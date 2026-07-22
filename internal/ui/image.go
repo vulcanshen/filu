@@ -13,11 +13,12 @@ import (
 const dataURIMaxBytes = 1 << 20 // 1 MiB: cap so the wrapped blob stays sane
 
 // imageMime maps an extension to its data-URI media type. base64 encoding needs
-// no decoder, so vector/exotic formats are fine here too.
+// no decoder, so exotic raster formats are fine here too. SVG is deliberately
+// absent: it is XML text and previews as highlighted source, not a data blob.
 var imageMime = map[string]string{
 	"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
 	"gif": "image/gif", "bmp": "image/bmp", "webp": "image/webp",
-	"tiff": "image/tiff", "tif": "image/tiff", "svg": "image/svg+xml",
+	"tiff": "image/tiff", "tif": "image/tiff",
 	"ico": "image/x-icon", "avif": "image/avif", "heic": "image/heic",
 }
 

@@ -13,8 +13,9 @@ import (
 func TestIsImage(t *testing.T) {
 	cases := map[string]bool{
 		"photo.png": true, "a.JPG": true, "clip.gif": true, "scan.tiff": true,
-		"vector.svg": true, "favicon.ico": true,
-		"doc.txt": false, "noext": false, "archive.zip": false,
+		"favicon.ico": true,
+		"doc.txt":     false, "noext": false, "archive.zip": false,
+		"vector.svg": false, // SVG is text — previews as XML, not a data URI
 	}
 	for name, want := range cases {
 		if got := isImage(name); got != want {
