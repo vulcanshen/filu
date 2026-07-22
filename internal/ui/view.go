@@ -108,15 +108,24 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, leftRegion, detail)
 }
 
-// zoomListView (panel [2] zoom): full-width, the three directory tabs become
-// 1:1:1 panels; the active tab is the focused column.
+// zoomListView (panel [2] zoom): [2] fully expanded over [4] fully expanded,
+// each as its tabs 1:1:1; [1]/[3] hidden. 2/4 pick which is focused, h/l its tab.
 func (m AppModel) zoomListView(w, midH int) string {
+	topH := midH * 2 / 3
+	return lipgloss.JoinVertical(lipgloss.Left,
+		m.expandedListTabs(w, topH),
+		m.expandedCarryTabs(w, midH-topH))
+}
+
+// expandedListTabs lays panel [2]'s 3 directory tabs out as equal-width columns;
+// the active tab is the focused column when [2] holds focus.
+func (m AppModel) expandedListTabs(w, h int) string {
 	widths := splitN(w, len(m.tabs))
 	cols := make([]string, len(m.tabs))
 	for i := range m.tabs {
 		cw := widths[i]
 		focused := m.focus == panelList && m.tab == i
-		cols[i] = m.panelBox(focused, singleChip(pathBase(m.tabs[i].dir), focused), cw, midH, m.tabs[i].view(cw-2, midH-2, focused))
+		cols[i] = m.panelBox(focused, singleChip(pathBase(m.tabs[i].dir), focused), cw, h, m.tabs[i].view(cw-2, h-2, focused))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, cols...)
 }
@@ -135,14 +144,19 @@ func (m AppModel) zoomDetailView(w, midH int) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, preview, meta)
 }
 
-// zoomCarryView (panel [4] zoom): full-width, the three tabs become 1:1:1
-// panels; the active tab (m.carryTab) is the focused column.
+// zoomCarryView (panel [4] zoom): [4] full-screen, its three tabs 1:1:1.
 func (m AppModel) zoomCarryView(w, midH int) string {
+	return m.expandedCarryTabs(w, midH)
+}
+
+// expandedCarryTabs lays panel [4]'s 3 tabs out as equal-width columns; the
+// active tab (m.carryTab) is the focused column when [4] holds focus.
+func (m AppModel) expandedCarryTabs(w, h int) string {
 	wd := splitN(w, 3)
 	foc := func(i int) bool { return m.focus == panelCarry && m.carryTab == i }
-	carry := m.panelBox(foc(0), singleChip("Carry", foc(0)), wd[0], midH, m.carry.view(wd[0]-2, midH-2, foc(0)))
-	progress := m.panelBox(foc(1), singleChip("Progress", foc(1)), wd[1], midH, centeredNote(wd[1]-2, midH-2, "(no active tasks)"))
-	history := m.panelBox(foc(2), singleChip("History", foc(2)), wd[2], midH, m.carry.historyView(wd[2]-2, midH-2))
+	carry := m.panelBox(foc(0), singleChip("Carry", foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
+	progress := m.panelBox(foc(1), singleChip("Progress", foc(1)), wd[1], h, centeredNote(wd[1]-2, h-2, "(no active tasks)"))
+	history := m.panelBox(foc(2), singleChip("History", foc(2)), wd[2], h, m.carry.historyView(wd[2]-2, h-2))
 	return lipgloss.JoinHorizontal(lipgloss.Top, carry, progress, history)
 }
 
