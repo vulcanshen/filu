@@ -52,6 +52,18 @@ func (m AppModel) View() string {
 	return out
 }
 
+// splitN divides w into n columns, the last absorbing the remainder so they
+// sum to w exactly.
+func splitN(w, n int) []int {
+	out := make([]int, n)
+	each := w / n
+	for i := range out {
+		out[i] = each
+	}
+	out[n-1] = w - each*(n-1)
+	return out
+}
+
 // middleView builds the panel region, honouring the zoom state.
 func (m AppModel) middleView(w, midH int) string {
 	switch m.zoom {
@@ -70,47 +82,51 @@ func (m AppModel) middleView(w, midH int) string {
 func (m AppModel) normalMiddle(w, midH int) string {
 	leftW, midW := w/3, w/3
 	rightW := w - leftW - midW
-	list := m.panelBox(panelList, m.listTitle(midW), midW, midH, m.active().view(midW-2, midH-2, m.focus == panelList))
+	listFocus := m.focus == panelList
+	list := m.panelBox(listFocus, m.listTitle(midW), midW, midH, m.active().view(midW-2, midH-2, listFocus))
 	if w < 72 { // too narrow for 3 columns; the list alone (Space menu Zoom is the escape hatch)
-		return m.panelBox(panelList, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, m.focus == panelList))
+		return m.panelBox(listFocus, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, listFocus))
 	}
 	pinH := midH * 2 / 3
 	left := lipgloss.JoinVertical(
 		lipgloss.Left,
-		m.panelBox(panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
-		m.panelBox(panelCarry, m.carryTitle(), leftW, midH-pinH, m.carryBody(leftW-2, (midH-pinH)-2)),
+		m.panelBox(m.focus == panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
+		m.panelBox(m.focus == panelCarry, m.carryTitle(), leftW, midH-pinH, m.carryBody(leftW-2, (midH-pinH)-2)),
 	)
-	right := m.panelBox(panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
+	right := m.panelBox(m.focus == panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
 }
 
-// zoomListView (panel [2] zoom): hide [1] and [4]; [2] and [3] split 1:1.
+// zoomListView (panel [2] zoom): full-width, the three directory tabs become
+// 1:1:1 panels; the active tab is the focused column.
 func (m AppModel) zoomListView(w, midH int) string {
-	leftW := w / 2
-	rightW := w - leftW
-	list := m.panelBox(panelList, m.listTitle(leftW), leftW, midH, m.active().view(leftW-2, midH-2, m.focus == panelList))
-	detail := m.panelBox(panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
-	return lipgloss.JoinHorizontal(lipgloss.Top, list, detail)
+	widths := splitN(w, len(m.tabs))
+	cols := make([]string, len(m.tabs))
+	for i := range m.tabs {
+		cw := widths[i]
+		focused := m.focus == panelList && m.tab == i
+		cols[i] = m.panelBox(focused, singleChip(pathBase(m.tabs[i].dir), focused), cw, midH, m.tabs[i].view(cw-2, midH-2, focused))
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, cols...)
 }
 
 // zoomDetailView (panel [3] zoom): full-width, the two tabs become 1:1 panels.
 func (m AppModel) zoomDetailView(w, midH int) string {
 	leftW := w / 2
 	rightW := w - leftW
-	preview := m.panelBox(panelDetail, singleChip("Preview", true), leftW, midH,
+	preview := m.panelBox(true, singleChip("Preview", true), leftW, midH,
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, leftW-2, midH-2))
-	meta := m.panelBox(panelDetail, singleChip("Meta", true), rightW, midH,
+	meta := m.panelBox(true, singleChip("Meta", true), rightW, midH,
 		renderLinesFrom(metaLines(m.active().cursorItem(), m.active().dir), 0, rightW-2, midH-2))
 	return lipgloss.JoinHorizontal(lipgloss.Top, preview, meta)
 }
 
 // zoomCarryView (panel [4] zoom): full-width, the three tabs become 1:1:1 panels.
 func (m AppModel) zoomCarryView(w, midH int) string {
-	w1, w2 := w/3, w/3
-	w3 := w - w1 - w2
-	carry := m.panelBox(panelCarry, singleChip("Carry", true), w1, midH, m.carry.view(w1-2, midH-2, true))
-	progress := m.panelBox(panelCarry, singleChip("Progress", true), w2, midH, centeredNote(w2-2, midH-2, "(no active tasks)"))
-	history := m.panelBox(panelCarry, singleChip("History", true), w3, midH, m.carry.historyView(w3-2, midH-2))
+	wd := splitN(w, 3)
+	carry := m.panelBox(true, singleChip("Carry", true), wd[0], midH, m.carry.view(wd[0]-2, midH-2, true))
+	progress := m.panelBox(true, singleChip("Progress", true), wd[1], midH, centeredNote(wd[1]-2, midH-2, "(no active tasks)"))
+	history := m.panelBox(true, singleChip("History", true), wd[2], midH, m.carry.historyView(wd[2]-2, midH-2))
 	return lipgloss.JoinHorizontal(lipgloss.Top, carry, progress, history)
 }
 
@@ -176,8 +192,7 @@ func (m AppModel) detailBody(w, rows int) string {
 
 // panelBox draws a bordered panel with the title embedded in the top border
 // (kbu style). Focused = double border + blue, else rounded + dim.
-func (m AppModel) panelBox(id panelID, title string, w, h int, body string) string {
-	focused := m.focus == id
+func (m AppModel) panelBox(focused bool, title string, w, h int, body string) string {
 	color := borderDim
 	tl, tr, bl, br, hz, vt := "╭", "╮", "╰", "╯", "─", "│"
 	if focused {
