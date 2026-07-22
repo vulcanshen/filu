@@ -27,9 +27,8 @@ const (
 // image / archive classes come later; for now dir / text / binary.
 type previewModel struct {
 	kind  previewKind
-	dir   listModel // when kind == previewDir
-	lines []string  // when kind == previewText / previewBinary
-	note  string    // empty / unreadable
+	lines []string // dir tree / text / hex
+	note  string   // empty / unreadable
 }
 
 func loadPreview(it fileItem, parent string) previewModel {
@@ -38,7 +37,7 @@ func loadPreview(it fileItem, parent string) previewModel {
 	}
 	full := filepath.Join(parent, it.name)
 	if it.isDir {
-		return previewModel{kind: previewDir, dir: newList(full)}
+		return previewModel{kind: previewDir, lines: treeLines(full, 3)}
 	}
 	data, err := readCapped(full, previewCap)
 	if err != nil {
@@ -51,14 +50,52 @@ func loadPreview(it fileItem, parent string) previewModel {
 }
 
 func (p previewModel) view(w, rows int) string {
-	switch p.kind {
-	case previewDir:
-		return p.dir.view(w, rows, false) // read-only, unfocused
-	case previewText, previewBinary:
-		return renderLines(p.lines, w, rows)
-	default:
+	if p.kind == previewNone {
 		return lipgloss.NewStyle().Foreground(dimColor).Render(p.note)
 	}
+	return renderLines(p.lines, w, rows)
+}
+
+// tree branch pieces (rune values so no box glyph sits in source).
+var (
+	treeTee = string(rune(0x251c)) + string(rune(0x2500)) + " " // "├─ "
+	treeEnd = string(rune(0x2514)) + string(rune(0x2500)) + " " // "└─ "
+	treeBar = string(rune(0x2502)) + "  "                       // "│  "
+	treeGap = "   "
+)
+
+const treeMaxLines = 200
+
+// treeLines renders a directory as a tree up to maxDepth levels, capped at
+// treeMaxLines rows.
+func treeLines(root string, maxDepth int) []string {
+	var lines []string
+	var walk func(dir, prefix string, depth int)
+	walk = func(dir, prefix string, depth int) {
+		items := readEntries(dir, false)
+		for i, it := range items {
+			if len(lines) >= treeMaxLines {
+				return
+			}
+			branch, ext := treeTee, treeBar
+			if i == len(items)-1 {
+				branch, ext = treeEnd, treeGap
+			}
+			icon := iconFile
+			if it.isDir {
+				icon = iconDir
+			}
+			lines = append(lines, prefix+branch+icon+" "+it.name)
+			if it.isDir && depth < maxDepth {
+				walk(filepath.Join(dir, it.name), prefix+ext, depth+1)
+			}
+		}
+	}
+	walk(root, "", 1)
+	if len(lines) == 0 {
+		return []string{lipgloss.NewStyle().Foreground(dimColor).Render("(空目錄)")}
+	}
+	return lines
 }
 
 func readCapped(path string, n int) ([]byte, error) {
