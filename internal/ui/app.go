@@ -25,7 +25,7 @@ type detailTab int
 
 const (
 	tabPreview detailTab = iota
-	tabInfo
+	tabMeta
 )
 
 // inputKind is the pending footer text input, if any.
@@ -191,7 +191,7 @@ func (m *AppModel) handleDetailKey(key string) {
 	switch key {
 	case "h", "left", "l", "right":
 		if m.detail == tabPreview {
-			m.detail = tabInfo
+			m.detail = tabMeta
 		} else {
 			m.detail = tabPreview
 		}
