@@ -269,9 +269,9 @@ func (m *AppModel) navigateTo(dir string) {
 }
 
 // listRows is how many file rows panel [2] can show:
-// height − header(1) − footer(1) − top/bottom border(2) − title(1).
+// height − header(1) − footer(1) − top/bottom border(2). Title is on the border.
 func (m AppModel) listRows() int {
-	if r := m.height - 5; r > 0 {
+	if r := m.height - 4; r > 0 {
 		return r
 	}
 	return 1

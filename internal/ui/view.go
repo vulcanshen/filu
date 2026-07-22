@@ -32,7 +32,7 @@ func (m AppModel) View() string {
 		leftW, rightW, midW = 0, 0, w
 	}
 
-	listBody := m.active().view(midW-2, midH-3, m.focus == panelList)
+	listBody := m.active().view(midW-2, midH-2, m.focus == panelList)
 	list := m.panelBox(panelList, m.listTitle(), midW, midH, listBody)
 
 	middle := list
@@ -40,10 +40,10 @@ func (m AppModel) View() string {
 		pinH := midH * 2 / 3
 		left := lipgloss.JoinVertical(
 			lipgloss.Left,
-			m.panelBox(panelPin, "[1] pin", leftW, pinH, m.places.view(leftW-2, pinH-3, m.focus == panelPin)),
-			m.panelBox(panelCarry, "[4] carry", leftW, midH-pinH, m.carry.view(leftW-2, (midH-pinH)-3, m.focus == panelCarry)),
+			m.panelBox(panelPin, "filu", leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
+			m.panelBox(panelCarry, "[4] carry", leftW, midH-pinH, m.carry.view(leftW-2, (midH-pinH)-2, m.focus == panelCarry)),
 		)
-		right := m.panelBox(panelDetail, m.detailTitle(), rightW, midH, m.detailBody(rightW-2, midH-3))
+		right := m.panelBox(panelDetail, m.detailTitle(), rightW, midH, m.detailBody(rightW-2, midH-2))
 		middle = lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
 	}
 
@@ -79,21 +79,42 @@ func (m AppModel) detailBody(w, rows int) string {
 	return m.preview.view(w, rows)
 }
 
-// panelBox renders one bordered panel; focused = double border + blue, else rounded + dim.
+// panelBox draws a bordered panel with the title embedded in the top border
+// (kbu style). Focused = double border + blue, else rounded + dim.
 func (m AppModel) panelBox(id panelID, title string, w, h int, body string) string {
 	focused := m.focus == id
-	border, color := lipgloss.RoundedBorder(), dimColor
+	color := dimColor
+	tl, tr, bl, br, hz, vt := "╭", "╮", "╰", "╯", "─", "│"
 	if focused {
-		border, color = lipgloss.DoubleBorder(), focusColor
+		color = focusColor
+		tl, tr, bl, br, hz, vt = "╔", "╗", "╚", "╝", "═", "║"
 	}
-	titleLine := lipgloss.NewStyle().Foreground(color).Bold(focused).Render(title)
-	content := titleLine + "\n" + body
-	return lipgloss.NewStyle().
-		Border(border).
-		BorderForeground(color).
-		Width(w - 2).
-		Height(h - 2).
-		Render(content)
+	bs := lipgloss.NewStyle().Foreground(color)
+	ts := lipgloss.NewStyle().Foreground(color).Bold(focused)
+	inner := max(w-2, 1)
+
+	titleText := " " + title + " "
+	if lipgloss.Width(titleText) > inner-1 {
+		titleText = truncate(titleText, inner-1)
+	}
+	fill := max(inner-1-lipgloss.Width(titleText), 0)
+	top := bs.Render(tl+hz) + ts.Render(titleText) + bs.Render(strings.Repeat(hz, fill)+tr)
+
+	bodyLines := strings.Split(body, "\n")
+	var b strings.Builder
+	b.WriteString(top + "\n")
+	for r := range h - 2 {
+		line := ""
+		if r < len(bodyLines) {
+			line = bodyLines[r]
+		}
+		if d := inner - lipgloss.Width(line); d > 0 {
+			line += strings.Repeat(" ", d)
+		}
+		b.WriteString(bs.Render(vt) + line + bs.Render(vt) + "\n")
+	}
+	b.WriteString(bs.Render(bl + strings.Repeat(hz, inner) + br))
+	return b.String()
 }
 
 func (m AppModel) headerBar(w int) string {
