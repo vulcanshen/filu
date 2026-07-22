@@ -122,25 +122,11 @@ func (m AppModel) detailLines() []string {
 	return m.preview.contentLines()
 }
 
-// detailBody renders panel [3]'s active tab from the scroll offset. Colour is a
-// focus signal (like panel [2]): focused shows it, unfocused strips it and dims
-// the whole thing so the panel recedes.
+// detailBody renders panel [3]'s active tab from the scroll offset. Panel [3] is
+// a reference view (read while another panel has focus), so it keeps its colour
+// even when unfocused rather than dimming.
 func (m AppModel) detailBody(w, rows int) string {
-	lines := m.detailLines()
-	if m.focus == panelDetail {
-		return renderLinesFrom(lines, m.detailScroll, w, rows)
-	}
-	offset := max(m.detailScroll, 0)
-	end := min(offset+rows, len(lines))
-	dim := lipgloss.NewStyle().Foreground(dimColor)
-	var b strings.Builder
-	for i := offset; i < end; i++ {
-		if i > offset {
-			b.WriteByte('\n')
-		}
-		b.WriteString(dim.Render(truncate(ansi.Strip(lines[i]), w)))
-	}
-	return b.String()
+	return renderLinesFrom(m.detailLines(), m.detailScroll, w, rows)
 }
 
 // panelBox draws a bordered panel with the title embedded in the top border
