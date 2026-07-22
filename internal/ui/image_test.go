@@ -1,19 +1,20 @@
 package ui
 
 import (
-	"image"
-	"image/color"
-	"image/png"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestIsImage(t *testing.T) {
 	cases := map[string]bool{
 		"photo.png": true, "a.JPG": true, "clip.gif": true, "scan.tiff": true,
-		"doc.txt": false, "noext": false, "archive.zip": false, "vector.svg": false,
+		"vector.svg": true, "favicon.ico": true,
+		"doc.txt": false, "noext": false, "archive.zip": false,
 	}
 	for name, want := range cases {
 		if got := isImage(name); got != want {
@@ -22,44 +23,52 @@ func TestIsImage(t *testing.T) {
 	}
 }
 
-func TestImageASCII(t *testing.T) {
+func TestImageDataURI(t *testing.T) {
 	dir := t.TempDir()
-	p := filepath.Join(dir, "swatch.png")
-	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
-	for y := 0; y < 16; y++ {
-		for x := 0; x < 16; x++ {
-			img.Set(x, y, color.RGBA{uint8(x * 16), uint8(y * 16), 128, 255})
-		}
-	}
-	f, err := os.Create(p)
-	if err != nil {
+	p := filepath.Join(dir, "pixel.png")
+	want := []byte("hello-image-bytes-\x00\x01\x02")
+	if err := os.WriteFile(p, want, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := png.Encode(f, img); err != nil {
-		t.Fatal(err)
-	}
-	f.Close()
 
-	lines, ok := imageASCII(p, 12)
+	lines, ok := imageDataURI(p, "pixel.png", 20)
 	if !ok {
-		t.Fatal("expected the PNG to render")
+		t.Fatal("expected ok=true")
 	}
-	if len(lines) == 0 {
-		t.Fatal("no ASCII lines produced")
+	joined := ansi.Strip(strings.Join(lines, "")) // "" join drops the wrap newlines
+	if !strings.Contains(joined, "data:image/png") {
+		t.Errorf("missing mime prefix: %q", joined)
 	}
-	joined := strings.Join(lines, "\n")
-	if !strings.Contains(joined, "\x1b[") {
-		t.Error("coloured output should carry ANSI codes")
+	_, b64, found := strings.Cut(joined, ";base64,")
+	if !found {
+		t.Fatalf("no data URI produced: %q", joined)
 	}
-	for i, l := range lines {
-		if !strings.HasSuffix(l, ansiReset) {
-			t.Errorf("line %d not reset-terminated (colour could bleed)", i)
-		}
+	got, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		t.Fatalf("body is not valid base64: %v", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("roundtrip mismatch: %q != %q", got, want)
 	}
 }
 
-func TestImageASCIIMissing(t *testing.T) {
-	if _, ok := imageASCII("/no/such/file.png", 20); ok {
+func TestImageDataURITooLarge(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "big.png")
+	if err := os.WriteFile(p, make([]byte, dataURIMaxBytes+1), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lines, ok := imageDataURI(p, "big.png", 40)
+	if !ok {
+		t.Fatal("expected ok=true (with a note)")
+	}
+	if !strings.Contains(ansi.Strip(strings.Join(lines, "\n")), "too large") {
+		t.Error("an oversized image should show a note, not a blob")
+	}
+}
+
+func TestImageDataURIMissing(t *testing.T) {
+	if _, ok := imageDataURI("/no/such/file.png", "file.png", 40); ok {
 		t.Error("a missing image must return ok=false")
 	}
 }
