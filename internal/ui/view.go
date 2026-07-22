@@ -163,7 +163,7 @@ func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
 		}
 		return s
 	}
-	carry := m.panelBox(foc(0), singleChip(label("Carry"), foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
+	carry := m.panelBox(foc(0), singleChip(label("Carries"), foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
 	progress := m.panelBox(foc(1), singleChip(label("Progress"), foc(1)), wd[1], h, centeredNote(wd[1]-2, h-2, "(no active tasks)"))
 	history := m.panelBox(foc(2), singleChip(label("History"), foc(2)), wd[2], h, m.carry.historyView(wd[2]-2, h-2))
 	return lipgloss.JoinHorizontal(lipgloss.Top, carry, progress, history)
@@ -191,7 +191,7 @@ func (m AppModel) listTitle(w int) string {
 // too narrow to fit it — see carouselChip for that narrow-panel tab strategy.
 func (m AppModel) carryTitle(w int) string {
 	focused := m.focus == panelCarry
-	labels := []string{"Carry", "Progress", "History"}
+	labels := []string{"Carries", "Progress", "History"}
 	if tb := tabBar("[4]", labels, m.carryTab, focused); lipgloss.Width(tb) <= w-2 {
 		return tb
 	}
