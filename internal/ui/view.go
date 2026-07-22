@@ -96,7 +96,7 @@ func (m AppModel) carryTitle() string {
 func (m AppModel) carryBody(w, rows int) string {
 	switch m.carryTab {
 	case 1: // progress — async land is future work
-		return lipgloss.NewStyle().Foreground(dimColor).Render("(no active tasks)")
+		return centeredNote(w, rows, "(no active tasks)")
 	case 2: // history
 		return m.carry.historyView(w, rows)
 	default: // carry

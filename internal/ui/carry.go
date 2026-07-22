@@ -66,9 +66,19 @@ func (m *carryModel) land(destDir string, move bool) {
 	}
 }
 
+// centeredNote renders a dim message centred both ways in a w×rows box — used
+// for panel [4]'s empty states.
+func centeredNote(w, rows int, text string) string {
+	msg := lipgloss.NewStyle().Foreground(dimColor).Render(text)
+	if w < 1 || rows < 1 {
+		return msg
+	}
+	return lipgloss.Place(w, rows, lipgloss.Center, lipgloss.Center, msg)
+}
+
 func (m carryModel) view(w, rows int, _ bool) string {
 	if len(m.items) == 0 {
-		return lipgloss.NewStyle().Foreground(dimColor).Render("empty")
+		return centeredNote(w, rows, "empty")
 	}
 	us := lipgloss.NewStyle().Foreground(userColor) // carried = user footprint
 	var b strings.Builder
@@ -84,7 +94,7 @@ func (m carryModel) view(w, rows int, _ bool) string {
 
 func (m carryModel) historyView(w, rows int) string {
 	if len(m.history) == 0 {
-		return lipgloss.NewStyle().Foreground(dimColor).Render("(no history)")
+		return centeredNote(w, rows, "(no history)")
 	}
 	lines := make([]string, len(m.history))
 	for i, h := range m.history {
