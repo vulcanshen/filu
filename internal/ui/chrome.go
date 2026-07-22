@@ -23,22 +23,29 @@ func singleChip(title string, focused bool) string {
 	return cap.Render(capLeft) + chip.Render(title+" ") + cap.Render(capRight)
 }
 
-// carouselChip is a compact single-tab title: [N] plus the active label, with
-// ‹ / › arrows showing there are more tabs before / after. Used where the column
-// is too narrow for a full tab bar (panel [4]).
+// carouselChip is a compact single-tab title: [N] plus the active label in full,
+// flanked by the neighbouring tabs' first letters separated by a › chevron
+// (first tab has no left neighbour, last tab no right). For narrow columns.
 func carouselChip(num string, labels []string, active int, focused bool) string {
 	bc := borderColor(focused)
 	cap := lipgloss.NewStyle().Foreground(bc)
 	chip := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
-	prev := " "
+	prefix := " "
 	if active > 0 {
-		prev = arrowL
+		prefix = firstRune(labels[active-1]) + arrowR
 	}
-	next := ""
+	suffix := ""
 	if active < len(labels)-1 {
-		next = arrowR
+		suffix = arrowR + firstRune(labels[active+1])
 	}
-	return cap.Render(capLeft) + chip.Render(num+prev+labels[active]+next) + cap.Render(capRight)
+	return cap.Render(capLeft) + chip.Render(num+prefix+labels[active]+suffix) + cap.Render(capRight)
+}
+
+func firstRune(s string) string {
+	for _, r := range s {
+		return string(r)
+	}
+	return ""
 }
 
 // tabBar renders a starship powerline chip chain (§8.2): a bright [N] chip, then
