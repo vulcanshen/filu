@@ -44,7 +44,11 @@ func loadPreview(it fileItem, parent string) previewModel {
 		return previewModel{note: "(unreadable)"}
 	}
 	if isText(data) {
-		return previewModel{kind: previewText, lines: sanitizeLines(strings.Split(string(data), "\n"))}
+		lines := sanitizeLines(strings.Split(string(data), "\n"))
+		if hl, ok := highlight(it.name, strings.Join(lines, "\n")); ok {
+			lines = hl
+		}
+		return previewModel{kind: previewText, lines: lines}
 	}
 	return previewModel{kind: previewBinary, lines: hexDump(data)}
 }
