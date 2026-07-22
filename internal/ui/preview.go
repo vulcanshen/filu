@@ -51,7 +51,7 @@ func loadPreview(it fileItem, parent string) previewModel {
 		}
 		return previewModel{kind: previewText, lines: withLineNumbers(lines)}
 	}
-	return previewModel{kind: previewBinary, lines: hexDump(data)}
+	return previewModel{kind: previewBinary, lines: withLineNumbers(hexDump(data))}
 }
 
 // withLineNumbers prefixes each text-preview line with a dim, right-aligned
