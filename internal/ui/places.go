@@ -40,9 +40,6 @@ func newPlaces() placesModel {
 		}
 	}
 	ps = append(ps, place{"Root", "/", iconDisk})
-	if dirExists("/Volumes") {
-		ps = append(ps, place{"Volumes", "/Volumes", iconDisk})
-	}
 	return placesModel{system: ps}
 }
 
@@ -65,8 +62,8 @@ func dirExists(p string) bool {
 }
 
 func (m placesModel) all() []place {
-	out := make([]place, 0, len(m.system)+len(m.pinned))
-	return append(append(out, m.system...), m.pinned...)
+	out := make([]place, 0, len(m.pinned)+len(m.system))
+	return append(append(out, m.pinned...), m.system...) // pinned first
 }
 
 func (m *placesModel) move(delta int) {
@@ -119,14 +116,12 @@ func (m placesModel) view(w, rows int, focused bool) string {
 		}
 	}
 
-	lines = append(lines, hdr.Render("PLACES"))
-	render(m.system)
-	lines = append(lines, hdr.Render("PINNED"))
-	if len(m.pinned) == 0 {
-		lines = append(lines, hdr.Render(" (按 P 加入)"))
-	} else {
+	if len(m.pinned) > 0 { // pinned on top, only when it has items
+		lines = append(lines, hdr.Render("Pinned"))
 		render(m.pinned)
 	}
+	lines = append(lines, hdr.Render("Local"))
+	render(m.system)
 
 	if len(lines) > rows {
 		lines = lines[:rows]

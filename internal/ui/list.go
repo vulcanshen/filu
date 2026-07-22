@@ -131,7 +131,7 @@ func (m *listModel) ensureVisible(rows int) {
 
 func (m listModel) view(w, rows int, focused bool) string {
 	if len(m.items) == 0 {
-		return lipgloss.NewStyle().Foreground(dimColor).Render("(空目錄)")
+		return lipgloss.NewStyle().Foreground(dimColor).Render("(empty)")
 	}
 	cursorBg := focusColor
 	if !focused {

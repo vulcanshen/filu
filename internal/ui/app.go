@@ -171,7 +171,7 @@ func (m *AppModel) handleListKey(key string) {
 			m.input = inputState{kind: inputRename, prompt: "Rename", buffer: it.name, target: it.name}
 		}
 	case "A": // add file/dir — lazyvim style: trailing / = dir (footer input)
-		m.input = inputState{kind: inputAdd, prompt: "New (末尾 / = 目錄)"}
+		m.input = inputState{kind: inputAdd, prompt: "New (trailing / = dir)"}
 	}
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
@@ -248,8 +248,10 @@ func (m *AppModel) handlePinKey(key string) {
 	switch key {
 	case "j", "down":
 		m.places.move(1)
+		m.syncPlaceToList()
 	case "k", "up":
 		m.places.move(-1)
+		m.syncPlaceToList()
 	case "enter":
 		if p, ok := m.places.current(); ok {
 			m.navigateTo(p.path)
@@ -257,15 +259,27 @@ func (m *AppModel) handlePinKey(key string) {
 	}
 }
 
-// navigateTo points panel [2] at dir and moves focus there.
-func (m *AppModel) navigateTo(dir string) {
+// navigateActive points the active tab at dir; focus stays put.
+func (m *AppModel) navigateActive(dir string) {
 	l := m.cur()
 	l.dir = dir
 	l.cursor, l.offset = 0, 0
 	l.reload()
-	m.focus = panelList
 	l.ensureVisible(m.listRows())
 	m.refreshPreview()
+}
+
+// navigateTo navigates and moves focus to panel [2].
+func (m *AppModel) navigateTo(dir string) {
+	m.navigateActive(dir)
+	m.focus = panelList
+}
+
+// syncPlaceToList live-updates panel [2] to the highlighted place (focus stays).
+func (m *AppModel) syncPlaceToList() {
+	if p, ok := m.places.current(); ok {
+		m.navigateActive(p.path)
+	}
 }
 
 // listRows is how many file rows panel [2] can show:

@@ -42,9 +42,10 @@ func tabBar(num string, labels []string, active int, focused bool) string {
 
 	for i, lab := range labels {
 		cur := i == active
+		lead := "" // after a cap, the cap itself separates — no leading space (§8.2)
 		switch {
 		case prevBright && cur:
-			// merge with the previous bright chip — no boundary cap
+			lead = " " // merge: no cap, one space separates from the previous chip
 		case prevBright && !cur:
 			b.WriteString(lipgloss.NewStyle().Foreground(bc).Background(crust).Render(capHard))
 		case !prevBright && cur:
@@ -52,7 +53,7 @@ func tabBar(num string, labels []string, active int, focused bool) string {
 		default:
 			b.WriteString(lipgloss.NewStyle().Foreground(chev).Background(crust).Render(capThin))
 		}
-		seg := " " + lab + " "
+		seg := lead + lab + " "
 		if cur {
 			b.WriteString(bright.Render(seg))
 		} else {

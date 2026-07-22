@@ -33,7 +33,7 @@ type previewModel struct {
 
 func loadPreview(it fileItem, parent string) previewModel {
 	if it.name == "" {
-		return previewModel{note: "(無選取)"}
+		return previewModel{note: "(no selection)"}
 	}
 	full := filepath.Join(parent, it.name)
 	if it.isDir {
@@ -41,7 +41,7 @@ func loadPreview(it fileItem, parent string) previewModel {
 	}
 	data, err := readCapped(full, previewCap)
 	if err != nil {
-		return previewModel{note: "(無法讀取)"}
+		return previewModel{note: "(unreadable)"}
 	}
 	if isText(data) {
 		return previewModel{kind: previewText, lines: strings.Split(string(data), "\n")}
@@ -93,7 +93,7 @@ func treeLines(root string, maxDepth int) []string {
 	}
 	walk(root, "", 1)
 	if len(lines) == 0 {
-		return []string{lipgloss.NewStyle().Foreground(dimColor).Render("(空目錄)")}
+		return []string{lipgloss.NewStyle().Foreground(dimColor).Render("(empty)")}
 	}
 	return lines
 }
