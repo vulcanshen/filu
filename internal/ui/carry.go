@@ -78,7 +78,7 @@ func centeredNote(w, rows int, text string) string {
 
 func (m carryModel) view(w, rows int, _ bool) string {
 	if len(m.items) == 0 {
-		return centeredNote(w, rows, "empty")
+		return centeredNote(w, rows, "(empty)")
 	}
 	us := lipgloss.NewStyle().Foreground(userColor) // carried = user footprint
 	var b strings.Builder
