@@ -1,0 +1,24 @@
+# forge — local dev state (never commit)
+CLAUDE.md
+.forge/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Go
+/filu
+/filu.exe
+*.exe
+*.test
+*.out
+/dist/
+go.work
+go.work.sum
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
