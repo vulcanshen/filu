@@ -47,20 +47,22 @@ type inputState struct {
 
 // AppModel is filu's root model.
 type AppModel struct {
-	width        int
-	height       int
-	focus        panelID
-	detail       detailTab
-	detailScroll int          // panel [3] content scroll offset
-	tabs         [3]listModel // panel [2]'s fixed 3 directory tabs
-	tab          int          // active tab index
-	preview      previewModel
-	places       placesModel
-	carry        carryModel
-	carryTab     int // panel [4] active tab: 0 carry / 1 progress / 2 history
-	input        inputState
-	spaceMenu    spaceMenu // §A.1 contextual popup (kbu form)
-	zoom         panelID   // 0 = normal; else the panel expanded full-width
+	width         int
+	height        int
+	focus         panelID
+	detail        detailTab
+	detailScroll  int          // panel [3] content scroll offset
+	tabs          [3]listModel // panel [2]'s fixed 3 directory tabs
+	tab           int          // active tab index
+	preview       previewModel
+	places        placesModel
+	carry         carryModel
+	carryTab      int // panel [4] active tab: 0 carry / 1 progress / 2 history
+	input         inputState
+	spaceMenu     spaceMenu    // §A.1 contextual popup (kbu form)
+	zoom          panelID      // 0 = normal; else the panel expanded full-width
+	confirm       confirmPopup // yes/no popup (delete)
+	pendingDelete string       // path awaiting delete confirmation
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -70,7 +72,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu()}
+	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup()}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -92,15 +94,32 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
 		m.spaceMenu.setSize(msg.Width)
+		m.confirm.setSize(msg.Width)
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, m.spaceMenu.handleTick(msg)
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.confirm.handleTick(msg))
 	case tea.KeyMsg:
 		if m.input.kind != inputNone {
 			m.handleInputKey(msg)
 			return m, nil
+		}
+		if m.confirm.isActive() { // modal: owns the keyboard while open
+			if !m.confirm.isInteractive() {
+				return m, nil
+			}
+			var ok bool
+			var cmd tea.Cmd
+			m.confirm, ok, cmd = m.confirm.update(msg)
+			if ok {
+				_ = moveToTrash(m.pendingDelete)
+				m.pendingDelete = ""
+				m.cur().reload()
+				m.cur().ensureVisible(m.listRows())
+				m.refreshPreview()
+			}
+			return m, cmd
 		}
 		if m.spaceMenu.isActive() { // popup owns the keyboard while open
 			if !m.spaceMenu.isInteractive() {
@@ -110,8 +129,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.spaceMenu, key, cmd = m.spaceMenu.update(msg)
 			if key != "" { // committed: fire on the focused panel, then close
-				m.dispatchFocusKey(key)
-				cmd = tea.Batch(cmd, m.spaceMenu.close())
+				cmd = tea.Batch(cmd, m.dispatchFocusKey(key), m.spaceMenu.close())
 			}
 			return m, cmd
 		}
@@ -138,24 +156,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "4":
 			m.setFocus(panelCarry)
 		default:
-			switch m.focus {
-			case panelList:
-				m.handleListKey(msg.String())
-			case panelPin:
-				m.handlePinKey(msg.String())
-			case panelDetail:
-				m.handleDetailKey(msg.String())
-			case panelCarry:
-				m.handleCarryKey(msg.String())
-			}
+			return m, m.dispatchFocusKey(msg.String())
 		}
 	}
 	return m, nil
 }
 
-// handleListKey routes navigation keys to panel [2] while it is focused.
-func (m *AppModel) handleListKey(key string) {
+// handleListKey routes navigation keys to panel [2] while it is focused. It may
+// return a tea.Cmd when a key opens an animated popup (delete confirm, input).
+func (m *AppModel) handleListKey(key string) tea.Cmd {
 	l := m.cur()
+	var cmd tea.Cmd
 	switch key {
 	case "j", "down":
 		l.move(1)
@@ -194,10 +205,10 @@ func (m *AppModel) handleListKey(key string) {
 	case ".": // toggle hidden files in this tab
 		l.showHidden = !l.showHidden
 		l.reload()
-	case "D": // delete: move cursor item to the system trash
+	case "D": // delete: confirm first, then move to the system trash
 		if it := l.cursorItem(); it.name != "" {
-			_ = moveToTrash(filepath.Join(l.dir, it.name))
-			l.reload()
+			m.pendingDelete = filepath.Join(l.dir, it.name)
+			cmd = m.confirm.open("Move " + it.name + " to the trash?")
 		}
 	case "R": // rename cursor item (footer input)
 		if it := l.cursorItem(); it.name != "" {
@@ -210,11 +221,12 @@ func (m *AppModel) handleListKey(key string) {
 	}
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
+	return cmd
 }
 
 // handleDetailKey routes keys to panel [3] while it is focused: h/l swap tab,
 // j/k/u/d/g/G scroll the content.
-func (m *AppModel) handleDetailKey(key string) {
+func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 	switch key {
 	case "h", "left", "l", "right":
 		if m.detail == tabPreview {
@@ -239,6 +251,7 @@ func (m *AppModel) handleDetailKey(key string) {
 		m.toggleZoom(panelDetail)
 	}
 	m.clampDetailScroll()
+	return nil
 }
 
 // clampDetailScroll keeps panel [3] from scrolling past its last page.
@@ -248,7 +261,7 @@ func (m *AppModel) clampDetailScroll() {
 }
 
 // handleCarryKey routes keys to panel [4] while it is focused (h/l swap tab).
-func (m *AppModel) handleCarryKey(key string) {
+func (m *AppModel) handleCarryKey(key string) tea.Cmd {
 	switch key {
 	case "l", "right":
 		m.carryTab = (m.carryTab + 1) % 3
@@ -257,6 +270,7 @@ func (m *AppModel) handleCarryKey(key string) {
 	case "z": // zoom panel [4]: full-width, Carry | Progress | History
 		m.toggleZoom(panelCarry)
 	}
+	return nil
 }
 
 // toggleZoom expands panel p (hiding the others), or restores the normal layout
@@ -292,17 +306,18 @@ func (m AppModel) zoomVisible(p panelID) bool {
 
 // dispatchFocusKey fires a Space-menu commit as if the letter were pressed on
 // the focused panel — the menu is a shell over the letter hotkeys.
-func (m *AppModel) dispatchFocusKey(key string) {
+func (m *AppModel) dispatchFocusKey(key string) tea.Cmd {
 	switch m.focus {
 	case panelList:
-		m.handleListKey(key)
+		return m.handleListKey(key)
 	case panelPin:
-		m.handlePinKey(key)
+		return m.handlePinKey(key)
 	case panelDetail:
-		m.handleDetailKey(key)
+		return m.handleDetailKey(key)
 	case panelCarry:
-		m.handleCarryKey(key)
+		return m.handleCarryKey(key)
 	}
+	return nil
 }
 
 // buildSpaceMenu returns the contextual menu items + title for the focused
@@ -438,7 +453,7 @@ func (m *AppModel) commitInput() {
 }
 
 // handlePinKey routes navigation keys to panel [1] while it is focused.
-func (m *AppModel) handlePinKey(key string) {
+func (m *AppModel) handlePinKey(key string) tea.Cmd {
 	switch key {
 	case "j", "down":
 		m.places.move(1)
@@ -459,6 +474,7 @@ func (m *AppModel) handlePinKey(key string) {
 			}
 		}
 	}
+	return nil
 }
 
 // navigateActive points the active tab at dir; focus stays put.
