@@ -70,11 +70,16 @@ func (m carryModel) view(w, rows int, _ bool) string {
 	if len(m.items) == 0 {
 		return lipgloss.NewStyle().Foreground(dimColor).Render("empty")
 	}
-	lines := make([]string, len(m.items))
-	for i, p := range m.items {
-		lines[i] = truncate(" "+iconFile+"  "+filepath.Base(p), w)
+	us := lipgloss.NewStyle().Foreground(userColor) // carried = user footprint
+	var b strings.Builder
+	n := min(len(m.items), rows)
+	for i := range n {
+		b.WriteString(us.Render(truncate(" "+iconFile+"  "+filepath.Base(m.items[i]), w)))
+		if i < n-1 {
+			b.WriteByte('\n')
+		}
 	}
-	return renderLines(lines, w, rows)
+	return b.String()
 }
 
 func (m carryModel) historyView(w, rows int) string {

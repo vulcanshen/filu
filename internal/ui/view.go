@@ -8,13 +8,17 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// kbu colour mindset (§2 / §8.0): blue = structure/focus, surface2 = unfocused
-// chrome, overlay0 = dim body text, lavender = user footprint.
+// kbu colour hierarchy (§2 / §B): three reserved tiers.
 var (
-	focusColor = lipgloss.Color("#89b4fa") // catppuccin blue  (focused chrome)
-	borderDim  = lipgloss.Color("#585b70") // catppuccin surface2 (unfocused chrome)
-	dimColor   = lipgloss.Color("#6c7086") // catppuccin overlay0 (dim body text)
-	pathColor  = lipgloss.Color("#b4befe") // catppuccin lavender (user footprint)
+	// structural (system) — panel chrome + focus; never user state.
+	focusColor = lipgloss.Color("#89b4fa") // blue    : focused border/chrome
+	borderDim  = lipgloss.Color("#585b70") // surface2: unfocused chrome
+	// user footprint — pinned / carried / current location / remembered cursor.
+	userColor = lipgloss.Color("#b4befe") // lavender
+	handColor = lipgloss.Color("#bac2de") // subtext1: focused cursor ("current hand")
+	// neutral text.
+	dimColor = lipgloss.Color("#6c7086") // overlay0: section headers / dim text
+	// popup layer scale (lavenphire25→sapphire) comes when popups land.
 )
 
 // §8.0/§8.2 powerline caps (rune values so no glyph sits in source).
@@ -152,7 +156,7 @@ func (m AppModel) panelBox(id panelID, title string, w, h int, body string) stri
 }
 
 func (m AppModel) headerBar(w int) string {
-	return lipgloss.NewStyle().Width(w).Foreground(pathColor).
+	return lipgloss.NewStyle().Width(w).Foreground(userColor).
 		Render(truncate(" "+breadcrumb(m.active().dir), w))
 }
 
