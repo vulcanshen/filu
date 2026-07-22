@@ -19,8 +19,7 @@ var (
 	handColor = lipgloss.Color("#bac2de") // subtext1: focused cursor ("current hand")
 	// neutral text.
 	dimColor = lipgloss.Color("#6c7086") // overlay0: section headers / dim text
-	// content type (focused panel only).
-	dirColor = lipgloss.Color("#89dceb") // sky: directories
+	// file-type content colours live in theme.go (eza catppuccin-mocha).
 	// popup layer scale (lavenphire25→sapphire) comes when popups land.
 )
 
