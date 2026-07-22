@@ -28,12 +28,25 @@ func singleChip(title string, focused bool) string {
 // (first tab has no left neighbour, last tab no right). For narrow columns.
 func carouselChip(num string, labels []string, active int, focused bool) string {
 	bc := borderColor(focused)
-	cap := lipgloss.NewStyle().Foreground(bc)
-	chip := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
+	crust := lipgloss.Color(crustHex)
+	base := lipgloss.Color(baseHex)
 	n := len(labels)
-	prefix := " " + firstRune(labels[(active-1+n)%n]) + arrowR // prev wraps
-	suffix := arrowR + firstRune(labels[(active+1)%n])         // next wraps
-	return cap.Render(capLeft) + chip.Render(num+prefix+labels[active]+suffix) + cap.Render(capRight)
+
+	capOn := lipgloss.NewStyle().Foreground(bc)                              // round-left on panel bg
+	capEnd := lipgloss.NewStyle().Foreground(crust)                          // round-right closing a crust segment
+	bright := lipgloss.NewStyle().Foreground(base).Background(bc).Bold(true) // [N] + active tab
+	recessed := lipgloss.NewStyle().Foreground(bc).Background(crust)         // neighbour initials
+	toActive := lipgloss.NewStyle().Foreground(crust).Background(bc)         // › recessed → bright
+	toNeighbor := lipgloss.NewStyle().Foreground(bc).Background(crust)       // › bright → recessed
+
+	return capOn.Render(capLeft) +
+		bright.Render(num+" ") +
+		recessed.Render(firstRune(labels[(active-1+n)%n])) + // prev wraps
+		toActive.Render(arrowR) +
+		bright.Render(labels[active]) +
+		toNeighbor.Render(arrowR) +
+		recessed.Render(firstRune(labels[(active+1)%n])) + // next wraps
+		capEnd.Render(capRight)
 }
 
 func firstRune(s string) string {
