@@ -44,9 +44,42 @@ func loadPreview(it fileItem, parent string) previewModel {
 		return previewModel{note: "(unreadable)"}
 	}
 	if isText(data) {
-		return previewModel{kind: previewText, lines: strings.Split(string(data), "\n")}
+		return previewModel{kind: previewText, lines: sanitizeLines(strings.Split(string(data), "\n"))}
 	}
 	return previewModel{kind: previewBinary, lines: hexDump(data)}
+}
+
+func sanitizeLines(lines []string) []string {
+	for i, l := range lines {
+		lines[i] = sanitizeLine(l)
+	}
+	return lines
+}
+
+// sanitizeLine makes a text line safe to draw: tabs → spaces, CR dropped, other
+// control bytes (incl. ESC — would otherwise corrupt the whole terminal) → space.
+// Capped so a pathological long line can't blow up width math.
+func sanitizeLine(s string) string {
+	const maxRunes = 2000
+	var b strings.Builder
+	n := 0
+	for _, r := range s {
+		if n >= maxRunes {
+			break
+		}
+		switch {
+		case r == '\t':
+			b.WriteString("    ")
+		case r == '\r':
+			continue
+		case r < 0x20 || r == 0x7f:
+			b.WriteByte(' ')
+		default:
+			b.WriteRune(r)
+		}
+		n++
+	}
+	return b.String()
 }
 
 // contentLines returns the preview's display lines (a note when empty/unreadable).

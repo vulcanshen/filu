@@ -168,7 +168,8 @@ func breadcrumb(p string) string {
 	return strings.Join(segs, " › ")
 }
 
-// truncate tail-clips to width w (middle-elision comes later).
+// truncate tail-clips s to display width w (wide-char aware), appending "…" when
+// clipped. Assumes s carries no ANSI (callers style after truncating).
 func truncate(s string, w int) string {
 	if w <= 0 {
 		return ""
@@ -176,9 +177,15 @@ func truncate(s string, w int) string {
 	if lipgloss.Width(s) <= w {
 		return s
 	}
-	r := []rune(s)
-	if len(r) > w-1 {
-		r = r[:w-1]
+	var b strings.Builder
+	width := 0
+	for _, r := range s {
+		rw := lipgloss.Width(string(r))
+		if width+rw > w-1 {
+			break
+		}
+		b.WriteRune(r)
+		width += rw
 	}
-	return string(r) + "…"
+	return b.String() + "…"
 }
