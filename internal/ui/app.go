@@ -18,11 +18,20 @@ const (
 	panelCarry                     // [4] carry bucket
 )
 
+// detailTab selects panel [3]'s active tab.
+type detailTab int
+
+const (
+	tabPreview detailTab = iota
+	tabInfo
+)
+
 // AppModel is filu's root model.
 type AppModel struct {
 	width   int
 	height  int
 	focus   panelID
+	detail  detailTab
 	list    listModel
 	preview previewModel
 	places  placesModel
@@ -67,6 +76,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.handleListKey(msg.String())
 			case panelPin:
 				m.handlePinKey(msg.String())
+			case panelDetail:
+				m.handleDetailKey(msg.String())
 			}
 		}
 	}
@@ -97,13 +108,21 @@ func (m *AppModel) handleListKey(key string) {
 	m.refreshPreview()
 }
 
+// handleDetailKey routes keys to panel [3] while it is focused (h/l swap tab).
+func (m *AppModel) handleDetailKey(key string) {
+	switch key {
+	case "h", "left", "l", "right":
+		if m.detail == tabPreview {
+			m.detail = tabInfo
+		} else {
+			m.detail = tabPreview
+		}
+	}
+}
+
 // refreshPreview reloads panel [3]'s preview for the current cursor item.
 func (m *AppModel) refreshPreview() {
-	var it fileItem
-	if m.list.cursor < len(m.list.items) {
-		it = m.list.items[m.list.cursor]
-	}
-	m.preview = loadPreview(it, m.list.dir)
+	m.preview = loadPreview(m.list.cursorItem(), m.list.dir)
 }
 
 // handlePinKey routes navigation keys to panel [1] while it is focused.
