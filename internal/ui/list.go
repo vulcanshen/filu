@@ -160,6 +160,8 @@ func (m listModel) view(w, rows int, focused bool) string {
 		cursorBg = userColor // unfocused: remembered position (lavender)
 	}
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
+	dimStyle := lipgloss.NewStyle().Foreground(dimColor)
+	dirStyle := lipgloss.NewStyle().Foreground(dirColor)
 
 	var b strings.Builder
 	b.WriteString(hdr + "\n")
@@ -171,8 +173,13 @@ func (m listModel) view(w, rows int, focused bool) string {
 			icon = iconDir
 		}
 		line := truncate(" "+icon+" "+it.name, w)
-		if i == m.cursor {
+		switch {
+		case i == m.cursor:
 			line = cursorStyle.Render(line)
+		case !focused:
+			line = dimStyle.Render(line) // unfocused panel: recede
+		case it.isDir:
+			line = dirStyle.Render(line) // focused dir: sky
 		}
 		b.WriteString(line)
 		if i < end-1 {

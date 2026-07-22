@@ -115,8 +115,12 @@ func treeLines(root string, maxDepth int) []string {
 			if it.isDir {
 				icon = iconDir
 			}
+			label := icon + " " + it.name
+			if it.isDir {
+				label = lipgloss.NewStyle().Foreground(dirColor).Render(label) // sky
+			}
 			if depth == 1 { // top level: a plain list, no branch guide
-				lines = append(lines, " "+icon+" "+it.name)
+				lines = append(lines, " "+label)
 				if it.isDir && depth < maxDepth {
 					walk(filepath.Join(dir, it.name), "  ", depth+1)
 				}
@@ -126,7 +130,7 @@ func treeLines(root string, maxDepth int) []string {
 			if i == len(items)-1 {
 				branch, ext = treeEnd, treeGap
 			}
-			lines = append(lines, prefix+branch+icon+" "+it.name)
+			lines = append(lines, prefix+branch+label)
 			if it.isDir && depth < maxDepth {
 				walk(filepath.Join(dir, it.name), prefix+ext, depth+1)
 			}
