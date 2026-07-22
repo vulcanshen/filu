@@ -28,11 +28,12 @@ func (m AppModel) View() string {
 
 	leftW, rightW := 22, 34
 	midW := w - leftW - rightW
-	if midW < 20 { // narrow: collapse side columns (zoom-less fallback for now)
+	if midW < 20 { // narrow: collapse side columns (real zoom comes later)
 		leftW, rightW, midW = 0, 0, w
 	}
 
-	list := m.panelBox(panelList, "[2] "+cwdBase(), midW, midH, "(檔案清單)")
+	listBody := m.list.view(midW-2, midH-3, m.focus == panelList)
+	list := m.panelBox(panelList, "[2] "+pathBase(m.list.dir), midW, midH, listBody)
 
 	middle := list
 	if leftW > 0 && rightW > 0 {
@@ -42,7 +43,7 @@ func (m AppModel) View() string {
 			m.panelBox(panelPin, "[1] pin", leftW, pinH, "Places\nPinned"),
 			m.panelBox(panelCarry, "[4] carry", leftW, midH-pinH, "empty"),
 		)
-		right := m.panelBox(panelDetail, "[3] Preview │ Info", rightW, midH, "(preview)")
+		right := m.panelBox(panelDetail, "[3] Preview|Info", rightW, midH, "(preview)")
 		middle = lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
 	}
 
@@ -57,7 +58,7 @@ func (m AppModel) panelBox(id panelID, title string, w, h int, body string) stri
 		border, color = lipgloss.DoubleBorder(), focusColor
 	}
 	titleLine := lipgloss.NewStyle().Foreground(color).Bold(focused).Render(title)
-	content := titleLine + "\n" + lipgloss.NewStyle().Foreground(dimColor).Render(body)
+	content := titleLine + "\n" + body
 	return lipgloss.NewStyle().
 		Border(border).
 		BorderForeground(color).
@@ -68,7 +69,7 @@ func (m AppModel) panelBox(id panelID, title string, w, h int, body string) stri
 
 func (m AppModel) headerBar(w int) string {
 	return lipgloss.NewStyle().Width(w).Foreground(pathColor).
-		Render(truncate(" "+breadcrumb(cwd()), w))
+		Render(truncate(" "+breadcrumb(m.list.dir), w))
 }
 
 func (m AppModel) footerBar(w int) string {
@@ -76,16 +77,8 @@ func (m AppModel) footerBar(w int) string {
 		Render(truncate(" Space 動作   ? 選單   Tab/1-4 切面板   q 離開", w))
 }
 
-func cwd() string {
-	d, err := os.Getwd()
-	if err != nil {
-		return "?"
-	}
-	return d
-}
-
-func cwdBase() string {
-	if b := filepath.Base(cwd()); b != "." && b != string(filepath.Separator) {
+func pathBase(p string) string {
+	if b := filepath.Base(p); b != "." && b != string(filepath.Separator) {
 		return b
 	}
 	return "/"
