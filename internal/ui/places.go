@@ -35,15 +35,15 @@ type placesModel struct {
 func newPlaces() placesModel {
 	var ps []place
 	if cwd, err := os.Getwd(); err == nil {
-		ps = append(ps, place{"Current Working Dir", cwd, iconCWD}) // startup dir, first
+		ps = append(ps, place{"CWD", cwd, iconCWD}) // startup dir, first
 	}
 	if home, err := os.UserHomeDir(); err == nil {
 		ps = append(ps, place{"Home", home, iconHome})
 	}
 	if t := trashDir(); t != "" && dirExists(t) {
-		ps = append(ps, place{"Recycle Bin", t, iconTrash})
+		ps = append(ps, place{"Trash", t, iconTrash})
 	}
-	ps = append(ps, place{"Root Dir", "/", iconRoot})
+	ps = append(ps, place{"RootDir", "/", iconRoot})
 	return placesModel{system: ps}
 }
 
@@ -111,7 +111,7 @@ func (m placesModel) view(w, rows int, focused bool) string {
 	idx := 0
 	render := func(ps []place) {
 		for _, p := range ps {
-			line := truncate(" "+p.icon+" "+p.label, w)
+			line := truncate(" "+p.icon+"  "+p.label, w)
 			if idx == m.cursor {
 				line = cur.Render(line)
 			}
