@@ -28,7 +28,7 @@ const (
 	tabMeta
 )
 
-// inputKind is the pending footer text input, if any.
+// inputKind selects what the input popup collects.
 type inputKind int
 
 const (
@@ -36,14 +36,6 @@ const (
 	inputRename
 	inputAdd
 )
-
-// inputState is a single-line input rendered in the footer (rename / add).
-type inputState struct {
-	kind   inputKind
-	prompt string
-	buffer string
-	target string // original name (rename)
-}
 
 // AppModel is filu's root model.
 type AppModel struct {
@@ -57,12 +49,12 @@ type AppModel struct {
 	preview       previewModel
 	places        placesModel
 	carry         carryModel
-	carryTab      int // panel [4] active tab: 0 carry / 1 progress / 2 history
-	input         inputState
+	carryTab      int          // panel [4] active tab: 0 carry / 1 progress / 2 history
 	spaceMenu     spaceMenu    // §A.1 contextual popup (kbu form)
 	zoom          panelID      // 0 = normal; else the panel expanded full-width
 	confirm       confirmPopup // yes/no popup (delete)
 	pendingDelete string       // path awaiting delete confirmation
+	inputPopup    inputPopup   // text prompt (rename / add)
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -72,7 +64,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup()}
+	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup()}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -95,15 +87,24 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 		m.spaceMenu.setSize(msg.Width)
 		m.confirm.setSize(msg.Width)
+		m.inputPopup.setSize(msg.Width)
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.confirm.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg))
 	case tea.KeyMsg:
-		if m.input.kind != inputNone {
-			m.handleInputKey(msg)
-			return m, nil
+		if m.inputPopup.isActive() { // text entry owns the keyboard while open
+			if !m.inputPopup.isInteractive() {
+				return m, nil
+			}
+			var ok bool
+			var cmd tea.Cmd
+			m.inputPopup, ok, cmd = m.inputPopup.update(msg)
+			if ok {
+				m.performInput()
+			}
+			return m, cmd
 		}
 		if m.confirm.isActive() { // modal: owns the keyboard while open
 			if !m.confirm.isInteractive() {
@@ -210,12 +211,12 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 			m.pendingDelete = filepath.Join(l.dir, it.name)
 			cmd = m.confirm.open("Move " + it.name + " to the trash?")
 		}
-	case "R": // rename cursor item (footer input)
+	case "R": // rename cursor item (input popup)
 		if it := l.cursorItem(); it.name != "" {
-			m.input = inputState{kind: inputRename, prompt: "Rename", buffer: it.name, target: it.name}
+			cmd = m.inputPopup.open(inputRename, "Rename", it.name, it.name)
 		}
-	case "a": // add file/dir — lazyvim style: trailing / = dir (footer input)
-		m.input = inputState{kind: inputAdd, prompt: "New (trailing / = dir)"}
+	case "a": // add file/dir — lazyvim style: trailing / = dir (input popup)
+		cmd = m.inputPopup.open(inputAdd, "New (trailing / = dir)", "", "")
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
 		m.toggleZoom(panelList)
 	}
@@ -404,29 +405,10 @@ func (m AppModel) previewWidth() int {
 	return 1
 }
 
-// handleInputKey feeds keystrokes to the footer text input.
-func (m *AppModel) handleInputKey(msg tea.KeyMsg) {
-	switch msg.Type {
-	case tea.KeyEsc:
-		m.input = inputState{}
-	case tea.KeyEnter:
-		m.commitInput()
-	case tea.KeyBackspace:
-		if r := []rune(m.input.buffer); len(r) > 0 {
-			m.input.buffer = string(r[:len(r)-1])
-		}
-	case tea.KeySpace:
-		m.input.buffer += " "
-	case tea.KeyRunes:
-		m.input.buffer += string(msg.Runes)
-	}
-}
-
-// commitInput performs the pending rename / add and closes the input.
-func (m *AppModel) commitInput() {
-	name := strings.TrimSpace(m.input.buffer)
-	kind, target := m.input.kind, m.input.target
-	m.input = inputState{}
+// performInput applies the committed input popup (rename / add) to the CWD.
+func (m *AppModel) performInput() {
+	name := strings.TrimSpace(m.inputPopup.buffer)
+	kind, target := m.inputPopup.kind, m.inputPopup.target
 	if name == "" {
 		return
 	}

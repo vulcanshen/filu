@@ -53,6 +53,9 @@ func (m AppModel) View() string {
 	if m.confirm.isActive() {
 		out = overlay.Composite(m.confirm.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.inputPopup.isActive() {
+		out = overlay.Composite(m.inputPopup.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	return out
 }
 
@@ -278,12 +281,8 @@ func (m AppModel) headerBar(w int) string {
 }
 
 func (m AppModel) footerBar(w int) string {
-	color, content := dimColor, " space menu   ? help   tab/1-4 panels   q quit"
-	if m.input.kind != inputNone {
-		color = focusColor
-		content = " " + m.input.prompt + ": " + m.input.buffer + "█"
-	}
-	return lipgloss.NewStyle().Width(w).Foreground(color).Render(truncate(content, w))
+	return lipgloss.NewStyle().Width(w).Foreground(dimColor).
+		Render(truncate(" space menu   ? help   tab/1-4 panels   q quit", w))
 }
 
 func pathBase(p string) string {
