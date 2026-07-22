@@ -23,6 +23,8 @@ var (
 	capRight = string(rune(0xe0b4)) // round-right — chip end
 	capHard  = string(rune(0xe0b0)) // hard right triangle — tab boundary
 	capThin  = string(rune(0xe0b1)) // thin chevron — inactive↔inactive divider
+	arrowL   = string(rune(0x2039)) // ‹ — more tabs before (carousel)
+	arrowR   = string(rune(0x203a)) // › — more tabs after (carousel)
 )
 
 const crustHex = "#11111b" // catppuccin crust — tab-bar recessed background
@@ -38,8 +40,8 @@ func (m AppModel) View() string {
 		return "terminal too small"
 	}
 
-	// left : middle : right = 1 : 2 : 2 (right absorbs rounding so they sum to w).
-	leftW, midW := w/5, w*2/5
+	// left : middle : right = 1 : 1 : 1 (right absorbs rounding so they sum to w).
+	leftW, midW := w/3, w/3
 	rightW := w - leftW - midW
 	if w < 72 { // too narrow for 3 columns; show just the list (real zoom comes later)
 		leftW, rightW, midW = 0, 0, w
@@ -54,7 +56,7 @@ func (m AppModel) View() string {
 		left := lipgloss.JoinVertical(
 			lipgloss.Left,
 			m.panelBox(panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
-			m.panelBox(panelCarry, m.carryTitle(leftW), leftW, midH-pinH, m.carryBody(leftW-2, (midH-pinH)-2)),
+			m.panelBox(panelCarry, m.carryTitle(), leftW, midH-pinH, m.carryBody(leftW-2, (midH-pinH)-2)),
 		)
 		right := m.panelBox(panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
 		middle = lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
@@ -77,15 +79,10 @@ func (m AppModel) listTitle(w int) string {
 	return singleChip("[2] "+pathBase(m.active().dir), focused)
 }
 
-// carryTitle renders panel [4]'s carry/progress/history tab bar (single-chip
-// fallback of the active tab if the bar would overflow).
-func (m AppModel) carryTitle(w int) string {
-	focused := m.focus == panelCarry
+// carryTitle renders panel [4]'s compact carry/progress/history carousel.
+func (m AppModel) carryTitle() string {
 	labels := []string{"carry", "progress", "history"}
-	if tb := tabBar("[4]", labels, m.carryTab, focused); lipgloss.Width(tb) <= w-2 {
-		return tb
-	}
-	return singleChip("[4] "+labels[m.carryTab], focused)
+	return carouselChip("[4]", labels, m.carryTab, m.focus == panelCarry)
 }
 
 // carryBody renders panel [4]'s active tab.
