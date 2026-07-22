@@ -87,12 +87,17 @@ func (m AppModel) detailTitle(w int) string {
 	return singleChip("[3] "+labels[m.detail], focused)
 }
 
-// detailBody renders panel [3]'s active tab.
-func (m AppModel) detailBody(w, rows int) string {
+// detailLines returns the full content of panel [3]'s active tab.
+func (m AppModel) detailLines() []string {
 	if m.detail == tabInfo {
-		return renderLines(infoLines(m.active().cursorItem(), m.active().dir), w, rows)
+		return infoLines(m.active().cursorItem(), m.active().dir)
 	}
-	return m.preview.view(w, rows)
+	return m.preview.contentLines()
+}
+
+// detailBody renders panel [3]'s active tab from the scroll offset.
+func (m AppModel) detailBody(w, rows int) string {
+	return renderLinesFrom(m.detailLines(), m.detailScroll, w, rows)
 }
 
 // panelBox draws a bordered panel with the title embedded in the top border

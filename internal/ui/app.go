@@ -47,16 +47,17 @@ type inputState struct {
 
 // AppModel is filu's root model.
 type AppModel struct {
-	width   int
-	height  int
-	focus   panelID
-	detail  detailTab
-	tabs    [3]listModel // panel [2]'s fixed 3 directory tabs
-	tab     int          // active tab index
-	preview previewModel
-	places  placesModel
-	carry   carryModel
-	input   inputState
+	width        int
+	height       int
+	focus        panelID
+	detail       detailTab
+	detailScroll int          // panel [3] content scroll offset
+	tabs         [3]listModel // panel [2]'s fixed 3 directory tabs
+	tab          int          // active tab index
+	preview      previewModel
+	places       placesModel
+	carry        carryModel
+	input        inputState
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -177,7 +178,8 @@ func (m *AppModel) handleListKey(key string) {
 	m.refreshPreview()
 }
 
-// handleDetailKey routes keys to panel [3] while it is focused (h/l swap tab).
+// handleDetailKey routes keys to panel [3] while it is focused: h/l swap tab,
+// j/k/u/d/g/G scroll the content.
 func (m *AppModel) handleDetailKey(key string) {
 	switch key {
 	case "h", "left", "l", "right":
@@ -186,13 +188,34 @@ func (m *AppModel) handleDetailKey(key string) {
 		} else {
 			m.detail = tabPreview
 		}
+		m.detailScroll = 0
+	case "j", "down":
+		m.detailScroll++
+	case "k", "up":
+		m.detailScroll--
+	case "d", "ctrl+d":
+		m.detailScroll += m.listRows() / 2
+	case "u", "ctrl+u":
+		m.detailScroll -= m.listRows() / 2
+	case "g":
+		m.detailScroll = 0
+	case "G":
+		m.detailScroll = len(m.detailLines())
 	}
+	m.clampDetailScroll()
+}
+
+// clampDetailScroll keeps panel [3] from scrolling past its last page.
+func (m *AppModel) clampDetailScroll() {
+	maxScroll := max(len(m.detailLines())-m.listRows(), 0)
+	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
 }
 
 // refreshPreview reloads panel [3]'s preview for the current cursor item.
 func (m *AppModel) refreshPreview() {
 	l := m.cur()
 	m.preview = loadPreview(l.cursorItem(), l.dir)
+	m.detailScroll = 0 // new content — back to the top
 }
 
 // handleInputKey feeds keystrokes to the footer text input.

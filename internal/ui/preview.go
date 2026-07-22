@@ -49,11 +49,12 @@ func loadPreview(it fileItem, parent string) previewModel {
 	return previewModel{kind: previewBinary, lines: hexDump(data)}
 }
 
-func (p previewModel) view(w, rows int) string {
+// contentLines returns the preview's display lines (a note when empty/unreadable).
+func (p previewModel) contentLines() []string {
 	if p.kind == previewNone {
-		return lipgloss.NewStyle().Foreground(dimColor).Render(p.note)
+		return []string{lipgloss.NewStyle().Foreground(dimColor).Render(p.note)}
 	}
-	return renderLines(p.lines, w, rows)
+	return p.lines
 }
 
 // tree branch pieces (rune values so no box glyph sits in source).
@@ -115,16 +116,24 @@ func isText(data []byte) bool {
 	return utf8.Valid(data)
 }
 
-func renderLines(lines []string, w, rows int) string {
+// renderLinesFrom renders up to rows lines starting at offset, each clipped to w.
+func renderLinesFrom(lines []string, offset, w, rows int) string {
+	if offset < 0 {
+		offset = 0
+	}
+	end := min(offset+rows, len(lines))
 	var b strings.Builder
-	n := min(len(lines), rows)
-	for i := range n {
+	for i := offset; i < end; i++ {
 		b.WriteString(truncate(lines[i], w))
-		if i < n-1 {
+		if i < end-1 {
 			b.WriteByte('\n')
 		}
 	}
 	return b.String()
+}
+
+func renderLines(lines []string, w, rows int) string {
+	return renderLinesFrom(lines, 0, w, rows)
 }
 
 // hexDump renders data xxd-style: offset, 16 hex bytes, ASCII gutter.
