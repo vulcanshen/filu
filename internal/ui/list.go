@@ -39,24 +39,31 @@ func newList(dir string) listModel {
 }
 
 func (m *listModel) reload() {
-	m.items = nil
-	entries, err := os.ReadDir(m.dir)
+	m.items = readEntries(m.dir, m.showHidden)
+	m.clampCursor()
+}
+
+// readEntries lists a directory: directories first, alphabetical, dotfiles
+// hidden unless showHidden. Errors yield an empty slice for now.
+func readEntries(dir string, showHidden bool) []fileItem {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return // TODO: surface error (red '!' / toast) once those land
+		return nil
 	}
+	var items []fileItem
 	for _, e := range entries {
-		if !m.showHidden && strings.HasPrefix(e.Name(), ".") {
+		if !showHidden && strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
-		m.items = append(m.items, fileItem{name: e.Name(), isDir: e.IsDir()})
+		items = append(items, fileItem{name: e.Name(), isDir: e.IsDir()})
 	}
-	sort.Slice(m.items, func(i, j int) bool {
-		if m.items[i].isDir != m.items[j].isDir {
-			return m.items[i].isDir // directories first
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].isDir != items[j].isDir {
+			return items[i].isDir // directories first
 		}
-		return m.items[i].name < m.items[j].name
+		return items[i].name < items[j].name
 	})
-	m.clampCursor()
+	return items
 }
 
 func (m *listModel) clampCursor() {
