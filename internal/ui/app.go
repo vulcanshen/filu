@@ -59,6 +59,7 @@ type AppModel struct {
 	carry        carryModel
 	carryTab     int // panel [4] active tab: 0 carry / 1 progress / 2 history
 	input        inputState
+	spaceMenu    spaceMenu // §A.1 contextual popup (kbu form)
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -68,7 +69,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, places: newPlaces()}
+	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu()}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -89,17 +90,37 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
+		m.spaceMenu.setSize(msg.Width)
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
+	case AnimTickMsg:
+		return m, m.spaceMenu.handleTick(msg)
 	case tea.KeyMsg:
 		if m.input.kind != inputNone {
 			m.handleInputKey(msg)
 			return m, nil
 		}
+		if m.spaceMenu.isActive() { // popup owns the keyboard while open
+			if !m.spaceMenu.isInteractive() {
+				return m, nil // swallow keys mid-animation
+			}
+			var key string
+			var cmd tea.Cmd
+			m.spaceMenu, key, cmd = m.spaceMenu.update(msg)
+			if key != "" { // committed: fire on the focused panel, then close
+				m.dispatchFocusKey(key)
+				cmd = tea.Batch(cmd, m.spaceMenu.close())
+			}
+			return m, cmd
+		}
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case " ": // Space opens the contextual menu for the focused panel
+			items, title := m.buildSpaceMenu()
+			m.spaceMenu.setItems(items, title)
+			return m, m.spaceMenu.open()
 		case "tab":
 			m.focus = m.focus%4 + 1 // 1→2→3→4→1
 		case "shift+tab":
@@ -226,6 +247,63 @@ func (m *AppModel) handleCarryKey(key string) {
 	case "h", "left":
 		m.carryTab = (m.carryTab + 2) % 3
 	}
+}
+
+// dispatchFocusKey fires a Space-menu commit as if the letter were pressed on
+// the focused panel — the menu is a shell over the letter hotkeys.
+func (m *AppModel) dispatchFocusKey(key string) {
+	switch m.focus {
+	case panelList:
+		m.handleListKey(key)
+	case panelPin:
+		m.handlePinKey(key)
+	case panelDetail:
+		m.handleDetailKey(key)
+	case panelCarry:
+		m.handleCarryKey(key)
+	}
+}
+
+// buildSpaceMenu returns the contextual menu items + title for the focused
+// panel. Every implemented contextual letter hotkey appears here (ZLC §A.1
+// completeness); items are gated by what actually applies to the cursor state.
+func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
+	switch m.focus {
+	case panelList:
+		it := m.active().cursorItem()
+		title := "CWD"
+		if it.name != "" {
+			title = it.name
+		}
+		var items []menuItem
+		if it.name != "" {
+			items = append(items, menuItem{label: "Carry", key: "C", hint: "add to the carry bucket"})
+		}
+		if len(m.carry.items) > 0 {
+			items = append(items,
+				menuItem{label: "Copy here", key: "c", hint: "land carried items as copy"},
+				menuItem{label: "Move here", key: "x", hint: "land carried items as move"})
+		}
+		if it.name != "" {
+			items = append(items, menuItem{label: "Rename", key: "R", hint: "rename this item"})
+		}
+		items = append(items, menuItem{label: "Add", key: "A", hint: "new file / dir (trailing / = dir)"})
+		if it.name != "" {
+			items = append(items, menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
+		}
+		if it.isDir {
+			items = append(items, menuItem{label: "Pin", key: "P", hint: "pin dir into the sidebar"})
+		}
+		items = append(items, menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"})
+		return items, title
+	case panelPin:
+		return []menuItem{{label: "Jump", key: "enter", hint: "go to this place"}}, "Places"
+	case panelDetail:
+		return []menuItem{{label: "Tab", key: "l", hint: "switch Preview / Meta"}}, "Preview"
+	case panelCarry:
+		return []menuItem{{label: "Tab", key: "l", hint: "switch Carry / Progress / History"}}, "Bucket"
+	}
+	return nil, ""
 }
 
 // refreshPreview reloads panel [3]'s preview for the current cursor item.
