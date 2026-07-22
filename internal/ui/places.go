@@ -43,7 +43,7 @@ func newPlaces() placesModel {
 	if t := trashDir(); t != "" && dirExists(t) {
 		ps = append(ps, place{"Recycle Bin", t, iconTrash})
 	}
-	ps = append(ps, place{"Root", "/", iconRoot})
+	ps = append(ps, place{"Root Dir", "/", iconRoot})
 	return placesModel{system: ps}
 }
 
