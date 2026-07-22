@@ -181,10 +181,10 @@ func (m *AppModel) handleListKey(key string) {
 		if it := l.cursorItem(); it.name != "" {
 			m.carry.toggle(filepath.Join(l.dir, it.name))
 		}
-	case "c": // provisional: land carried items here as copy
+	case "p": // paste: land carried items here as copy
 		m.carry.land(l.dir, false)
 		l.reload()
-	case "x": // provisional: land carried items here as move
+	case "m": // move: land carried items here (move)
 		m.carry.land(l.dir, true)
 		l.reload()
 	case "P": // pin: toggle the cursor dir into [1] Pinned
@@ -203,7 +203,7 @@ func (m *AppModel) handleListKey(key string) {
 		if it := l.cursorItem(); it.name != "" {
 			m.input = inputState{kind: inputRename, prompt: "Rename", buffer: it.name, target: it.name}
 		}
-	case "A": // add file/dir — lazyvim style: trailing / = dir (footer input)
+	case "a": // add file/dir — lazyvim style: trailing / = dir (footer input)
 		m.input = inputState{kind: inputAdd, prompt: "New (trailing / = dir)"}
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
 		m.toggleZoom(panelList)
@@ -319,7 +319,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		var itemOps, panelOps []menuItem
 		if it.name != "" {
 			itemOps = append(itemOps,
-				menuItem{label: "Carry", key: "C", hint: "add to the carry bucket"},
+				menuItem{label: "Carry", key: "C", hint: `add to "carries" bucket`},
 				menuItem{label: "Rename", key: "R", hint: "rename this item"},
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
 		}
@@ -328,11 +328,11 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		if len(m.carry.items) > 0 {
 			panelOps = append(panelOps,
-				menuItem{label: "Copy here", key: "c", hint: "land carried items as copy"},
-				menuItem{label: "Move here", key: "x", hint: "land carried items as move"})
+				menuItem{label: "Paste here", key: "p", hint: "land carried items as copy"},
+				menuItem{label: "Move here", key: "m", hint: "land carried items as move"})
 		}
 		panelOps = append(panelOps,
-			menuItem{label: "Add", key: "A", hint: "new file / dir (trailing / = dir)"},
+			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
 			menuItem{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"})
 		return groupedMenu(itemOps, panelOps), title
