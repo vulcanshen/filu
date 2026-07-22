@@ -12,6 +12,7 @@ import (
 var (
 	colDir    = lipgloss.Color("#89b4fa") // directory (accent)
 	colLink   = lipgloss.Color("#89b4fa") // symlink (accent)
+	colExec   = lipgloss.Color("#a6e3a1") // green (executable)
 	colNormal = lipgloss.Color("#cdd6f4") // text / document
 	ezaImage  = lipgloss.Color("#f9e2af") // yellow
 	ezaVideo  = lipgloss.Color("#f38ba8") // red
@@ -55,7 +56,10 @@ func fileColor(it fileItem) lipgloss.Color {
 	}
 	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(it.name), "."))
 	if c, ok := extColor[ext]; ok {
-		return c
+		return c // a known extension is more specific than the exec bit
+	}
+	if it.isExec {
+		return colExec
 	}
 	return colNormal
 }
