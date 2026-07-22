@@ -9,12 +9,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Nerd Font icons (rune values so no PUA glyph sits in source).
+// Nerd Font icons (rune values so no PUA glyph sits in source). RootDir's glyph
+// is the OS logo and lives in osroot_{darwin,linux}.go.
 var (
-	iconHome = string(rune(0xf015))  // nf-fa-home
-	iconCWD  = string(rune(0xf450))  // nf-oct-file-directory
-	iconRoot = string(rune(0xf0fdf)) // nf-md server/disk
-	iconPin  = string(rune(0xf005))  // nf-fa-star
+	iconHome = string(rune(0xf015)) // nf-fa-home
+	iconCWD  = string(rune(0xf450)) // nf-oct-file-directory
+	iconPin  = string(rune(0xf005)) // nf-fa-star
 )
 
 type place struct {
@@ -39,7 +39,7 @@ func newPlaces() placesModel {
 	if home, err := os.UserHomeDir(); err == nil {
 		ps = append(ps, place{"Home", home, iconHome})
 	}
-	ps = append(ps, place{"RootDir", "/", iconRoot})
+	ps = append(ps, place{"RootDir", "/", osRootGlyph})
 	return placesModel{system: ps}
 }
 
