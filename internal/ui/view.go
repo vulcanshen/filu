@@ -69,18 +69,21 @@ func (m AppModel) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), middle, m.footerBar(w))
 }
 
-// listTitle renders panel [2]'s directory-tab bar, falling back to a single
-// chip of the active tab if the bar would overflow the panel width.
+// listTitle renders panel [2]'s fixed 3-tab bar. The tabs are always shown; when
+// the bar would overflow the column we shrink the per-tab labels rather than
+// collapsing to a single chip (the 3 tabs are a fixed part of the design).
 func (m AppModel) listTitle(w int) string {
 	focused := m.focus == panelList
 	labels := make([]string, len(m.tabs))
-	for i, t := range m.tabs {
-		labels[i] = truncate(pathBase(t.dir), 10)
+	for maxLen := 10; ; maxLen-- {
+		for i, t := range m.tabs {
+			labels[i] = truncate(pathBase(t.dir), maxLen)
+		}
+		tb := tabBar("[2]", labels, m.tab, focused)
+		if maxLen == 1 || lipgloss.Width(tb) <= w-2 {
+			return tb
+		}
 	}
-	if tb := tabBar("[2]", labels, m.tab, focused); lipgloss.Width(tb) <= w-2 {
-		return tb
-	}
-	return singleChip("[2] "+pathBase(m.active().dir), focused)
 }
 
 // carryTitle renders panel [4]'s compact carousel (active tab + next initial).
