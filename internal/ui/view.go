@@ -46,8 +46,12 @@ func (m AppModel) View() string {
 	}
 
 	out := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), m.middleView(w, midH), m.footerBar(w))
-	if m.spaceMenu.isActive() { // Compose-don't-Replace: overlay onto the canvas
+	// Compose-don't-Replace: overlay popups onto the canvas (last = on top).
+	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.confirm.isActive() {
+		out = overlay.Composite(m.confirm.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	return out
 }

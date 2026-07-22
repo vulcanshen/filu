@@ -166,19 +166,12 @@ func bracketHotkey(label, key string) string {
 // "[K]label   hint", cursor row reverse-highlighted.
 func (m spaceMenu) renderFull() string {
 	bc := popupLayerColor(1)
-	bStyle := lipgloss.NewStyle().Foreground(bc)
-	tStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)
 	hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f849c"))
-	headerStyle := hintStyle
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
 
 	title := " " + m.title
 	hint := " j/k move   Space close "
 
-	maxInnerW := 40
-	if m.screenW > 0 {
-		maxInnerW = max(m.screenW*85/100, 40)
-	}
 	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
 	for _, it := range m.items {
 		labelW := lipgloss.Width(bracketHotkey(it.label, it.key))
@@ -187,17 +180,17 @@ func (m spaceMenu) renderFull() string {
 			innerW = w
 		}
 	}
-	innerW = min(innerW, maxInnerW)
+	innerW = min(innerW, maxInnerWidth(m.screenW))
 
 	const gutter = "  "
 	var rows []string
 	for i, it := range m.items {
 		switch {
 		case it.header:
-			rows = append(rows, " "+gutter+headerStyle.Render(it.label))
+			rows = append(rows, " "+gutter+hintStyle.Render(it.label))
 			continue
 		case it.separator:
-			rows = append(rows, bStyle.Render(strings.Repeat("─", innerW)))
+			rows = append(rows, lipgloss.NewStyle().Foreground(bc).Render(strings.Repeat("─", innerW)))
 			continue
 		}
 		labelDisplay := bracketHotkey(it.label, it.key)
@@ -210,19 +203,5 @@ func (m spaceMenu) renderFull() string {
 		}
 		rows = append(rows, " "+gutter+labelDisplay+gap+hintStyle.Render(it.hint)+strings.Repeat(" ", padW))
 	}
-
-	var b strings.Builder
-	dashesTop := max(0, innerW-1-lipgloss.Width(title))
-	b.WriteString(bStyle.Render("╭─") + tStyle.Render(title) + bStyle.Render(strings.Repeat("─", dashesTop)+"╮") + "\n")
-	left, right := bStyle.Render("│"), bStyle.Render("│")
-	padRow := left + strings.Repeat(" ", innerW) + right + "\n"
-	b.WriteString(padRow)
-	for _, line := range rows {
-		pad := max(0, innerW-lipgloss.Width(line))
-		b.WriteString(left + line + strings.Repeat(" ", pad) + right + "\n")
-	}
-	b.WriteString(padRow)
-	dashesBot := max(0, innerW-lipgloss.Width(hint)-1)
-	b.WriteString(bStyle.Render("╰─") + tStyle.Render(hint) + bStyle.Render(strings.Repeat("─", dashesBot)+"╯"))
-	return b.String()
+	return drawPopupBox(bc, title, hint, rows, innerW)
 }

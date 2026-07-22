@@ -1,0 +1,38 @@
+package ui
+
+import (
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
+
+// drawPopupBox renders the shared rounded popup box (kbu form): title embedded in
+// the top border, hint in the bottom border, pre-styled rows between two padding
+// rows. rows must already be clipped to innerW by the caller.
+func drawPopupBox(bc lipgloss.Color, title, hint string, rows []string, innerW int) string {
+	bStyle := lipgloss.NewStyle().Foreground(bc)
+	tStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)
+
+	var b strings.Builder
+	dashesTop := max(0, innerW-1-lipgloss.Width(title))
+	b.WriteString(bStyle.Render("╭─") + tStyle.Render(title) + bStyle.Render(strings.Repeat("─", dashesTop)+"╮") + "\n")
+	left, right := bStyle.Render("│"), bStyle.Render("│")
+	padRow := left + strings.Repeat(" ", innerW) + right + "\n"
+	b.WriteString(padRow)
+	for _, line := range rows {
+		pad := max(0, innerW-lipgloss.Width(line))
+		b.WriteString(left + line + strings.Repeat(" ", pad) + right + "\n")
+	}
+	b.WriteString(padRow)
+	dashesBot := max(0, innerW-lipgloss.Width(hint)-1)
+	b.WriteString(bStyle.Render("╰─") + tStyle.Render(hint) + bStyle.Render(strings.Repeat("─", dashesBot)+"╯"))
+	return b.String()
+}
+
+// maxInnerWidth caps a popup's inner width at 85% of the screen (min 40).
+func maxInnerWidth(screenW int) int {
+	if screenW <= 0 {
+		return 40
+	}
+	return max(screenW*85/100, 40)
+}
