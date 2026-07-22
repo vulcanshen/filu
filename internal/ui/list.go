@@ -25,10 +25,11 @@ type fileItem struct {
 // listModel is panel [2]: the CWD file list. Hidden files are dropped by
 // default (the '.' toggle comes later).
 type listModel struct {
-	dir    string
-	items  []fileItem
-	cursor int
-	offset int
+	dir        string
+	items      []fileItem
+	cursor     int
+	offset     int
+	showHidden bool
 }
 
 func newList(dir string) listModel {
@@ -44,7 +45,7 @@ func (m *listModel) reload() {
 		return // TODO: surface error (red '!' / toast) once those land
 	}
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".") {
+		if !m.showHidden && strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
 		m.items = append(m.items, fileItem{name: e.Name(), isDir: e.IsDir()})
