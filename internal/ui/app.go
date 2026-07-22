@@ -207,7 +207,7 @@ func (m *AppModel) handleListKey(key string) {
 		}
 	case "A": // add file/dir — lazyvim style: trailing / = dir (footer input)
 		m.input = inputState{kind: inputAdd, prompt: "New (trailing / = dir)"}
-	case "z": // zoom panel [2]: fill with p2 + p3
+	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
 		m.toggleZoom(panelList)
 	}
 	m.cur().ensureVisible(m.listRows())
@@ -315,7 +315,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		panelOps = append(panelOps,
 			menuItem{label: "Add", key: "A", hint: "new file / dir (trailing / = dir)"},
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
-			menuItem{label: "Zoom", key: "z", hint: "hide [1]/[4], fill with [2]+[3]"})
+			menuItem{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"})
 		return groupedMenu(itemOps, panelOps), title
 	case panelPin:
 		items := []menuItem{{label: "Jump", key: "enter", hint: "go to this place"}}
