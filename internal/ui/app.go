@@ -57,6 +57,7 @@ type AppModel struct {
 	preview      previewModel
 	places       placesModel
 	carry        carryModel
+	carryTab     int // panel [4] active tab: 0 carry / 1 progress / 2 history
 	input        inputState
 }
 
@@ -115,6 +116,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.handlePinKey(msg.String())
 			case panelDetail:
 				m.handleDetailKey(msg.String())
+			case panelCarry:
+				m.handleCarryKey(msg.String())
 			}
 		}
 	}
@@ -209,6 +212,16 @@ func (m *AppModel) handleDetailKey(key string) {
 func (m *AppModel) clampDetailScroll() {
 	maxScroll := max(len(m.detailLines())-m.listRows(), 0)
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
+}
+
+// handleCarryKey routes keys to panel [4] while it is focused (h/l swap tab).
+func (m *AppModel) handleCarryKey(key string) {
+	switch key {
+	case "l", "right":
+		m.carryTab = (m.carryTab + 1) % 3
+	case "h", "left":
+		m.carryTab = (m.carryTab + 2) % 3
+	}
 }
 
 // refreshPreview reloads panel [3]'s preview for the current cursor item.

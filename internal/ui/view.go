@@ -54,7 +54,7 @@ func (m AppModel) View() string {
 		left := lipgloss.JoinVertical(
 			lipgloss.Left,
 			m.panelBox(panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
-			m.panelBox(panelCarry, singleChip("[4] carry", m.focus == panelCarry), leftW, midH-pinH, m.carry.view(leftW-2, (midH-pinH)-2, m.focus == panelCarry)),
+			m.panelBox(panelCarry, m.carryTitle(leftW), leftW, midH-pinH, m.carryBody(leftW-2, (midH-pinH)-2)),
 		)
 		right := m.panelBox(panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
 		middle = lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
@@ -75,6 +75,29 @@ func (m AppModel) listTitle(w int) string {
 		return tb
 	}
 	return singleChip("[2] "+pathBase(m.active().dir), focused)
+}
+
+// carryTitle renders panel [4]'s carry/progress/history tab bar (single-chip
+// fallback of the active tab if the bar would overflow).
+func (m AppModel) carryTitle(w int) string {
+	focused := m.focus == panelCarry
+	labels := []string{"carry", "progress", "history"}
+	if tb := tabBar("[4]", labels, m.carryTab, focused); lipgloss.Width(tb) <= w-2 {
+		return tb
+	}
+	return singleChip("[4] "+labels[m.carryTab], focused)
+}
+
+// carryBody renders panel [4]'s active tab.
+func (m AppModel) carryBody(w, rows int) string {
+	switch m.carryTab {
+	case 1: // progress — async land is future work
+		return lipgloss.NewStyle().Foreground(dimColor).Render("(no active tasks)")
+	case 2: // history
+		return m.carry.historyView(w, rows)
+	default: // carry
+		return m.carry.view(w, rows, m.focus == panelCarry)
+	}
 }
 
 // detailTitle renders panel [3]'s Preview/Info tab bar.
