@@ -138,6 +138,11 @@ func (m *AppModel) handleListKey(key string) {
 	case ".": // toggle hidden files in this tab
 		l.showHidden = !l.showHidden
 		l.reload()
+	case "D": // delete: move cursor item to the system trash
+		if it := l.cursorItem(); it.name != "" {
+			_ = moveToTrash(filepath.Join(l.dir, it.name))
+			l.reload()
+		}
 	}
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
