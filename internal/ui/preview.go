@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -48,9 +49,23 @@ func loadPreview(it fileItem, parent string) previewModel {
 		if hl, ok := highlight(it.name, strings.Join(lines, "\n")); ok {
 			lines = hl
 		}
-		return previewModel{kind: previewText, lines: lines}
+		return previewModel{kind: previewText, lines: withLineNumbers(lines)}
 	}
 	return previewModel{kind: previewBinary, lines: hexDump(data)}
+}
+
+// withLineNumbers prefixes each text-preview line with a dim, right-aligned
+// gutter ("  1 │ …") numbered by source line. The gutter carries its own reset,
+// so the highlighted content that follows keeps its colour.
+func withLineNumbers(lines []string) []string {
+	width := max(len(strconv.Itoa(len(lines))), 2)
+	sep := " " + string(rune(0x2502)) + " " // " │ "
+	gutter := lipgloss.NewStyle().Foreground(dimColor)
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = gutter.Render(fmt.Sprintf("%*d", width, i+1)+sep) + l
+	}
+	return out
 }
 
 func sanitizeLines(lines []string) []string {
