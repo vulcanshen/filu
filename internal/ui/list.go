@@ -72,6 +72,13 @@ func (m *listModel) move(delta int) {
 	m.clampCursor()
 }
 
+func (m listModel) cursorItem() fileItem {
+	if m.cursor >= 0 && m.cursor < len(m.items) {
+		return m.items[m.cursor]
+	}
+	return fileItem{}
+}
+
 // enter descends into the cursor directory. Opening files goes through the OS
 // later; for now a file is a no-op.
 func (m *listModel) enter() {

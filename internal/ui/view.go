@@ -43,11 +43,27 @@ func (m AppModel) View() string {
 			m.panelBox(panelPin, "[1] pin", leftW, pinH, m.places.view(leftW-2, pinH-3, m.focus == panelPin)),
 			m.panelBox(panelCarry, "[4] carry", leftW, midH-pinH, "empty"),
 		)
-		right := m.panelBox(panelDetail, "[3] Preview|Info", rightW, midH, m.preview.view(rightW-2, midH-3))
+		right := m.panelBox(panelDetail, m.detailTitle(), rightW, midH, m.detailBody(rightW-2, midH-3))
 		middle = lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), middle, m.footerBar(w))
+}
+
+// detailTitle marks panel [3]'s active tab with brackets.
+func (m AppModel) detailTitle() string {
+	if m.detail == tabInfo {
+		return "[3] Preview [Info]"
+	}
+	return "[3] [Preview] Info"
+}
+
+// detailBody renders panel [3]'s active tab.
+func (m AppModel) detailBody(w, rows int) string {
+	if m.detail == tabInfo {
+		return renderLines(infoLines(m.list.cursorItem(), m.list.dir), w, rows)
+	}
+	return m.preview.view(w, rows)
 }
 
 // panelBox renders one bordered panel; focused = double border + blue, else rounded + dim.
