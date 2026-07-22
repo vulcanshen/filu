@@ -104,10 +104,10 @@ func (m AppModel) carryBody(w, rows int) string {
 	}
 }
 
-// detailTitle renders panel [3]'s Preview/Info tab bar.
+// detailTitle renders panel [3]'s Preview/Meta tab bar.
 func (m AppModel) detailTitle(w int) string {
 	focused := m.focus == panelDetail
-	labels := []string{"Preview", "Info"}
+	labels := []string{"Preview", "Meta"}
 	if tb := tabBar("[3]", labels, int(m.detail), focused); lipgloss.Width(tb) <= w-2 {
 		return tb
 	}
@@ -116,8 +116,8 @@ func (m AppModel) detailTitle(w int) string {
 
 // detailLines returns the full content of panel [3]'s active tab.
 func (m AppModel) detailLines() []string {
-	if m.detail == tabInfo {
-		return infoLines(m.active().cursorItem(), m.active().dir)
+	if m.detail == tabMeta {
+		return metaLines(m.active().cursorItem(), m.active().dir)
 	}
 	return m.preview.contentLines()
 }
