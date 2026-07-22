@@ -23,8 +23,12 @@ func singleChip(title string, focused bool) string {
 	return cap.Render(capLeft) + chip.Render(title+" ") + cap.Render(capRight)
 }
 
-// carouselChip is a compact panel title for narrow columns: [N] and the active
-// label as one bright chip, a hard cap, then the NEXT tab's initial (recessed).
+// carouselChip is filu's narrow-panel tab strategy: when a tabbed panel is too
+// thin to show a full starship tab bar, collapse it to [N] + the active label as
+// one bright chip, a hard cap, then just the NEXT tab's initial (recessed) — a
+// carousel hint that more tabs exist without spending the width to name them.
+// Panels prefer the full tabBar and only reach for this on overflow (see
+// listTitle / carryTitle). Kept as the reference implementation of the pattern.
 func carouselChip(num string, labels []string, active int, focused bool) string {
 	bc := borderColor(focused)
 	crust := lipgloss.Color(crustHex)

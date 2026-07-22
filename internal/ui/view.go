@@ -101,7 +101,7 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	top := lipgloss.JoinHorizontal(lipgloss.Top, pin, list)
 
 	carryW := leftW + midW
-	carry := m.panelBox(m.focus == panelCarry, m.carryTitle(), carryW, botH, m.carryBody(carryW-2, botH-2))
+	carry := m.panelBox(m.focus == panelCarry, m.carryTitle(carryW), carryW, botH, m.carryBody(carryW-2, botH-2))
 
 	leftRegion := lipgloss.JoinVertical(lipgloss.Left, top, carry)
 	detail := m.panelBox(m.focus == panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
@@ -158,10 +158,16 @@ func (m AppModel) listTitle(w int) string {
 	}
 }
 
-// carryTitle renders panel [4]'s compact carousel (active tab + next initial).
-func (m AppModel) carryTitle() string {
+// carryTitle renders panel [4]'s tab bar. Like panel [2] it prefers the full
+// starship tab bar and only falls back to the compact carousel when the panel is
+// too narrow to fit it — see carouselChip for that narrow-panel tab strategy.
+func (m AppModel) carryTitle(w int) string {
+	focused := m.focus == panelCarry
 	labels := []string{"Carry", "Progress", "History"}
-	return carouselChip("[4]", labels, m.carryTab, m.focus == panelCarry)
+	if tb := tabBar("[4]", labels, m.carryTab, focused); lipgloss.Width(tb) <= w-2 {
+		return tb
+	}
+	return carouselChip("[4]", labels, m.carryTab, focused)
 }
 
 // carryBody renders panel [4]'s active tab.
