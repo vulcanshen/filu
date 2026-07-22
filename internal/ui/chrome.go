@@ -36,8 +36,8 @@ func carouselChip(num string, labels []string, active int, focused bool) string 
 	capEnd := lipgloss.NewStyle().Foreground(crust)                          // round-right closing a crust segment
 	bright := lipgloss.NewStyle().Foreground(base).Background(bc).Bold(true) // [N] + active tab
 	recessed := lipgloss.NewStyle().Foreground(bc).Background(crust)         // neighbour initials
-	toActive := lipgloss.NewStyle().Foreground(crust).Background(bc)         // › recessed → bright
-	toNeighbor := lipgloss.NewStyle().Foreground(bc).Background(crust)       // › bright → recessed
+	toActive := lipgloss.NewStyle().Foreground(bc).Background(crust)         // › on the crust (prev) side
+	toNeighbor := lipgloss.NewStyle().Foreground(crust).Background(bc)       // › on the bright (active) side
 
 	return capOn.Render(capLeft) +
 		bright.Render(num+" ") +

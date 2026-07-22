@@ -72,7 +72,7 @@ func (m carryModel) view(w, rows int, _ bool) string {
 	}
 	lines := make([]string, len(m.items))
 	for i, p := range m.items {
-		lines[i] = truncate(iconFile+" "+filepath.Base(p), w)
+		lines[i] = truncate(" "+iconFile+"  "+filepath.Base(p), w)
 	}
 	return renderLines(lines, w, rows)
 }
