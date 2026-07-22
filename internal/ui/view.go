@@ -34,9 +34,10 @@ func (m AppModel) View() string {
 		return "terminal too small"
 	}
 
-	leftW, rightW := 22, 34
-	midW := w - leftW - rightW
-	if midW < 20 { // narrow: collapse side columns (real zoom comes later)
+	// left : middle : right = 1 : 2 : 2 (right absorbs rounding so they sum to w).
+	leftW, midW := w/5, w*2/5
+	rightW := w - leftW - midW
+	if w < 72 { // too narrow for 3 columns; show just the list (real zoom comes later)
 		leftW, rightW, midW = 0, 0, w
 	}
 
