@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // kbu colour hierarchy (§2 / §B): three reserved tiers.
@@ -18,6 +19,8 @@ var (
 	handColor = lipgloss.Color("#bac2de") // subtext1: focused cursor ("current hand")
 	// neutral text.
 	dimColor = lipgloss.Color("#6c7086") // overlay0: section headers / dim text
+	// content type (focused panel only).
+	dirColor = lipgloss.Color("#89dceb") // sky: directories
 	// popup layer scale (lavenphire25→sapphire) comes when popups land.
 )
 
@@ -156,8 +159,9 @@ func (m AppModel) panelBox(id panelID, title string, w, h int, body string) stri
 }
 
 func (m AppModel) headerBar(w int) string {
+	glyph := string(rune(0xf07c)) // nf-fa-folder-open
 	return lipgloss.NewStyle().Width(w).Foreground(userColor).
-		Render(truncate(" "+breadcrumb(m.active().dir), w))
+		Render(truncate(" "+glyph+" "+shortPath(m.active().dir), w))
 }
 
 func (m AppModel) footerBar(w int) string {
@@ -176,38 +180,18 @@ func pathBase(p string) string {
 	return "/"
 }
 
-// breadcrumb turns a path into "~ › a › b › c" (home folded to ~).
-func breadcrumb(p string) string {
+// shortPath folds the home dir to ~ (keeps normal / separators).
+func shortPath(p string) string {
 	if home, err := os.UserHomeDir(); err == nil && strings.HasPrefix(p, home) {
-		p = "~" + strings.TrimPrefix(p, home)
+		return "~" + strings.TrimPrefix(p, home)
 	}
-	var segs []string
-	for s := range strings.SplitSeq(p, string(filepath.Separator)) {
-		if s != "" {
-			segs = append(segs, s)
-		}
-	}
-	return strings.Join(segs, " › ")
+	return p
 }
 
-// truncate tail-clips s to display width w (wide-char aware), appending "…" when
-// clipped. Assumes s carries no ANSI (callers style after truncating).
+// truncate clips s to display width w (ANSI- and wide-char-aware), adding "…".
 func truncate(s string, w int) string {
 	if w <= 0 {
 		return ""
 	}
-	if lipgloss.Width(s) <= w {
-		return s
-	}
-	var b strings.Builder
-	width := 0
-	for _, r := range s {
-		rw := lipgloss.Width(string(r))
-		if width+rw > w-1 {
-			break
-		}
-		b.WriteRune(r)
-		width += rw
-	}
-	return b.String() + "…"
+	return ansi.Truncate(s, w, "…")
 }

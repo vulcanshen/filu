@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestTreeLines(t *testing.T) {
@@ -14,6 +16,9 @@ func TestTreeLines(t *testing.T) {
 	mustWrite(t, filepath.Join(dir, "top.txt"))
 
 	lines := treeLines(dir, 3)
+	for i := range lines {
+		lines[i] = ansi.Strip(lines[i]) // drop dir colour for structural asserts
+	}
 	joined := strings.Join(lines, "\n")
 
 	for _, want := range []string{"a", "b", "f.txt", "top.txt"} {
