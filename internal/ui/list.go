@@ -20,8 +20,9 @@ var (
 )
 
 type fileItem struct {
-	name  string
-	isDir bool
+	name   string
+	isDir  bool
+	isLink bool
 }
 
 // listModel is panel [2]: the CWD file list. Hidden files are dropped by
@@ -59,7 +60,11 @@ func readEntries(dir string, showHidden bool) ([]fileItem, error) {
 		if !showHidden && strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
-		items = append(items, fileItem{name: e.Name(), isDir: e.IsDir()})
+		items = append(items, fileItem{
+			name:   e.Name(),
+			isDir:  e.IsDir(),
+			isLink: e.Type()&os.ModeSymlink != 0,
+		})
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].isDir != items[j].isDir {
@@ -161,7 +166,6 @@ func (m listModel) view(w, rows int, focused bool) string {
 	}
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
 	dimStyle := lipgloss.NewStyle().Foreground(dimColor)
-	dirStyle := lipgloss.NewStyle().Foreground(dirColor)
 
 	var b strings.Builder
 	b.WriteString(hdr + "\n")
@@ -178,8 +182,8 @@ func (m listModel) view(w, rows int, focused bool) string {
 			line = cursorStyle.Render(line)
 		case !focused:
 			line = dimStyle.Render(line) // unfocused panel: recede
-		case it.isDir:
-			line = dirStyle.Render(line) // focused dir: sky
+		default:
+			line = lipgloss.NewStyle().Foreground(fileColor(it)).Render(line) // eza type colour
 		}
 		b.WriteString(line)
 		if i < end-1 {
