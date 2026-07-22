@@ -44,6 +44,11 @@ func loadPreview(it fileItem, parent string) previewModel {
 	if lines, ok := archiveTree(full, it.name); ok {
 		return previewModel{kind: previewArchive, lines: lines}
 	}
+	if strings.HasSuffix(strings.ToLower(it.name), ".pdf") {
+		if text, pages, ok := pdfText(full); ok {
+			return previewModel{kind: previewText, lines: pdfLines(text, pages)}
+		}
+	}
 	data, err := readCapped(full, previewCap)
 	if err != nil {
 		return previewModel{note: "(unreadable)"}
