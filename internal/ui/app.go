@@ -126,19 +126,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spaceMenu.setItems(items, title)
 			return m, m.spaceMenu.open()
 		case "tab":
-			m.focus = m.focus%4 + 1 // 1→2→3→4→1
-			m.zoom = 0
+			m.setFocus(m.focus%4 + 1) // 1→2→3→4→1
 		case "shift+tab":
-			m.focus = (m.focus+2)%4 + 1 // 1→4→3→2→1
-			m.zoom = 0
+			m.setFocus((m.focus+2)%4 + 1) // 1→4→3→2→1
 		case "1":
-			m.focus, m.zoom = panelPin, 0
+			m.setFocus(panelPin)
 		case "2":
-			m.focus, m.zoom = panelList, 0
+			m.setFocus(panelList)
 		case "3":
-			m.focus, m.zoom = panelDetail, 0
+			m.setFocus(panelDetail)
 		case "4":
-			m.focus, m.zoom = panelCarry, 0
+			m.setFocus(panelCarry)
 		default:
 			switch m.focus {
 			case panelList:
@@ -261,14 +259,35 @@ func (m *AppModel) handleCarryKey(key string) {
 	}
 }
 
-// toggleZoom expands panel p full-width (hiding the others), or restores the
-// normal layout when p is already zoomed.
+// toggleZoom expands panel p (hiding the others), or restores the normal layout
+// when p is already zoomed.
 func (m *AppModel) toggleZoom(p panelID) {
 	if m.zoom == p {
 		m.zoom = 0
 		return
 	}
 	m.zoom = p
+}
+
+// setFocus moves focus to p, exiting zoom only when p isn't part of the current
+// zoom layout. [2]-zoom shows [2]+[4], so 2/4 switch focus without un-zooming.
+func (m *AppModel) setFocus(p panelID) {
+	if !m.zoomVisible(p) {
+		m.zoom = 0
+	}
+	m.focus = p
+}
+
+// zoomVisible reports whether panel p appears in the current zoom layout.
+func (m AppModel) zoomVisible(p panelID) bool {
+	switch m.zoom {
+	case 0:
+		return true // normal layout: everything is visible
+	case panelList:
+		return p == panelList || p == panelCarry // [2]-zoom stacks [2] over [4]
+	default:
+		return p == m.zoom // [3]/[4]-zoom show only that panel
+	}
 }
 
 // dispatchFocusKey fires a Space-menu commit as if the letter were pressed on
@@ -465,11 +484,12 @@ func (m *AppModel) syncPlaceToList() {
 	}
 }
 
-// listPanelHeight is panel [2]'s box height for the current layout: full when
-// zoomed or in the narrow list-only fallback, otherwise the grid's top 2/3.
+// listPanelHeight is panel [2]'s box height: full in the narrow list-only
+// fallback, otherwise the top 2/3 (both the normal grid and [2]-zoom put [2] over
+// [4] at 2/3 : 1/3).
 func (m AppModel) listPanelHeight() int {
 	midH := m.height - 2
-	if m.zoom == panelList || m.width < 72 {
+	if m.width < 72 {
 		return midH
 	}
 	return midH * 2 / 3
