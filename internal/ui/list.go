@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,6 +29,7 @@ type fileItem struct {
 type listModel struct {
 	dir        string
 	items      []fileItem
+	err        error // last read error (permission denied, etc.)
 	cursor     int
 	offset     int
 	showHidden bool
@@ -39,16 +42,17 @@ func newList(dir string) listModel {
 }
 
 func (m *listModel) reload() {
-	m.items = readEntries(m.dir, m.showHidden)
+	m.items, m.err = readEntries(m.dir, m.showHidden)
 	m.clampCursor()
 }
 
 // readEntries lists a directory: directories first, alphabetical, dotfiles
-// hidden unless showHidden. Errors yield an empty slice for now.
-func readEntries(dir string, showHidden bool) []fileItem {
+// hidden unless showHidden. The error (e.g. permission denied) is returned so
+// callers can distinguish "empty" from "unreadable".
+func readEntries(dir string, showHidden bool) ([]fileItem, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	var items []fileItem
 	for _, e := range entries {
@@ -63,7 +67,19 @@ func readEntries(dir string, showHidden bool) []fileItem {
 		}
 		return items[i].name < items[j].name
 	})
-	return items
+	return items, nil
+}
+
+// friendlyErr turns a read error into a short label.
+func friendlyErr(err error) string {
+	switch {
+	case errors.Is(err, fs.ErrPermission):
+		return "permission denied"
+	case errors.Is(err, fs.ErrNotExist):
+		return "not found"
+	default:
+		return "unreadable"
+	}
 }
 
 func (m *listModel) clampCursor() {
@@ -131,7 +147,11 @@ func (m *listModel) ensureVisible(rows int) {
 
 func (m listModel) view(w, rows int, focused bool) string {
 	if len(m.items) == 0 {
-		return lipgloss.NewStyle().Foreground(dimColor).Render("(empty)")
+		msg := "(empty)"
+		if m.err != nil {
+			msg = "(" + friendlyErr(m.err) + ")"
+		}
+		return lipgloss.NewStyle().Foreground(dimColor).Render(msg)
 	}
 	cursorBg := focusColor
 	if !focused {
