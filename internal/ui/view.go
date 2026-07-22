@@ -23,8 +23,8 @@ var (
 	capRight = string(rune(0xe0b4)) // round-right — chip end
 	capHard  = string(rune(0xe0b0)) // hard right triangle — tab boundary
 	capThin  = string(rune(0xe0b1)) // thin chevron — inactive↔inactive divider
-	arrowL   = string(rune(0x2039)) // ‹ — more tabs before (carousel)
-	arrowR   = string(rune(0x203a)) // › — more tabs after (carousel)
+	arrowL   = string(rune(0xe0b3)) // powerline thin chevron ‹ — more tabs before
+	arrowR   = string(rune(0xe0b1)) // powerline thin chevron › — more tabs after (same as panel 2)
 )
 
 const crustHex = "#11111b" // catppuccin crust — tab-bar recessed background
