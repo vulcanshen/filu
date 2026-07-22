@@ -78,9 +78,9 @@ func (m AppModel) listTitle(w int) string {
 	return singleChip("[2] "+pathBase(m.active().dir), focused)
 }
 
-// carryTitle renders panel [4]'s compact carry/progress/history carousel.
+// carryTitle renders panel [4]'s compact carousel (active tab + next initial).
 func (m AppModel) carryTitle() string {
-	labels := []string{"carry", "progress", "history"}
+	labels := []string{"Carry", "Progress", "History"}
 	return carouselChip("[4]", labels, m.carryTab, m.focus == panelCarry)
 }
 

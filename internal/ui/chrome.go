@@ -23,9 +23,8 @@ func singleChip(title string, focused bool) string {
 	return cap.Render(capLeft) + chip.Render(title+" ") + cap.Render(capRight)
 }
 
-// carouselChip is a compact single-tab title: [N] plus the active label in full,
-// flanked by the neighbouring tabs' first letters separated by a › chevron
-// (first tab has no left neighbour, last tab no right). For narrow columns.
+// carouselChip is a compact panel title for narrow columns: [N] and the active
+// label as one bright chip, a hard cap, then the NEXT tab's initial (recessed).
 func carouselChip(num string, labels []string, active int, focused bool) string {
 	bc := borderColor(focused)
 	crust := lipgloss.Color(crustHex)
@@ -37,14 +36,9 @@ func carouselChip(num string, labels []string, active int, focused bool) string 
 	bright := lipgloss.NewStyle().Foreground(base).Background(bc).Bold(true) // [N] + active tab
 	recessed := lipgloss.NewStyle().Foreground(bc).Background(crust)         // neighbour initials
 	brToRe := lipgloss.NewStyle().Foreground(bc).Background(crust)           // hard cap bright -> recessed
-	reToBr := lipgloss.NewStyle().Foreground(crust).Background(bc)           // hard cap recessed -> bright
 
 	return capOn.Render(capLeft) +
-		bright.Render(num) +
-		brToRe.Render(capHard) +
-		recessed.Render(firstRune(labels[(active-1+n)%n])) + // prev wraps
-		reToBr.Render(capHard) +
-		bright.Render(labels[active]) +
+		bright.Render(num+" "+labels[active]) +
 		brToRe.Render(capHard) +
 		recessed.Render(firstRune(labels[(active+1)%n])) + // next wraps
 		capDark.Render(capRight)
