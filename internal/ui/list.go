@@ -155,12 +155,11 @@ func (m listModel) view(w, rows int, focused bool) string {
 		}
 		return hdr + "\n" + lipgloss.NewStyle().Foreground(dimColor).Render(msg)
 	}
-	cursorBg := focusColor
+	cursorBg := handColor // focused: current hand (subtext1)
 	if !focused {
-		cursorBg = dimColor
+		cursorBg = userColor // unfocused: remembered position (lavender)
 	}
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
-	dirStyle := lipgloss.NewStyle().Foreground(focusColor)
 
 	var b strings.Builder
 	b.WriteString(hdr + "\n")
@@ -172,11 +171,8 @@ func (m listModel) view(w, rows int, focused bool) string {
 			icon = iconDir
 		}
 		line := truncate(" "+icon+" "+it.name, w)
-		switch {
-		case i == m.cursor:
+		if i == m.cursor {
 			line = cursorStyle.Render(line)
-		case it.isDir:
-			line = dirStyle.Render(line)
 		}
 		b.WriteString(line)
 		if i < end-1 {

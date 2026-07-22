@@ -92,19 +92,21 @@ func (m *placesModel) togglePin(path string) {
 
 func (m placesModel) view(w, rows int, focused bool) string {
 	hdr := lipgloss.NewStyle().Foreground(dimColor)
-	cursorBg := focusColor
+	cursorBg := handColor // focused: current hand (subtext1)
 	if !focused {
-		cursorBg = dimColor
+		cursorBg = userColor // unfocused: remembered position (lavender)
 	}
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
 
 	var lines []string
 	idx := 0
-	render := func(ps []place) {
+	render := func(ps []place, fg lipgloss.Style) {
 		for _, p := range ps {
 			line := truncate(" "+p.icon+"  "+p.label, w)
 			if idx == m.cursor {
 				line = cur.Render(line)
+			} else {
+				line = fg.Render(line)
 			}
 			lines = append(lines, line)
 			idx++
@@ -113,10 +115,10 @@ func (m placesModel) view(w, rows int, focused bool) string {
 
 	if len(m.pinned) > 0 { // pinned on top, only when it has items
 		lines = append(lines, hdr.Render("Pinned"))
-		render(m.pinned)
+		render(m.pinned, lipgloss.NewStyle().Foreground(userColor)) // user footprint
 	}
 	lines = append(lines, hdr.Render("Local"))
-	render(m.system)
+	render(m.system, lipgloss.NewStyle()) // neutral
 
 	if len(lines) > rows {
 		lines = lines[:rows]
