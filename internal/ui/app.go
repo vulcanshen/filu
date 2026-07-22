@@ -197,9 +197,9 @@ func (m *AppModel) handleDetailKey(key string) {
 	case "k", "up":
 		m.detailScroll--
 	case "d", "ctrl+d":
-		m.detailScroll += m.listRows() / 2
+		m.detailScroll += m.detailRows() / 2
 	case "u", "ctrl+u":
-		m.detailScroll -= m.listRows() / 2
+		m.detailScroll -= m.detailRows() / 2
 	case "g":
 		m.detailScroll = 0
 	case "G":
@@ -210,7 +210,7 @@ func (m *AppModel) handleDetailKey(key string) {
 
 // clampDetailScroll keeps panel [3] from scrolling past its last page.
 func (m *AppModel) clampDetailScroll() {
-	maxScroll := max(len(m.detailLines())-m.listRows(), 0)
+	maxScroll := max(len(m.detailLines())-m.detailRows(), 0)
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
 }
 
@@ -319,8 +319,16 @@ func (m *AppModel) syncPlaceToList() {
 }
 
 // listRows is how many file rows panel [2] can show:
-// height − header(1) − footer(1) − top/bottom border(2). Title is on the border.
+// height − header(1) − footer(1) − top/bottom border(2) − top padding(1).
 func (m AppModel) listRows() int {
+	if r := m.height - 5; r > 0 {
+		return r
+	}
+	return 1
+}
+
+// detailRows is panel [3]'s visible content rows (no top padding there).
+func (m AppModel) detailRows() int {
 	if r := m.height - 4; r > 0 {
 		return r
 	}
