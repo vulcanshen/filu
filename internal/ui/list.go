@@ -23,6 +23,7 @@ type fileItem struct {
 	name   string
 	isDir  bool
 	isLink bool
+	isExec bool
 }
 
 // listModel is panel [2]: the CWD file list. Hidden files are dropped by
@@ -60,11 +61,17 @@ func readEntries(dir string, showHidden bool) ([]fileItem, error) {
 		if !showHidden && strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
-		items = append(items, fileItem{
+		it := fileItem{
 			name:   e.Name(),
 			isDir:  e.IsDir(),
 			isLink: e.Type()&os.ModeSymlink != 0,
-		})
+		}
+		if !it.isDir && !it.isLink { // exec bit needs a stat; skip dirs/links
+			if info, err := e.Info(); err == nil {
+				it.isExec = info.Mode()&0o111 != 0
+			}
+		}
+		items = append(items, it)
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].isDir != items[j].isDir {
