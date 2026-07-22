@@ -146,12 +146,13 @@ func (m *listModel) ensureVisible(rows int) {
 }
 
 func (m listModel) view(w, rows int, focused bool) string {
+	rows-- // reserve one row of top padding
 	if len(m.items) == 0 {
 		msg := "(empty)"
 		if m.err != nil {
 			msg = "(" + friendlyErr(m.err) + ")"
 		}
-		return lipgloss.NewStyle().Foreground(dimColor).Render(msg)
+		return "\n" + lipgloss.NewStyle().Foreground(dimColor).Render(msg)
 	}
 	cursorBg := focusColor
 	if !focused {
@@ -161,6 +162,7 @@ func (m listModel) view(w, rows int, focused bool) string {
 	dirStyle := lipgloss.NewStyle().Foreground(focusColor)
 
 	var b strings.Builder
+	b.WriteString("\n") // top padding
 	end := min(m.offset+rows, len(m.items))
 	for i := m.offset; i < end; i++ {
 		it := m.items[i]
@@ -168,7 +170,7 @@ func (m listModel) view(w, rows int, focused bool) string {
 		if it.isDir {
 			icon = iconDir
 		}
-		line := truncate(" "+icon+"  "+it.name, w)
+		line := truncate(" "+icon+" "+it.name, w)
 		switch {
 		case i == m.cursor:
 			line = cursorStyle.Render(line)
