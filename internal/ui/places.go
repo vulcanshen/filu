@@ -79,6 +79,22 @@ func (m placesModel) current() (place, bool) {
 	return place{}, false
 }
 
+// currentIsPinned reports whether the cursor sits on a pinned entry (pinned
+// entries come first in all()).
+func (m placesModel) currentIsPinned() bool {
+	return m.cursor >= 0 && m.cursor < len(m.pinned)
+}
+
+// unpin removes path from the pinned list if present.
+func (m *placesModel) unpin(path string) {
+	for i, p := range m.pinned {
+		if p.path == path {
+			m.pinned = append(m.pinned[:i], m.pinned[i+1:]...)
+			return
+		}
+	}
+}
+
 // togglePin adds or removes a pinned directory.
 func (m *placesModel) togglePin(path string) {
 	for i, p := range m.pinned {

@@ -45,33 +45,73 @@ func (m AppModel) View() string {
 		return "terminal too small"
 	}
 
-	// left : middle : right = 1 : 1 : 1 (right absorbs rounding so they sum to w).
-	leftW, midW := w/3, w/3
-	rightW := w - leftW - midW
-	if w < 72 { // too narrow for 3 columns; show just the list (real zoom comes later)
-		leftW, rightW, midW = 0, 0, w
-	}
-
-	listBody := m.active().view(midW-2, midH-2, m.focus == panelList)
-	list := m.panelBox(panelList, m.listTitle(midW), midW, midH, listBody)
-
-	middle := list
-	if leftW > 0 && rightW > 0 {
-		pinH := midH * 2 / 3
-		left := lipgloss.JoinVertical(
-			lipgloss.Left,
-			m.panelBox(panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
-			m.panelBox(panelCarry, m.carryTitle(), leftW, midH-pinH, m.carryBody(leftW-2, (midH-pinH)-2)),
-		)
-		right := m.panelBox(panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
-		middle = lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
-	}
-
-	out := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), middle, m.footerBar(w))
+	out := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), m.middleView(w, midH), m.footerBar(w))
 	if m.spaceMenu.isActive() { // Compose-don't-Replace: overlay onto the canvas
 		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	return out
+}
+
+// middleView builds the panel region, honouring the zoom state.
+func (m AppModel) middleView(w, midH int) string {
+	switch m.zoom {
+	case panelList:
+		return m.zoomListView(w, midH)
+	case panelDetail:
+		return m.zoomDetailView(w, midH)
+	case panelCarry:
+		return m.zoomCarryView(w, midH)
+	default:
+		return m.normalMiddle(w, midH)
+	}
+}
+
+// normalMiddle is the default 1:1:1 layout: [1|4] left column, [2] list, [3] detail.
+func (m AppModel) normalMiddle(w, midH int) string {
+	leftW, midW := w/3, w/3
+	rightW := w - leftW - midW
+	list := m.panelBox(panelList, m.listTitle(midW), midW, midH, m.active().view(midW-2, midH-2, m.focus == panelList))
+	if w < 72 { // too narrow for 3 columns; the list alone (Space menu Zoom is the escape hatch)
+		return m.panelBox(panelList, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, m.focus == panelList))
+	}
+	pinH := midH * 2 / 3
+	left := lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.panelBox(panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
+		m.panelBox(panelCarry, m.carryTitle(), leftW, midH-pinH, m.carryBody(leftW-2, (midH-pinH)-2)),
+	)
+	right := m.panelBox(panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
+	return lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
+}
+
+// zoomListView (panel [2] zoom): hide [1] and [4]; [2] and [3] split 1:1.
+func (m AppModel) zoomListView(w, midH int) string {
+	leftW := w / 2
+	rightW := w - leftW
+	list := m.panelBox(panelList, m.listTitle(leftW), leftW, midH, m.active().view(leftW-2, midH-2, m.focus == panelList))
+	detail := m.panelBox(panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
+	return lipgloss.JoinHorizontal(lipgloss.Top, list, detail)
+}
+
+// zoomDetailView (panel [3] zoom): full-width, the two tabs become 1:1 panels.
+func (m AppModel) zoomDetailView(w, midH int) string {
+	leftW := w / 2
+	rightW := w - leftW
+	preview := m.panelBox(panelDetail, singleChip("Preview", true), leftW, midH,
+		renderLinesFrom(m.preview.contentLines(), m.detailScroll, leftW-2, midH-2))
+	meta := m.panelBox(panelDetail, singleChip("Meta", true), rightW, midH,
+		renderLinesFrom(metaLines(m.active().cursorItem(), m.active().dir), 0, rightW-2, midH-2))
+	return lipgloss.JoinHorizontal(lipgloss.Top, preview, meta)
+}
+
+// zoomCarryView (panel [4] zoom): full-width, the three tabs become 1:1:1 panels.
+func (m AppModel) zoomCarryView(w, midH int) string {
+	w1, w2 := w/3, w/3
+	w3 := w - w1 - w2
+	carry := m.panelBox(panelCarry, singleChip("Carry", true), w1, midH, m.carry.view(w1-2, midH-2, true))
+	progress := m.panelBox(panelCarry, singleChip("Progress", true), w2, midH, centeredNote(w2-2, midH-2, "(no active tasks)"))
+	history := m.panelBox(panelCarry, singleChip("History", true), w3, midH, m.carry.historyView(w3-2, midH-2))
+	return lipgloss.JoinHorizontal(lipgloss.Top, carry, progress, history)
 }
 
 // listTitle renders panel [2]'s fixed 3-tab bar. The tabs are always shown; when

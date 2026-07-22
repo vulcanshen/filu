@@ -61,15 +61,65 @@ func TestBuildSpaceMenuList(t *testing.T) {
 		t.Errorf("title = %q, want foo.txt", title)
 	}
 	keys := map[string]bool{}
+	headers := map[string]bool{}
 	for _, it := range items {
+		if it.header {
+			headers[it.label] = true
+			continue
+		}
 		keys[it.key] = true
 	}
-	for _, k := range []string{"C", "R", "A", "D", "."} {
+	for _, k := range []string{"C", "R", "A", "D", ".", "z"} {
 		if !keys[k] {
 			t.Errorf("panel [2] menu missing hotkey %q", k)
 		}
 	}
 	if keys["P"] {
 		t.Error("Pin should be hidden for a non-dir cursor item")
+	}
+	if !headers["item operation"] || !headers["panel operation"] {
+		t.Errorf("panel [2] menu should label both regions: %v", headers)
+	}
+}
+
+func TestGroupedMenu(t *testing.T) {
+	itemOps := []menuItem{{label: "Carry", key: "C"}}
+	panelOps := []menuItem{{label: "Zoom", key: "z"}}
+
+	both := groupedMenu(itemOps, panelOps)
+	if !both[0].header || both[0].label != "item operation" {
+		t.Errorf("grouped menu should open with the item-operation header: %+v", both[0])
+	}
+	sawSep, sawPanelHdr := false, false
+	for _, it := range both {
+		sawSep = sawSep || it.separator
+		sawPanelHdr = sawPanelHdr || (it.header && it.label == "panel operation")
+	}
+	if !sawSep || !sawPanelHdr {
+		t.Error("two-region menu needs a separator and a panel-operation header")
+	}
+
+	flat := groupedMenu(nil, panelOps)
+	for _, it := range flat {
+		if it.header || it.separator {
+			t.Errorf("single-region menu should stay flat: %+v", it)
+		}
+	}
+}
+
+func TestToggleZoom(t *testing.T) {
+	var m AppModel
+	m.toggleZoom(panelList)
+	if m.zoom != panelList {
+		t.Errorf("zoom = %v, want panelList", m.zoom)
+	}
+	m.toggleZoom(panelList) // same panel toggles off
+	if m.zoom != 0 {
+		t.Errorf("zoom = %v, want 0 after toggle off", m.zoom)
+	}
+	m.toggleZoom(panelDetail)
+	m.toggleZoom(panelCarry) // different panel switches target
+	if m.zoom != panelCarry {
+		t.Errorf("zoom = %v, want panelCarry", m.zoom)
 	}
 }

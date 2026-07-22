@@ -60,6 +60,7 @@ type AppModel struct {
 	carryTab     int // panel [4] active tab: 0 carry / 1 progress / 2 history
 	input        inputState
 	spaceMenu    spaceMenu // §A.1 contextual popup (kbu form)
+	zoom         panelID   // 0 = normal; else the panel expanded full-width
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -119,20 +120,25 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case " ": // Space opens the contextual menu for the focused panel
 			items, title := m.buildSpaceMenu()
+			if len(items) == 0 {
+				return m, nil // nothing contextual here
+			}
 			m.spaceMenu.setItems(items, title)
 			return m, m.spaceMenu.open()
 		case "tab":
 			m.focus = m.focus%4 + 1 // 1→2→3→4→1
+			m.zoom = 0
 		case "shift+tab":
 			m.focus = (m.focus+2)%4 + 1 // 1→4→3→2→1
+			m.zoom = 0
 		case "1":
-			m.focus = panelPin
+			m.focus, m.zoom = panelPin, 0
 		case "2":
-			m.focus = panelList
+			m.focus, m.zoom = panelList, 0
 		case "3":
-			m.focus = panelDetail
+			m.focus, m.zoom = panelDetail, 0
 		case "4":
-			m.focus = panelCarry
+			m.focus, m.zoom = panelCarry, 0
 		default:
 			switch m.focus {
 			case panelList:
@@ -201,6 +207,8 @@ func (m *AppModel) handleListKey(key string) {
 		}
 	case "A": // add file/dir — lazyvim style: trailing / = dir (footer input)
 		m.input = inputState{kind: inputAdd, prompt: "New (trailing / = dir)"}
+	case "z": // zoom panel [2]: fill with p2 + p3
+		m.toggleZoom(panelList)
 	}
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
@@ -229,6 +237,8 @@ func (m *AppModel) handleDetailKey(key string) {
 		m.detailScroll = 0
 	case "G":
 		m.detailScroll = len(m.detailLines())
+	case "z": // zoom panel [3]: full-width, Preview | Meta side by side
+		m.toggleZoom(panelDetail)
 	}
 	m.clampDetailScroll()
 }
@@ -246,7 +256,19 @@ func (m *AppModel) handleCarryKey(key string) {
 		m.carryTab = (m.carryTab + 1) % 3
 	case "h", "left":
 		m.carryTab = (m.carryTab + 2) % 3
+	case "z": // zoom panel [4]: full-width, Carry | Progress | History
+		m.toggleZoom(panelCarry)
 	}
+}
+
+// toggleZoom expands panel p full-width (hiding the others), or restores the
+// normal layout when p is already zoomed.
+func (m *AppModel) toggleZoom(p panelID) {
+	if m.zoom == p {
+		m.zoom = 0
+		return
+	}
+	m.zoom = p
 }
 
 // dispatchFocusKey fires a Space-menu commit as if the letter were pressed on
@@ -275,35 +297,60 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		if it.name != "" {
 			title = it.name
 		}
-		var items []menuItem
+		var itemOps, panelOps []menuItem
 		if it.name != "" {
-			items = append(items, menuItem{label: "Carry", key: "C", hint: "add to the carry bucket"})
+			itemOps = append(itemOps,
+				menuItem{label: "Carry", key: "C", hint: "add to the carry bucket"},
+				menuItem{label: "Rename", key: "R", hint: "rename this item"},
+				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
+		}
+		if it.isDir {
+			itemOps = append(itemOps, menuItem{label: "Pin", key: "P", hint: "pin dir into the sidebar"})
 		}
 		if len(m.carry.items) > 0 {
-			items = append(items,
+			panelOps = append(panelOps,
 				menuItem{label: "Copy here", key: "c", hint: "land carried items as copy"},
 				menuItem{label: "Move here", key: "x", hint: "land carried items as move"})
 		}
-		if it.name != "" {
-			items = append(items, menuItem{label: "Rename", key: "R", hint: "rename this item"})
-		}
-		items = append(items, menuItem{label: "Add", key: "A", hint: "new file / dir (trailing / = dir)"})
-		if it.name != "" {
-			items = append(items, menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
-		}
-		if it.isDir {
-			items = append(items, menuItem{label: "Pin", key: "P", hint: "pin dir into the sidebar"})
-		}
-		items = append(items, menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"})
-		return items, title
+		panelOps = append(panelOps,
+			menuItem{label: "Add", key: "A", hint: "new file / dir (trailing / = dir)"},
+			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
+			menuItem{label: "Zoom", key: "z", hint: "hide [1]/[4], fill with [2]+[3]"})
+		return groupedMenu(itemOps, panelOps), title
 	case panelPin:
-		return []menuItem{{label: "Jump", key: "enter", hint: "go to this place"}}, "Places"
+		items := []menuItem{{label: "Jump", key: "enter", hint: "go to this place"}}
+		if m.places.currentIsPinned() {
+			items = append(items, menuItem{label: "UnPin", key: "U", hint: "remove from Pinned"})
+		}
+		return items, "Places"
 	case panelDetail:
-		return []menuItem{{label: "Tab", key: "l", hint: "switch Preview / Meta"}}, "Preview"
+		return groupedMenu(nil, []menuItem{
+			{label: "Tab", key: "l", hint: "switch Preview / Meta"},
+			{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
+		}), "Preview"
 	case panelCarry:
-		return []menuItem{{label: "Tab", key: "l", hint: "switch Carry / Progress / History"}}, "Bucket"
+		return groupedMenu(nil, []menuItem{
+			{label: "Tab", key: "l", hint: "switch Carry / Progress / History"},
+			{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
+		}), "Bucket"
 	}
 	return nil, ""
+}
+
+// groupedMenu assembles a Space menu from item-level and panel-level actions.
+// With both groups present it labels each region (kbu's "item operation" /
+// "panel operation" headers, split by a rule); a single region stays flat and
+// header-less so the menu doesn't shout when there's nothing to disambiguate.
+func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
+	if len(itemOps) == 0 {
+		return panelOps
+	}
+	if len(panelOps) == 0 {
+		return itemOps
+	}
+	out := append([]menuItem{{header: true, label: "item operation"}}, itemOps...)
+	out = append(out, menuItem{separator: true}, menuItem{header: true, label: "panel operation"})
+	return append(out, panelOps...)
 }
 
 // refreshPreview reloads panel [3]'s preview for the current cursor item.
@@ -383,6 +430,14 @@ func (m *AppModel) handlePinKey(key string) {
 	case "enter":
 		if p, ok := m.places.current(); ok {
 			m.navigateTo(p.path)
+		}
+	case "U": // unpin the cursor place (only meaningful on a Pinned entry)
+		if m.places.currentIsPinned() {
+			if p, ok := m.places.current(); ok {
+				m.places.unpin(p.path)
+				m.places.move(0) // reclamp the cursor after the list shrank
+				m.syncPlaceToList()
+			}
 		}
 	}
 }
