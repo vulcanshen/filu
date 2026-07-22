@@ -465,9 +465,19 @@ func (m *AppModel) syncPlaceToList() {
 	}
 }
 
-// listRows: panel [2] file rows = height − header − footer − border(2) − Files header.
+// listPanelHeight is panel [2]'s box height for the current layout: full when
+// zoomed or in the narrow list-only fallback, otherwise the grid's top 2/3.
+func (m AppModel) listPanelHeight() int {
+	midH := m.height - 2
+	if m.zoom == panelList || m.width < 72 {
+		return midH
+	}
+	return midH * 2 / 3
+}
+
+// listRows: panel [2] file rows = box height − border(2) − Files header(1).
 func (m AppModel) listRows() int {
-	if r := m.height - 5; r > 0 {
+	if r := m.listPanelHeight() - 3; r > 0 {
 		return r
 	}
 	return 1

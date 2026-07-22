@@ -78,23 +78,34 @@ func (m AppModel) middleView(w, midH int) string {
 	}
 }
 
-// normalMiddle is the default 1:1:1 layout: [1|4] left column, [2] list, [3] detail.
+// normalMiddle is the default layout:
+//
+//	[1][2][3]
+//	[1][2][3]
+//	[4][4][3]
+//
+// [1] places + [2] list share the top 2/3; [4] carry spans their two columns
+// along the bottom 1/3; [3] detail is the full-height right column.
 func (m AppModel) normalMiddle(w, midH int) string {
 	leftW, midW := w/3, w/3
 	rightW := w - leftW - midW
 	listFocus := m.focus == panelList
-	list := m.panelBox(listFocus, m.listTitle(midW), midW, midH, m.active().view(midW-2, midH-2, listFocus))
-	if w < 72 { // too narrow for 3 columns; the list alone (Space menu Zoom is the escape hatch)
+	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
 		return m.panelBox(listFocus, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, listFocus))
 	}
-	pinH := midH * 2 / 3
-	left := lipgloss.JoinVertical(
-		lipgloss.Left,
-		m.panelBox(m.focus == panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
-		m.panelBox(m.focus == panelCarry, m.carryTitle(), leftW, midH-pinH, m.carryBody(leftW-2, (midH-pinH)-2)),
-	)
-	right := m.panelBox(m.focus == panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
-	return lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
+	topH := midH * 2 / 3
+	botH := midH - topH
+
+	pin := m.panelBox(m.focus == panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, topH, m.places.view(leftW-2, topH-2, m.focus == panelPin))
+	list := m.panelBox(listFocus, m.listTitle(midW), midW, topH, m.active().view(midW-2, topH-2, listFocus))
+	top := lipgloss.JoinHorizontal(lipgloss.Top, pin, list)
+
+	carryW := leftW + midW
+	carry := m.panelBox(m.focus == panelCarry, m.carryTitle(), carryW, botH, m.carryBody(carryW-2, botH-2))
+
+	leftRegion := lipgloss.JoinVertical(lipgloss.Left, top, carry)
+	detail := m.panelBox(m.focus == panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
+	return lipgloss.JoinHorizontal(lipgloss.Top, leftRegion, detail)
 }
 
 // zoomListView (panel [2] zoom): full-width, the three directory tabs become
