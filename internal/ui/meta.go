@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
-
-	"github.com/charmbracelet/lipgloss"
 )
 
 // osMeta holds the unix stat fields the Meta tab shows; osStat fills it per OS
@@ -45,12 +43,11 @@ func metaLines(it fileItem, parent string) []string {
 	}
 
 	var rows []string
-	label := lipgloss.NewStyle().Foreground(dimColor)
 	add := func(name, value string) {
 		if value == "" {
 			return
 		}
-		rows = append(rows, label.Render(fmt.Sprintf("%-9s", name))+value)
+		rows = append(rows, fmt.Sprintf("%-9s", name)+value)
 	}
 
 	add("Name", it.name)
