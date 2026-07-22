@@ -121,23 +121,28 @@ func (m AppModel) zoomListView(w, midH int) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, cols...)
 }
 
-// zoomDetailView (panel [3] zoom): full-width, the two tabs become 1:1 panels.
+// zoomDetailView (panel [3] zoom): full-width, the two tabs become 1:1 panels;
+// the active tab (m.detail) is the focused column.
 func (m AppModel) zoomDetailView(w, midH int) string {
 	leftW := w / 2
 	rightW := w - leftW
-	preview := m.panelBox(true, singleChip("Preview", true), leftW, midH,
+	pv := m.focus == panelDetail && m.detail == tabPreview
+	mt := m.focus == panelDetail && m.detail == tabMeta
+	preview := m.panelBox(pv, singleChip("Preview", pv), leftW, midH,
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, leftW-2, midH-2))
-	meta := m.panelBox(true, singleChip("Meta", true), rightW, midH,
+	meta := m.panelBox(mt, singleChip("Meta", mt), rightW, midH,
 		renderLinesFrom(metaLines(m.active().cursorItem(), m.active().dir), 0, rightW-2, midH-2))
 	return lipgloss.JoinHorizontal(lipgloss.Top, preview, meta)
 }
 
-// zoomCarryView (panel [4] zoom): full-width, the three tabs become 1:1:1 panels.
+// zoomCarryView (panel [4] zoom): full-width, the three tabs become 1:1:1
+// panels; the active tab (m.carryTab) is the focused column.
 func (m AppModel) zoomCarryView(w, midH int) string {
 	wd := splitN(w, 3)
-	carry := m.panelBox(true, singleChip("Carry", true), wd[0], midH, m.carry.view(wd[0]-2, midH-2, true))
-	progress := m.panelBox(true, singleChip("Progress", true), wd[1], midH, centeredNote(wd[1]-2, midH-2, "(no active tasks)"))
-	history := m.panelBox(true, singleChip("History", true), wd[2], midH, m.carry.historyView(wd[2]-2, midH-2))
+	foc := func(i int) bool { return m.focus == panelCarry && m.carryTab == i }
+	carry := m.panelBox(foc(0), singleChip("Carry", foc(0)), wd[0], midH, m.carry.view(wd[0]-2, midH-2, foc(0)))
+	progress := m.panelBox(foc(1), singleChip("Progress", foc(1)), wd[1], midH, centeredNote(wd[1]-2, midH-2, "(no active tasks)"))
+	history := m.panelBox(foc(2), singleChip("History", foc(2)), wd[2], midH, m.carry.historyView(wd[2]-2, midH-2))
 	return lipgloss.JoinHorizontal(lipgloss.Top, carry, progress, history)
 }
 
