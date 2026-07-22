@@ -168,7 +168,7 @@ func (m listModel) view(w, rows int, focused bool) string {
 		if it.isDir {
 			icon = iconDir
 		}
-		line := truncate(icon+" "+it.name, w)
+		line := truncate(" "+icon+"  "+it.name, w)
 		switch {
 		case i == m.cursor:
 			line = cursorStyle.Render(line)
