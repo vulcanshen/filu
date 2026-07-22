@@ -8,11 +8,19 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// kbu colour mindset: blue = structure/focus, overlay0 = unfocused, lavender = user footprint.
+// kbu colour mindset (§2 / §8.0): blue = structure/focus, surface2 = unfocused
+// chrome, overlay0 = dim body text, lavender = user footprint.
 var (
-	focusColor = lipgloss.Color("#89b4fa") // catppuccin blue
-	dimColor   = lipgloss.Color("#6c7086") // catppuccin overlay0
-	pathColor  = lipgloss.Color("#b4befe") // catppuccin lavender
+	focusColor = lipgloss.Color("#89b4fa") // catppuccin blue  (focused chrome)
+	borderDim  = lipgloss.Color("#585b70") // catppuccin surface2 (unfocused chrome)
+	dimColor   = lipgloss.Color("#6c7086") // catppuccin overlay0 (dim body text)
+	pathColor  = lipgloss.Color("#b4befe") // catppuccin lavender (user footprint)
+)
+
+// §8.1 powerline chip caps (rune values so no glyph sits in source).
+var (
+	capLeft  = string(rune(0xe0b6)) // powerline round-left
+	capRight = string(rune(0xe0b4)) // powerline round-right
 )
 
 func (m AppModel) View() string {
@@ -83,22 +91,25 @@ func (m AppModel) detailBody(w, rows int) string {
 // (kbu style). Focused = double border + blue, else rounded + dim.
 func (m AppModel) panelBox(id panelID, title string, w, h int, body string) string {
 	focused := m.focus == id
-	color := dimColor
+	color := borderDim
 	tl, tr, bl, br, hz, vt := "╭", "╮", "╰", "╯", "─", "│"
 	if focused {
 		color = focusColor
 		tl, tr, bl, br, hz, vt = "╔", "╗", "╚", "╝", "═", "║"
 	}
 	bs := lipgloss.NewStyle().Foreground(color)
-	ts := lipgloss.NewStyle().Foreground(color).Bold(focused)
 	inner := max(w-2, 1)
 
-	titleText := " " + title + " "
-	if lipgloss.Width(titleText) > inner-1 {
-		titleText = truncate(titleText, inner-1)
+	// §8.1 title chip: round-left cap + dark-on-border-colour body + round-right cap.
+	capS := lipgloss.NewStyle().Foreground(color)
+	chipS := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(color).Bold(true)
+	label := " " + title + " "
+	if lipgloss.Width(label)+2 > inner {
+		label = truncate(label, max(inner-2, 1))
 	}
-	fill := max(inner-1-lipgloss.Width(titleText), 0)
-	top := bs.Render(tl+hz) + ts.Render(titleText) + bs.Render(strings.Repeat(hz, fill)+tr)
+	chip := capS.Render(capLeft) + chipS.Render(label) + capS.Render(capRight)
+	fill := max(inner-lipgloss.Width(chip), 0)
+	top := bs.Render(tl) + chip + bs.Render(strings.Repeat(hz, fill)+tr)
 
 	bodyLines := strings.Split(body, "\n")
 	var b strings.Builder
