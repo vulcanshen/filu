@@ -17,11 +17,15 @@ var (
 	pathColor  = lipgloss.Color("#b4befe") // catppuccin lavender (user footprint)
 )
 
-// §8.1 powerline chip caps (rune values so no glyph sits in source).
+// §8.0/§8.2 powerline caps (rune values so no glyph sits in source).
 var (
-	capLeft  = string(rune(0xe0b6)) // powerline round-left
-	capRight = string(rune(0xe0b4)) // powerline round-right
+	capLeft  = string(rune(0xe0b6)) // round-left  — chip start
+	capRight = string(rune(0xe0b4)) // round-right — chip end
+	capHard  = string(rune(0xe0b0)) // hard right triangle — tab boundary
+	capThin  = string(rune(0xe0b1)) // thin chevron — inactive↔inactive divider
 )
+
+const crustHex = "#11111b" // catppuccin crust — tab-bar recessed background
 
 func (m AppModel) View() string {
 	if m.width == 0 || m.height == 0 {
@@ -42,42 +46,45 @@ func (m AppModel) View() string {
 	}
 
 	listBody := m.active().view(midW-2, midH-2, m.focus == panelList)
-	list := m.panelBox(panelList, m.listTitle(), midW, midH, listBody)
+	list := m.panelBox(panelList, m.listTitle(midW), midW, midH, listBody)
 
 	middle := list
 	if leftW > 0 && rightW > 0 {
 		pinH := midH * 2 / 3
 		left := lipgloss.JoinVertical(
 			lipgloss.Left,
-			m.panelBox(panelPin, "filu", leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
-			m.panelBox(panelCarry, "[4] carry", leftW, midH-pinH, m.carry.view(leftW-2, (midH-pinH)-2, m.focus == panelCarry)),
+			m.panelBox(panelPin, singleChip("filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
+			m.panelBox(panelCarry, singleChip("[4] carry", m.focus == panelCarry), leftW, midH-pinH, m.carry.view(leftW-2, (midH-pinH)-2, m.focus == panelCarry)),
 		)
-		right := m.panelBox(panelDetail, m.detailTitle(), rightW, midH, m.detailBody(rightW-2, midH-2))
+		right := m.panelBox(panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
 		middle = lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), middle, m.footerBar(w))
 }
 
-// listTitle renders panel [2]'s tab bar; the active tab is bracketed.
-func (m AppModel) listTitle() string {
-	parts := make([]string, len(m.tabs))
+// listTitle renders panel [2]'s directory-tab bar, falling back to a single
+// chip of the active tab if the bar would overflow the panel width.
+func (m AppModel) listTitle(w int) string {
+	focused := m.focus == panelList
+	labels := make([]string, len(m.tabs))
 	for i, t := range m.tabs {
-		b := pathBase(t.dir)
-		if i == m.tab {
-			b = "[" + b + "]"
-		}
-		parts[i] = b
+		labels[i] = truncate(pathBase(t.dir), 10)
 	}
-	return "[2] " + strings.Join(parts, " ")
+	if tb := tabBar("[2]", labels, m.tab, focused); lipgloss.Width(tb) <= w-2 {
+		return tb
+	}
+	return singleChip("[2] "+pathBase(m.active().dir), focused)
 }
 
-// detailTitle marks panel [3]'s active tab with brackets.
-func (m AppModel) detailTitle() string {
-	if m.detail == tabInfo {
-		return "[3] Preview [Info]"
+// detailTitle renders panel [3]'s Preview/Info tab bar.
+func (m AppModel) detailTitle(w int) string {
+	focused := m.focus == panelDetail
+	labels := []string{"Preview", "Info"}
+	if tb := tabBar("[3]", labels, int(m.detail), focused); lipgloss.Width(tb) <= w-2 {
+		return tb
 	}
-	return "[3] [Preview] Info"
+	return singleChip("[3] "+labels[m.detail], focused)
 }
 
 // detailBody renders panel [3]'s active tab.
@@ -100,17 +107,9 @@ func (m AppModel) panelBox(id panelID, title string, w, h int, body string) stri
 	}
 	bs := lipgloss.NewStyle().Foreground(color)
 	inner := max(w-2, 1)
-
-	// §8.1 title chip: round-left cap + dark-on-border-colour body + round-right cap.
-	capS := lipgloss.NewStyle().Foreground(color)
-	chipS := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(color).Bold(true)
-	label := " " + title + " "
-	if lipgloss.Width(label)+2 > inner {
-		label = truncate(label, max(inner-2, 1))
-	}
-	chip := capS.Render(capLeft) + chipS.Render(label) + capS.Render(capRight)
-	fill := max(inner-lipgloss.Width(chip), 0)
-	top := bs.Render(tl) + chip + bs.Render(strings.Repeat(hz, fill)+tr)
+	// title is pre-rendered chrome (singleChip / tabBar); place it on the top edge.
+	fill := max(inner-lipgloss.Width(title), 0)
+	top := bs.Render(tl) + title + bs.Render(strings.Repeat(hz, fill)+tr)
 
 	bodyLines := strings.Split(body, "\n")
 	var b strings.Builder
