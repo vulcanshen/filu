@@ -14,6 +14,7 @@ var (
 	iconHome  = string(rune(0xf015)) // nf-fa-home
 	iconTrash = string(rune(0xf1f8)) // nf-fa-trash
 	iconDisk  = string(rune(0xf0a0)) // nf-fa-hdd
+	iconPin   = string(rune(0xf005)) // nf-fa-star
 )
 
 type place struct {
@@ -22,10 +23,11 @@ type place struct {
 	icon  string
 }
 
-// placesModel is panel [1]: system Places (+ a Pinned region, empty for now).
-// Rows are nav targets — Enter jumps panel [2] there.
+// placesModel is panel [1]: system Places + user Pinned. Rows are nav targets —
+// Enter jumps panel [2] there. The cursor runs over system then pinned.
 type placesModel struct {
-	places []place
+	system []place
+	pinned []place
 	cursor int
 }
 
@@ -41,7 +43,7 @@ func newPlaces() placesModel {
 	if dirExists("/Volumes") {
 		ps = append(ps, place{"Volumes", "/Volumes", iconDisk})
 	}
-	return placesModel{places: ps}
+	return placesModel{system: ps}
 }
 
 // trashDir is the system trash location. TODO: move behind the platform
@@ -62,21 +64,38 @@ func dirExists(p string) bool {
 	return err == nil && info.IsDir()
 }
 
+func (m placesModel) all() []place {
+	out := make([]place, 0, len(m.system)+len(m.pinned))
+	return append(append(out, m.system...), m.pinned...)
+}
+
 func (m *placesModel) move(delta int) {
 	m.cursor += delta
 	if m.cursor < 0 {
 		m.cursor = 0
 	}
-	if m.cursor > len(m.places)-1 {
-		m.cursor = len(m.places) - 1
+	if n := len(m.all()); m.cursor > n-1 {
+		m.cursor = n - 1
 	}
 }
 
 func (m placesModel) current() (place, bool) {
-	if m.cursor >= 0 && m.cursor < len(m.places) {
-		return m.places[m.cursor], true
+	all := m.all()
+	if m.cursor >= 0 && m.cursor < len(all) {
+		return all[m.cursor], true
 	}
 	return place{}, false
+}
+
+// togglePin adds or removes a pinned directory.
+func (m *placesModel) togglePin(path string) {
+	for i, p := range m.pinned {
+		if p.path == path {
+			m.pinned = append(m.pinned[:i], m.pinned[i+1:]...)
+			return
+		}
+	}
+	m.pinned = append(m.pinned, place{label: filepath.Base(path), path: path, icon: iconPin})
 }
 
 func (m placesModel) view(w, rows int, focused bool) string {
@@ -87,15 +106,28 @@ func (m placesModel) view(w, rows int, focused bool) string {
 	}
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
 
-	lines := []string{hdr.Render("PLACES")}
-	for i, p := range m.places {
-		line := truncate(" "+p.icon+" "+p.label, w)
-		if i == m.cursor {
-			line = cur.Render(line)
+	var lines []string
+	idx := 0
+	render := func(ps []place) {
+		for _, p := range ps {
+			line := truncate(" "+p.icon+" "+p.label, w)
+			if idx == m.cursor {
+				line = cur.Render(line)
+			}
+			lines = append(lines, line)
+			idx++
 		}
-		lines = append(lines, line)
 	}
-	lines = append(lines, hdr.Render("PINNED"), hdr.Render(" (按 P 加入)"))
+
+	lines = append(lines, hdr.Render("PLACES"))
+	render(m.system)
+	lines = append(lines, hdr.Render("PINNED"))
+	if len(m.pinned) == 0 {
+		lines = append(lines, hdr.Render(" (按 P 加入)"))
+	} else {
+		render(m.pinned)
+	}
+
 	if len(lines) > rows {
 		lines = lines[:rows]
 	}

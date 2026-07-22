@@ -131,6 +131,13 @@ func (m *AppModel) handleListKey(key string) {
 	case "x": // provisional: land carried items here as move
 		m.carry.land(l.dir, true)
 		l.reload()
+	case "P": // pin: toggle the cursor dir into [1] Pinned
+		if it := l.cursorItem(); it.isDir {
+			m.places.togglePin(filepath.Join(l.dir, it.name))
+		}
+	case ".": // toggle hidden files in this tab
+		l.showHidden = !l.showHidden
+		l.reload()
 	}
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
