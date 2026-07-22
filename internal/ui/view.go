@@ -41,7 +41,7 @@ func (m AppModel) View() string {
 		left := lipgloss.JoinVertical(
 			lipgloss.Left,
 			m.panelBox(panelPin, "[1] pin", leftW, pinH, m.places.view(leftW-2, pinH-3, m.focus == panelPin)),
-			m.panelBox(panelCarry, "[4] carry", leftW, midH-pinH, "empty"),
+			m.panelBox(panelCarry, "[4] carry", leftW, midH-pinH, m.carry.view(leftW-2, (midH-pinH)-3, m.focus == panelCarry)),
 		)
 		right := m.panelBox(panelDetail, m.detailTitle(), rightW, midH, m.detailBody(rightW-2, midH-3))
 		middle = lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
