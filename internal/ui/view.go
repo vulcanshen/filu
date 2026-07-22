@@ -32,8 +32,8 @@ func (m AppModel) View() string {
 		leftW, rightW, midW = 0, 0, w
 	}
 
-	listBody := m.list.view(midW-2, midH-3, m.focus == panelList)
-	list := m.panelBox(panelList, "[2] "+pathBase(m.list.dir), midW, midH, listBody)
+	listBody := m.active().view(midW-2, midH-3, m.focus == panelList)
+	list := m.panelBox(panelList, m.listTitle(), midW, midH, listBody)
 
 	middle := list
 	if leftW > 0 && rightW > 0 {
@@ -50,6 +50,19 @@ func (m AppModel) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), middle, m.footerBar(w))
 }
 
+// listTitle renders panel [2]'s tab bar; the active tab is bracketed.
+func (m AppModel) listTitle() string {
+	parts := make([]string, len(m.tabs))
+	for i, t := range m.tabs {
+		b := pathBase(t.dir)
+		if i == m.tab {
+			b = "[" + b + "]"
+		}
+		parts[i] = b
+	}
+	return "[2] " + strings.Join(parts, " ")
+}
+
 // detailTitle marks panel [3]'s active tab with brackets.
 func (m AppModel) detailTitle() string {
 	if m.detail == tabInfo {
@@ -61,7 +74,7 @@ func (m AppModel) detailTitle() string {
 // detailBody renders panel [3]'s active tab.
 func (m AppModel) detailBody(w, rows int) string {
 	if m.detail == tabInfo {
-		return renderLines(infoLines(m.list.cursorItem(), m.list.dir), w, rows)
+		return renderLines(infoLines(m.active().cursorItem(), m.active().dir), w, rows)
 	}
 	return m.preview.view(w, rows)
 }
@@ -85,7 +98,7 @@ func (m AppModel) panelBox(id panelID, title string, w, h int, body string) stri
 
 func (m AppModel) headerBar(w int) string {
 	return lipgloss.NewStyle().Width(w).Foreground(pathColor).
-		Render(truncate(" "+breadcrumb(m.list.dir), w))
+		Render(truncate(" "+breadcrumb(m.active().dir), w))
 }
 
 func (m AppModel) footerBar(w int) string {
