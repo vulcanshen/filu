@@ -5,6 +5,7 @@ package ui
 
 import (
 	"os"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -36,6 +37,7 @@ type AppModel struct {
 	tab     int          // active tab index
 	preview previewModel
 	places  placesModel
+	carry   carryModel
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -119,6 +121,16 @@ func (m *AppModel) handleListKey(key string) {
 		m.tab = (m.tab + 1) % len(m.tabs)
 	case "h", "left":
 		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
+	case "C": // carry: toggle cursor item in the bucket
+		if it := l.cursorItem(); it.name != "" {
+			m.carry.toggle(filepath.Join(l.dir, it.name))
+		}
+	case "c": // provisional: land carried items here as copy
+		m.carry.land(l.dir, false)
+		l.reload()
+	case "x": // provisional: land carried items here as move
+		m.carry.land(l.dir, true)
+		l.reload()
 	}
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
