@@ -30,12 +30,10 @@ func carouselChip(num string, labels []string, active int, focused bool) string 
 	bc := borderColor(focused)
 	cap := lipgloss.NewStyle().Foreground(bc)
 	chip := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
-	prefix := " "
-	if active > 0 {
-		prefix = firstRune(labels[active-1]) + arrowR
-	}
+	n := len(labels)
+	prefix := " " + firstRune(labels[(active-1+n)%n]) + arrowR // prev wraps (first tab shows last)
 	suffix := ""
-	if active < len(labels)-1 {
+	if active < n-1 { // no right neighbour on the last tab
 		suffix = arrowR + firstRune(labels[active+1])
 	}
 	return cap.Render(capLeft) + chip.Render(num+prefix+labels[active]+suffix) + cap.Render(capRight)
