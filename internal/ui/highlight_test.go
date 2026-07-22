@@ -10,6 +10,7 @@ func TestHighlightKnown(t *testing.T) {
 		{"config.json", `{"a": 1, "b": [true, null]}`},
 		{"app.yaml", "key: value\nlist:\n  - one\n"},
 		{"main.go", "package main\n\nfunc main() {}\n"},
+		{"icon.svg", `<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>`},
 	}
 	for _, tc := range cases {
 		lines, ok := highlight(tc.name, tc.src)
