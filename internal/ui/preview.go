@@ -111,13 +111,20 @@ func treeLines(root string, maxDepth int) []string {
 			if len(lines) >= treeMaxLines {
 				return
 			}
-			branch, ext := treeTee, treeBar
-			if i == len(items)-1 {
-				branch, ext = treeEnd, treeGap
-			}
 			icon := iconFile
 			if it.isDir {
 				icon = iconDir
+			}
+			if depth == 1 { // top level: a plain list, no branch guide
+				lines = append(lines, " "+icon+" "+it.name)
+				if it.isDir && depth < maxDepth {
+					walk(filepath.Join(dir, it.name), "  ", depth+1)
+				}
+				continue
+			}
+			branch, ext := treeTee, treeBar
+			if i == len(items)-1 {
+				branch, ext = treeEnd, treeGap
 			}
 			lines = append(lines, prefix+branch+icon+" "+it.name)
 			if it.isDir && depth < maxDepth {
