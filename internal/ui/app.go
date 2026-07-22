@@ -318,13 +318,18 @@ func (m *AppModel) syncPlaceToList() {
 	}
 }
 
-// listRows / detailRows: how many content rows a full-height middle panel shows
-// (height − header − footer − top/bottom border). Title sits on the border.
+// listRows: panel [2] file rows = height − header − footer − border(2) − Files header.
 func (m AppModel) listRows() int {
-	if r := m.height - 4; r > 0 {
+	if r := m.height - 5; r > 0 {
 		return r
 	}
 	return 1
 }
 
-func (m AppModel) detailRows() int { return m.listRows() }
+// detailRows: panel [3] content rows (no section header there).
+func (m AppModel) detailRows() int {
+	if r := m.height - 4; r > 0 {
+		return r
+	}
+	return 1
+}

@@ -146,12 +146,14 @@ func (m *listModel) ensureVisible(rows int) {
 }
 
 func (m listModel) view(w, rows int, focused bool) string {
+	hdr := lipgloss.NewStyle().Foreground(dimColor).Render("Files")
+	rows-- // reserve the section-header row
 	if len(m.items) == 0 {
 		msg := "(empty)"
 		if m.err != nil {
 			msg = "(" + friendlyErr(m.err) + ")"
 		}
-		return lipgloss.NewStyle().Foreground(dimColor).Render(msg)
+		return hdr + "\n" + lipgloss.NewStyle().Foreground(dimColor).Render(msg)
 	}
 	cursorBg := focusColor
 	if !focused {
@@ -161,6 +163,7 @@ func (m listModel) view(w, rows int, focused bool) string {
 	dirStyle := lipgloss.NewStyle().Foreground(focusColor)
 
 	var b strings.Builder
+	b.WriteString(hdr + "\n")
 	end := min(m.offset+rows, len(m.items))
 	for i := m.offset; i < end; i++ {
 		it := m.items[i]
