@@ -6,14 +6,23 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
 
 // carryModel is panel [4]'s bucket: files picked up with Carry, dropped with
-// Land (which decides copy vs move). Pick / progress / history come later.
+// Land (which decides copy vs move). It also records completed lands as history.
 type carryModel struct {
-	items []string // full source paths
+	items   []string       // full source paths
+	history []historyEntry // completed lands, newest first
+}
+
+type historyEntry struct {
+	action string // "cp" / "mv"
+	count  int
+	dest   string
+	when   time.Time
 }
 
 func (m *carryModel) toggle(path string) {
@@ -31,6 +40,7 @@ func (m *carryModel) toggle(path string) {
 // leave it. Errors are swallowed for now (TODO: surface + progress tab).
 func (m *carryModel) land(destDir string, move bool) {
 	var remaining []string
+	done := 0
 	for _, src := range m.items {
 		dst := uniquePath(filepath.Join(destDir, filepath.Base(src)))
 		var err error
@@ -39,11 +49,21 @@ func (m *carryModel) land(destDir string, move bool) {
 		} else {
 			err = copyPath(src, dst)
 		}
+		if err == nil {
+			done++
+		}
 		if err != nil || !move {
 			remaining = append(remaining, src)
 		}
 	}
 	m.items = remaining
+	if done > 0 {
+		act := "cp"
+		if move {
+			act = "mv"
+		}
+		m.history = append([]historyEntry{{act, done, filepath.Base(destDir), time.Now()}}, m.history...)
+	}
 }
 
 func (m carryModel) view(w, rows int, _ bool) string {
@@ -53,6 +73,17 @@ func (m carryModel) view(w, rows int, _ bool) string {
 	lines := make([]string, len(m.items))
 	for i, p := range m.items {
 		lines[i] = truncate(iconFile+" "+filepath.Base(p), w)
+	}
+	return renderLines(lines, w, rows)
+}
+
+func (m carryModel) historyView(w, rows int) string {
+	if len(m.history) == 0 {
+		return lipgloss.NewStyle().Foreground(dimColor).Render("(no history)")
+	}
+	lines := make([]string, len(m.history))
+	for i, h := range m.history {
+		lines[i] = truncate(fmt.Sprintf("%s %d %s %s", h.action, h.count, h.dest, h.when.Format("15:04")), w)
 	}
 	return renderLines(lines, w, rows)
 }

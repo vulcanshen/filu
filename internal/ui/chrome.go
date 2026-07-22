@@ -19,7 +19,8 @@ func singleChip(title string, focused bool) string {
 	bc := borderColor(focused)
 	cap := lipgloss.NewStyle().Foreground(bc)
 	chip := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
-	return cap.Render(capLeft) + chip.Render(" "+title+" ") + cap.Render(capRight)
+	// no leading space — [N] sits flush against the cap, matching the tab bar.
+	return cap.Render(capLeft) + chip.Render(title+" ") + cap.Render(capRight)
 }
 
 // tabBar renders a starship powerline chip chain (§8.2): a bright [N] chip, then
