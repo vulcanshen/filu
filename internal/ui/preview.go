@@ -21,6 +21,7 @@ const (
 	previewNone previewKind = iota
 	previewDir
 	previewArchive
+	previewImage
 	previewText
 	previewBinary
 )
@@ -33,7 +34,7 @@ type previewModel struct {
 	note  string   // empty / unreadable
 }
 
-func loadPreview(it fileItem, parent string) previewModel {
+func loadPreview(it fileItem, parent string, imgW int) previewModel {
 	if it.name == "" {
 		return previewModel{note: "(no selection)"}
 	}
@@ -43,6 +44,11 @@ func loadPreview(it fileItem, parent string) previewModel {
 	}
 	if lines, ok := archiveTree(full, it.name); ok {
 		return previewModel{kind: previewArchive, lines: lines}
+	}
+	if isImage(it.name) {
+		if lines, ok := imageASCII(full, imgW); ok {
+			return previewModel{kind: previewImage, lines: lines}
+		}
 	}
 	if strings.HasSuffix(strings.ToLower(it.name), ".pdf") {
 		if text, pages, ok := pdfText(full); ok {
