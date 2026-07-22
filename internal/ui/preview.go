@@ -20,6 +20,7 @@ type previewKind int
 const (
 	previewNone previewKind = iota
 	previewDir
+	previewArchive
 	previewText
 	previewBinary
 )
@@ -39,6 +40,9 @@ func loadPreview(it fileItem, parent string) previewModel {
 	full := filepath.Join(parent, it.name)
 	if it.isDir {
 		return previewModel{kind: previewDir, lines: treeLines(full, 3)}
+	}
+	if lines, ok := archiveTree(full, it.name); ok {
+		return previewModel{kind: previewArchive, lines: lines}
 	}
 	data, err := readCapped(full, previewCap)
 	if err != nil {
