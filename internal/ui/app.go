@@ -32,21 +32,32 @@ type AppModel struct {
 	height  int
 	focus   panelID
 	detail  detailTab
-	list    listModel
+	tabs    [3]listModel // panel [2]'s fixed 3 directory tabs
+	tab     int          // active tab index
 	preview previewModel
 	places  placesModel
 }
 
-// New returns the root model, focused on the file list at the current dir.
+// New returns the root model, focused on the file list. All 3 tabs open at the
+// current dir (they diverge as the user navigates each).
 func New() AppModel {
 	dir, err := os.Getwd()
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, list: newList(dir), places: newPlaces()}
+	m := AppModel{focus: panelList, places: newPlaces()}
+	for i := range m.tabs {
+		m.tabs[i] = newList(dir)
+	}
 	m.refreshPreview()
 	return m
 }
+
+// cur returns a pointer to the active directory tab.
+func (m *AppModel) cur() *listModel { return &m.tabs[m.tab] }
+
+// active returns the active tab by value (read-only paths).
+func (m AppModel) active() listModel { return m.tabs[m.tab] }
 
 func (m AppModel) Init() tea.Cmd { return nil }
 
@@ -86,25 +97,30 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // handleListKey routes navigation keys to panel [2] while it is focused.
 func (m *AppModel) handleListKey(key string) {
+	l := m.cur()
 	switch key {
 	case "j", "down":
-		m.list.move(1)
+		l.move(1)
 	case "k", "up":
-		m.list.move(-1)
+		l.move(-1)
 	case "g":
-		m.list.cursor = 0
+		l.cursor = 0
 	case "G":
-		m.list.move(len(m.list.items))
+		l.move(len(l.items))
 	case "u", "ctrl+u":
-		m.list.move(-m.listRows() / 2)
+		l.move(-m.listRows() / 2)
 	case "d", "ctrl+d":
-		m.list.move(m.listRows() / 2)
+		l.move(m.listRows() / 2)
 	case "enter":
-		m.list.enter()
+		l.enter()
 	case "esc":
-		m.list.parent()
+		l.parent()
+	case "l", "right":
+		m.tab = (m.tab + 1) % len(m.tabs)
+	case "h", "left":
+		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
 	}
-	m.list.ensureVisible(m.listRows())
+	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
 }
 
@@ -122,7 +138,8 @@ func (m *AppModel) handleDetailKey(key string) {
 
 // refreshPreview reloads panel [3]'s preview for the current cursor item.
 func (m *AppModel) refreshPreview() {
-	m.preview = loadPreview(m.list.cursorItem(), m.list.dir)
+	l := m.cur()
+	m.preview = loadPreview(l.cursorItem(), l.dir)
 }
 
 // handlePinKey routes navigation keys to panel [1] while it is focused.
@@ -141,11 +158,12 @@ func (m *AppModel) handlePinKey(key string) {
 
 // navigateTo points panel [2] at dir and moves focus there.
 func (m *AppModel) navigateTo(dir string) {
-	m.list.dir = dir
-	m.list.cursor, m.list.offset = 0, 0
-	m.list.reload()
+	l := m.cur()
+	l.dir = dir
+	l.cursor, l.offset = 0, 0
+	l.reload()
 	m.focus = panelList
-	m.list.ensureVisible(m.listRows())
+	l.ensureVisible(m.listRows())
 	m.refreshPreview()
 }
 
