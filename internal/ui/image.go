@@ -1,45 +1,64 @@
 package ui
 
 import (
+	"encoding/base64"
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/TheZoraiz/ascii-image-converter/aic_package"
+	"github.com/charmbracelet/lipgloss"
 )
 
-// imageExt is the raster formats aic_package (via x/image) can decode.
-var imageExt = map[string]bool{
-	"png": true, "jpg": true, "jpeg": true, "gif": true,
-	"bmp": true, "webp": true, "tiff": true, "tif": true,
+const dataURIMaxBytes = 1 << 20 // 1 MiB: cap so the wrapped blob stays sane
+
+// imageMime maps an extension to its data-URI media type. base64 encoding needs
+// no decoder, so vector/exotic formats are fine here too.
+var imageMime = map[string]string{
+	"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+	"gif": "image/gif", "bmp": "image/bmp", "webp": "image/webp",
+	"tiff": "image/tiff", "tif": "image/tiff", "svg": "image/svg+xml",
+	"ico": "image/x-icon", "avif": "image/avif", "heic": "image/heic",
 }
 
 func isImage(name string) bool {
-	return imageExt[strings.ToLower(strings.TrimPrefix(filepath.Ext(name), "."))]
+	_, ok := imageMime[strings.ToLower(strings.TrimPrefix(filepath.Ext(name), "."))]
+	return ok
 }
 
-// imageASCII renders an image as coloured ASCII art fitted to w chars wide
-// (aspect preserved; a tall image spills into scrollable lines). ok is false
-// when the file can't be decoded, so the caller falls back to a hex preview.
-// Wrapped in recover() as belt-and-braces against a decoder panic.
-func imageASCII(path string, w int) (lines []string, ok bool) {
-	defer func() {
-		if recover() != nil {
-			lines, ok = nil, false
-		}
-	}()
-	if w < 1 {
+// imageDataURI renders an image as a base64 data: URI wrapped to w columns so
+// the whole string scrolls into view. ok is false when the file can't be read;
+// a file over dataURIMaxBytes shows a note instead of an enormous blob.
+func imageDataURI(path, name string, w int) (lines []string, ok bool) {
+	mime := imageMime[strings.ToLower(strings.TrimPrefix(filepath.Ext(name), "."))]
+	if mime == "" {
 		return nil, false
 	}
-	flags := aic_package.DefaultFlags()
-	flags.Colored = true
-	flags.Width = w // fit to panel width; height follows the aspect ratio
-	art, err := aic_package.Convert(path, flags)
+	info, err := os.Stat(path)
 	if err != nil {
 		return nil, false
 	}
-	out := strings.Split(strings.TrimRight(art, "\n"), "\n")
-	for i := range out {
-		out[i] += ansiReset // stop colour bleeding into the panel padding/border
+	dim := lipgloss.NewStyle().Foreground(dimColor)
+	head := dim.Render(fmt.Sprintf("data:%s · %s", mime, humanSize(info.Size())))
+	if info.Size() > dataURIMaxBytes {
+		note := dim.Render(fmt.Sprintf("(%s — too large to inline as a data URI)", humanSize(info.Size())))
+		return []string{head, "", note}, true
 	}
-	return out, true
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, false
+	}
+	uri := "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+	return append([]string{head, ""}, wrapCols(uri, max(w, 1))...), true
+}
+
+// wrapCols hard-wraps ASCII s into lines of at most w columns (base64 is ASCII,
+// so byte slicing is column-accurate).
+func wrapCols(s string, w int) []string {
+	var lines []string
+	for len(s) > w {
+		lines = append(lines, s[:w])
+		s = s[w:]
+	}
+	return append(lines, s)
 }

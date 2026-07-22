@@ -46,7 +46,7 @@ func loadPreview(it fileItem, parent string, imgW int) previewModel {
 		return previewModel{kind: previewArchive, lines: lines}
 	}
 	if isImage(it.name) {
-		if lines, ok := imageASCII(full, imgW); ok {
+		if lines, ok := imageDataURI(full, it.name, imgW); ok {
 			return previewModel{kind: previewImage, lines: lines}
 		}
 	}
