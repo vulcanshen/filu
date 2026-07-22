@@ -11,11 +11,10 @@ import (
 
 // Nerd Font icons (rune values so no PUA glyph sits in source).
 var (
-	iconHome  = string(rune(0xf015))  // nf-fa-home
-	iconCWD   = string(rune(0xf450))  // nf-oct-file-directory
-	iconTrash = string(rune(0xf1f8))  // nf-fa-trash
-	iconRoot  = string(rune(0xf0fdf)) // nf-md server/disk
-	iconPin   = string(rune(0xf005))  // nf-fa-star
+	iconHome = string(rune(0xf015))  // nf-fa-home
+	iconCWD  = string(rune(0xf450))  // nf-oct-file-directory
+	iconRoot = string(rune(0xf0fdf)) // nf-md server/disk
+	iconPin  = string(rune(0xf005))  // nf-fa-star
 )
 
 type place struct {
@@ -40,9 +39,6 @@ func newPlaces() placesModel {
 	if home, err := os.UserHomeDir(); err == nil {
 		ps = append(ps, place{"Home", home, iconHome})
 	}
-	if t := trashDir(); t != "" && dirExists(t) {
-		ps = append(ps, place{"Trash", t, iconTrash})
-	}
 	ps = append(ps, place{"RootDir", "/", iconRoot})
 	return placesModel{system: ps}
 }
@@ -58,11 +54,6 @@ func trashDir() string {
 		return filepath.Join(home, ".Trash")
 	}
 	return filepath.Join(home, ".local", "share", "Trash", "files")
-}
-
-func dirExists(p string) bool {
-	info, err := os.Stat(p)
-	return err == nil && info.IsDir()
 }
 
 func (m placesModel) all() []place {
