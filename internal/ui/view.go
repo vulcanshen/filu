@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	overlay "github.com/rmhubbert/bubbletea-overlay"
 )
 
 // kbu colour hierarchy (§2 / §B): three reserved tiers.
@@ -66,7 +67,11 @@ func (m AppModel) View() string {
 		middle = lipgloss.JoinHorizontal(lipgloss.Top, left, list, right)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), middle, m.footerBar(w))
+	out := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), middle, m.footerBar(w))
+	if m.spaceMenu.isActive() { // Compose-don't-Replace: overlay onto the canvas
+		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	return out
 }
 
 // listTitle renders panel [2]'s fixed 3-tab bar. The tabs are always shown; when
