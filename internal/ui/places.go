@@ -14,7 +14,7 @@ var (
 	iconHome  = string(rune(0xf015))  // nf-fa-home
 	iconCWD   = string(rune(0xf07c))  // nf-fa-folder-open
 	iconTrash = string(rune(0xf1f8))  // nf-fa-trash
-	iconRoot  = string(rune(0xf0fe0)) // nf-md server/disk
+	iconRoot  = string(rune(0xf0fdf)) // nf-md server/disk
 	iconPin   = string(rune(0xf005))  // nf-fa-star
 )
 
@@ -34,11 +34,11 @@ type placesModel struct {
 
 func newPlaces() placesModel {
 	var ps []place
+	if cwd, err := os.Getwd(); err == nil {
+		ps = append(ps, place{"CWD", cwd, iconCWD}) // startup dir, first
+	}
 	if home, err := os.UserHomeDir(); err == nil {
 		ps = append(ps, place{"Home", home, iconHome})
-	}
-	if cwd, err := os.Getwd(); err == nil {
-		ps = append(ps, place{"CWD", cwd, iconCWD}) // startup dir
 	}
 	if t := trashDir(); t != "" && dirExists(t) {
 		ps = append(ps, place{"Recycle Bin", t, iconTrash})
