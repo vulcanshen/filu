@@ -6,6 +6,7 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -27,6 +28,23 @@ const (
 	tabInfo
 )
 
+// inputKind is the pending footer text input, if any.
+type inputKind int
+
+const (
+	inputNone inputKind = iota
+	inputRename
+	inputAdd
+)
+
+// inputState is a single-line input rendered in the footer (rename / add).
+type inputState struct {
+	kind   inputKind
+	prompt string
+	buffer string
+	target string // original name (rename)
+}
+
 // AppModel is filu's root model.
 type AppModel struct {
 	width   int
@@ -38,6 +56,7 @@ type AppModel struct {
 	preview previewModel
 	places  placesModel
 	carry   carryModel
+	input   inputState
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -68,6 +87,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 	case tea.KeyMsg:
+		if m.input.kind != inputNone {
+			m.handleInputKey(msg)
+			return m, nil
+		}
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -143,6 +166,12 @@ func (m *AppModel) handleListKey(key string) {
 			_ = moveToTrash(filepath.Join(l.dir, it.name))
 			l.reload()
 		}
+	case "R": // rename cursor item (footer input)
+		if it := l.cursorItem(); it.name != "" {
+			m.input = inputState{kind: inputRename, prompt: "Rename", buffer: it.name, target: it.name}
+		}
+	case "A": // add file/dir — lazyvim style: trailing / = dir (footer input)
+		m.input = inputState{kind: inputAdd, prompt: "New (末尾 / = 目錄)"}
 	}
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
@@ -164,6 +193,54 @@ func (m *AppModel) handleDetailKey(key string) {
 func (m *AppModel) refreshPreview() {
 	l := m.cur()
 	m.preview = loadPreview(l.cursorItem(), l.dir)
+}
+
+// handleInputKey feeds keystrokes to the footer text input.
+func (m *AppModel) handleInputKey(msg tea.KeyMsg) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.input = inputState{}
+	case tea.KeyEnter:
+		m.commitInput()
+	case tea.KeyBackspace:
+		if r := []rune(m.input.buffer); len(r) > 0 {
+			m.input.buffer = string(r[:len(r)-1])
+		}
+	case tea.KeySpace:
+		m.input.buffer += " "
+	case tea.KeyRunes:
+		m.input.buffer += string(msg.Runes)
+	}
+}
+
+// commitInput performs the pending rename / add and closes the input.
+func (m *AppModel) commitInput() {
+	name := strings.TrimSpace(m.input.buffer)
+	kind, target := m.input.kind, m.input.target
+	m.input = inputState{}
+	if name == "" {
+		return
+	}
+	l := m.cur()
+	switch kind {
+	case inputRename:
+		if target != "" {
+			_ = os.Rename(filepath.Join(l.dir, target), filepath.Join(l.dir, name))
+		}
+	case inputAdd:
+		full := filepath.Join(l.dir, name)
+		if strings.HasSuffix(name, "/") {
+			_ = os.MkdirAll(full, 0o755)
+		} else {
+			_ = os.MkdirAll(filepath.Dir(full), 0o755)
+			if f, err := os.OpenFile(full, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644); err == nil {
+				_ = f.Close()
+			}
+		}
+	}
+	l.reload()
+	m.cur().ensureVisible(m.listRows())
+	m.refreshPreview()
 }
 
 // handlePinKey routes navigation keys to panel [1] while it is focused.

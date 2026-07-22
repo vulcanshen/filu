@@ -102,8 +102,12 @@ func (m AppModel) headerBar(w int) string {
 }
 
 func (m AppModel) footerBar(w int) string {
-	return lipgloss.NewStyle().Width(w).Foreground(dimColor).
-		Render(truncate(" Space 動作   ? 選單   Tab/1-4 切面板   q 離開", w))
+	color, content := dimColor, " Space 動作   ? 選單   Tab/1-4 切面板   q 離開"
+	if m.input.kind != inputNone {
+		color = focusColor
+		content = " " + m.input.prompt + ": " + m.input.buffer + "█"
+	}
+	return lipgloss.NewStyle().Width(w).Foreground(color).Render(truncate(content, w))
 }
 
 func pathBase(p string) string {
