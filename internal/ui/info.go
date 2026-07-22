@@ -9,12 +9,12 @@ import (
 // infoLines is panel [3]'s Info tab: metadata for the cursor item.
 func infoLines(it fileItem, parent string) []string {
 	if it.name == "" {
-		return []string{"(無選取)"}
+		return []string{"(no selection)"}
 	}
 	full := filepath.Join(parent, it.name)
 	fi, err := os.Lstat(full)
 	if err != nil {
-		return []string{"(無法讀取)"}
+		return []string{"(unreadable)"}
 	}
 
 	kind := "file"

@@ -53,7 +53,7 @@ func (m AppModel) View() string {
 		pinH := midH * 2 / 3
 		left := lipgloss.JoinVertical(
 			lipgloss.Left,
-			m.panelBox(panelPin, singleChip("filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
+			m.panelBox(panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, pinH, m.places.view(leftW-2, pinH-2, m.focus == panelPin)),
 			m.panelBox(panelCarry, singleChip("[4] carry", m.focus == panelCarry), leftW, midH-pinH, m.carry.view(leftW-2, (midH-pinH)-2, m.focus == panelCarry)),
 		)
 		right := m.panelBox(panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
@@ -134,7 +134,7 @@ func (m AppModel) headerBar(w int) string {
 }
 
 func (m AppModel) footerBar(w int) string {
-	color, content := dimColor, " Space 動作   ? 選單   Tab/1-4 切面板   q 離開"
+	color, content := dimColor, " space menu   ? help   tab/1-4 panels   q quit"
 	if m.input.kind != inputNone {
 		color = focusColor
 		content = " " + m.input.prompt + ": " + m.input.buffer + "█"
