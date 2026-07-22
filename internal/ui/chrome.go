@@ -19,8 +19,8 @@ func singleChip(title string, focused bool) string {
 	bc := borderColor(focused)
 	cap := lipgloss.NewStyle().Foreground(bc)
 	chip := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
-	// no leading space — [N] sits flush against the cap, matching the tab bar.
-	return cap.Render(capLeft) + chip.Render(title+" ") + cap.Render(capRight)
+	// flush both sides — no padding space, so the title sits between the caps.
+	return cap.Render(capLeft) + chip.Render(title) + cap.Render(capRight)
 }
 
 // carouselChip is filu's narrow-panel tab strategy: when a tabbed panel is too
