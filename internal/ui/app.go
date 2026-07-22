@@ -87,7 +87,11 @@ func (m AppModel) Init() tea.Cmd { return nil }
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
+		if m.preview.kind == previewImage && m.previewWidth() != oldW {
+			m.refreshPreview() // ASCII art is sized to the panel width
+		}
 	case tea.KeyMsg:
 		if m.input.kind != inputNone {
 			m.handleInputKey(msg)
@@ -227,8 +231,18 @@ func (m *AppModel) handleCarryKey(key string) {
 // refreshPreview reloads panel [3]'s preview for the current cursor item.
 func (m *AppModel) refreshPreview() {
 	l := m.cur()
-	m.preview = loadPreview(l.cursorItem(), l.dir)
+	m.preview = loadPreview(l.cursorItem(), l.dir, m.previewWidth())
 	m.detailScroll = 0 // new content — back to the top
+}
+
+// previewWidth is panel [3]'s inner content width (1:1:1 columns, minus border),
+// used to size image ASCII previews.
+func (m AppModel) previewWidth() int {
+	rightW := m.width - (m.width/3)*2 // panel [3] is the remainder column
+	if w := rightW - 2; w > 0 {
+		return w
+	}
+	return 1
 }
 
 // handleInputKey feeds keystrokes to the footer text input.
