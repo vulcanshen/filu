@@ -109,6 +109,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
+		m.cur().ensureVisible(m.listRows()) // scroll a restored cursor into view
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}

@@ -15,7 +15,7 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	m.focus = panelDetail
 	m.detail = tabMeta
 	m.carry.items = []string{"/a", "/b"}
-	m.places.pinned = []place{{path: "/home/me/proj", icon: iconPin, label: "proj"}}
+	m.places = placesModel{pinned: []place{{path: "/home/me/proj", icon: iconPin, label: "proj"}}, cursor: 2}
 
 	data, err := yaml.Marshal(m.snapshotState())
 	if err != nil {
@@ -26,7 +26,7 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var got AppModel
+	got := AppModel{places: newPlaces()} // like New(): system places already present
 	got.applyState(st)
 
 	if got.tab != 1 || got.focus != panelDetail || got.detail != tabMeta {
@@ -35,11 +35,11 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	if len(got.carry.items) != 2 {
 		t.Errorf("carry not restored: %v", got.carry.items)
 	}
-	if len(got.places.pinned) != 1 || got.places.pinned[0].path != "/home/me/proj" {
-		t.Errorf("pinned not restored: %v", got.places.pinned)
+	if got.tabs[1].dir != "/usr" || got.tabs[1].cursor != 2 {
+		t.Errorf("tab[1] not restored: dir=%q cursor=%d", got.tabs[1].dir, got.tabs[1].cursor)
 	}
-	if got.tabs[1].dir != "/usr" {
-		t.Errorf("tab[1] dir not restored: %q", got.tabs[1].dir)
+	if got.places.cursor != 2 {
+		t.Errorf("places cursor not restored: %d", got.places.cursor)
 	}
 }
 

@@ -11,13 +11,14 @@ import (
 // were is where you restart") — the 3 tab dirs + cursors, active tab, focus,
 // detail tab, carry bucket, and pinned places.
 type sessionState struct {
-	Tabs   []tabState      `yaml:"tabs"`
-	Tab    int             `yaml:"tab"`
-	Focus  int             `yaml:"focus"`
-	Detail int             `yaml:"detail"`
-	Carry  []string        `yaml:"carry,omitempty"`
-	Pinned []string        `yaml:"pinned,omitempty"`
-	Tasks  []persistedTask `yaml:"tasks,omitempty"`
+	Tabs         []tabState      `yaml:"tabs"`
+	Tab          int             `yaml:"tab"`
+	Focus        int             `yaml:"focus"`
+	Detail       int             `yaml:"detail"`
+	PlacesCursor int             `yaml:"places_cursor"`
+	Carry        []string        `yaml:"carry,omitempty"`
+	Pinned       []string        `yaml:"pinned,omitempty"`
+	Tasks        []persistedTask `yaml:"tasks,omitempty"`
 }
 
 type tabState struct {
@@ -97,10 +98,11 @@ func saveState(st sessionState) {
 // snapshotState captures the current model for persistence.
 func (m AppModel) snapshotState() sessionState {
 	st := sessionState{
-		Tab:    m.tab,
-		Focus:  int(m.focus),
-		Detail: int(m.detail),
-		Carry:  m.carry.items,
+		Tab:          m.tab,
+		Focus:        int(m.focus),
+		Detail:       int(m.detail),
+		PlacesCursor: m.places.cursor,
+		Carry:        m.carry.items,
 	}
 	for _, t := range m.tabs {
 		st.Tabs = append(st.Tabs, tabState{Dir: t.dir, Cursor: t.cursor})
@@ -140,6 +142,8 @@ func (m *AppModel) applyState(st sessionState) {
 	for _, p := range st.Pinned {
 		m.places.pinned = append(m.places.pinned, place{label: filepath.Base(p), path: p, icon: iconPin})
 	}
+	m.places.cursor = st.PlacesCursor
+	m.places.move(0)              // clamp to the restored place count
 	for _, pt := range st.Tasks { // "undone" tasks were interrupted → pending
 		status := taskPending
 		switch pt.Status {
