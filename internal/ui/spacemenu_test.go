@@ -69,7 +69,7 @@ func TestBuildSpaceMenuList(t *testing.T) {
 		}
 		keys[it.key] = true
 	}
-	for _, k := range []string{"p", "R", "a", "D", ".", "z"} {
+	for _, k := range []string{"p", "r", "a", "D", ".", "z"} {
 		if !keys[k] {
 			t.Errorf("panel [2] menu missing hotkey %q", k)
 		}

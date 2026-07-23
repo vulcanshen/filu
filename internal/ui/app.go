@@ -340,7 +340,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 			m.confirmAction = confirmDelete
 			cmd = m.confirm.open("Move " + it.name + " to the trash?")
 		}
-	case "R": // rename cursor item (input popup)
+	case "r": // rename cursor item (input popup, pre-filled with its name)
 		if it := l.cursorItem(); it.name != "" {
 			cmd = m.inputPopup.open(inputRename, "Rename", it.name, it.name)
 		}
@@ -528,7 +528,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				menuItem{label: "Pick", key: "p", hint: `add to "carries" bucket`},
 				menuItem{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				menuItem{label: "Edit", key: "e", hint: "edit a text file in $EDITOR (else OS open)"},
-				menuItem{label: "Rename", key: "R", hint: "rename this item"},
+				menuItem{label: "Rename", key: "r", hint: "rename this item"},
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
 		}
 		if it.isDir {

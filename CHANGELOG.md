@@ -20,6 +20,8 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- Rename moved to lowercase `r` (Delete stays `D`, to avoid clashing with the
+  `d` half-page-down motion).
 - On launch, panel [2] always opens on the first tab at the current directory,
   and panel [1] always lands on the current directory. The first tab's state,
   the active-tab index, and the places cursor are no longer persisted (tabs [2]
@@ -34,6 +36,8 @@
   before quitting; `Ctrl+C` still force-quits immediately.
 
 ### Fixed
+- The rename / add input highlight now covers only the typed text and cursor,
+  instead of a full-width bar with a leading blank the cursor sat after.
 - Panel borders no longer break on CJK Nerd Fonts (e.g. Maple Mono NF CN) that
   draw file-type icons two cells wide. filu now probes the terminal at startup
   (CPR) to measure the real icon cell width and reserves layout space to match.
