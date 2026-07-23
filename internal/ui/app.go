@@ -69,6 +69,9 @@ func New() AppModel {
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
+	if st, ok := loadState(); ok { // restore last session
+		m.applyState(st)
+	}
 	m.refreshPreview()
 	return m
 }
@@ -146,6 +149,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch msg.String() {
 		case "q", "ctrl+c":
+			saveState(m.snapshotState()) // restore this session on next launch
 			return m, tea.Quit
 		case "?": // §A.2 global help cheatsheet
 			return m, m.help.open()

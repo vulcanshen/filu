@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
 	github.com/rmhubbert/bubbletea-overlay v0.6.7
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
