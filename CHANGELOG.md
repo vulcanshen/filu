@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Added
+- cd-on-quit: `q` now opens a picker to leave the shell in panel [1]'s launch
+  directory or any of the three list tabs' current directories (1–4 or j/k +
+  Enter; Esc stays). With the shell wrapper installed (`eval "$(filu shell)"`),
+  the shell cd's there on exit; `Ctrl+C` still hard-quits without cd-ing.
 - Edit (`e`) opens a text file in `$EDITOR` inside an embedded PTY popup — the
   editor renders within filu instead of taking over the screen. Non-text files
   fall back to OS open; the directory reloads when the editor exits.

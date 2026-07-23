@@ -53,6 +53,11 @@ func newSortMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("sortmenu", popupLayerColor(1))}
 }
 
+// newQuitMenu is a third spaceMenu instance reused as the cd-on-quit picker.
+func newQuitMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("quitmenu", popupLayerColor(1))}
+}
+
 func (m *spaceMenu) setItems(items []menuItem, title string) {
 	m.items = items
 	m.title = title
