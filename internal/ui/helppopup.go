@@ -36,7 +36,7 @@ var helpRows = []helpRow{
 	{key: "Space", desc: "actions menu for this panel"},
 	{key: "z", desc: "zoom the focused panel"},
 	{key: "?", desc: "this help"},
-	{key: "q", desc: "quit"},
+	{key: "q", desc: "quit — pick a dir to cd to"},
 }
 
 func newHelpPopup() helpPopup {

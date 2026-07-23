@@ -61,9 +61,21 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 | `h` / `l` | 切換當前面板的分頁 |
 | `Space` | 開「當前面板此刻能做什麼」的選單 |
 | `?` | 全域說明 |
-| `q` | 離開(存檔) |
+| `q` | 離開:跳選單選一個目錄 cd 過去(1–4 或 j/k+Enter) |
 
 面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`.` 顯示隱藏檔、`z` zoom。
+
+## cd-on-quit(離開時切換目錄)
+
+按 `q` 會跳出選單:選 **panel 1 的起始目錄** 或 **panel 2 三個分頁的當前目錄**,離開 filu 時把 shell 的 cwd 切過去(對標 superfile 的 `cd_on_quit`)。
+
+需要一個 shell function wrapper。加到你的 `~/.zshrc` / `~/.bashrc`:
+
+```sh
+eval "$(filu shell)"
+```
+
+原理:wrapper 給 filu 一個暫存檔路徑(`FILU_LAST_DIR_FILE`),filu 離開時把選定目錄寫進去,wrapper 再 `cd` 過去。沒裝 wrapper 直接跑 `filu` 也能用,只是離開時不會切目錄。
 
 ## 建置
 
