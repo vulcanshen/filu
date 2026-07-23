@@ -22,8 +22,10 @@
 ### Changed
 - The Carries tab shows each item's full path (home folded to `~`), trimmed from
   the left so the filename stays visible, instead of just the basename.
-- The Carries tab's Pick action is now lowercase `p` (was `P`), decoupling it
-  from panel [1]/[2]'s `P` (Pin/UnPin).
+- Panel [2] keys: Carry is now Pick (`p`) and Paste-here is now Copy (`c`), so
+  `p` means "pick into the carries bucket" in both panel [2] and the Carries
+  tab; the Carries tab's Pick also moved from `P` to `p`, off panel [1]/[2]'s
+  `P` (Pin/UnPin).
 - Pressing `q` while a copy/move is still running now asks for confirmation
   before quitting; `Ctrl+C` still force-quits immediately.
 
