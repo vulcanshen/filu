@@ -112,7 +112,7 @@ func (m placesModel) view(w, rows int, focused bool) string {
 	if !focused {
 		cursorBg = userColor // unfocused: remembered position (lavender)
 	}
-	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
+	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
 
 	var lines []string
 	idx := 0
@@ -120,7 +120,7 @@ func (m placesModel) view(w, rows int, focused bool) string {
 		for _, p := range ps {
 			line := truncate(" "+p.icon+"  "+p.label, w)
 			if idx == m.cursor {
-				line = cur.Render(line)
+				line = cur.Render(padDisp(line, w)) // full-width highlight bar
 			} else {
 				line = fg.Render(line)
 			}
