@@ -400,7 +400,7 @@ func (m *AppModel) handleCarryKey(key string) tea.Cmd {
 			m.carry.cursor = 0
 		case "G":
 			m.carry.moveCursor(len(m.carry.items))
-		case "P": // pick: toggle this item in the land subset
+		case "p": // pick: toggle this item in the land subset
 			m.carry.togglePick()
 		case "D": // delete: drop this item from the bucket (not the file)
 			if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
@@ -538,7 +538,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		if m.carryTab == 0 && len(m.carry.items) > 0 { // Carries tab, with items
 			itemOps := []menuItem{
-				{label: "Pick", key: "P", hint: "toggle this item in the land subset"},
+				{label: "Pick", key: "p", hint: "toggle this item in the land subset"},
 				{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				{label: "Delete", key: "D", hint: "remove this item from the bucket"},
 			}
