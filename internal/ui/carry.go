@@ -82,42 +82,27 @@ func (m carryModel) landSet() map[string]bool {
 	return all
 }
 
-// land copies (move=false) or moves (move=true) every carried item into
-// destDir. Copies stay in the bucket (paste again elsewhere); moved items
-// leave it. Errors are swallowed for now (TODO: surface + progress tab).
-func (m *carryModel) land(destDir string, move bool) {
-	targets := m.landSet()
-	var remaining []string
-	done := 0
-	for _, src := range m.items {
-		if !targets[src] { // not in the land subset — keep it
-			remaining = append(remaining, src)
-			continue
-		}
-		dst := uniquePath(filepath.Join(destDir, filepath.Base(src)))
-		var err error
-		if move {
-			err = movePath(src, dst)
-		} else {
-			err = copyPath(src, dst)
-		}
-		if err == nil {
-			done++
-		}
-		if err != nil || !move {
-			remaining = append(remaining, src) // copy keeps; failed move keeps
-		} else {
-			delete(m.picked, src) // moved out — drop its pick
+// landItems is landSet in item order — the paths a Land goroutine processes.
+func (m carryModel) landItems() []string {
+	set := m.landSet()
+	var out []string
+	for _, p := range m.items {
+		if set[p] {
+			out = append(out, p)
 		}
 	}
-	m.items = remaining
-	m.clampCursor()
-	if done > 0 {
-		act := "cp"
-		if move {
-			act = "mv"
+	return out
+}
+
+// removeItem drops path from the bucket (used when a move lands it elsewhere).
+func (m *carryModel) removeItem(path string) {
+	for i, p := range m.items {
+		if p == path {
+			delete(m.picked, p)
+			m.items = append(m.items[:i], m.items[i+1:]...)
+			m.clampCursor()
+			return
 		}
-		m.history = append([]historyEntry{{act, done, filepath.Base(destDir), time.Now()}}, m.history...)
 	}
 }
 
