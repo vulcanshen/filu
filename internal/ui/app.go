@@ -81,6 +81,7 @@ type AppModel struct {
 	inputPopup    inputPopup   // text prompt (rename / add)
 	help          helpPopup    // §A.2 global help cheatsheet
 	toast         toastModel   // transient notification (yank feedback)
+	detailYank    detailYank   // panel [3] yank viewport (cursor + visual selection)
 	pty           *ptyPopup    // embedded editor (text files); pointer — shared with its read goroutine
 	tasks         []landTask   // land operations (Tasks tab: running + log)
 	taskCh        chan landMsg // land goroutines → UI
@@ -100,7 +101,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), pty: newPtyPopup(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -176,16 +177,25 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
 		m.toast.setSize(msg.Width)
+		m.detailYank.setSize(msg.Width, msg.Height)
 		m.pty.setSize(msg.Width, msg.Height)
 		m.cur().ensureVisible(m.listRows()) // scroll a restored cursor into view
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.pty.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg))
 	case tea.KeyMsg:
 		if m.pty.isActive() { // the embedded editor owns every keystroke
 			return m, m.pty.update(msg)
+		}
+		if m.detailYank.isActive() { // yank viewport owns the keyboard while open
+			if !m.detailYank.isInteractive() {
+				return m, nil
+			}
+			var cmd tea.Cmd
+			m.detailYank, cmd = m.detailYank.update(msg)
+			return m, cmd
 		}
 		if m.help.isActive() { // modal cheatsheet
 			if !m.help.isInteractive() {
@@ -402,11 +412,27 @@ func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 		m.detailScroll = 0
 	case "G":
 		m.detailScroll = len(m.detailLines())
+	case "y": // yank: open the selection viewport over this tab's content
+		return m.openDetailYank()
 	case "z": // zoom panel [3]: full-width, Preview | Meta side by side
 		m.toggleZoom(panelDetail)
 	}
 	m.clampDetailScroll()
 	return nil
+}
+
+// openDetailYank opens the panel [3] yank viewport over the active detail tab.
+func (m *AppModel) openDetailYank() tea.Cmd {
+	lines := m.detailLines()
+	if len(lines) == 0 {
+		return nil
+	}
+	title := "Yank: Preview"
+	if m.detail == tabMeta {
+		title = "Yank: Meta"
+	}
+	m.detailYank.setSize(m.width, m.height)
+	return m.detailYank.open(title, lines)
 }
 
 // clampDetailScroll keeps panel [3] from scrolling past its last page.
@@ -562,10 +588,12 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		return items, "Places"
 	case panelDetail:
-		return groupedMenu(nil, []menuItem{
-			{label: "Tab", key: "l", hint: "switch Preview / Meta"},
-			{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
-		}), "Preview"
+		return groupedMenu(
+			[]menuItem{{label: "Yank", key: "y", hint: "select & copy content (v: visual)"}},
+			[]menuItem{
+				{label: "Tab", key: "l", hint: "switch Preview / Meta"},
+				{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
+			}), "Preview"
 	case panelCarry:
 		panelOps := []menuItem{
 			{label: "Tab", key: "l", hint: "switch Carries / Tasks"},
