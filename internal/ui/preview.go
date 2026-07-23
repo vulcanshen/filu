@@ -153,8 +153,8 @@ func treeLines(root string, maxDepth int) []string {
 			if it.isDir {
 				icon = iconDir
 			}
-			label := lipgloss.NewStyle().Foreground(fileColor(it)).Render(icon + " " + it.name) // eza type colour
-			if depth == 1 {                                                                     // top level: a plain list, no branch guide
+			label := lipgloss.NewStyle().Foreground(fileColor(it)).Render(icon + " " + safeName(it.name)) // eza type colour
+			if depth == 1 {                                                                               // top level: a plain list, no branch guide
 				lines = append(lines, " "+label)
 				if it.isDir && depth < maxDepth {
 					walk(filepath.Join(dir, it.name), "  ", depth+1)

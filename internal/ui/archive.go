@@ -172,7 +172,7 @@ func renderArchiveTree(entries []archEntry) []string {
 			}
 			label := lipgloss.NewStyle().
 				Foreground(fileColor(fileItem{name: name, isDir: c.isDir})).
-				Render(icon + " " + name)
+				Render(icon + " " + safeName(name))
 			if depth == 1 { // top level: a plain list, no branch guide
 				lines = append(lines, " "+label)
 				if c.isDir {

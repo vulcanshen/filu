@@ -68,9 +68,10 @@ func (m inputPopup) renderFull() string {
 	title := " " + m.prompt
 	hint := " enter confirm   esc cancel "
 
-	field := m.buffer + "█"
+	field := safeName(m.buffer) + "█"
+	target := safeName(m.target)
 	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
-	innerW = max(innerW, lipgloss.Width(m.target)+4)
+	innerW = max(innerW, lipgloss.Width(target)+4)
 	innerW = min(max(innerW, lipgloss.Width(field)+4), maxInnerWidth(m.screenW))
 
 	// keep the cursor (tail) visible when the text overruns the box
@@ -78,8 +79,8 @@ func (m inputPopup) renderFull() string {
 		field = ansi.TruncateLeft(field, lipgloss.Width(field)-(innerW-1), "…")
 	}
 	var rows []string
-	if m.target != "" { // a description line naming what's being renamed
-		rows = append(rows, " "+lipgloss.NewStyle().Foreground(dimColor).Render(m.target))
+	if target != "" { // a description line naming what's being renamed
+		rows = append(rows, " "+lipgloss.NewStyle().Foreground(dimColor).Render(target))
 	}
 	// full-width dark-grey input bar (catppuccin surface1); the text starts at
 	// the left edge — no untouchable leading space the cursor can't reach.

@@ -43,6 +43,12 @@
   before quitting; `Ctrl+C` still force-quits immediately.
 
 ### Fixed
+- Filenames containing control characters no longer shatter the layout. A macOS
+  custom-icon file is literally named "Icon\r" (a carriage return), and drawing
+  that CR reset the terminal cursor mid-line, misaligning every panel. Names are
+  now stripped of control characters for display (the real name is kept for file
+  operations) everywhere they're shown — list, tree/archive preview, places,
+  carry, meta, header path, tab labels, and the rename input.
 - Rename popup: the item name is now a description line inside the box (the
   border title stays "Rename"), and the full-width dark input bar starts the
   cursor flush to the pre-filled name — no untouchable leading blank.

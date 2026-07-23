@@ -118,7 +118,7 @@ func (m placesModel) view(w, rows int, focused bool) string {
 	idx := 0
 	render := func(ps []place, fg lipgloss.Style) {
 		for _, p := range ps {
-			line := truncate(" "+p.icon+"  "+p.label, w)
+			line := truncate(" "+p.icon+"  "+safeName(p.label), w)
 			if idx == m.cursor {
 				line = cur.Render(padDisp(line, w)) // full-width highlight bar
 			} else {

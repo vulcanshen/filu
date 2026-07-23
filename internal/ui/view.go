@@ -286,7 +286,7 @@ func (m AppModel) panelBox(focused bool, title string, w, h int, body string) st
 func (m AppModel) headerBar(w int) string {
 	glyph := string(rune(0xf07c)) // nf-fa-folder-open
 	return lipgloss.NewStyle().Foreground(userColor).
-		Render(padDisp(" "+glyph+" "+shortPath(m.active().dir), w))
+		Render(padDisp(" "+glyph+" "+safeName(shortPath(m.active().dir)), w))
 }
 
 func (m AppModel) footerBar(w int) string {
@@ -296,7 +296,7 @@ func (m AppModel) footerBar(w int) string {
 
 func pathBase(p string) string {
 	if b := filepath.Base(p); b != "." && b != string(filepath.Separator) {
-		return b
+		return safeName(b)
 	}
 	return "/"
 }
