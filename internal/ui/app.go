@@ -79,6 +79,7 @@ type AppModel struct {
 	inputPopup    inputPopup   // text prompt (rename / add)
 	help          helpPopup    // §A.2 global help cheatsheet
 	toast         toastModel   // transient notification (yank feedback)
+	pty           *ptyPopup    // embedded editor (text files); pointer — shared with its read goroutine
 	tasks         []landTask   // land operations (Tasks tab: running + log)
 	taskCh        chan landMsg // land goroutines → UI
 	nextTaskID    int
@@ -97,7 +98,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), pty: newPtyPopup(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -146,6 +147,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.toast.show("Clipboard unavailable")
 	case toastDismissMsg:
 		return m, m.toast.dismiss(msg)
+	case ptyTickMsg:
+		return m, m.pty.update(msg)
+	case ptyExitMsg:
+		for i := range m.tabs { // an edit may have changed the file — reload its dir
+			if m.tabs[i].dir == msg.dir {
+				m.tabs[i].reloadPreserving()
+			}
+		}
+		m.refreshPreview()
+		return m, nil
 	case spinnerTickMsg:
 		m.spinnerFrame++
 		if m.anyRunning() {
@@ -162,13 +173,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
 		m.toast.setSize(msg.Width)
+		m.pty.setSize(msg.Width, msg.Height)
 		m.cur().ensureVisible(m.listRows()) // scroll a restored cursor into view
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.pty.handleTick(msg))
 	case tea.KeyMsg:
+		if m.pty.isActive() { // the embedded editor owns every keystroke
+			return m, m.pty.update(msg)
+		}
 		if m.help.isActive() { // modal cheatsheet
 			if !m.help.isInteractive() {
 				return m, nil
@@ -334,6 +349,15 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "y": // yank: copy the item's full path to the clipboard
 		if it := l.cursorItem(); it.name != "" {
 			cmd = copyToClipboardCmd(filepath.Join(l.dir, it.name), "Copied path to clipboard")
+		}
+	case "e": // edit: text files open in the embedded editor, else hand to the OS
+		if it := l.cursorItem(); it.name != "" {
+			full := filepath.Join(l.dir, it.name)
+			if !it.isDir && isTextFile(full) {
+				cmd = m.pty.start(buildEditorCmd(full), "Edit: "+it.name, l.dir, m.width, m.height)
+			} else {
+				cmd = openFileCmd(full)
+			}
 		}
 	case "S": // sort: open the column→direction picker
 		cmd = m.openSortColumnPicker()
@@ -503,6 +527,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			itemOps = append(itemOps,
 				menuItem{label: "Carry", key: "C", hint: `add to "carries" bucket`},
 				menuItem{label: "Yank", key: "y", hint: "copy full path to clipboard"},
+				menuItem{label: "Edit", key: "e", hint: "edit a text file in $EDITOR (else OS open)"},
 				menuItem{label: "Rename", key: "R", hint: "rename this item"},
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
 		}

@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- Edit (`e`) opens a text file in `$EDITOR` inside an embedded PTY popup — the
+  editor renders within filu instead of taking over the screen. Non-text files
+  fall back to OS open; the directory reloads when the editor exits.
 - Yank (`y`) in panel [2] or the Carries tab copies the item's full path to the
   system clipboard via OSC 52 (works over SSH and tmux), with a toast
   confirmation.
