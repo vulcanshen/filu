@@ -63,7 +63,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 | `?` | 全域說明 |
 | `q` | 離開(存檔) |
 
-面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`R` rename、`a` add、`D` delete、`S` sort、`.` 顯示隱藏檔、`z` zoom。
+面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`.` 顯示隱藏檔、`z` zoom。
 
 ## 建置
 

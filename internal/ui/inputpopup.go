@@ -76,7 +76,8 @@ func (m inputPopup) renderFull() string {
 	if cw := innerW - 2; lipgloss.Width(field) > cw {
 		field = ansi.TruncateLeft(field, lipgloss.Width(field)-(cw-1), "…")
 	}
-	// dark-grey input bar spanning the full inner width (catppuccin surface1)
-	bar := lipgloss.NewStyle().Background(lipgloss.Color("#45475a")).Width(innerW).Render(" " + field)
-	return drawPopupBox(bc, title, hint, []string{bar}, innerW)
+	// dark-grey bar covering ONLY the typed text + cursor (catppuccin surface1);
+	// the leading space is plain so the highlight starts at the first character.
+	bar := lipgloss.NewStyle().Background(lipgloss.Color("#45475a")).Render(field)
+	return drawPopupBox(bc, title, hint, []string{" " + bar}, innerW)
 }
