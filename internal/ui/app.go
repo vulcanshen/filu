@@ -38,6 +38,15 @@ const (
 	inputAdd
 )
 
+// confirmKind selects what the yes/no popup commits to when accepted.
+type confirmKind int
+
+const (
+	confirmNone confirmKind = iota
+	confirmDelete
+	confirmQuit
+)
+
 // AppModel is filu's root model.
 type AppModel struct {
 	width         int
@@ -53,7 +62,8 @@ type AppModel struct {
 	carryTab      int          // panel [4] active tab: 0 carry / 1 progress / 2 history
 	spaceMenu     spaceMenu    // §A.1 contextual popup (kbu form)
 	zoom          panelID      // 0 = normal; else the panel expanded full-width
-	confirm       confirmPopup // yes/no popup (delete)
+	confirm       confirmPopup // yes/no popup (delete / quit)
+	confirmAction confirmKind  // what an accepted confirm commits to
 	pendingDelete string       // path awaiting delete confirmation
 	inputPopup    inputPopup   // text prompt (rename / add)
 	help          helpPopup    // §A.2 global help cheatsheet
@@ -89,6 +99,15 @@ func New() AppModel {
 		go watchLoop(m.watcher, m.watchCh)
 	}
 	return m
+}
+
+// shutdown persists the session, stops the watcher, and quits.
+func (m *AppModel) shutdown() tea.Cmd {
+	saveState(m.snapshotState()) // restore this session on next launch
+	if m.watcher != nil {
+		m.watcher.Close()
+	}
+	return tea.Quit
 }
 
 // cur returns a pointer to the active directory tab.
@@ -158,11 +177,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.confirm, ok, cmd = m.confirm.update(msg)
 			if ok {
-				_ = moveToTrash(m.pendingDelete)
-				m.pendingDelete = ""
-				m.cur().reload()
-				m.cur().ensureVisible(m.listRows())
-				m.refreshPreview()
+				switch m.confirmAction {
+				case confirmQuit:
+					return m, m.shutdown()
+				case confirmDelete:
+					_ = moveToTrash(m.pendingDelete)
+					m.pendingDelete = ""
+					m.cur().reload()
+					m.cur().ensureVisible(m.listRows())
+					m.refreshPreview()
+				}
+				m.confirmAction = confirmNone
 			}
 			return m, cmd
 		}
@@ -179,12 +204,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 		switch msg.String() {
-		case "q", "ctrl+c":
-			saveState(m.snapshotState()) // restore this session on next launch
-			if m.watcher != nil {
-				m.watcher.Close()
+		case "ctrl+c": // hard quit — abandon any running task
+			return m, m.shutdown()
+		case "q":
+			if m.anyRunning() { // a copy/move is in flight — confirm first
+				m.confirmAction = confirmQuit
+				return m, m.confirm.open("A task is still running. Quit anyway?")
 			}
-			return m, tea.Quit
+			return m, m.shutdown()
 		case "?": // §A.2 global help cheatsheet
 			return m, m.help.open()
 		case " ": // Space opens the contextual menu for the focused panel
@@ -263,6 +290,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "D": // delete: confirm first, then move to the system trash
 		if it := l.cursorItem(); it.name != "" {
 			m.pendingDelete = filepath.Join(l.dir, it.name)
+			m.confirmAction = confirmDelete
 			cmd = m.confirm.open("Move " + it.name + " to the trash?")
 		}
 	case "R": // rename cursor item (input popup)

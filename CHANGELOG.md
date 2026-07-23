@@ -12,6 +12,8 @@
 ### Changed
 - The Carries tab shows each item's full path (home folded to `~`), trimmed from
   the left so the filename stays visible, instead of just the basename.
+- Pressing `q` while a copy/move is still running now asks for confirmation
+  before quitting; `Ctrl+C` still force-quits immediately.
 
 ### Fixed
 - Panel borders no longer break on CJK Nerd Fonts (e.g. Maple Mono NF CN) that
