@@ -47,6 +47,12 @@ func newSpaceMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("spacemenu", popupLayerColor(1))}
 }
 
+// newSortMenu is a second spaceMenu instance reused as the sort picker; the
+// distinct animator name keeps its ticks from colliding with the Space menu's.
+func newSortMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("sortmenu", popupLayerColor(1))}
+}
+
 func (m *spaceMenu) setItems(items []menuItem, title string) {
 	m.items = items
 	m.title = title

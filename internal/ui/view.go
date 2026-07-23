@@ -49,6 +49,9 @@ func (m AppModel) View() string {
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.sortMenu.isActive() {
+		out = overlay.Composite(m.sortMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.confirm.isActive() {
 		out = overlay.Composite(m.confirm.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}

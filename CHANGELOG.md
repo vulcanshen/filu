@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Added
+- Sort panel [2] by name / size / modified / extension with `S` (or the Space
+  menu). A kbu-style column → direction picker builds a multi-tier sort chain
+  (later tiers break ties), with per-column unset and a reset; directories stay
+  first, the active sort shows in the Files header, and it persists per session.
 - Pressing Enter on a file opens it in the OS default app (macOS `open`, Linux
   `xdg-open`); Enter on a directory still descends into it.
 - Live refresh: the list tabs now watch their directories (fsnotify) and reload

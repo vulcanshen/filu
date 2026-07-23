@@ -47,6 +47,14 @@ const (
 	confirmQuit
 )
 
+// sortStep tracks where the sort picker is in its column→direction flow.
+type sortStep int
+
+const (
+	sortStepColumn sortStep = iota
+	sortStepDirection
+)
+
 // AppModel is filu's root model.
 type AppModel struct {
 	width         int
@@ -61,6 +69,9 @@ type AppModel struct {
 	carry         carryModel
 	carryTab      int          // panel [4] active tab: 0 carry / 1 progress / 2 history
 	spaceMenu     spaceMenu    // §A.1 contextual popup (kbu form)
+	sortMenu      spaceMenu    // sort picker (column→direction chain, kbu form)
+	sortStep      sortStep     // which step the sort picker is on
+	sortFlowCol   sortCol      // column carried from the column step to direction
 	zoom          panelID      // 0 = normal; else the panel expanded full-width
 	confirm       confirmPopup // yes/no popup (delete / quit)
 	confirmAction confirmKind  // what an accepted confirm commits to
@@ -85,7 +96,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -139,6 +150,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
 		m.spaceMenu.setSize(msg.Width)
+		m.sortMenu.setSize(msg.Width)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
@@ -147,7 +159,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg))
 	case tea.KeyMsg:
 		if m.help.isActive() { // modal cheatsheet
 			if !m.help.isInteractive() {
@@ -200,6 +212,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spaceMenu, key, cmd = m.spaceMenu.update(msg)
 			if key != "" { // committed: fire on the focused panel, then close
 				cmd = tea.Batch(cmd, m.dispatchFocusKey(key), m.spaceMenu.close())
+			}
+			return m, cmd
+		}
+		if m.sortMenu.isActive() { // sort picker owns the keyboard; commits drive the chain flow
+			if !m.sortMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.sortMenu, key, cmd = m.sortMenu.update(msg)
+			if key != "" { // stays open, swapping to the next step / looping back
+				cmd = tea.Batch(cmd, m.advanceSortFlow(key))
 			}
 			return m, cmd
 		}
@@ -299,6 +323,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		}
 	case "a": // add file/dir — lazyvim style: trailing / = dir (input popup)
 		cmd = m.inputPopup.open(inputAdd, "New (trailing / = dir)", "", "")
+	case "S": // sort: open the column→direction picker
+		cmd = m.openSortColumnPicker()
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
 		m.toggleZoom(panelList)
 	}
@@ -473,6 +499,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		panelOps = append(panelOps,
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
+			menuItem{label: "Sort", key: "S", hint: "order by name / size / modified / ext"},
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
 			menuItem{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"})
 		return groupedMenu(itemOps, panelOps), title

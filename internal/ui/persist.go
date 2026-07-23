@@ -19,6 +19,13 @@ type sessionState struct {
 	Carry        []string        `yaml:"carry,omitempty"`
 	Pinned       []string        `yaml:"pinned,omitempty"`
 	Tasks        []persistedTask `yaml:"tasks,omitempty"`
+	Sort         []sortRuleYAML  `yaml:"sort,omitempty"`
+}
+
+// sortRuleYAML is one persisted sort tier.
+type sortRuleYAML struct {
+	Col int  `yaml:"col"`
+	Asc bool `yaml:"asc"`
 }
 
 type tabState struct {
@@ -116,11 +123,18 @@ func (m AppModel) snapshotState() sessionState {
 			Status: taskStatusString(t.status),
 		})
 	}
+	for _, r := range sortChain {
+		st.Sort = append(st.Sort, sortRuleYAML{Col: int(r.col), Asc: r.asc})
+	}
 	return st
 }
 
 // applyState restores a saved session onto a freshly-built model.
 func (m *AppModel) applyState(st sessionState) {
+	sortChain = nil // restore the sort before tabs reload so they sort correctly
+	for _, r := range st.Sort {
+		sortChain = append(sortChain, sortRule{col: sortCol(r.Col), asc: r.Asc})
+	}
 	for i := 0; i < len(m.tabs) && i < len(st.Tabs); i++ {
 		if st.Tabs[i].Dir == "" {
 			continue
