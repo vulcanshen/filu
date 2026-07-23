@@ -174,7 +174,7 @@ func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
 		return s
 	}
 	carry := m.panelBox(foc(0), singleChip(label("Carries"), foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
-	progress := m.panelBox(foc(1), singleChip(label("Progress"), foc(1)), wd[1], h, centeredNote(wd[1]-2, h-2, "(no active tasks)"))
+	progress := m.panelBox(foc(1), singleChip(label("Progress"), foc(1)), wd[1], h, m.progressView(wd[1]-2, h-2))
 	history := m.panelBox(foc(2), singleChip(label("History"), foc(2)), wd[2], h, m.carry.historyView(wd[2]-2, h-2))
 	return lipgloss.JoinHorizontal(lipgloss.Top, carry, progress, history)
 }
@@ -211,8 +211,8 @@ func (m AppModel) carryTitle(w int) string {
 // carryBody renders panel [4]'s active tab.
 func (m AppModel) carryBody(w, rows int) string {
 	switch m.carryTab {
-	case 1: // progress — async land is future work
-		return centeredNote(w, rows, "(no active tasks)")
+	case 1: // progress
+		return m.progressView(w, rows)
 	case 2: // history
 		return m.carry.historyView(w, rows)
 	default: // carry

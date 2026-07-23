@@ -25,27 +25,60 @@ func TestCarryPick(t *testing.T) {
 	}
 }
 
-func TestCarryLandPickedOnly(t *testing.T) {
+func TestLandItemsPickedOnly(t *testing.T) {
+	m := carryModel{items: []string{"/a", "/b", "/c"}}
+	m.cursor = 0
+	m.togglePick() // pick /a only
+	if got := m.landItems(); len(got) != 1 || got[0] != "/a" {
+		t.Errorf("landItems should be just /a, got %v", got)
+	}
+}
+
+func TestHandleLandMsgFinish(t *testing.T) {
+	var m AppModel
+	m.tasks = []landTask{{id: 1, action: "cp", dest: "dst", total: 2}}
+	m.carry.items = []string{"/a", "/b"}
+
+	m.handleLandMsg(landMsg{taskID: 1, done: 1, total: 2}) // progress
+	if m.tasks[0].done != 1 {
+		t.Errorf("progress not applied: %+v", m.tasks[0])
+	}
+	m.handleLandMsg(landMsg{taskID: 1, done: 2, total: 2, finished: true, moved: []string{"/a"}})
+	if len(m.tasks) != 0 {
+		t.Error("finished task should be removed")
+	}
+	if len(m.carry.history) != 1 || m.carry.history[0].action != "cp" {
+		t.Errorf("finish should record history, got %v", m.carry.history)
+	}
+	if len(m.carry.items) != 1 || m.carry.items[0] != "/b" {
+		t.Errorf("moved /a should leave the bucket, got %v", m.carry.items)
+	}
+}
+
+func TestRunLandCopy(t *testing.T) {
 	src, dst := t.TempDir(), t.TempDir()
 	a := filepath.Join(src, "a.txt")
-	b := filepath.Join(src, "b.txt")
-	for _, p := range []string{a, b} {
-		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+	if err := os.WriteFile(a, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ch := make(chan landMsg, 8)
+	go runLand(1, []string{a}, dst, false, ch)
+
+	var last landMsg
+	for {
+		msg := <-ch
+		last = msg
+		if msg.finished {
+			break
 		}
 	}
-	m := carryModel{items: []string{a, b}}
-	m.cursor = 0
-	m.togglePick() // pick only a
-	m.land(dst, false)
-
+	if last.total != 1 || last.done != 1 {
+		t.Errorf("finish msg = %+v, want done/total 1/1", last)
+	}
+	if len(last.moved) != 0 {
+		t.Errorf("copy should report no moved items, got %v", last.moved)
+	}
 	if _, err := os.Stat(filepath.Join(dst, "a.txt")); err != nil {
-		t.Error("picked a.txt should be copied")
-	}
-	if _, err := os.Stat(filepath.Join(dst, "b.txt")); err == nil {
-		t.Error("unpicked b.txt should not be copied")
-	}
-	if len(m.items) != 2 {
-		t.Errorf("copy keeps the bucket, got %d items", len(m.items))
+		t.Error("a.txt should be copied to dst")
 	}
 }

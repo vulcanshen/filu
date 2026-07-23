@@ -56,6 +56,9 @@ type AppModel struct {
 	pendingDelete string       // path awaiting delete confirmation
 	inputPopup    inputPopup   // text prompt (rename / add)
 	help          helpPopup    // §A.2 global help cheatsheet
+	tasks         []landTask   // in-flight land operations (Progress tab)
+	taskCh        chan landMsg // land goroutines → UI
+	nextTaskID    int
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -65,7 +68,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup()}
+	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), taskCh: make(chan landMsg, 64)}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -82,10 +85,13 @@ func (m *AppModel) cur() *listModel { return &m.tabs[m.tab] }
 // active returns the active tab by value (read-only paths).
 func (m AppModel) active() listModel { return m.tabs[m.tab] }
 
-func (m AppModel) Init() tea.Cmd { return nil }
+func (m AppModel) Init() tea.Cmd { return m.waitLand() } // one persistent task-channel reader
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case landMsg:
+		m.handleLandMsg(msg)
+		return m, m.waitLand()
 	case tea.WindowSizeMsg:
 		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
@@ -209,12 +215,10 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		if it := l.cursorItem(); it.name != "" {
 			m.carry.toggle(filepath.Join(l.dir, it.name))
 		}
-	case "p": // paste: land carried items here as copy
-		m.carry.land(l.dir, false)
-		l.reload()
-	case "m": // move: land carried items here (move)
-		m.carry.land(l.dir, true)
-		l.reload()
+	case "p": // paste: land carried items here as copy (async)
+		m.startLand(l.dir, false)
+	case "m": // move: land carried items here as move (async)
+		m.startLand(l.dir, true)
 	case "P": // pin: toggle the cursor dir into [1] Pinned
 		if it := l.cursorItem(); it.isDir {
 			m.places.togglePin(filepath.Join(l.dir, it.name))
