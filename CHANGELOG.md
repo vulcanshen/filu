@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- Yank from panel [3]: `y` opens a viewport over the Preview/Meta content with a
+  vim-style cursor and character-wise visual selection (`v`); `y` copies the
+  selection, or the whole content when nothing is selected (OSC 52 + toast).
 - cd-on-quit: `q` now opens a picker to leave the shell in panel [1]'s launch
   directory or any of the three list tabs' current directories (1–4 or j/k +
   Enter; Esc stays). With the shell wrapper installed (`eval "$(filu shell)"`),

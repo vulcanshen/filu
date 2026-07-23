@@ -31,7 +31,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 
 - **[1] pin**:系統 Places(CWD / Home / 根目錄)+ 使用者釘選的目錄。純導覽 —— 選一個,`[2]` 就跳過去。
 - **[2] 清單**:當前目錄的檔案,固定 3 個目錄分頁(各自獨立 CWD + cursor)。檔案操作主戰場。
-- **[3] detail**:`Preview` / `Meta` 兩個 tab。Preview 依型別分五類呈現;Meta 是 `stat` 等級的詳細資訊。這是參考視角,失焦也不 dim。
+- **[3] detail**:`Preview` / `Meta` 兩個 tab。Preview 依型別分五類呈現;Meta 是 `stat` 等級的詳細資訊。這是參考視角,失焦也不 dim。按 `y` 開 yank 視窗(vim 式 cursor + `v` visual selection):有選取時 `y` 複製選取內容,沒選取則複製全部。
 - **[4] carry**:`Carries`(搬運暫存區)/ `Tasks`(複製/搬移任務,含 running / done / pending / error 狀態)兩個 tab。
 
 ## 功能
