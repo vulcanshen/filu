@@ -193,7 +193,11 @@ func (m *listModel) ensureVisible(rows int) {
 	}
 }
 
-func (m listModel) view(w, rows int, focused bool) string {
+// view renders the file list. carried is the set of full paths sitting in the
+// carries bucket; those rows get a green tick in a reserved left column, so a
+// Pick reads the same as it does in the Carries tab (and doubles as
+// multi-select).
+func (m listModel) view(w, rows int, focused bool, carried map[string]bool) string {
 	hdr := lipgloss.NewStyle().Foreground(dimColor).Render("Files" + sortHeaderSuffix())
 	rows-- // reserve the section-header row
 	if len(m.items) == 0 {
@@ -209,6 +213,7 @@ func (m listModel) view(w, rows int, focused bool) string {
 	}
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
 	dimStyle := lipgloss.NewStyle().Foreground(dimColor)
+	checkStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#a6e3a1")) // carried = green tick
 
 	var b strings.Builder
 	b.WriteString(hdr + "\n")
@@ -219,14 +224,27 @@ func (m listModel) view(w, rows int, focused bool) string {
 		if it.isDir {
 			icon = iconDir
 		}
-		line := truncate(" "+icon+" "+safeName(it.name), w)
+		inBucket := carried[filepath.Join(m.dir, it.name)]
+		body := icon + " " + safeName(it.name)
+		var line string
 		switch {
-		case i == m.cursor:
-			line = cursorStyle.Render(padDisp(line, w)) // full-width highlight bar
-		case !focused:
-			line = dimStyle.Render(line) // unfocused panel: recede
+		case i == m.cursor: // full-width highlight bar; tick inherits the bar fg
+			mark := " "
+			if inBucket {
+				mark = pickGlyph
+			}
+			line = cursorStyle.Render(padDisp(" "+mark+" "+body, w))
 		default:
-			line = lipgloss.NewStyle().Foreground(fileColor(it)).Render(line) // eza type colour
+			mark := " "
+			if inBucket {
+				mark = checkStyle.Render(pickGlyph)
+			}
+			if focused {
+				body = lipgloss.NewStyle().Foreground(fileColor(it)).Render(body) // eza type colour
+			} else {
+				body = dimStyle.Render(body) // unfocused panel: recede
+			}
+			line = truncate(" "+mark+" "+body, w)
 		}
 		b.WriteString(line)
 		if i < end-1 {

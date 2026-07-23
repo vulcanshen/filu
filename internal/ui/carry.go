@@ -60,6 +60,17 @@ func (m *carryModel) togglePick() {
 	m.picked[p] = true
 }
 
+// inBucket is the set of paths currently in the bucket. Panel [2] marks these
+// with a tick, so a Pick shows up the same way it does in the Carries tab —
+// which doubles as multi-select.
+func (m carryModel) inBucket() map[string]bool {
+	s := make(map[string]bool, len(m.items))
+	for _, p := range m.items {
+		s[p] = true
+	}
+	return s
+}
+
 // landSet is the set of paths a Land acts on: the picked subset, or everything
 // when nothing is picked.
 func (m carryModel) landSet() map[string]bool {

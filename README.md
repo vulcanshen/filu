@@ -45,7 +45,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
   - PDF → 純 Go 抽文字 + 頁數
 - **顏色**:eza catppuccin-mocha 檔案型別色 + executable-bit 綠。structural 藍 / user lavender / popup 層色的三層階層。
 - **Zoom**:每個有分頁的面板都能 `z` 展開佔滿,把分頁攤成等寬並排欄。
-- **Carry-bucket 搬檔**:`Carry` 把檔案拿進 bucket → 切到目標目錄 → `Land`(落地)才決定複製(`p`)或搬移(`m`);可 `Pick` 只落地子集。落地跑 goroutine,進度在 Tasks tab 即時更新。
+- **Carry-bucket 搬檔**:`p` pick 把檔案拿進 bucket(panel 2 會**打綠勾**標記,等同 multi-select)→ 切到目標目錄 → `c` copy / `m` move 落地;Carries tab 可 `p` 只落地子集。落地跑 goroutine,進度在 Tasks tab 即時更新。
 - **Popup**(全走 kbu form:line→expand 動畫 + 層色 border):`Space` 情境選單(§A.1)、`?` 全域說明(§A.2)、刪除確認、Rename / Add 輸入框。
 - **Session 持久化**:分頁位置 + cursor、active tab、focus、detail tab、carry bucket、pinned、task log 都存進 `state.yaml`,下次啟動接續。
 
