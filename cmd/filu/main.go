@@ -15,6 +15,11 @@ func main() {
 		fmt.Print(shellWrapper) // `eval "$(filu shell)"` in your rc enables cd-on-quit
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "iconwidth" {
+		ui.DetectIconWidth() // probe + report the detected Nerd Font icon cell width
+		fmt.Println(ui.IconCells())
+		return
+	}
 	ui.DetectIconWidth() // measure Nerd Font icon cell width (CJK fonts draw them 2-wide)
 	p := tea.NewProgram(ui.New(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
