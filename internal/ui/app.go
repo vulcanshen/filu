@@ -304,6 +304,10 @@ func (m *AppModel) handleCarryKey(key string) tea.Cmd {
 			m.carry.moveCursor(len(m.carry.items))
 		case "P": // pick: toggle this item in the land subset
 			m.carry.togglePick()
+		case "D": // delete: drop this item from the bucket (not the file)
+			if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
+				m.carry.removeItem(m.carry.items[m.carry.cursor])
+			}
 		}
 	}
 	return nil
@@ -390,7 +394,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 	case panelPin:
 		items := []menuItem{{label: "Jump", key: "enter", hint: "go to this place"}}
 		if m.places.currentIsPinned() {
-			items = append(items, menuItem{label: "UnPin", key: "U", hint: "remove from Pinned"})
+			items = append(items, menuItem{label: "UnPin", key: "P", hint: "remove from Pinned"})
 		}
 		return items, "Places"
 	case panelDetail:
@@ -404,7 +408,10 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
 		}
 		if m.carryTab == 0 && len(m.carry.items) > 0 { // Carries tab, with items
-			itemOps := []menuItem{{label: "Pick", key: "P", hint: "toggle this item in the land subset"}}
+			itemOps := []menuItem{
+				{label: "Pick", key: "P", hint: "toggle this item in the land subset"},
+				{label: "Delete", key: "D", hint: "remove this item from the bucket"},
+			}
 			return groupedMenu(itemOps, panelOps), "Carries"
 		}
 		return groupedMenu(nil, panelOps), "Bucket"
@@ -487,7 +494,7 @@ func (m *AppModel) handlePinKey(key string) tea.Cmd {
 		if p, ok := m.places.current(); ok {
 			m.navigateTo(p.path)
 		}
-	case "U": // unpin the cursor place (only meaningful on a Pinned entry)
+	case "P": // unpin the cursor place (panel-aware P; only on a Pinned entry)
 		if m.places.currentIsPinned() {
 			if p, ok := m.places.current(); ok {
 				m.places.unpin(p.path)
