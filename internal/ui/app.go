@@ -422,17 +422,23 @@ func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 }
 
 // openDetailYank opens the panel [3] yank viewport over the active detail tab.
+// Preview yanks the file's own content (body, no line-number gutter — that
+// becomes a display-only gutter in the viewport); Meta yanks the meta lines.
 func (m *AppModel) openDetailYank() tea.Cmd {
-	lines := m.detailLines()
+	var lines []string
+	title, showGutter := "Yank: Preview", false
+	if m.detail == tabMeta {
+		lines = metaLines(m.active().cursorItem(), m.active().dir)
+		title = "Yank: Meta"
+	} else {
+		lines = m.preview.body
+		showGutter = m.preview.kind == previewText || m.preview.kind == previewBinary
+	}
 	if len(lines) == 0 {
 		return nil
 	}
-	title := "Yank: Preview"
-	if m.detail == tabMeta {
-		title = "Yank: Meta"
-	}
 	m.detailYank.setSize(m.width, m.height)
-	return m.detailYank.open(title, lines)
+	return m.detailYank.open(title, lines, showGutter)
 }
 
 // clampDetailScroll keeps panel [3] from scrolling past its last page.

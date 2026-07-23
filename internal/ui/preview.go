@@ -30,7 +30,8 @@ const (
 // image / archive classes come later; for now dir / text / binary.
 type previewModel struct {
 	kind  previewKind
-	lines []string // dir tree / text / hex
+	lines []string // panel display lines (text/hex carry a line-number gutter)
+	body  []string // same content WITHOUT the gutter — the yank source
 	note  string   // empty / unreadable
 }
 
@@ -40,19 +41,21 @@ func loadPreview(it fileItem, parent string, imgW int) previewModel {
 	}
 	full := filepath.Join(parent, it.name)
 	if it.isDir {
-		return previewModel{kind: previewDir, lines: treeLines(full, 3)}
+		tl := treeLines(full, 3)
+		return previewModel{kind: previewDir, lines: tl, body: tl}
 	}
 	if lines, ok := archiveTree(full, it.name); ok {
-		return previewModel{kind: previewArchive, lines: lines}
+		return previewModel{kind: previewArchive, lines: lines, body: lines}
 	}
 	if isImage(it.name) {
 		if lines, ok := imageDataURI(full, it.name, imgW); ok {
-			return previewModel{kind: previewImage, lines: lines}
+			return previewModel{kind: previewImage, lines: lines, body: lines}
 		}
 	}
 	if strings.HasSuffix(strings.ToLower(it.name), ".pdf") {
 		if text, pages, ok := pdfText(full); ok {
-			return previewModel{kind: previewText, lines: pdfLines(text, pages)}
+			pl := pdfLines(text, pages)
+			return previewModel{kind: previewText, lines: pl, body: pl}
 		}
 	}
 	data, err := readCapped(full, previewCap)
@@ -64,9 +67,10 @@ func loadPreview(it fileItem, parent string, imgW int) previewModel {
 		if hl, ok := highlight(it.name, strings.Join(lines, "\n")); ok {
 			lines = hl
 		}
-		return previewModel{kind: previewText, lines: withLineNumbers(lines)}
+		return previewModel{kind: previewText, lines: withLineNumbers(lines), body: lines}
 	}
-	return previewModel{kind: previewBinary, lines: withLineNumbers(hexDump(data))}
+	hex := hexDump(data)
+	return previewModel{kind: previewBinary, lines: withLineNumbers(hex), body: hex}
 }
 
 // withLineNumbers prefixes each text-preview line with a dim, right-aligned

@@ -11,7 +11,7 @@ func dyRune(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: 
 func openYank(lines ...string) detailYank {
 	m := newDetailYank()
 	m.setSize(80, 24)
-	m.open("t", lines)
+	m.open("t", lines, false)
 	m.anim.state = popupOpen // skip the open animation so update() is interactive
 	return m
 }
@@ -65,6 +65,18 @@ func TestDetailYankEscPeelsVisualThenCloses(t *testing.T) {
 	}
 	if _, cmd := m.update(tea.KeyMsg{Type: tea.KeyEsc}); cmd == nil {
 		t.Error("second Esc should close the viewport")
+	}
+}
+
+func TestDetailYankGutterExcludedFromYank(t *testing.T) {
+	m := newDetailYank()
+	m.setSize(80, 24)
+	m.open("t", []string{"foo", "bar"}, true) // line-number gutter on
+	if m.plain[0] != "foo" || m.plain[1] != "bar" {
+		t.Errorf("plain should be the raw content without line numbers: %v", m.plain)
+	}
+	if m.full != "foo\nbar" {
+		t.Errorf("yank-all = %q, want foo\\nbar (gutter excluded)", m.full)
 	}
 }
 
