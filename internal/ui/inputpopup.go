@@ -76,5 +76,7 @@ func (m inputPopup) renderFull() string {
 	if cw := innerW - 2; lipgloss.Width(field) > cw {
 		field = ansi.TruncateLeft(field, lipgloss.Width(field)-(cw-1), "…")
 	}
-	return drawPopupBox(bc, title, hint, []string{" " + field}, innerW)
+	// dark-grey input bar spanning the full inner width (catppuccin surface1)
+	bar := lipgloss.NewStyle().Background(lipgloss.Color("#45475a")).Width(innerW).Render(" " + field)
+	return drawPopupBox(bc, title, hint, []string{bar}, innerW)
 }
