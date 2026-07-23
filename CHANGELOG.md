@@ -27,6 +27,12 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- Line-number gutters now show just the number and a space — the "│" separator
+  is gone — in both the text/binary preview and the panel [3] yank viewport, so
+  the two share one form. The yank popup's content also starts flush against the
+  top border (no leading blank row), matching kbu's YAML popup. The panel [3]
+  Space menu's Yank entry no longer lists `v`, since visual is a within-popup
+  action (already shown in the popup's hint bar).
 - Rename moved to lowercase `r` (Delete stays `D`, to avoid clashing with the
   `d` half-page-down motion).
 - On launch, panel [2] always opens on the first tab at the current directory,

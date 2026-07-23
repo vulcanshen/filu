@@ -74,15 +74,15 @@ func loadPreview(it fileItem, parent string, imgW int) previewModel {
 }
 
 // withLineNumbers prefixes each text-preview line with a dim, right-aligned
-// gutter ("  1 │ …") numbered by source line. The gutter carries its own reset,
-// so the highlighted content that follows keeps its colour.
+// gutter ("  1 …") numbered by source line — just the number and a trailing
+// space, matching the yank popup (no "│" separator). The gutter carries its own
+// reset, so the highlighted content that follows keeps its colour.
 func withLineNumbers(lines []string) []string {
 	width := max(len(strconv.Itoa(len(lines))), 2)
-	sep := " " + string(rune(0x2502)) + " " // " │ "
 	gutter := lipgloss.NewStyle().Foreground(dimColor)
 	out := make([]string, len(lines))
 	for i, l := range lines {
-		out[i] = gutter.Render(fmt.Sprintf("%*d", width, i+1)+sep) + l
+		out[i] = gutter.Render(fmt.Sprintf("%*d ", width, i+1)) + l
 	}
 	return out
 }
