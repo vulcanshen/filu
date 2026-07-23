@@ -8,18 +8,19 @@ import (
 )
 
 // sessionState is what filu restores on the next launch (IDEA.md: "where you
-// were is where you restart") — the 3 tab dirs + cursors, active tab, focus,
-// detail tab, carry bucket, and pinned places.
+// were is where you restart") — tabs [1]/[2] dirs + cursors, focus, detail tab,
+// carry bucket, pinned places, and the sort chain.
+// Tab [0] always reopens at the CWD and is the active tab on launch, and panel
+// [1] always lands on the CWD — so the first tab's state, the active-tab index,
+// and the places cursor are deliberately NOT persisted.
 type sessionState struct {
-	Tabs         []tabState      `yaml:"tabs"`
-	Tab          int             `yaml:"tab"`
-	Focus        int             `yaml:"focus"`
-	Detail       int             `yaml:"detail"`
-	PlacesCursor int             `yaml:"places_cursor"`
-	Carry        []string        `yaml:"carry,omitempty"`
-	Pinned       []string        `yaml:"pinned,omitempty"`
-	Tasks        []persistedTask `yaml:"tasks,omitempty"`
-	Sort         []sortRuleYAML  `yaml:"sort,omitempty"`
+	Tabs   []tabState      `yaml:"tabs"` // tabs [1] and [2] only (tab [0] = CWD)
+	Focus  int             `yaml:"focus"`
+	Detail int             `yaml:"detail"`
+	Carry  []string        `yaml:"carry,omitempty"`
+	Pinned []string        `yaml:"pinned,omitempty"`
+	Tasks  []persistedTask `yaml:"tasks,omitempty"`
+	Sort   []sortRuleYAML  `yaml:"sort,omitempty"`
 }
 
 // sortRuleYAML is one persisted sort tier.
@@ -105,14 +106,12 @@ func saveState(st sessionState) {
 // snapshotState captures the current model for persistence.
 func (m AppModel) snapshotState() sessionState {
 	st := sessionState{
-		Tab:          m.tab,
-		Focus:        int(m.focus),
-		Detail:       int(m.detail),
-		PlacesCursor: m.places.cursor,
-		Carry:        m.carry.items,
+		Focus:  int(m.focus),
+		Detail: int(m.detail),
+		Carry:  m.carry.items,
 	}
-	for _, t := range m.tabs {
-		st.Tabs = append(st.Tabs, tabState{Dir: t.dir, Cursor: t.cursor})
+	for i := 1; i < len(m.tabs); i++ { // tab [0] always reopens at CWD — skip it
+		st.Tabs = append(st.Tabs, tabState{Dir: m.tabs[i].dir, Cursor: m.tabs[i].cursor})
 	}
 	for _, p := range m.places.pinned {
 		st.Pinned = append(st.Pinned, p.path)
@@ -135,16 +134,13 @@ func (m *AppModel) applyState(st sessionState) {
 	for _, r := range st.Sort {
 		sortChain = append(sortChain, sortRule{col: sortCol(r.Col), asc: r.Asc})
 	}
-	for i := 0; i < len(m.tabs) && i < len(st.Tabs); i++ {
-		if st.Tabs[i].Dir == "" {
+	for k := 0; k < len(st.Tabs) && k+1 < len(m.tabs); k++ { // st.Tabs[k] → tab [k+1]; tab [0] stays CWD
+		if st.Tabs[k].Dir == "" {
 			continue
 		}
-		m.tabs[i] = newList(st.Tabs[i].Dir)
-		m.tabs[i].cursor = st.Tabs[i].Cursor
-		m.tabs[i].clampCursor()
-	}
-	if st.Tab >= 0 && st.Tab < len(m.tabs) {
-		m.tab = st.Tab
+		m.tabs[k+1] = newList(st.Tabs[k].Dir)
+		m.tabs[k+1].cursor = st.Tabs[k].Cursor
+		m.tabs[k+1].clampCursor()
 	}
 	if st.Focus >= int(panelPin) && st.Focus <= int(panelCarry) {
 		m.focus = panelID(st.Focus)
@@ -156,9 +152,9 @@ func (m *AppModel) applyState(st sessionState) {
 	for _, p := range st.Pinned {
 		m.places.pinned = append(m.places.pinned, place{label: filepath.Base(p), path: p, icon: iconPin})
 	}
-	m.places.cursor = st.PlacesCursor
-	m.places.move(0)              // clamp to the restored place count
-	for _, pt := range st.Tasks { // "undone" tasks were interrupted → pending
+	m.places.cursor = len(m.places.pinned) // panel [1] always lands on the CWD (first system place)
+	m.places.move(0)                       // clamp to the restored place count
+	for _, pt := range st.Tasks {          // "undone" tasks were interrupted → pending
 		status := taskPending
 		switch pt.Status {
 		case "done":

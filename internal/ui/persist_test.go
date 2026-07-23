@@ -29,8 +29,11 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	got := AppModel{places: newPlaces()} // like New(): system places already present
 	got.applyState(st)
 
-	if got.tab != 1 || got.focus != panelDetail || got.detail != tabMeta {
-		t.Errorf("scalars: tab=%d focus=%d detail=%d", got.tab, got.focus, got.detail)
+	if got.focus != panelDetail || got.detail != tabMeta {
+		t.Errorf("scalars: focus=%d detail=%d", got.focus, got.detail)
+	}
+	if got.tab != 0 {
+		t.Errorf("tab [0] should always be active on launch, got tab=%d", got.tab)
 	}
 	if len(got.carry.items) != 2 {
 		t.Errorf("carry not restored: %v", got.carry.items)
@@ -38,8 +41,8 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	if got.tabs[1].dir != "/usr" || got.tabs[1].cursor != 2 {
 		t.Errorf("tab[1] not restored: dir=%q cursor=%d", got.tabs[1].dir, got.tabs[1].cursor)
 	}
-	if got.places.cursor != 2 {
-		t.Errorf("places cursor not restored: %d", got.places.cursor)
+	if p, ok := got.places.current(); !ok || p.label != "CWD" {
+		t.Errorf("panel [1] should land on CWD, got %+v ok=%v", p, ok)
 	}
 }
 
