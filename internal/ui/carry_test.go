@@ -3,7 +3,10 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestCarryPick(t *testing.T) {
@@ -31,6 +34,14 @@ func TestLandItemsPickedOnly(t *testing.T) {
 	m.togglePick() // pick /a only
 	if got := m.landItems(); len(got) != 1 || got[0] != "/a" {
 		t.Errorf("landItems should be just /a, got %v", got)
+	}
+}
+
+func TestCarryViewShowsFullPath(t *testing.T) {
+	m := carryModel{items: []string{"/tmp/projects/demo/notes.txt"}}
+	out := ansi.Strip(m.view(60, 4, false))
+	if !strings.Contains(out, "projects/demo/notes.txt") {
+		t.Errorf("carry view should show the full path, got %q", out)
 	}
 }
 
