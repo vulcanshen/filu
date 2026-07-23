@@ -6,6 +6,10 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
+// IconCells reports the detected Nerd Font icon cell width (1 or 2) — exposed
+// for the `filu iconwidth` debug command.
+func IconCells() int { return iconCells }
+
 // iconCells is how many terminal cells a Nerd Font file-type icon actually
 // occupies. On a normal Nerd Font it is 1; on a CJK "full-width icon" font
 // (e.g. Maple Mono NF CN) the icons are drawn 2 cells wide to align to the CJK
