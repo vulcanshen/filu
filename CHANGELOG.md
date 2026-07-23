@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- Yank (`y`) in panel [2] or the Carries tab copies the item's full path to the
+  system clipboard via OSC 52 (works over SSH and tmux), with a toast
+  confirmation.
 - Sort panel [2] by name / size / modified / extension with `S` (or the Space
   menu). A kbu-style column → direction picker builds a multi-tier sort chain
   (later tiers break ties), with per-column unset and a reset; directories stay

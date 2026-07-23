@@ -78,6 +78,7 @@ type AppModel struct {
 	pendingDelete string       // path awaiting delete confirmation
 	inputPopup    inputPopup   // text prompt (rename / add)
 	help          helpPopup    // §A.2 global help cheatsheet
+	toast         toastModel   // transient notification (yank feedback)
 	tasks         []landTask   // land operations (Tasks tab: running + log)
 	taskCh        chan landMsg // land goroutines → UI
 	nextTaskID    int
@@ -96,7 +97,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -139,6 +140,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case watchMsg:
 		m.handleWatchMsg(msg)
 		return m, m.waitWatch()
+	case clipboardCopiedMsg:
+		return m, m.toast.show(msg.note)
+	case clipboardFailedMsg:
+		return m, m.toast.show("Clipboard unavailable")
+	case toastDismissMsg:
+		return m, m.toast.dismiss(msg)
 	case spinnerTickMsg:
 		m.spinnerFrame++
 		if m.anyRunning() {
@@ -154,12 +161,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
+		m.toast.setSize(msg.Width)
 		m.cur().ensureVisible(m.listRows()) // scroll a restored cursor into view
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg))
 	case tea.KeyMsg:
 		if m.help.isActive() { // modal cheatsheet
 			if !m.help.isInteractive() {
@@ -323,6 +331,10 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		}
 	case "a": // add file/dir — lazyvim style: trailing / = dir (input popup)
 		cmd = m.inputPopup.open(inputAdd, "New (trailing / = dir)", "", "")
+	case "y": // yank: copy the item's full path to the clipboard
+		if it := l.cursorItem(); it.name != "" {
+			cmd = copyToClipboardCmd(filepath.Join(l.dir, it.name), "Copied path to clipboard")
+		}
 	case "S": // sort: open the column→direction picker
 		cmd = m.openSortColumnPicker()
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
@@ -393,6 +405,10 @@ func (m *AppModel) handleCarryKey(key string) tea.Cmd {
 		case "D": // delete: drop this item from the bucket (not the file)
 			if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
 				m.carry.removeItem(m.carry.items[m.carry.cursor])
+			}
+		case "y": // yank: copy this item's full path to the clipboard
+			if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
+				return copyToClipboardCmd(m.carry.items[m.carry.cursor], "Copied path to clipboard")
 			}
 		}
 		return nil
@@ -486,6 +502,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		if it.name != "" {
 			itemOps = append(itemOps,
 				menuItem{label: "Carry", key: "C", hint: `add to "carries" bucket`},
+				menuItem{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				menuItem{label: "Rename", key: "R", hint: "rename this item"},
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
 		}
@@ -522,6 +539,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		if m.carryTab == 0 && len(m.carry.items) > 0 { // Carries tab, with items
 			itemOps := []menuItem{
 				{label: "Pick", key: "P", hint: "toggle this item in the land subset"},
+				{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				{label: "Delete", key: "D", hint: "remove this item from the bucket"},
 			}
 			return groupedMenu(itemOps, panelOps), "Carries"
