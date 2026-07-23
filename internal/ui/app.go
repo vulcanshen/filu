@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/fsnotify/fsnotify"
 )
 
 type panelID int
@@ -59,9 +60,12 @@ type AppModel struct {
 	tasks         []landTask   // land operations (Tasks tab: running + log)
 	taskCh        chan landMsg // land goroutines → UI
 	nextTaskID    int
-	spinnerFrame  int  // running-task spinner animation
-	spinning      bool // a spinner tick is in flight
-	taskCursor    int  // cursor over the Tasks tab
+	spinnerFrame  int               // running-task spinner animation
+	spinning      bool              // a spinner tick is in flight
+	taskCursor    int               // cursor over the Tasks tab
+	watcher       *fsnotify.Watcher // live directory watch (nil if unavailable)
+	watchCh       chan watchMsg     // watcher goroutine → UI
+	watched       map[string]bool   // dirs currently registered with the watcher
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -71,7 +75,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), taskCh: make(chan landMsg, 64)}
+	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -79,6 +83,11 @@ func New() AppModel {
 		m.applyState(st)
 	}
 	m.refreshPreview()
+	if m.watcher = newWatcher(); m.watcher != nil { // live refresh of the tab dirs
+		m.watchCh = make(chan watchMsg, 16)
+		m.syncWatches()
+		go watchLoop(m.watcher, m.watchCh)
+	}
 	return m
 }
 
@@ -88,13 +97,18 @@ func (m *AppModel) cur() *listModel { return &m.tabs[m.tab] }
 // active returns the active tab by value (read-only paths).
 func (m AppModel) active() listModel { return m.tabs[m.tab] }
 
-func (m AppModel) Init() tea.Cmd { return m.waitLand() } // one persistent task-channel reader
+func (m AppModel) Init() tea.Cmd { // persistent readers: land results + live-refresh events
+	return tea.Batch(m.waitLand(), m.waitWatch())
+}
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case landMsg:
 		m.handleLandMsg(msg)
 		return m, m.waitLand()
+	case watchMsg:
+		m.handleWatchMsg(msg)
+		return m, m.waitWatch()
 	case spinnerTickMsg:
 		m.spinnerFrame++
 		if m.anyRunning() {
@@ -167,6 +181,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			saveState(m.snapshotState()) // restore this session on next launch
+			if m.watcher != nil {
+				m.watcher.Close()
+			}
 			return m, tea.Quit
 		case "?": // §A.2 global help cheatsheet
 			return m, m.help.open()
@@ -190,7 +207,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "4":
 			m.setFocus(panelCarry)
 		default:
-			return m, m.dispatchFocusKey(msg.String())
+			cmd := m.dispatchFocusKey(msg.String())
+			m.syncWatches() // navigation may have moved a tab to a new dir
+			return m, cmd
 		}
 	}
 	return m, nil

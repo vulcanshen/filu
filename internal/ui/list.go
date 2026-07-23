@@ -48,6 +48,23 @@ func (m *listModel) reload() {
 	m.clampCursor()
 }
 
+// reloadPreserving re-reads the directory but keeps the cursor on the same named
+// entry when it survives, so an external add/remove (live refresh) doesn't make
+// the selection jump. Falls back to a clamp when the entry is gone.
+func (m *listModel) reloadPreserving() {
+	name := m.cursorItem().name
+	m.reload()
+	if name == "" {
+		return
+	}
+	for i, it := range m.items {
+		if it.name == name {
+			m.cursor = i
+			return
+		}
+	}
+}
+
 // readEntries lists a directory: directories first, alphabetical, dotfiles
 // hidden unless showHidden. The error (e.g. permission denied) is returned so
 // callers can distinguish "empty" from "unreadable".
