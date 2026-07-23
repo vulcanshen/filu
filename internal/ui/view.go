@@ -174,7 +174,7 @@ func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
 		return s
 	}
 	carries := m.panelBox(foc(0), singleChip(label("Carries"), foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
-	tasks := m.panelBox(foc(1), singleChip(label("Tasks"), foc(1)), wd[1], h, m.tasksView(wd[1]-2, h-2))
+	tasks := m.panelBox(foc(1), singleChip(label("Tasks"), foc(1)), wd[1], h, m.tasksView(wd[1]-2, h-2, foc(1)))
 	return lipgloss.JoinHorizontal(lipgloss.Top, carries, tasks)
 }
 
@@ -210,7 +210,7 @@ func (m AppModel) carryTitle(w int) string {
 // carryBody renders panel [4]'s active tab.
 func (m AppModel) carryBody(w, rows int) string {
 	if m.carryTab == 1 { // Tasks (running + log)
-		return m.tasksView(w, rows)
+		return m.tasksView(w, rows, m.focus == panelCarry)
 	}
 	return m.carry.view(w, rows, m.focus == panelCarry) // Carries
 }

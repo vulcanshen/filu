@@ -28,11 +28,13 @@ type tabState struct {
 // persistedTask is a land task on disk. Status "undone" means it was running
 // when the app exited — on the next launch it restores as taskPending.
 type persistedTask struct {
-	ID     int    `yaml:"id"`
-	Action string `yaml:"action"`
-	Dest   string `yaml:"dest"`
-	Total  int    `yaml:"total"`
-	Status string `yaml:"status"` // "done" / "undone" / "error"
+	ID     int      `yaml:"id"`
+	Action string   `yaml:"action"`
+	Dest   string   `yaml:"dest"`
+	Path   string   `yaml:"path"`
+	Srcs   []string `yaml:"srcs,omitempty"`
+	Total  int      `yaml:"total"`
+	Status string   `yaml:"status"` // "done" / "undone" / "error"
 }
 
 func taskStatusString(s taskStatus) string {
@@ -46,7 +48,12 @@ func taskStatusString(s taskStatus) string {
 	}
 }
 
+var statePathOverride string // tests redirect state I/O here
+
 func stateFilePath() (string, bool) {
+	if statePathOverride != "" {
+		return statePathOverride, true
+	}
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", false
@@ -103,7 +110,7 @@ func (m AppModel) snapshotState() sessionState {
 	}
 	for _, t := range m.tasks {
 		st.Tasks = append(st.Tasks, persistedTask{
-			ID: t.id, Action: t.action, Dest: t.dest, Total: t.total,
+			ID: t.id, Action: t.action, Dest: t.dest, Path: t.destPath, Srcs: t.srcs, Total: t.total,
 			Status: taskStatusString(t.status),
 		})
 	}
@@ -142,7 +149,8 @@ func (m *AppModel) applyState(st sessionState) {
 			status = taskError
 		}
 		m.tasks = append(m.tasks, landTask{
-			id: pt.ID, action: pt.Action, dest: pt.Dest, total: pt.Total, done: pt.Total, status: status,
+			id: pt.ID, action: pt.Action, dest: pt.Dest, destPath: pt.Path, srcs: pt.Srcs,
+			total: pt.Total, done: pt.Total, status: status,
 		})
 		if pt.ID > m.nextTaskID {
 			m.nextTaskID = pt.ID

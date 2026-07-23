@@ -207,10 +207,6 @@ func renderLinesFrom(lines []string, offset, w, rows int) string {
 	return b.String()
 }
 
-func renderLines(lines []string, w, rows int) string {
-	return renderLinesFrom(lines, 0, w, rows)
-}
-
 // hexDump renders data xxd-style: offset, 16 hex bytes, ASCII gutter.
 func hexDump(data []byte) []string {
 	var out []string
