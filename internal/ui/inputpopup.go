@@ -70,14 +70,20 @@ func (m inputPopup) renderFull() string {
 
 	field := m.buffer + "█"
 	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
+	innerW = max(innerW, lipgloss.Width(m.target)+4)
 	innerW = min(max(innerW, lipgloss.Width(field)+4), maxInnerWidth(m.screenW))
 
 	// keep the cursor (tail) visible when the text overruns the box
 	if lipgloss.Width(field) > innerW {
 		field = ansi.TruncateLeft(field, lipgloss.Width(field)-(innerW-1), "…")
 	}
+	var rows []string
+	if m.target != "" { // a description line naming what's being renamed
+		rows = append(rows, " "+lipgloss.NewStyle().Foreground(dimColor).Render(m.target))
+	}
 	// full-width dark-grey input bar (catppuccin surface1); the text starts at
 	// the left edge — no untouchable leading space the cursor can't reach.
 	bar := lipgloss.NewStyle().Background(lipgloss.Color("#45475a")).Width(innerW).Render(field)
-	return drawPopupBox(bc, title, hint, []string{bar}, innerW)
+	rows = append(rows, bar)
+	return drawPopupBox(bc, title, hint, rows, innerW)
 }

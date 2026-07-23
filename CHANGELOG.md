@@ -43,8 +43,9 @@
   before quitting; `Ctrl+C` still force-quits immediately.
 
 ### Fixed
-- The rename / add input highlight now covers only the typed text and cursor,
-  instead of a full-width bar with a leading blank the cursor sat after.
+- Rename popup: the item name is now a description line inside the box (the
+  border title stays "Rename"), and the full-width dark input bar starts the
+  cursor flush to the pre-filled name — no untouchable leading blank.
 - Panel borders no longer break on CJK Nerd Fonts (e.g. Maple Mono NF CN) that
   draw file-type icons two cells wide. filu now probes the terminal at startup
   (CPR) to measure the real icon cell width and reserves layout space to match.
