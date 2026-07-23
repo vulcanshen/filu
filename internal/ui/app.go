@@ -56,9 +56,11 @@ type AppModel struct {
 	pendingDelete string       // path awaiting delete confirmation
 	inputPopup    inputPopup   // text prompt (rename / add)
 	help          helpPopup    // §A.2 global help cheatsheet
-	tasks         []landTask   // in-flight land operations (Progress tab)
+	tasks         []landTask   // land operations (Tasks tab: running + log)
 	taskCh        chan landMsg // land goroutines → UI
 	nextTaskID    int
+	spinnerFrame  int  // running-task spinner animation
+	spinning      bool // a spinner tick is in flight
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -92,6 +94,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case landMsg:
 		m.handleLandMsg(msg)
 		return m, m.waitLand()
+	case spinnerTickMsg:
+		m.spinnerFrame++
+		if m.anyRunning() {
+			return m, spinnerTick()
+		}
+		m.spinning = false
+		return m, nil
 	case tea.WindowSizeMsg:
 		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
@@ -216,9 +225,9 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 			m.carry.toggle(filepath.Join(l.dir, it.name))
 		}
 	case "p": // paste: land carried items here as copy (async)
-		m.startLand(l.dir, false)
+		cmd = m.startLand(l.dir, false)
 	case "m": // move: land carried items here as move (async)
-		m.startLand(l.dir, true)
+		cmd = m.startLand(l.dir, true)
 	case "P": // pin: toggle the cursor dir into [1] Pinned
 		if it := l.cursorItem(); it.isDir {
 			m.places.togglePin(filepath.Join(l.dir, it.name))
@@ -285,11 +294,9 @@ func (m *AppModel) clampDetailScroll() {
 // the Carries tab j/k move the cursor and P toggles the pick subset).
 func (m *AppModel) handleCarryKey(key string) tea.Cmd {
 	switch key {
-	case "l", "right":
-		m.carryTab = (m.carryTab + 1) % 3
-	case "h", "left":
-		m.carryTab = (m.carryTab + 2) % 3
-	case "z": // zoom panel [4]: full-width, Carries | Progress | History
+	case "l", "right", "h", "left":
+		m.carryTab = (m.carryTab + 1) % 2 // Carries <-> Tasks
+	case "z": // zoom panel [4]: full-width, Carries | Tasks
 		m.toggleZoom(panelCarry)
 	}
 	if m.carryTab == 0 { // Carries tab

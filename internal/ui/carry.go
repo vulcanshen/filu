@@ -6,25 +6,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
 
 // carryModel is panel [4]'s bucket: files picked up with Carry, dropped with
-// Land (which decides copy vs move). It also records completed lands as history.
+// Land (which decides copy vs move). Completed lands live in AppModel.tasks.
 type carryModel struct {
-	items   []string        // full source paths
-	history []historyEntry  // completed lands, newest first
-	cursor  int             // cursor over items (carries tab)
-	picked  map[string]bool // land subset; empty = land everything
-}
-
-type historyEntry struct {
-	action string // "cp" / "mv"
-	count  int
-	dest   string
-	when   time.Time
+	items  []string        // full source paths
+	cursor int             // cursor over items (carries tab)
+	picked map[string]bool // land subset; empty = land everything
 }
 
 func (m *carryModel) toggle(path string) {
@@ -155,17 +146,6 @@ func (m carryModel) view(w, rows int, focused bool) string {
 		}
 	}
 	return b.String()
-}
-
-func (m carryModel) historyView(w, rows int) string {
-	if len(m.history) == 0 {
-		return centeredNote(w, rows, "(no history)")
-	}
-	lines := make([]string, len(m.history))
-	for i, h := range m.history {
-		lines[i] = truncate(fmt.Sprintf("%s %d %s %s", h.action, h.count, h.dest, h.when.Format("15:04")), w)
-	}
-	return renderLines(lines, w, rows)
 }
 
 // --- file operations ---
