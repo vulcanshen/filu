@@ -73,11 +73,11 @@ func (m inputPopup) renderFull() string {
 	innerW = min(max(innerW, lipgloss.Width(field)+4), maxInnerWidth(m.screenW))
 
 	// keep the cursor (tail) visible when the text overruns the box
-	if cw := innerW - 2; lipgloss.Width(field) > cw {
-		field = ansi.TruncateLeft(field, lipgloss.Width(field)-(cw-1), "…")
+	if lipgloss.Width(field) > innerW {
+		field = ansi.TruncateLeft(field, lipgloss.Width(field)-(innerW-1), "…")
 	}
-	// dark-grey bar covering ONLY the typed text + cursor (catppuccin surface1);
-	// the leading space is plain so the highlight starts at the first character.
-	bar := lipgloss.NewStyle().Background(lipgloss.Color("#45475a")).Render(field)
-	return drawPopupBox(bc, title, hint, []string{" " + bar}, innerW)
+	// full-width dark-grey input bar (catppuccin surface1); the text starts at
+	// the left edge — no untouchable leading space the cursor can't reach.
+	bar := lipgloss.NewStyle().Background(lipgloss.Color("#45475a")).Width(innerW).Render(field)
+	return drawPopupBox(bc, title, hint, []string{bar}, innerW)
 }

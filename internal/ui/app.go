@@ -352,7 +352,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		}
 	case "r": // rename cursor item (input popup, pre-filled with its name)
 		if it := l.cursorItem(); it.name != "" {
-			cmd = m.inputPopup.open(inputRename, "Rename", it.name, it.name)
+			cmd = m.inputPopup.open(inputRename, "Rename ["+it.name+"]", it.name, it.name)
 		}
 	case "a": // add file/dir — lazyvim style: trailing / = dir (input popup)
 		cmd = m.inputPopup.open(inputAdd, "New (trailing / = dir)", "", "")
