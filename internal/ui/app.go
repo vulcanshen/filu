@@ -303,6 +303,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			cmd := m.dispatchFocusKey(msg.String())
 			m.syncWatches() // navigation may have moved a tab to a new dir
+			if os.Getenv("FILU_REPAINT") != "" {
+				// Some terminals draw Nerd Font glyphs wider than they advance the
+				// cursor; the overflow can leave stray cells bubbletea's diff won't
+				// clear. A forced repaint on navigation wipes them (opt-in — costs a
+				// full redraw per key).
+				cmd = tea.Batch(cmd, tea.ClearScreen)
+			}
 			return m, cmd
 		}
 	}
