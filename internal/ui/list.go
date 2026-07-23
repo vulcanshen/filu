@@ -5,8 +5,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -24,6 +24,8 @@ type fileItem struct {
 	isDir  bool
 	isLink bool
 	isExec bool
+	size   int64     // for size sort
+	mtime  time.Time // for mtime sort
 }
 
 // listModel is panel [2]: the CWD file list. Hidden files are dropped by
@@ -83,19 +85,16 @@ func readEntries(dir string, showHidden bool) ([]fileItem, error) {
 			isDir:  e.IsDir(),
 			isLink: e.Type()&os.ModeSymlink != 0,
 		}
-		if !it.isDir && !it.isLink { // exec bit needs a stat; skip dirs/links
-			if info, err := e.Info(); err == nil {
+		if info, err := e.Info(); err == nil { // size/mtime for sorting, exec bit for colour
+			it.size = info.Size()
+			it.mtime = info.ModTime()
+			if !it.isDir && !it.isLink {
 				it.isExec = info.Mode()&0o111 != 0
 			}
 		}
 		items = append(items, it)
 	}
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].isDir != items[j].isDir {
-			return items[i].isDir // directories first
-		}
-		return items[i].name < items[j].name
-	})
+	sortItems(items) // directories first, then the active sort chain
 	return items, nil
 }
 
@@ -175,7 +174,7 @@ func (m *listModel) ensureVisible(rows int) {
 }
 
 func (m listModel) view(w, rows int, focused bool) string {
-	hdr := lipgloss.NewStyle().Foreground(dimColor).Render("Files")
+	hdr := lipgloss.NewStyle().Foreground(dimColor).Render("Files" + sortHeaderSuffix())
 	rows-- // reserve the section-header row
 	if len(m.items) == 0 {
 		msg := "(empty)"
