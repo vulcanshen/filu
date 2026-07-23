@@ -61,6 +61,27 @@ func TestQuitMenuSelectWritesDirAndQuits(t *testing.T) {
 	}
 }
 
+func TestQuitMenuWarnsWhenTaskRunning(t *testing.T) {
+	m := minModel()
+	m.tasks = []landTask{{id: 1, status: taskRunning}}
+	m.openQuitMenu()
+	warned := false
+	for _, it := range m.quitMenu.items {
+		warned = warned || it.warn
+	}
+	if !warned {
+		t.Error("quit menu should carry a warning while a task is running")
+	}
+
+	idle := minModel()
+	idle.openQuitMenu()
+	for _, it := range idle.quitMenu.items {
+		if it.warn {
+			t.Error("quit menu should not warn when idle")
+		}
+	}
+}
+
 func TestCtrlCForceQuits(t *testing.T) {
 	m := minModel()
 	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC}); !isQuitCmd(cmd) {

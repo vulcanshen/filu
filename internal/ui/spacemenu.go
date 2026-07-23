@@ -30,7 +30,8 @@ type menuItem struct {
 	key       string // hotkey dispatched on commit, e.g. "C" / "c" / "."
 	hint      string // short description shown after the label
 	separator bool   // non-selectable horizontal rule
-	header    bool   // non-selectable dim region label
+	header    bool   // non-selectable region label (dim, or red when warn)
+	warn      bool   // header rendered as a red warning line
 }
 
 // spaceMenu is the §A.1 contextual popup, following kbu's form (animation,
@@ -198,7 +199,11 @@ func (m spaceMenu) renderFull() string {
 	for i, it := range m.items {
 		switch {
 		case it.header:
-			rows = append(rows, " "+gutter+hintStyle.Render(it.label))
+			style := hintStyle
+			if it.warn {
+				style = lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8")).Bold(true) // red
+			}
+			rows = append(rows, " "+gutter+style.Render(it.label))
 			continue
 		case it.separator:
 			rows = append(rows, lipgloss.NewStyle().Foreground(bc).Render(strings.Repeat("─", innerW)))

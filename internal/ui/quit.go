@@ -32,7 +32,12 @@ func (m *AppModel) openQuitMenu() tea.Cmd {
 	dirs := m.quitDirs()
 	hints := []string{"panel 1 (launch)", "tab 1", "tab 2", "tab 3"}
 	labelMax := max(maxInnerWidth(m.width)-28, 12)
-	items := make([]menuItem, 0, len(dirs))
+	items := make([]menuItem, 0, len(dirs)+2)
+	if m.anyRunning() { // quitting abandons an in-flight copy/move
+		items = append(items,
+			menuItem{header: true, warn: true, label: "!!! a task is still running"},
+			menuItem{separator: true})
+	}
 	for i, d := range dirs {
 		items = append(items, menuItem{
 			label: truncPathLeft(shortPath(d), labelMax),
