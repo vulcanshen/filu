@@ -215,7 +215,11 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "d", "ctrl+d":
 		l.move(m.listRows() / 2)
 	case "enter":
-		l.enter()
+		if it := l.cursorItem(); it.isDir {
+			l.enter()
+		} else if it.name != "" {
+			cmd = openFileCmd(filepath.Join(l.dir, it.name)) // hand files to the OS
+		}
 	case "esc":
 		l.parent()
 	case "l", "right":
