@@ -56,6 +56,9 @@ func (m AppModel) View() string {
 	if m.inputPopup.isActive() {
 		out = overlay.Composite(m.inputPopup.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.help.isActive() {
+		out = overlay.Composite(m.help.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	return out
 }
 

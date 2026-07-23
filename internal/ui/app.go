@@ -55,6 +55,7 @@ type AppModel struct {
 	confirm       confirmPopup // yes/no popup (delete)
 	pendingDelete string       // path awaiting delete confirmation
 	inputPopup    inputPopup   // text prompt (rename / add)
+	help          helpPopup    // §A.2 global help cheatsheet
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -64,7 +65,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup()}
+	m := AppModel{focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup()}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -88,12 +89,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spaceMenu.setSize(msg.Width)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
+		m.help.setSize(msg.Width)
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg))
 	case tea.KeyMsg:
+		if m.help.isActive() { // modal cheatsheet
+			if !m.help.isInteractive() {
+				return m, nil
+			}
+			var cmd tea.Cmd
+			m.help, cmd = m.help.update(msg)
+			return m, cmd
+		}
 		if m.inputPopup.isActive() { // text entry owns the keyboard while open
 			if !m.inputPopup.isInteractive() {
 				return m, nil
@@ -137,6 +147,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "?": // §A.2 global help cheatsheet
+			return m, m.help.open()
 		case " ": // Space opens the contextual menu for the focused panel
 			items, title := m.buildSpaceMenu()
 			if len(items) == 0 {
