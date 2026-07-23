@@ -127,19 +127,28 @@ func (m carryModel) view(w, rows int, focused bool) string {
 	n := min(len(m.items), rows)
 	for i := range n {
 		p := m.items[i]
-		name := filepath.Base(p)
+		picked := m.picked[p]
+		markW := 1
+		if picked {
+			markW = dispWidth(pickGlyph)
+		}
+		// Fixed prefix cells: " <mark> <icon> " — reserve them, then fit the full
+		// path (home-folded) into the rest, trimmed from the left so the filename
+		// stays on screen.
+		prefixW := 1 + markW + 1 + dispWidth(iconFile) + 1
+		path := truncPathLeft(shortPath(p), w-prefixW)
 		if focused && i == m.cursor {
 			mark := " "
-			if m.picked[p] {
+			if picked {
 				mark = pickGlyph
 			}
-			b.WriteString(cur.Render(padDisp(truncate(" "+mark+" "+iconFile+" "+name, w), w)))
+			b.WriteString(cur.Render(padDisp(" "+mark+" "+iconFile+" "+path, w)))
 		} else {
 			mark := " "
-			if m.picked[p] {
+			if picked {
 				mark = check.Render(pickGlyph)
 			}
-			b.WriteString(truncate(" "+mark+" "+us.Render(iconFile+" "+name), w))
+			b.WriteString(truncate(" "+mark+" "+us.Render(iconFile+" "+path), w))
 		}
 		if i < n-1 {
 			b.WriteByte('\n')

@@ -99,6 +99,20 @@ func truncate(s string, w int) string {
 	}
 }
 
+// truncPathLeft clips s to display width w from the LEFT, keeping the tail
+// (filename) visible and prepending "…" — the right choice for paths, where the
+// end matters more than the root. Paths carry no wide icons, so the measured and
+// display widths coincide.
+func truncPathLeft(s string, w int) string {
+	if w <= 0 {
+		return ""
+	}
+	if dispWidth(s) <= w {
+		return s
+	}
+	return ansi.TruncateLeft(s, dispWidth(s)-(w-1), "…")
+}
+
 // joinH lays multi-line blocks side by side. Each block's lines are padded to
 // that block's own display width, so a wide icon in one column never shoves the
 // next column left. Replaces lipgloss.JoinHorizontal, whose width maths is
