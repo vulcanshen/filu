@@ -61,6 +61,9 @@ func (m AppModel) View() string {
 	if m.help.isActive() {
 		out = overlay.Composite(m.help.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.toast.isActive() { // transient, always on top
+		out = overlay.Composite(m.toast.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	return out
 }
 
