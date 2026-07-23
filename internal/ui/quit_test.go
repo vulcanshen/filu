@@ -7,7 +7,7 @@ import (
 )
 
 func minModel() AppModel {
-	m := AppModel{focus: panelList, confirm: newConfirmPopup(), taskCh: make(chan landMsg, 1), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, confirm: newConfirmPopup(), pty: newPtyPopup(), taskCh: make(chan landMsg, 1), watched: map[string]bool{}}
 	for i := range m.tabs {
 		m.tabs[i] = listModel{dir: "/tmp"}
 	}
