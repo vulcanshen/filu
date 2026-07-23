@@ -20,6 +20,10 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- On launch, panel [2] always opens on the first tab at the current directory,
+  and panel [1] always lands on the current directory. The first tab's state,
+  the active-tab index, and the places cursor are no longer persisted (tabs [2]
+  and [3], focus, detail tab, carry, pinned, tasks, and sort still are).
 - The Carries tab shows each item's full path (home folded to `~`), trimmed from
   the left so the filename stays visible, instead of just the basename.
 - Panel [2] keys: Carry is now Pick (`p`) and Paste-here is now Copy (`c`), so
