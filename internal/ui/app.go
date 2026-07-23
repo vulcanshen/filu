@@ -273,15 +273,30 @@ func (m *AppModel) clampDetailScroll() {
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
 }
 
-// handleCarryKey routes keys to panel [4] while it is focused (h/l swap tab).
+// handleCarryKey routes keys to panel [4] while it is focused (h/l swap tab; on
+// the Carries tab j/k move the cursor and P toggles the pick subset).
 func (m *AppModel) handleCarryKey(key string) tea.Cmd {
 	switch key {
 	case "l", "right":
 		m.carryTab = (m.carryTab + 1) % 3
 	case "h", "left":
 		m.carryTab = (m.carryTab + 2) % 3
-	case "z": // zoom panel [4]: full-width, Carry | Progress | History
+	case "z": // zoom panel [4]: full-width, Carries | Progress | History
 		m.toggleZoom(panelCarry)
+	}
+	if m.carryTab == 0 { // Carries tab
+		switch key {
+		case "j", "down":
+			m.carry.moveCursor(1)
+		case "k", "up":
+			m.carry.moveCursor(-1)
+		case "g":
+			m.carry.cursor = 0
+		case "G":
+			m.carry.moveCursor(len(m.carry.items))
+		case "P": // pick: toggle this item in the land subset
+			m.carry.togglePick()
+		}
 	}
 	return nil
 }
@@ -376,10 +391,15 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
 		}), "Preview"
 	case panelCarry:
-		return groupedMenu(nil, []menuItem{
-			{label: "Tab", key: "l", hint: "switch Carry / Progress / History"},
+		panelOps := []menuItem{
+			{label: "Tab", key: "l", hint: "switch Carries / Progress / History"},
 			{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
-		}), "Bucket"
+		}
+		if m.carryTab == 0 && len(m.carry.items) > 0 { // Carries tab, with items
+			itemOps := []menuItem{{label: "Pick", key: "P", hint: "toggle this item in the land subset"}}
+			return groupedMenu(itemOps, panelOps), "Carries"
+		}
+		return groupedMenu(nil, panelOps), "Bucket"
 	}
 	return nil, ""
 }

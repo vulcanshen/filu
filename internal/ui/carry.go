@@ -14,8 +14,10 @@ import (
 // carryModel is panel [4]'s bucket: files picked up with Carry, dropped with
 // Land (which decides copy vs move). It also records completed lands as history.
 type carryModel struct {
-	items   []string       // full source paths
-	history []historyEntry // completed lands, newest first
+	items   []string        // full source paths
+	history []historyEntry  // completed lands, newest first
+	cursor  int             // cursor over items (carries tab)
+	picked  map[string]bool // land subset; empty = land everything
 }
 
 type historyEntry struct {
@@ -28,20 +30,70 @@ type historyEntry struct {
 func (m *carryModel) toggle(path string) {
 	for i, p := range m.items {
 		if p == path {
+			delete(m.picked, p)
 			m.items = append(m.items[:i], m.items[i+1:]...)
+			m.clampCursor()
 			return
 		}
 	}
 	m.items = append(m.items, path)
 }
 
+func (m *carryModel) clampCursor() {
+	if m.cursor > len(m.items)-1 {
+		m.cursor = len(m.items) - 1
+	}
+	if m.cursor < 0 {
+		m.cursor = 0
+	}
+}
+
+func (m *carryModel) moveCursor(delta int) {
+	m.cursor += delta
+	m.clampCursor()
+}
+
+// togglePick flips the cursor item in/out of the land subset.
+func (m *carryModel) togglePick() {
+	if m.cursor < 0 || m.cursor >= len(m.items) {
+		return
+	}
+	p := m.items[m.cursor]
+	if m.picked[p] {
+		delete(m.picked, p)
+		return
+	}
+	if m.picked == nil {
+		m.picked = map[string]bool{}
+	}
+	m.picked[p] = true
+}
+
+// landSet is the set of paths a Land acts on: the picked subset, or everything
+// when nothing is picked.
+func (m carryModel) landSet() map[string]bool {
+	if len(m.picked) > 0 {
+		return m.picked
+	}
+	all := make(map[string]bool, len(m.items))
+	for _, p := range m.items {
+		all[p] = true
+	}
+	return all
+}
+
 // land copies (move=false) or moves (move=true) every carried item into
 // destDir. Copies stay in the bucket (paste again elsewhere); moved items
 // leave it. Errors are swallowed for now (TODO: surface + progress tab).
 func (m *carryModel) land(destDir string, move bool) {
+	targets := m.landSet()
 	var remaining []string
 	done := 0
 	for _, src := range m.items {
+		if !targets[src] { // not in the land subset — keep it
+			remaining = append(remaining, src)
+			continue
+		}
 		dst := uniquePath(filepath.Join(destDir, filepath.Base(src)))
 		var err error
 		if move {
@@ -53,10 +105,13 @@ func (m *carryModel) land(destDir string, move bool) {
 			done++
 		}
 		if err != nil || !move {
-			remaining = append(remaining, src)
+			remaining = append(remaining, src) // copy keeps; failed move keeps
+		} else {
+			delete(m.picked, src) // moved out — drop its pick
 		}
 	}
 	m.items = remaining
+	m.clampCursor()
 	if done > 0 {
 		act := "cp"
 		if move {
@@ -76,15 +131,40 @@ func centeredNote(w, rows int, text string) string {
 	return lipgloss.Place(w, rows, lipgloss.Center, lipgloss.Center, msg)
 }
 
-func (m carryModel) view(w, rows int, _ bool) string {
+// pickGlyph marks a picked item — a distinct signal from the lavender "in
+// bucket" colour (§B: one element, one semantic).
+var pickGlyph = string(rune(0xf00c)) // nf-fa-check
+
+func (m carryModel) view(w, rows int, focused bool) string {
 	if len(m.items) == 0 {
 		return centeredNote(w, rows, "(empty)")
 	}
-	us := lipgloss.NewStyle().Foreground(userColor) // carried = user footprint
+	us := lipgloss.NewStyle().Foreground(userColor)                    // carried = user footprint
+	check := lipgloss.NewStyle().Foreground(lipgloss.Color("#a6e3a1")) // picked = green tick
+	cursorBg := handColor                                              // focused: current hand
+	if !focused {
+		cursorBg = userColor
+	}
+	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
+
 	var b strings.Builder
 	n := min(len(m.items), rows)
 	for i := range n {
-		b.WriteString(us.Render(truncate(" "+iconFile+"  "+filepath.Base(m.items[i]), w)))
+		p := m.items[i]
+		name := filepath.Base(p)
+		if focused && i == m.cursor {
+			mark := " "
+			if m.picked[p] {
+				mark = pickGlyph
+			}
+			b.WriteString(cur.Render(truncate(" "+mark+" "+iconFile+" "+name, w)))
+		} else {
+			mark := " "
+			if m.picked[p] {
+				mark = check.Render(pickGlyph)
+			}
+			b.WriteString(truncate(" "+mark+" "+us.Render(iconFile+" "+name), w))
+		}
 		if i < n-1 {
 			b.WriteByte('\n')
 		}
