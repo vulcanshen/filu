@@ -61,6 +61,7 @@ type AppModel struct {
 	nextTaskID    int
 	spinnerFrame  int  // running-task spinner animation
 	spinning      bool // a spinner tick is in flight
+	taskCursor    int  // cursor over the Tasks tab
 }
 
 // New returns the root model, focused on the file list. All 3 tabs open at the
@@ -316,6 +317,31 @@ func (m *AppModel) handleCarryKey(key string) tea.Cmd {
 				m.carry.removeItem(m.carry.items[m.carry.cursor])
 			}
 		}
+		return nil
+	}
+	// Tasks tab
+	switch key {
+	case "j", "down":
+		m.taskCursor++
+		m.clampTaskCursor()
+	case "k", "up":
+		m.taskCursor--
+		m.clampTaskCursor()
+	case "g":
+		m.taskCursor = 0
+	case "G":
+		m.taskCursor = len(m.tasks) - 1
+		m.clampTaskCursor()
+	case "R": // redo: run this task again
+		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
+			return m.redoTask(m.tasks[m.taskCursor])
+		}
+	case "D": // delete: drop this task from the log
+		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
+			m.tasks = append(m.tasks[:m.taskCursor], m.tasks[m.taskCursor+1:]...)
+			m.clampTaskCursor()
+			saveState(m.snapshotState())
+		}
 	}
 	return nil
 }
@@ -411,7 +437,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}), "Preview"
 	case panelCarry:
 		panelOps := []menuItem{
-			{label: "Tab", key: "l", hint: "switch Carries / Progress / History"},
+			{label: "Tab", key: "l", hint: "switch Carries / Tasks"},
 			{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
 		}
 		if m.carryTab == 0 && len(m.carry.items) > 0 { // Carries tab, with items
@@ -420,6 +446,13 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				{label: "Delete", key: "D", hint: "remove this item from the bucket"},
 			}
 			return groupedMenu(itemOps, panelOps), "Carries"
+		}
+		if m.carryTab == 1 && len(m.tasks) > 0 { // Tasks tab
+			itemOps := []menuItem{
+				{label: "Redo", key: "R", hint: "run this task again"},
+				{label: "Delete", key: "D", hint: "remove this task from the log"},
+			}
+			return groupedMenu(itemOps, panelOps), "Tasks"
 		}
 		return groupedMenu(nil, panelOps), "Bucket"
 	}

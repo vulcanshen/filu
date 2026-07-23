@@ -3,10 +3,12 @@ package ui
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 type taskStatus int
@@ -24,9 +26,10 @@ const maxTasks = 30 // cap the merged task log
 // animate; finished ones stay as the log (Progress + History merged).
 type landTask struct {
 	id       int
-	action   string // "cp" / "mv"
-	dest     string // destination basename (display)
-	destPath string // destination dir (reload matching tabs on finish)
+	action   string   // "cp" / "mv"
+	dest     string   // destination basename (display)
+	destPath string   // destination dir (reload matching tabs on finish)
+	srcs     []string // source paths (for Redo)
 	total    int
 	done     int
 	status   taskStatus
@@ -96,10 +99,20 @@ func (m AppModel) anyRunning() bool {
 	return false
 }
 
-// startLand snapshots the land subset and kicks off an async copy/move, adding a
-// running task (persisted immediately as "undone" so an interrupt is recorded).
+// startLand kicks off a land of the carry bucket's subset.
 func (m *AppModel) startLand(destDir string, move bool) tea.Cmd {
-	items := m.carry.landItems()
+	return m.startLandItems(m.carry.landItems(), destDir, move)
+}
+
+// redoTask re-runs a task's copy/move (Redo). Sources gone (e.g. an old move)
+// simply error again.
+func (m *AppModel) redoTask(t landTask) tea.Cmd {
+	return m.startLandItems(t.srcs, t.destPath, t.action == "mv")
+}
+
+// startLandItems adds a running task (persisted immediately as "undone" so an
+// interrupt is recorded) and launches the async copy/move.
+func (m *AppModel) startLandItems(items []string, destDir string, move bool) tea.Cmd {
 	if len(items) == 0 {
 		return nil
 	}
@@ -110,7 +123,7 @@ func (m *AppModel) startLand(destDir string, move bool) tea.Cmd {
 	}
 	m.tasks = append(m.tasks, landTask{
 		id: m.nextTaskID, action: action,
-		dest: filepath.Base(destDir), destPath: destDir,
+		dest: filepath.Base(destDir), destPath: destDir, srcs: items,
 		total: len(items), status: taskRunning,
 	})
 	m.capTasks()
@@ -121,6 +134,15 @@ func (m *AppModel) startLand(destDir string, move bool) tea.Cmd {
 		return spinnerTick()
 	}
 	return nil
+}
+
+func (m *AppModel) clampTaskCursor() {
+	if m.taskCursor > len(m.tasks)-1 {
+		m.taskCursor = len(m.tasks) - 1
+	}
+	if m.taskCursor < 0 {
+		m.taskCursor = 0
+	}
 }
 
 func (m *AppModel) capTasks() {
@@ -159,16 +181,35 @@ func (m *AppModel) handleLandMsg(msg landMsg) {
 	}
 }
 
-// tasksView renders the merged Tasks tab (running + done + pending + error).
-func (m AppModel) tasksView(w, rows int) string {
+// tasksView renders the merged Tasks tab (running + done + pending + error),
+// with a cursor when focused.
+func (m AppModel) tasksView(w, rows int, focused bool) string {
 	if len(m.tasks) == 0 {
 		return centeredNote(w, rows, "(no tasks)")
 	}
-	lines := make([]string, len(m.tasks))
-	for i, t := range m.tasks {
-		lines[i] = truncate(m.taskLine(t), w)
+	cursorBg := handColor
+	if !focused {
+		cursorBg = borderDim
 	}
-	return renderLines(lines, w, rows)
+	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
+
+	start := 0
+	if m.taskCursor >= rows { // keep the cursor in view
+		start = m.taskCursor - rows + 1
+	}
+	end := min(start+rows, len(m.tasks))
+	var b strings.Builder
+	for i := start; i < end; i++ {
+		if focused && i == m.taskCursor {
+			b.WriteString(cur.Render(truncate(ansi.Strip(m.taskLine(m.tasks[i])), w)))
+		} else {
+			b.WriteString(truncate(m.taskLine(m.tasks[i]), w))
+		}
+		if i < end-1 {
+			b.WriteByte('\n')
+		}
+	}
+	return b.String()
 }
 
 func (m AppModel) taskLine(t landTask) string {
