@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- Panel [2] now shows a green tick on files sitting in the carries bucket, so a
+  Pick (`p`) reads the same as it does in the Carries tab — and picking several
+  files gives a visible multi-select before you Copy/Move them.
 - Yank from panel [3]: `y` opens a viewport over the Preview/Meta content with a
   vim-style cursor and character-wise visual selection (`v`); `y` copies the
   selection, or the whole content when nothing is selected (OSC 52 + toast).

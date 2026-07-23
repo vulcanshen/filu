@@ -115,13 +115,13 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	rightW := w - leftW - midW
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
-		return m.panelBox(listFocus, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, listFocus))
+		return m.panelBox(listFocus, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, listFocus, m.carry.inBucket()))
 	}
 	topH := midH * 2 / 3
 	botH := midH - topH
 
 	pin := m.panelBox(m.focus == panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, topH, m.places.view(leftW-2, topH-2, m.focus == panelPin))
-	list := m.panelBox(listFocus, m.listTitle(midW), midW, topH, m.active().view(midW-2, topH-2, listFocus))
+	list := m.panelBox(listFocus, m.listTitle(midW), midW, topH, m.active().view(midW-2, topH-2, listFocus, m.carry.inBucket()))
 	top := joinH(pin, list)
 
 	carryW := leftW + midW
@@ -147,10 +147,11 @@ func (m AppModel) zoomListView(w, midH int) string {
 func (m AppModel) expandedListTabs(w, h int) string {
 	widths := splitN(w, len(m.tabs))
 	cols := make([]string, len(m.tabs))
+	carried := m.carry.inBucket()
 	for i := range m.tabs {
 		cw := widths[i]
 		focused := m.focus == panelList && m.tab == i
-		cols[i] = m.panelBox(focused, singleChip("[2] "+pathBase(m.tabs[i].dir), focused), cw, h, m.tabs[i].view(cw-2, h-2, focused))
+		cols[i] = m.panelBox(focused, singleChip("[2] "+pathBase(m.tabs[i].dir), focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried))
 	}
 	return joinH(cols...)
 }

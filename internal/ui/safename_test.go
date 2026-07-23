@@ -30,7 +30,7 @@ func TestListViewNoCursorResetOnControlName(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "z.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	out := newList(dir).view(40, 10, true)
+	out := newList(dir).view(40, 10, true, nil)
 	if strings.ContainsRune(out, '\r') {
 		t.Error("list view must not emit a raw CR from a filename (would reset the cursor)")
 	}
