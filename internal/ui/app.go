@@ -602,7 +602,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		return items, "Places"
 	case panelDetail:
 		return groupedMenu(
-			[]menuItem{{label: "Yank", key: "y", hint: "select & copy content (v: visual)"}},
+			[]menuItem{{label: "Yank", key: "y", hint: "select & copy content"}},
 			[]menuItem{
 				{label: "Tab", key: "l", hint: "switch Preview / Meta"},
 				{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},

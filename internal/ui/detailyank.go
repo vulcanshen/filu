@@ -269,14 +269,16 @@ func (m detailYank) renderFull() string {
 			body = styled
 		}
 		if m.showGutter { // gutter is display-only — the cursor never enters it
-			body = gutStyle.Render(fmt.Sprintf("%*d "+string(rune(0x2502))+" ", numW, i+1)) + body
+			body = gutStyle.Render(fmt.Sprintf("%*d ", numW, i+1)) + body
 		}
 		out = append(out, ansi.Truncate(body, innerW, ""))
 	}
 	for len(out) < rows {
 		out = append(out, "")
 	}
-	return drawPopupBox(bc, " "+m.title, " v:visual   y:copy   Esc:close ", out, innerW)
+	// pad=false: content hugs the top border like kbu's YAML popup — no leading
+	// blank row, and the gutter is just the line number (no "│" separator).
+	return drawPopupBoxPad(bc, " "+m.title, " v:visual   y:copy   Esc:close ", out, innerW, false)
 }
 
 // overlaySelectionOnStyledLine keeps the styled line intact outside the
