@@ -319,11 +319,11 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		m.tab = (m.tab + 1) % len(m.tabs)
 	case "h", "left":
 		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
-	case "C": // carry: toggle cursor item in the bucket
+	case "p": // pick: toggle cursor item into the carries bucket
 		if it := l.cursorItem(); it.name != "" {
 			m.carry.toggle(filepath.Join(l.dir, it.name))
 		}
-	case "p": // paste: land carried items here as copy (async)
+	case "c": // copy: land carried items here as copy (async)
 		cmd = m.startLand(l.dir, false)
 	case "m": // move: land carried items here as move (async)
 		cmd = m.startLand(l.dir, true)
@@ -525,7 +525,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		var itemOps, panelOps []menuItem
 		if it.name != "" {
 			itemOps = append(itemOps,
-				menuItem{label: "Carry", key: "C", hint: `add to "carries" bucket`},
+				menuItem{label: "Pick", key: "p", hint: `add to "carries" bucket`},
 				menuItem{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				menuItem{label: "Edit", key: "e", hint: "edit a text file in $EDITOR (else OS open)"},
 				menuItem{label: "Rename", key: "R", hint: "rename this item"},
@@ -536,7 +536,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		if len(m.carry.items) > 0 {
 			panelOps = append(panelOps,
-				menuItem{label: "Paste here", key: "p", hint: "land carried items as copy"},
+				menuItem{label: "Copy", key: "c", hint: "land carried items as copy"},
 				menuItem{label: "Move here", key: "m", hint: "land carried items as move"})
 		}
 		panelOps = append(panelOps,
