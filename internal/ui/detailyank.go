@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,6 +19,8 @@ type detailYank struct {
 	plain []string // ANSI-stripped mirror — authoritative for cursor/selection
 	full  string   // whole content joined, for "copy all"
 
+	showGutter bool // draw a non-selectable line-number gutter (text/hex)
+
 	cursorLine, cursorCol int
 	visual                bool
 	anchorLine, anchorCol int
@@ -31,10 +35,12 @@ func newDetailYank() detailYank {
 	return detailYank{anim: newPopupAnimator("detailyank", popupLayerColor(1))}
 }
 
-// open loads content and resets the cursor to the top.
-func (m *detailYank) open(title string, lines []string) tea.Cmd {
+// open loads content and resets the cursor to the top. showGutter draws a
+// non-selectable line-number gutter (for text/hex, like kbu's YAML popup).
+func (m *detailYank) open(title string, lines []string, showGutter bool) tea.Cmd {
 	m.title = title
 	m.lines = lines
+	m.showGutter = showGutter
 	m.plain = make([]string, len(lines))
 	for i, l := range lines {
 		m.plain[i] = ansi.Strip(l)
@@ -236,12 +242,17 @@ func (m detailYank) renderFull() string {
 	innerW, rows := m.innerW(), m.contentRows()
 	selStyle := lipgloss.NewStyle().Background(userColor).Foreground(lipgloss.Color(baseHex)).Bold(true)
 	curStyle := lipgloss.NewStyle().Reverse(true)
+	gutStyle := lipgloss.NewStyle().Foreground(dimColor)
+	numW := 0
+	if m.showGutter {
+		numW = max(len(strconv.Itoa(len(m.lines))), 2)
+	}
 
 	sL, sC, eL, eC := m.selectionRange()
 	out := make([]string, 0, rows)
 	for i := m.scroll; i < min(m.scroll+rows, len(m.lines)); i++ {
 		styled, plain := m.lines[i], m.plain[i]
-		var row string
+		var body string
 		switch {
 		case m.visual && i >= sL && i <= eL:
 			ls, le := 0, m.lastCol(i)
@@ -251,13 +262,16 @@ func (m detailYank) renderFull() string {
 			if i == eL {
 				le = eC
 			}
-			row = overlaySelectionOnStyledLine(styled, plain, ls, le, i == m.cursorLine, m.cursorCol, selStyle, curStyle)
+			body = overlaySelectionOnStyledLine(styled, plain, ls, le, i == m.cursorLine, m.cursorCol, selStyle, curStyle)
 		case i == m.cursorLine:
-			row = overlayCursorOnStyledLine(styled, plain, m.cursorCol, curStyle)
+			body = overlayCursorOnStyledLine(styled, plain, m.cursorCol, curStyle)
 		default:
-			row = styled
+			body = styled
 		}
-		out = append(out, ansi.Truncate(row, innerW, ""))
+		if m.showGutter { // gutter is display-only — the cursor never enters it
+			body = gutStyle.Render(fmt.Sprintf("%*d "+string(rune(0x2502))+" ", numW, i+1)) + body
+		}
+		out = append(out, ansi.Truncate(body, innerW, ""))
 	}
 	for len(out) < rows {
 		out = append(out, "")
