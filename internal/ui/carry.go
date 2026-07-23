@@ -136,7 +136,7 @@ func (m carryModel) view(w, rows int, focused bool) string {
 		// path (home-folded) into the rest, trimmed from the left so the filename
 		// stays on screen.
 		prefixW := 1 + markW + 1 + dispWidth(iconFile) + 1
-		path := truncPathLeft(shortPath(p), w-prefixW)
+		path := truncPathLeft(safeName(shortPath(p)), w-prefixW)
 		if focused && i == m.cursor {
 			mark := " "
 			if picked {

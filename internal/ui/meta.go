@@ -53,8 +53,8 @@ func metaLines(it fileItem, parent string) []string {
 		rows = append(rows, key.Render(fmt.Sprintf("%-9s", name))+value)
 	}
 
-	add("Name", it.name)
-	add("Path", shortPath(parent))
+	add("Name", safeName(it.name))
+	add("Path", safeName(shortPath(parent)))
 	add("Type", kind)
 	if fi.IsDir() {
 		if entries, e := os.ReadDir(full); e == nil {
