@@ -11,17 +11,39 @@ import (
 // were is where you restart") — the 3 tab dirs + cursors, active tab, focus,
 // detail tab, carry bucket, and pinned places.
 type sessionState struct {
-	Tabs   []tabState `yaml:"tabs"`
-	Tab    int        `yaml:"tab"`
-	Focus  int        `yaml:"focus"`
-	Detail int        `yaml:"detail"`
-	Carry  []string   `yaml:"carry,omitempty"`
-	Pinned []string   `yaml:"pinned,omitempty"`
+	Tabs   []tabState      `yaml:"tabs"`
+	Tab    int             `yaml:"tab"`
+	Focus  int             `yaml:"focus"`
+	Detail int             `yaml:"detail"`
+	Carry  []string        `yaml:"carry,omitempty"`
+	Pinned []string        `yaml:"pinned,omitempty"`
+	Tasks  []persistedTask `yaml:"tasks,omitempty"`
 }
 
 type tabState struct {
 	Dir    string `yaml:"dir"`
 	Cursor int    `yaml:"cursor"`
+}
+
+// persistedTask is a land task on disk. Status "undone" means it was running
+// when the app exited — on the next launch it restores as taskPending.
+type persistedTask struct {
+	ID     int    `yaml:"id"`
+	Action string `yaml:"action"`
+	Dest   string `yaml:"dest"`
+	Total  int    `yaml:"total"`
+	Status string `yaml:"status"` // "done" / "undone" / "error"
+}
+
+func taskStatusString(s taskStatus) string {
+	switch s {
+	case taskDone:
+		return "done"
+	case taskError:
+		return "error"
+	default: // taskRunning / taskPending are both unfinished on disk
+		return "undone"
+	}
 }
 
 func stateFilePath() (string, bool) {
@@ -79,6 +101,12 @@ func (m AppModel) snapshotState() sessionState {
 	for _, p := range m.places.pinned {
 		st.Pinned = append(st.Pinned, p.path)
 	}
+	for _, t := range m.tasks {
+		st.Tasks = append(st.Tasks, persistedTask{
+			ID: t.id, Action: t.action, Dest: t.dest, Total: t.total,
+			Status: taskStatusString(t.status),
+		})
+	}
 	return st
 }
 
@@ -104,5 +132,20 @@ func (m *AppModel) applyState(st sessionState) {
 	m.carry.items = st.Carry
 	for _, p := range st.Pinned {
 		m.places.pinned = append(m.places.pinned, place{label: filepath.Base(p), path: p, icon: iconPin})
+	}
+	for _, pt := range st.Tasks { // "undone" tasks were interrupted → pending
+		status := taskPending
+		switch pt.Status {
+		case "done":
+			status = taskDone
+		case "error":
+			status = taskError
+		}
+		m.tasks = append(m.tasks, landTask{
+			id: pt.ID, action: pt.Action, dest: pt.Dest, total: pt.Total, done: pt.Total, status: status,
+		})
+		if pt.ID > m.nextTaskID {
+			m.nextTaskID = pt.ID
+		}
 	}
 }

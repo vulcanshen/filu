@@ -42,3 +42,38 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 		t.Errorf("tab[1] dir not restored: %q", got.tabs[1].dir)
 	}
 }
+
+func TestTaskStatusPersist(t *testing.T) {
+	var m AppModel
+	m.tasks = []landTask{
+		{id: 1, action: "cp", dest: "d", total: 3, status: taskRunning},
+		{id: 2, action: "mv", dest: "e", total: 1, status: taskDone},
+		{id: 3, action: "cp", dest: "f", total: 2, status: taskError},
+	}
+	data, err := yaml.Marshal(m.snapshotState())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var st sessionState
+	if err := yaml.Unmarshal(data, &st); err != nil {
+		t.Fatal(err)
+	}
+
+	var got AppModel
+	got.applyState(st)
+	if len(got.tasks) != 3 {
+		t.Fatalf("tasks not restored: %d", len(got.tasks))
+	}
+	if got.tasks[0].status != taskPending {
+		t.Errorf("a running task should restore as pending (interrupted), got %v", got.tasks[0].status)
+	}
+	if got.tasks[1].status != taskDone {
+		t.Errorf("done should restore as done, got %v", got.tasks[1].status)
+	}
+	if got.tasks[2].status != taskError {
+		t.Errorf("error should restore as error, got %v", got.tasks[2].status)
+	}
+	if got.nextTaskID != 3 {
+		t.Errorf("nextTaskID should be the max loaded id 3, got %d", got.nextTaskID)
+	}
+}

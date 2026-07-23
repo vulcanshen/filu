@@ -44,11 +44,8 @@ func TestHandleLandMsgFinish(t *testing.T) {
 		t.Errorf("progress not applied: %+v", m.tasks[0])
 	}
 	m.handleLandMsg(landMsg{taskID: 1, done: 2, total: 2, finished: true, moved: []string{"/a"}})
-	if len(m.tasks) != 0 {
-		t.Error("finished task should be removed")
-	}
-	if len(m.carry.history) != 1 || m.carry.history[0].action != "cp" {
-		t.Errorf("finish should record history, got %v", m.carry.history)
+	if len(m.tasks) != 1 || m.tasks[0].status != taskDone {
+		t.Errorf("finished task should stay as done, got %+v", m.tasks)
 	}
 	if len(m.carry.items) != 1 || m.carry.items[0] != "/b" {
 		t.Errorf("moved /a should leave the bucket, got %v", m.carry.items)

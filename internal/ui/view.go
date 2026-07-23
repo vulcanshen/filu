@@ -161,11 +161,11 @@ func (m AppModel) zoomCarryView(w, midH int) string {
 	return m.expandedCarryTabs(w, midH, false)
 }
 
-// expandedCarryTabs lays panel [4]'s 3 tabs out as equal-width columns; the
+// expandedCarryTabs lays panel [4]'s 2 tabs out as equal-width columns; the
 // active tab (m.carryTab) is the focused column when [4] holds focus. numbered
 // prefixes each chip with "[4]" (used in [2]-zoom, where panels are mixed).
 func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
-	wd := splitN(w, 3)
+	wd := splitN(w, 2)
 	foc := func(i int) bool { return m.focus == panelCarry && m.carryTab == i }
 	label := func(s string) string {
 		if numbered {
@@ -173,10 +173,9 @@ func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
 		}
 		return s
 	}
-	carry := m.panelBox(foc(0), singleChip(label("Carries"), foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
-	progress := m.panelBox(foc(1), singleChip(label("Progress"), foc(1)), wd[1], h, m.progressView(wd[1]-2, h-2))
-	history := m.panelBox(foc(2), singleChip(label("History"), foc(2)), wd[2], h, m.carry.historyView(wd[2]-2, h-2))
-	return lipgloss.JoinHorizontal(lipgloss.Top, carry, progress, history)
+	carries := m.panelBox(foc(0), singleChip(label("Carries"), foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
+	tasks := m.panelBox(foc(1), singleChip(label("Tasks"), foc(1)), wd[1], h, m.tasksView(wd[1]-2, h-2))
+	return lipgloss.JoinHorizontal(lipgloss.Top, carries, tasks)
 }
 
 // listTitle renders panel [2]'s fixed 3-tab bar. The tabs are always shown; when
@@ -201,7 +200,7 @@ func (m AppModel) listTitle(w int) string {
 // too narrow to fit it — see carouselChip for that narrow-panel tab strategy.
 func (m AppModel) carryTitle(w int) string {
 	focused := m.focus == panelCarry
-	labels := []string{"Carries", "Progress", "History"}
+	labels := []string{"Carries", "Tasks"}
 	if tb := tabBar("[4]", labels, m.carryTab, focused); lipgloss.Width(tb) <= w-2 {
 		return tb
 	}
@@ -210,14 +209,10 @@ func (m AppModel) carryTitle(w int) string {
 
 // carryBody renders panel [4]'s active tab.
 func (m AppModel) carryBody(w, rows int) string {
-	switch m.carryTab {
-	case 1: // progress
-		return m.progressView(w, rows)
-	case 2: // history
-		return m.carry.historyView(w, rows)
-	default: // carry
-		return m.carry.view(w, rows, m.focus == panelCarry)
+	if m.carryTab == 1 { // Tasks (running + log)
+		return m.tasksView(w, rows)
 	}
+	return m.carry.view(w, rows, m.focus == panelCarry) // Carries
 }
 
 // detailTitle renders panel [3]'s Preview/Meta tab bar.
