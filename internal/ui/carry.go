@@ -121,7 +121,7 @@ func (m carryModel) view(w, rows int, focused bool) string {
 	if !focused {
 		cursorBg = userColor
 	}
-	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
+	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
 
 	var b strings.Builder
 	n := min(len(m.items), rows)
@@ -133,7 +133,7 @@ func (m carryModel) view(w, rows int, focused bool) string {
 			if m.picked[p] {
 				mark = pickGlyph
 			}
-			b.WriteString(cur.Render(truncate(" "+mark+" "+iconFile+" "+name, w)))
+			b.WriteString(cur.Render(padDisp(truncate(" "+mark+" "+iconFile+" "+name, w), w)))
 		} else {
 			mark := " "
 			if m.picked[p] {

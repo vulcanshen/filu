@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+	ui.DetectIconWidth() // measure Nerd Font icon cell width (CJK fonts draw them 2-wide)
 	p := tea.NewProgram(ui.New(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "filu:", err)

@@ -171,7 +171,7 @@ func (m listModel) view(w, rows int, focused bool) string {
 	if !focused {
 		cursorBg = userColor // unfocused: remembered position (lavender)
 	}
-	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
+	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
 	dimStyle := lipgloss.NewStyle().Foreground(dimColor)
 
 	var b strings.Builder
@@ -186,7 +186,7 @@ func (m listModel) view(w, rows int, focused bool) string {
 		line := truncate(" "+icon+" "+it.name, w)
 		switch {
 		case i == m.cursor:
-			line = cursorStyle.Render(line)
+			line = cursorStyle.Render(padDisp(line, w)) // full-width highlight bar
 		case !focused:
 			line = dimStyle.Render(line) // unfocused panel: recede
 		default:

@@ -191,7 +191,7 @@ func (m AppModel) tasksView(w, rows int, focused bool) string {
 	if !focused {
 		cursorBg = borderDim
 	}
-	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg).Width(w)
+	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
 
 	start := 0
 	if m.taskCursor >= rows { // keep the cursor in view
@@ -201,7 +201,7 @@ func (m AppModel) tasksView(w, rows int, focused bool) string {
 	var b strings.Builder
 	for i := start; i < end; i++ {
 		if focused && i == m.taskCursor {
-			b.WriteString(cur.Render(truncate(ansi.Strip(m.taskLine(m.tasks[i])), w)))
+			b.WriteString(cur.Render(padDisp(truncate(ansi.Strip(m.taskLine(m.tasks[i])), w), w)))
 		} else {
 			b.WriteString(truncate(m.taskLine(m.tasks[i]), w))
 		}

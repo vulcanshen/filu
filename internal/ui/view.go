@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/ansi"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 )
 
@@ -45,7 +44,7 @@ func (m AppModel) View() string {
 		return "terminal too small"
 	}
 
-	out := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(w), m.middleView(w, midH), m.footerBar(w))
+	out := joinV(m.headerBar(w), m.middleView(w, midH), m.footerBar(w))
 	// Compose-don't-Replace: overlay popups onto the canvas (last = on top).
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
@@ -108,14 +107,14 @@ func (m AppModel) normalMiddle(w, midH int) string {
 
 	pin := m.panelBox(m.focus == panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, topH, m.places.view(leftW-2, topH-2, m.focus == panelPin))
 	list := m.panelBox(listFocus, m.listTitle(midW), midW, topH, m.active().view(midW-2, topH-2, listFocus))
-	top := lipgloss.JoinHorizontal(lipgloss.Top, pin, list)
+	top := joinH(pin, list)
 
 	carryW := leftW + midW
 	carry := m.panelBox(m.focus == panelCarry, m.carryTitle(carryW), carryW, botH, m.carryBody(carryW-2, botH-2))
 
-	leftRegion := lipgloss.JoinVertical(lipgloss.Left, top, carry)
+	leftRegion := joinV(top, carry)
 	detail := m.panelBox(m.focus == panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
-	return lipgloss.JoinHorizontal(lipgloss.Top, leftRegion, detail)
+	return joinH(leftRegion, detail)
 }
 
 // zoomListView (panel [2] zoom): [2] fully expanded over [4] fully expanded,
@@ -123,7 +122,7 @@ func (m AppModel) normalMiddle(w, midH int) string {
 func (m AppModel) zoomListView(w, midH int) string {
 	topH := midH * 2 / 3
 	// [2]-zoom mixes two panels, so each column's chip carries its panel number.
-	return lipgloss.JoinVertical(lipgloss.Left,
+	return joinV(
 		m.expandedListTabs(w, topH),
 		m.expandedCarryTabs(w, midH-topH, true))
 }
@@ -138,7 +137,7 @@ func (m AppModel) expandedListTabs(w, h int) string {
 		focused := m.focus == panelList && m.tab == i
 		cols[i] = m.panelBox(focused, singleChip("[2] "+pathBase(m.tabs[i].dir), focused), cw, h, m.tabs[i].view(cw-2, h-2, focused))
 	}
-	return lipgloss.JoinHorizontal(lipgloss.Top, cols...)
+	return joinH(cols...)
 }
 
 // zoomDetailView (panel [3] zoom): full-width, the two tabs become 1:1 panels;
@@ -152,7 +151,7 @@ func (m AppModel) zoomDetailView(w, midH int) string {
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, leftW-2, midH-2))
 	meta := m.panelBox(mt, singleChip("Meta", mt), rightW, midH,
 		renderLinesFrom(metaLines(m.active().cursorItem(), m.active().dir), 0, rightW-2, midH-2))
-	return lipgloss.JoinHorizontal(lipgloss.Top, preview, meta)
+	return joinH(preview, meta)
 }
 
 // zoomCarryView (panel [4] zoom): [4] full-screen, its three tabs 1:1:1.
@@ -175,7 +174,7 @@ func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
 	}
 	carries := m.panelBox(foc(0), singleChip(label("Carries"), foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
 	tasks := m.panelBox(foc(1), singleChip(label("Tasks"), foc(1)), wd[1], h, m.tasksView(wd[1]-2, h-2, foc(1)))
-	return lipgloss.JoinHorizontal(lipgloss.Top, carries, tasks)
+	return joinH(carries, tasks)
 }
 
 // listTitle renders panel [2]'s fixed 3-tab bar. The tabs are always shown; when
@@ -252,7 +251,7 @@ func (m AppModel) panelBox(focused bool, title string, w, h int, body string) st
 	bs := lipgloss.NewStyle().Foreground(color)
 	inner := max(w-2, 1)
 	// title is pre-rendered chrome (singleChip / tabBar); place it on the top edge.
-	fill := max(inner-lipgloss.Width(title), 0)
+	fill := max(inner-dispWidth(title), 0)
 	top := bs.Render(tl) + title + bs.Render(strings.Repeat(hz, fill)+tr)
 
 	bodyLines := strings.Split(body, "\n")
@@ -263,10 +262,7 @@ func (m AppModel) panelBox(focused bool, title string, w, h int, body string) st
 		if r < len(bodyLines) {
 			line = bodyLines[r]
 		}
-		if d := inner - lipgloss.Width(line); d > 0 {
-			line += strings.Repeat(" ", d)
-		}
-		b.WriteString(bs.Render(vt) + line + bs.Render(vt) + "\n")
+		b.WriteString(bs.Render(vt) + padDisp(line, inner) + bs.Render(vt) + "\n")
 	}
 	b.WriteString(bs.Render(bl + strings.Repeat(hz, inner) + br))
 	return b.String()
@@ -274,13 +270,13 @@ func (m AppModel) panelBox(focused bool, title string, w, h int, body string) st
 
 func (m AppModel) headerBar(w int) string {
 	glyph := string(rune(0xf07c)) // nf-fa-folder-open
-	return lipgloss.NewStyle().Width(w).Foreground(userColor).
-		Render(truncate(" "+glyph+" "+shortPath(m.active().dir), w))
+	return lipgloss.NewStyle().Foreground(userColor).
+		Render(padDisp(" "+glyph+" "+shortPath(m.active().dir), w))
 }
 
 func (m AppModel) footerBar(w int) string {
-	return lipgloss.NewStyle().Width(w).Foreground(dimColor).
-		Render(truncate(" space menu   ? help   tab/1-4 panels   q quit", w))
+	return lipgloss.NewStyle().Foreground(dimColor).
+		Render(padDisp(" space menu   ? help   tab/1-4 panels   q quit", w))
 }
 
 func pathBase(p string) string {
@@ -296,12 +292,4 @@ func shortPath(p string) string {
 		return "~" + strings.TrimPrefix(p, home)
 	}
 	return p
-}
-
-// truncate clips s to display width w (ANSI- and wide-char-aware), adding "…".
-func truncate(s string, w int) string {
-	if w <= 0 {
-		return ""
-	}
-	return ansi.Truncate(s, w, "…")
 }
