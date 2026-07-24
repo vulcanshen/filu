@@ -184,11 +184,12 @@ func (m spaceMenu) renderFull() string {
 	title := " " + m.title
 	hint := " j/k move   Space close "
 
+	const maxHintW = 44 // a longer hint wraps onto continuation lines, not widens the box
 	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
 	for _, it := range m.items {
 		labelW := lipgloss.Width(bracketHotkey(it.label, it.key))
 		gap := max(2, 16-labelW)
-		if w := 1 + 2 + labelW + gap + lipgloss.Width(it.hint) + 1; w > innerW {
+		if w := 1 + 2 + labelW + gap + min(lipgloss.Width(it.hint), maxHintW) + 1; w > innerW {
 			innerW = w
 		}
 	}
@@ -211,13 +212,50 @@ func (m spaceMenu) renderFull() string {
 		}
 		labelDisplay := bracketHotkey(it.label, it.key)
 		gap := strings.Repeat(" ", max(2, 16-lipgloss.Width(labelDisplay)))
-		body := " " + gutter + labelDisplay + gap + it.hint
-		padW := max(0, innerW-1-lipgloss.Width(body))
-		if i == m.cursor {
-			rows = append(rows, cursorStyle.Render(body+strings.Repeat(" ", padW)))
-			continue
+		hintCol := 1 + len(gutter) + lipgloss.Width(labelDisplay) + lipgloss.Width(gap)
+		hintW := max(innerW-1-hintCol, 8)
+		indent := strings.Repeat(" ", hintCol)
+		for j, hl := range wrapText(it.hint, hintW) { // long hints wrap under the label
+			lead := indent
+			if j == 0 {
+				lead = " " + gutter + labelDisplay + gap
+			}
+			padW := max(0, innerW-1-lipgloss.Width(lead)-lipgloss.Width(hl))
+			if i == m.cursor {
+				rows = append(rows, cursorStyle.Render(lead+hl+strings.Repeat(" ", padW)))
+			} else {
+				rows = append(rows, lead+hintStyle.Render(hl)+strings.Repeat(" ", padW))
+			}
 		}
-		rows = append(rows, " "+gutter+labelDisplay+gap+hintStyle.Render(it.hint)+strings.Repeat(" ", padW))
 	}
 	return drawPopupBox(bc, title, hint, rows, innerW)
+}
+
+// wrapText word-wraps s to width, hard-cutting any single word that alone
+// overruns it so a row can never overflow the box.
+func wrapText(s string, width int) []string {
+	if width < 1 {
+		width = 1
+	}
+	words := strings.Fields(s)
+	if len(words) == 0 {
+		return []string{""}
+	}
+	var lines []string
+	cur := ""
+	for _, w := range words {
+		if lipgloss.Width(w) > width {
+			w = truncate(w, width)
+		}
+		switch {
+		case cur == "":
+			cur = w
+		case lipgloss.Width(cur)+1+lipgloss.Width(w) <= width:
+			cur += " " + w
+		default:
+			lines = append(lines, cur)
+			cur = w
+		}
+	}
+	return append(lines, cur)
 }
