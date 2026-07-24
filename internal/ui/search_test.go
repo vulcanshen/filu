@@ -6,15 +6,20 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// openedSearch builds an interactive finder with the all-files list already
-// loaded (skipping the async fd + open animation). Paths need not exist — the
-// preview just notes them unreadable, which the tests don't assert on.
+// openedSearch builds an interactive Find (by-content) finder with the all-files
+// list already loaded (skipping the async fd + open animation). Paths need not
+// exist — the preview just notes them unreadable, which the tests don't assert.
 func openedSearch(root string, files ...string) searchModel {
+	return openedFinder(root, true, files...)
+}
+
+// openedFinder is openedSearch with an explicit mode (byContent).
+func openedFinder(root string, byContent bool, files ...string) searchModel {
 	m := newSearch()
 	m.setSize(120, 30)
-	m.open(root, 120, 30)
+	m.open(root, 120, 30, byContent)
 	m.anim.state = popupOpen // skip the open animation so update() is interactive
-	m.onFilesLoaded(filesLoadedMsg{gen: m.gen, root: root, files: files})
+	m.onFilesLoaded(filesLoadedMsg{gen: m.openGen, root: root, files: files})
 	return m
 }
 
@@ -70,6 +75,51 @@ func TestSearchTypingFiltersByContent(t *testing.T) {
 	}
 	if len(m.files) != 3 {
 		t.Errorf("empty query should restore all 3 files, got %d", len(m.files))
+	}
+}
+
+func TestFuzzyMatch(t *testing.T) {
+	// non-contiguous subsequence across path segments
+	if _, ok := fuzzyMatch("internal/ui/search.go", "uisrch"); !ok {
+		t.Error("uisrch should fuzzy-match internal/ui/search.go")
+	}
+	if _, ok := fuzzyMatch("search.go", "xyz"); ok {
+		t.Error("xyz is not a subsequence of search.go")
+	}
+	// a prefix / boundary match outranks the same query mid-word
+	pre, _ := fuzzyMatch("app.go", "app")
+	mid, _ := fuzzyMatch("myapp.go", "app")
+	if pre <= mid {
+		t.Errorf("prefix match (%d) should outrank mid-word (%d)", pre, mid)
+	}
+}
+
+func TestSearchByNameFiltersInMemory(t *testing.T) {
+	m := openedFinder("/root", false, "app.go", "search.go", "sub/app_test.go")
+
+	// typing narrows the list in-memory (no rg cmd, not "searching")
+	m, cmd := m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("app")})
+	if cmd != nil || m.searching {
+		t.Errorf("by-name filter should be synchronous (cmd=%v searching=%v)", cmd != nil, m.searching)
+	}
+	// fuzzy: "app" matches app.go and sub/app_test.go, but not search.go
+	if len(m.files) != 2 {
+		t.Fatalf("query %q should match app.go + sub/app_test.go, got %d: %v", "app", len(m.files), m.files)
+	}
+	if m.files[0].path != "app.go" {
+		t.Errorf("best match for %q should rank app.go first, got %q", "app", m.files[0].path)
+	}
+	// the finder shows no preview in by-name mode
+	if m.renderFull() == "" {
+		t.Error("by-name finder should still render a list box")
+	}
+
+	// backspace to empty restores everything
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyBackspace})
+	if m.query != "" || len(m.files) != 3 {
+		t.Errorf("empty query should restore all 3, got query=%q n=%d", m.query, len(m.files))
 	}
 }
 

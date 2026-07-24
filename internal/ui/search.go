@@ -7,9 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -17,15 +19,19 @@ import (
 )
 
 // searchModel is filu's native file finder (snacks/Telescope form, not the fzf
-// binary): a split popup with a file list on the left and a preview of the
-// selected file on the right (stacked when the screen is narrow). On open it
-// lists every file + dir under the active tab's directory; typing filters that
-// list BY CONTENT (`rg --files-with-matches`, so a file that matches many times
-// still appears once). The unit you pick is always a file/dir — Enter drops
-// focus into the list, a second Enter reveals the pick in the active tab.
+// binary). It has two modes over the same picker UI, both rooted at the active
+// tab's subtree:
+//   - Search (`/`, byContent=false): fuzzy-filter the file list BY NAME,
+//     in-memory, ranked best-first — a single list box, no preview.
+//   - Find (`f`, byContent=true): filter BY CONTENT (`rg --files-with-matches`,
+//     so a file that matches many times still appears once) — a split popup with
+//     the list on the left and a preview on the right (stacked when narrow), the
+//     preview scrolled to the matched line.
 //
+// The unit you pick is always a file/dir — Enter drops focus into the list, a
+// second Enter reveals the pick in the active tab (descending into its subdir).
 // Drawn entirely in filu's own render loop — no PTY, so it can never break out
-// of its popup. Scope is the current tab's subtree, so it is fast and bounded.
+// of its popup; the subtree scope keeps it fast and bounded.
 type searchMode int
 
 const (
@@ -50,13 +56,15 @@ type fileMatch struct {
 
 type searchModel struct {
 	root      string      // absolute search root (the active tab's dir)
-	query     string      // content filter
+	byContent bool        // true = Find (rg content + preview); false = Search (name)
+	query     string      // filter text
 	allFiles  []fileMatch // every file + dir under root (the empty-query list)
-	files     []fileMatch // current list: allFiles, or the content-matched files
+	files     []fileMatch // current list: allFiles, or the name/content matches
 	cursor    int         // into files
 	scroll    int
 	mode      searchMode
-	gen       int  // bumped per query change; stale results are dropped
+	gen       int  // bumped per content-query change; stale rg results are dropped
+	openGen   int  // bumped per open; guards the fd all-files load (query-gen independent)
 	loading   bool // allFiles still loading
 	searching bool // an rg filter is in flight
 
@@ -102,24 +110,32 @@ func newSearch() searchModel {
 	return searchModel{anim: newPopupAnimator("search", popupLayerColor(1))}
 }
 
-// openSearch opens the finder over the active tab's directory.
+// openSearch opens the by-name finder (`/`) over the active tab's directory.
 func (m *AppModel) openSearch() tea.Cmd {
-	return m.search.open(m.cur().dir, m.width, m.height)
+	return m.search.open(m.cur().dir, m.width, m.height, false)
+}
+
+// openFind opens the by-content finder (`f`) over the active tab's directory.
+func (m *AppModel) openFind() tea.Cmd {
+	return m.search.open(m.cur().dir, m.width, m.height, true)
 }
 
 // open resets the finder over root and loads the full file list immediately.
-func (m *searchModel) open(root string, w, h int) tea.Cmd {
+// byContent selects Find (rg + preview) vs Search (name-only, no preview).
+func (m *searchModel) open(root string, w, h int, byContent bool) tea.Cmd {
 	m.root = root
+	m.byContent = byContent
 	m.query = ""
 	m.allFiles, m.files = nil, nil
 	m.cursor, m.scroll = 0, 0
 	m.mode = searchInput
-	m.gen++ // invalidate any in-flight load from a previous open
+	m.gen++     // invalidate any in-flight rg from a previous open
+	m.openGen++ // the all-files load is keyed on this, not the query gen
 	m.loading, m.searching = true, false
 	m.preview, m.previewFor = previewModel{}, ""
 	m.blink, m.blinkGen = true, m.blinkGen+1
 	m.width, m.height = w, h
-	return tea.Batch(m.anim.open(), listAllFilesCmd(m.gen, root), blinkTickCmd(m.blinkGen))
+	return tea.Batch(m.anim.open(), listAllFilesCmd(m.openGen, root), blinkTickCmd(m.blinkGen))
 }
 
 // onBlink toggles the input cursor and reschedules, as long as this is still the
@@ -147,10 +163,12 @@ func (m *searchModel) handleTick(msg AnimTickMsg) tea.Cmd {
 	return m.anim.tick()
 }
 
-// onFilesLoaded installs the fd listing; when the query is empty it becomes the
-// visible list.
+// onFilesLoaded installs the fd listing (keyed on openGen, so a query change
+// mid-load doesn't drop it). An empty query shows the full list; a pending
+// by-name query is applied now that the files exist; by-content queries are
+// driven by rg independently.
 func (m *searchModel) onFilesLoaded(msg filesLoadedMsg) {
-	if !m.anim.isActive() || msg.gen != m.gen || msg.root != m.root {
+	if !m.anim.isActive() || msg.gen != m.openGen || msg.root != m.root {
 		return
 	}
 	m.allFiles = m.allFiles[:0]
@@ -158,11 +176,16 @@ func (m *searchModel) onFilesLoaded(msg filesLoadedMsg) {
 		m.allFiles = append(m.allFiles, fileMatch{path: p})
 	}
 	m.loading = false
-	if m.query == "" {
+	switch {
+	case m.query == "":
 		m.files = m.allFiles
-		m.clampCursor()
-		m.refreshPreview()
+	case !m.byContent:
+		m.filterByName()
+	default:
+		return // by-content: rg owns the non-empty query
 	}
+	m.clampCursor()
+	m.refreshPreview()
 }
 
 // onGrepFire runs rg once the debounce elapses, unless a newer keystroke has
@@ -243,19 +266,98 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 	return m, nil
 }
 
-// queryChanged bumps the generation. An empty query restores the full list
-// instantly; otherwise it schedules a debounced content filter.
+// queryChanged re-filters after a keystroke. An empty query restores the full
+// list; by-name (Search) filters allFiles in-memory instantly; by-content (Find)
+// bumps the generation and schedules a debounced rg run.
 func (m *searchModel) queryChanged() tea.Cmd {
-	m.gen++
+	m.cursor, m.scroll = 0, 0
 	if m.query == "" {
 		m.files = m.allFiles
 		m.searching = false
-		m.cursor, m.scroll = 0, 0
 		m.refreshPreview()
 		return nil
 	}
+	if !m.byContent { // by-name: synchronous, in-memory, no rg
+		m.filterByName()
+		m.searching = false
+		m.refreshPreview()
+		return nil
+	}
+	m.gen++ // by-content: invalidate older rg runs
 	m.searching = true
 	return grepDebounceCmd(m.gen, m.root, m.query)
+}
+
+// filterByName narrows allFiles to entries whose relative path fuzzy-matches the
+// query, ranked best-first. Builds a fresh slice so it never mutates allFiles
+// (which m.files may alias when the query is empty).
+func (m *searchModel) filterByName() {
+	type scored struct {
+		f     fileMatch
+		score int
+	}
+	var hits []scored
+	for _, f := range m.allFiles {
+		if s, ok := fuzzyMatch(f.path, m.query); ok {
+			hits = append(hits, scored{f, s})
+		}
+	}
+	sort.SliceStable(hits, func(i, j int) bool { return hits[i].score > hits[j].score })
+	out := make([]fileMatch, len(hits))
+	for i, h := range hits {
+		out[i] = h.f
+	}
+	m.files = out
+}
+
+// fuzzyMatch reports whether query is a case-insensitive subsequence of target,
+// with a score that favours matches at word boundaries (start / after a
+// /_-. separator / camelCase), contiguous runs, and the basename over deep path
+// segments, while penalising gaps. Higher is better; ok=false when query is not
+// a subsequence. Greedy left-to-right — correct for detection, good enough for
+// ranking a file list.
+func fuzzyMatch(target, query string) (int, bool) {
+	q := []rune(strings.ToLower(query))
+	if len(q) == 0 {
+		return 0, true
+	}
+	t := []rune(target)
+	baseStart := 0
+	for i, r := range t {
+		if r == '/' {
+			baseStart = i + 1
+		}
+	}
+	score, qi, prev := 0, 0, -2
+	for ti := 0; ti < len(t) && qi < len(q); ti++ {
+		if unicode.ToLower(t[ti]) != q[qi] {
+			continue
+		}
+		s := 1
+		switch {
+		case prev >= 0 && ti == prev+1:
+			s += 6 // contiguous with the previous match
+		case prev >= 0:
+			s -= min(ti-prev-1, 4) // gap penalty (capped)
+		}
+		if ti == 0 || isSep(t[ti-1]) || (unicode.IsUpper(t[ti]) && unicode.IsLower(t[ti-1])) {
+			s += 8 // word boundary
+		}
+		if ti >= baseStart {
+			s += 3 // in the basename
+		}
+		score += s
+		prev = ti
+		qi++
+	}
+	if qi < len(q) {
+		return 0, false
+	}
+	return score, true
+}
+
+func isSep(r rune) bool {
+	return r == '/' || r == '_' || r == '-' || r == '.' || r == ' '
 }
 
 func (m *searchModel) moveCursor(delta int) {
@@ -309,6 +411,9 @@ func (m searchModel) selectedLine() int {
 // refreshPreview loads the selected file's preview when the selection changes and
 // scrolls it so the matched line sits a few rows down (some context above).
 func (m *searchModel) refreshPreview() {
+	if !m.byContent {
+		return // the by-name finder shows no preview
+	}
 	abs := m.selectedAbs()
 	if abs != m.previewFor {
 		m.previewFor = abs
@@ -330,6 +435,11 @@ func (m *searchModel) refreshPreview() {
 // preview side by side; a narrow one stacks them. Returns each box's inner width
 // and content-row count (content = rows drawn between the box's pad rows).
 func (m searchModel) geometry() (side bool, sW, sRows, pW, pRows int) {
+	if !m.byContent { // by-name finder: a single list box, no preview
+		W := max(min(m.width-2, m.width*3/5), 32)
+		H := min(m.height-2, m.height*9/10)
+		return false, max(W-2, 20), max(H-4, 4), 0, 0
+	}
 	if m.width >= 96 { // room for a list box + a useful preview box
 		side = true
 		totalW := min(m.width-2, m.width*19/20)
@@ -364,12 +474,19 @@ func (m searchModel) previewTitle() string {
 
 func (m searchModel) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
-// renderFull draws two separate popup boxes — the search list and the file
-// preview — joined side by side (wide) or stacked (narrow).
+// renderFull draws the finder. Search (by-name) is a single list box; Find
+// (by-content) adds a preview box joined side by side (wide) or stacked (narrow).
 func (m searchModel) renderFull() string {
 	bc := popupLayerColor(1)
 	side, sW, sRows, pW, pRows := m.geometry()
-	sb := drawPopupBox(bc, " Search", m.hint(), m.listColumn(sW, sRows), sW)
+	title := " Search"
+	if m.byContent {
+		title = " Find"
+	}
+	sb := drawPopupBox(bc, title, m.hint(), m.listColumn(sW, sRows), sW)
+	if !m.byContent {
+		return sb // by-name: list only, no preview
+	}
 	pb := drawPopupBox(bc, m.previewTitle(), "", m.previewColumn(pW, pRows), pW)
 	if side {
 		h := strings.Count(sb, "\n") + 1 // a 1-col gap so the two boxes read as separate panels

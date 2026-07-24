@@ -431,8 +431,10 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		}
 	case "S": // sort: open the column→direction picker
 		cmd = m.openSortColumnPicker()
-	case "/": // search: native finder (ripgrep content filter), reveal the pick here
+	case "/": // Search: by-name finder over the subtree, reveal the pick here
 		cmd = m.openSearch()
+	case "f": // Find: by-content finder (rg) with preview, reveal the pick here
+		cmd = m.openFind()
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
 		m.toggleZoom(panelList)
 	}
@@ -634,7 +636,8 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				menuItem{label: "Move here", key: "m", hint: "land carried items as move"})
 		}
 		panelOps = append(panelOps,
-			menuItem{label: "Search", key: "/", hint: "find a file under this dir (filter by content) + preview"})
+			menuItem{label: "Search", key: "/", hint: "find a file by name in this tree"},
+			menuItem{label: "Find", key: "f", hint: "find a file by content (grep) + preview"})
 		if len(m.tabs) < maxTabs {
 			panelOps = append(panelOps,
 				menuItem{label: "Tab", key: "t", hint: "open a new tab in this directory"})
