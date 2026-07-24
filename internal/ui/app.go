@@ -415,7 +415,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		}
 	case "S": // sort: open the column→direction picker
 		cmd = m.openSortColumnPicker()
-	case "/": // search: fzf + ripgrep in the embedded PTY, reveal the pick here
+	case "/": // search: native finder (ripgrep content filter), reveal the pick here
 		cmd = m.openSearch()
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
 		m.toggleZoom(panelList)
