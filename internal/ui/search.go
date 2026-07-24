@@ -416,16 +416,12 @@ func (m searchModel) listColumn(w, rows int) []string {
 func fileRow(rel string, w int, cursor bool, cursorStyle lipgloss.Style) string {
 	isDir := strings.HasSuffix(rel, "/")
 	name := safeName(strings.TrimSuffix(rel, "/"))
-	icon := iconFile
-	if isDir {
-		icon = iconDir
-	}
-	content := " " + icon + " " + name
+	it := fileItem{name: filepath.Base(name), isDir: isDir}
+	content := " " + fileIcon(it) + " " + name
 	if cursor {
 		return cursorStyle.Render(padDisp(content, w))
 	}
-	col := fileColor(fileItem{name: filepath.Base(name), isDir: isDir})
-	return truncate(lipgloss.NewStyle().Foreground(col).Render(content), w)
+	return truncate(lipgloss.NewStyle().Foreground(fileColor(it)).Render(content), w)
 }
 
 // previewColumn is the selected file's preview, exactly rows tall, scrolled to

@@ -30,8 +30,8 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
  space menu   ? help   tab/1-4 panels   q quit         ← footer
 ```
 
-- **[1] pin**:系統 Places(CWD / Home / 根目錄)+ 使用者釘選的目錄。純導覽 —— 選一個,`[2]` 就跳過去。
-- **[2] 清單**:當前目錄的檔案,固定 3 個目錄分頁(各自獨立 CWD + cursor)。檔案操作主戰場。
+- **[1] pin**:系統 Places(CWD / Home / 根目錄)+ 使用者釘選的目錄(`Pinned` 標題為 lavender)。釘選項目以**縮減 path** 呈現(`~/Documents/sideproj/filu` → `~/D/s/filu`,過長則前綴變 `…`)。純導覽 —— 選一個,`[2]` 就跳過去。
+- **[2] 清單**:當前目錄的檔案,固定 3 個目錄分頁(各自獨立 CWD + cursor)。每列 `<icon> <檔名>`,icon 與配色照 eza(見下方[配色](#功能))。檔案操作主戰場。
 - **[3] detail**:`Preview` / `Meta` 兩個 tab。Preview 依型別分五類呈現;Meta 是 `stat` 等級的詳細資訊。這是參考視角,失焦也不 dim。按 `y` 開 yank 視窗(vim 式 cursor + `v` visual selection):有選取時 `y` 複製選取內容,沒選取則複製全部。
 - **[4] carry**:`Carries`(搬運暫存區)/ `Tasks`(複製/搬移任務,含 running / done / pending / error 狀態)兩個 tab。
 
@@ -44,7 +44,10 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
   - 文字 → chroma 語法highlight + 行號(catppuccin-mocha)
   - 二進位 → hex + ASCII(xxd 風)+ 行號
   - PDF → 純 Go 抽文字 + 頁數
-- **顏色**:eza catppuccin-mocha 檔案型別色 + executable-bit 綠。structural 藍 / user lavender / popup 層色的三層階層。
+- **Icon + 配色(照 eza)**:
+  - **Icon**:檔案型別 glyph 取自 eza 原始碼的完整對照表(`src/output/icons.rs`,~760 個)—— 目錄名 / 檔名走 exact-case、副檔名走小寫,涵蓋各語言、設定檔、壓縮/影音/圖片與 `README` / `Dockerfile` / `go.mod` 等特例。
+  - **顏色**:把一份 `vivid generate catppuccin-mocha` 的 `LS_COLORS`(該 palette 每個副檔名一個色)**烘進 binary**,依 eza 的優先序上色(目錄 → symlink → executable → 整名 suffix → 副檔名 → normal;executable 蓋過副檔名)。結果與使用者終端機的 `eza` / `ls` **完全一致**,且**不需要**環境有 `LS_COLORS` —— 別人裝了也是同一套配色。
+  - 面板層級另有 structural 藍 / user lavender / popup 層色的三層階層。
 - **Zoom**:每個有分頁的面板都能 `z` 展開佔滿,把分頁攤成等寬並排欄。
 - **Carry-bucket 搬檔**:`p` pick 把檔案拿進 bucket(panel 2 會**打綠勾**標記,等同 multi-select)→ 切到目標目錄 → `c` copy / `m` move 落地;Carries tab 可 `p` 只落地子集。落地跑 goroutine,進度在 Tasks tab 即時更新。
 - **Search(`/`,僅 panel 2)**:filu 原生的 file finder(snacks / Telescope 形式,非 fzf binary)—— 分割 popup:左清單 + 右預覽(窄寬改上下)。開啟即列當前目錄底下所有檔案+目錄;打字用 `ripgrep` **內容**過濾出含關鍵字的檔案(去重),游標選一個 → panel 2 跳到該檔;預覽自動 scroll 到命中行並 lavender 反白。輸入列走 snacks 樣式(peach chevron prompt + blinking block cursor)。

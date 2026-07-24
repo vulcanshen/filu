@@ -15,8 +15,8 @@ const baseHex = "#1e1e2e" // catppuccin base (cursor fg on highlight)
 
 // Nerd Font icons, built from rune values so no PUA glyph sits in source.
 var (
-	iconDir  = string(rune(0xf07b)) // nf-fa-folder
-	iconFile = string(rune(0xf15b)) // nf-fa-file
+	iconDir  = string(rune(0xe5ff)) // eza FOLDER (nf-custom-folder)
+	iconFile = string(rune(0xf15b)) // eza FILE (nf-fa-file)
 )
 
 type fileItem struct {
@@ -218,33 +218,36 @@ func (m listModel) view(w, rows int, focused bool, carried map[string]bool) stri
 	var b strings.Builder
 	b.WriteString(hdr + "\n")
 	end := min(m.offset+rows, len(m.items))
+	// The leftmost cell is the carry mark: a tick when the file is in the bucket,
+	// otherwise blank. Reserving exactly the tick's display width keeps ticked and
+	// un-ticked rows aligned, and on a normal font it is one cell — so a plain row
+	// reads " <icon> <name>", the original layout, with the tick sitting where
+	// that leading space was.
+	markW := dispWidth(pickGlyph)
+	blank := strings.Repeat(" ", markW)
 	for i := m.offset; i < end; i++ {
 		it := m.items[i]
-		icon := iconFile
-		if it.isDir {
-			icon = iconDir
-		}
 		inBucket := carried[filepath.Join(m.dir, it.name)]
-		body := icon + " " + safeName(it.name)
+		body := fileIcon(it) + " " + safeName(it.name)
 		var line string
 		switch {
 		case i == m.cursor: // full-width highlight bar; tick inherits the bar fg
-			mark := " "
+			lead := blank
 			if inBucket {
-				mark = pickGlyph
+				lead = pickGlyph
 			}
-			line = cursorStyle.Render(padDisp(" "+mark+" "+body, w))
+			line = cursorStyle.Render(padDisp(lead+body, w))
 		default:
-			mark := " "
+			lead := blank
 			if inBucket {
-				mark = checkStyle.Render(pickGlyph)
+				lead = checkStyle.Render(pickGlyph)
 			}
 			if focused {
 				body = lipgloss.NewStyle().Foreground(fileColor(it)).Render(body) // eza type colour
 			} else {
 				body = dimStyle.Render(body) // unfocused panel: recede
 			}
-			line = truncate(" "+mark+" "+body, w)
+			line = truncate(lead+body, w)
 		}
 		b.WriteString(line)
 		if i < end-1 {
