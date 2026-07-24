@@ -79,6 +79,25 @@ eval "$(filu shell)"
 
 原理:wrapper 給 filu 一個暫存檔路徑(`FILU_LAST_DIR_FILE`),filu 離開時把選定目錄寫進去,wrapper 再 `cd` 過去。沒裝 wrapper 直接跑 `filu` 也能用,只是離開時不會切目錄。
 
+## 安裝
+
+> 發佈基建已備妥(goreleaser + Homebrew tap + `install.sh`);以下管道在第一個 GitHub release(tag `v*`)後生效。目前請走下面的[建置](#建置)從原始碼編。
+
+- **Homebrew**(macOS / Linux)—— 會一併裝 Search 需要的 `ripgrep` + `fd`:
+  ```sh
+  brew install vulcanshen/tap/filu
+  ```
+- **install script**(抓 release binary;缺 `ripgrep` / `fd` 時印各發行版安裝提示):
+  ```sh
+  curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/install.sh | sh
+  ```
+- **go install**:
+  ```sh
+  go install github.com/vulcanshen/filu/cmd/filu@latest
+  ```
+
+移除:`curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh | sh`。
+
 ## 建置
 
 ```sh

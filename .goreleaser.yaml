@@ -1,0 +1,42 @@
+version: 2
+
+project_name: filu
+
+builds:
+  - main: ./cmd/filu
+    binary: filu
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+    goos:
+      # unix-first — no windows target (GOOS=windows fails to compile by design)
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  disable: true
+
+homebrew_casks:
+  - repository:
+      owner: vulcanshen
+      name: homebrew-tap
+      token: "{{ .Env.ACTION_TOKEN }}"
+    homepage: "https://github.com/vulcanshen/filu"
+    description: "ZLC terminal file manager (kbu u-family) — content search, split preview, carry-bucket"
+    # Search (/) uses ripgrep for the content filter and fd for the file list;
+    # declaring them as deps means `brew install filu` pulls them in too.
+    dependencies:
+      - formula: ripgrep
+      - formula: fd
