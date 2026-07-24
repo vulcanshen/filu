@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 ### Added
+- Release tooling: a goreleaser config (linux/darwin, no Windows), an
+  `install.sh` / `uninstall.sh`, and a tag-triggered GitHub Actions workflow. The
+  Homebrew cask declares `ripgrep` + `fd` as dependencies, so
+  `brew install vulcanshen/tap/filu` pulls in Search's tools; `install.sh` prints
+  install hints for them when they're missing.
 - Search (`/`, panel [2]): a native file finder (snacks/Telescope form, not the
   fzf binary) — a split popup with the file list on the left and a preview of the
   selected file on the right (stacked when narrow). It lists everything under the
