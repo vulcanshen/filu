@@ -48,6 +48,16 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- Panel [2] tabs are now dynamic: it opens with a single directory tab, `t`
+  opens a new tab in the current directory (up to three) and `w` closes the
+  active one — replacing the old fixed three tabs. Tabs are labelled with Roman
+  numerals (Ⅰ / Ⅱ / Ⅲ) rather than the directory basename, since the active
+  tab's full path already shows in the header bar; Zoom lays out however many
+  tabs are open. The extra tabs you open persist across sessions, but the first
+  tab always reopens at the launch directory and is active on start.
+- The cd-on-quit picker now lists distinct directories — the launch dir plus each
+  tab's dir with duplicates dropped — instead of one row per tab, so a directory
+  open in several tabs is offered once.
 - File colours now match your terminal's `eza` / `ls` exactly. filu bakes in a
   `vivid generate catppuccin-mocha` `LS_COLORS` palette (a colour per extension)
   and resolves it in eza's order — directory, symlink, executable (which beats an

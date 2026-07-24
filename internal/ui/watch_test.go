@@ -39,9 +39,7 @@ func TestHandleWatchMsgReloadsChangedTab(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "one.txt"))
 	m := AppModel{taskCh: make(chan landMsg, 1), watched: map[string]bool{}}
-	for i := range m.tabs {
-		m.tabs[i] = newList(dir)
-	}
+	m.tabs = []listModel{newList(dir)}
 	before := len(m.tabs[0].items)
 
 	writeFile(t, filepath.Join(dir, "two.txt"))
@@ -66,9 +64,7 @@ func TestSyncWatchesFollowsTabDirs(t *testing.T) {
 	defer w.Close()
 
 	m := AppModel{watcher: w, watched: map[string]bool{}}
-	m.tabs[0] = listModel{dir: d1}
-	m.tabs[1] = listModel{dir: d1} // duplicate — should dedup to one watch
-	m.tabs[2] = listModel{dir: d2}
+	m.tabs = []listModel{{dir: d1}, {dir: d1}, {dir: d2}} // d1 duplicated — dedups to one watch
 
 	m.syncWatches()
 	if !m.watched[d1] || !m.watched[d2] || len(m.watched) != 2 {

@@ -34,7 +34,7 @@ func TestYankPanel2ReturnsCopy(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "f.txt"))
 	m := AppModel{focus: panelList, taskCh: make(chan landMsg, 1), watched: map[string]bool{}}
-	m.tabs[0] = newList(dir)
+	m.tabs = []listModel{newList(dir)}
 	cursorOn(&m, "f.txt")
 
 	cmd := m.handleListKey("y")

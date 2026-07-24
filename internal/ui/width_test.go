@@ -93,9 +93,7 @@ func TestViewEveryLineIsTerminalWidth(t *testing.T) {
 			confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(),
 			taskCh: make(chan landMsg, 8),
 		}
-		for i := range m.tabs {
-			m.tabs[i] = newList(dir)
-		}
+		m.tabs = []listModel{newList(dir)}
 		m.carry.items = []string{filepath.Join(dir, "file.go")}
 		m.tasks = []landTask{{id: 1, action: "cp", dest: "d", total: 1, status: taskDone}}
 		m.refreshPreview()

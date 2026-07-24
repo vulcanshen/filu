@@ -31,7 +31,7 @@ func TestEnterOpensFileNavigatesDir(t *testing.T) {
 	defer func() { openFile = old }()
 
 	m := AppModel{focus: panelList, taskCh: make(chan landMsg, 1)}
-	m.tabs[0] = newList(dir)
+	m.tabs = []listModel{newList(dir)}
 
 	// Enter on the file → OS open, dir unchanged.
 	cursorOn(&m, "doc.txt")

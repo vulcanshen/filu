@@ -47,6 +47,7 @@ func TestCarryViewShowsFullPath(t *testing.T) {
 
 func TestHandleLandMsgFinish(t *testing.T) {
 	var m AppModel
+	m.tabs = []listModel{{}} // one tab so refreshPreview's cur() is valid
 	m.tasks = []landTask{{id: 1, action: "cp", dest: "dst", total: 2}}
 	m.carry.items = []string{"/a", "/b"}
 

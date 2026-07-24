@@ -8,9 +8,7 @@ import (
 
 func TestSnapshotApplyRoundtrip(t *testing.T) {
 	var m AppModel
-	m.tabs[0] = listModel{dir: "/tmp"}
-	m.tabs[1] = listModel{dir: "/usr", cursor: 2}
-	m.tabs[2] = listModel{dir: "/etc"}
+	m.tabs = []listModel{{dir: "/tmp"}, {dir: "/usr", cursor: 2}, {dir: "/etc"}}
 	m.tab = 1
 	m.focus = panelDetail
 	m.detail = tabMeta
@@ -26,7 +24,8 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := AppModel{places: newPlaces()} // like New(): system places already present
+	got := AppModel{places: newPlaces()}  // like New(): system places already present
+	got.tabs = []listModel{{dir: "/cwd"}} // like New(): one CWD tab, extras restored onto it
 	got.applyState(st)
 
 	if got.focus != panelDetail || got.detail != tabMeta {
