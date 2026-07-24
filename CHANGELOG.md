@@ -48,6 +48,13 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- Search (`/`, panel [2]) is now a by-name fuzzy finder — a single list box, no
+  preview — and content search moved to a new Find (`f`). Both share the same
+  picker over the current tab's subtree: `/` fuzzy-matches file names in memory
+  and ranks the best matches first (word-boundary, contiguous, and basename hits
+  score highest); `f` filters by content via `ripgrep` and keeps the split
+  preview that scrolls to the matched line. Enter reveals the pick and descends
+  the tab into its directory.
 - Panel [2] tabs are now dynamic: it opens with a single directory tab, `t`
   opens a new tab in the current directory (up to three) and `w` closes the
   active one — replacing the old fixed three tabs. Tabs are labelled with Roman
