@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 ### Added
+- File-type icons now come from eza's full icon table (~760 glyphs, generated
+  from eza's source). Every row in panel [2], the rename popup, and the Search
+  list shows its eza glyph — languages, config files, archives, media, and
+  special names (`README`, `Dockerfile`, `go.mod`, …). Directory and filename
+  matches are case-sensitive; the extension match is lower-cased.
 - Release tooling: a goreleaser config (linux/darwin, no Windows), an
   `install.sh` / `uninstall.sh`, and a tag-triggered GitHub Actions workflow. The
   Homebrew cask declares `ripgrep` + `fd` as dependencies, so
@@ -43,6 +48,19 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- File colours now match your terminal's `eza` / `ls` exactly. filu bakes in a
+  `vivid generate catppuccin-mocha` `LS_COLORS` palette (a colour per extension)
+  and resolves it in eza's order — directory, symlink, executable (which beats an
+  extension, so a `.sh` script reads as executable, not source), longest
+  filename-suffix (e.g. `go.mod`), then the plain extension. No `LS_COLORS` is
+  needed at run time, so every install shows the same palette.
+- Panel [1]: the `Pinned` section title is now lavender and pinned entries render
+  in the same colour as the system places (no longer lavender); a pinned
+  directory shows a compact path (`~/Documents/sideproj/filu` → `~/D/s/filu`,
+  `…`-trimmed from the left when it overflows); the whole panel dims when it is
+  not focused. The pinned icon and the local-CWD icon were also updated.
+- Panel [2] rows are back to `<space><icon><space><name>`; the carries tick now
+  sits in that leading cell instead of adding an extra column.
 - Text-entry fields (search, rename, add) now share one style: a peach chevron
   prompt and a blinking block cursor, no background bar. The rename popup shows
   the item exactly as panel [2] does — its type icon in its eza colour — with a

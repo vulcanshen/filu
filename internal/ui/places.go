@@ -12,9 +12,9 @@ import (
 // Nerd Font icons (rune values so no PUA glyph sits in source). RootDir's glyph
 // is the OS logo and lives in osroot_{darwin,linux}.go.
 var (
-	iconHome = string(rune(0xf015)) // nf-fa-home
-	iconCWD  = string(rune(0xf450)) // nf-oct-file-directory
-	iconPin  = string(rune(0xf005)) // nf-fa-star
+	iconHome = string(rune(0xf015))  // nf-fa-home
+	iconCWD  = string(rune(0xf14de)) // local cwd
+	iconPin  = string(rune(0xf450))  // pinned dir
 )
 
 type place struct {
@@ -113,16 +113,26 @@ func (m placesModel) view(w, rows int, focused bool) string {
 		cursorBg = userColor // unfocused: remembered position (lavender)
 	}
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
+	dim := lipgloss.NewStyle().Foreground(dimColor)
 
 	var lines []string
 	idx := 0
-	render := func(ps []place, fg lipgloss.Style) {
+	// asPath renders the entry's compact path (pinned dirs) instead of its label.
+	render := func(ps []place, activeFg lipgloss.Style, asPath bool) {
 		for _, p := range ps {
-			line := truncate(" "+p.icon+"  "+safeName(p.label), w)
-			if idx == m.cursor {
+			label := safeName(p.label)
+			if asPath {
+				avail := w - 1 - dispWidth(p.icon) - 2 // leading space + icon + 2 gaps
+				label = truncPathLeft(safeName(shortenPinPath(p.path)), avail)
+			}
+			line := truncate(" "+p.icon+"  "+label, w)
+			switch {
+			case idx == m.cursor:
 				line = cur.Render(padDisp(line, w)) // full-width highlight bar
-			} else {
-				line = fg.Render(line)
+			case focused:
+				line = activeFg.Render(line)
+			default:
+				line = dim.Render(line) // unfocused panel: recede to dim
 			}
 			lines = append(lines, line)
 			idx++
@@ -130,14 +140,29 @@ func (m placesModel) view(w, rows int, focused bool) string {
 	}
 
 	if len(m.pinned) > 0 { // pinned on top, only when it has items
-		lines = append(lines, hdr.Render("Pinned"))
-		render(m.pinned, lipgloss.NewStyle().Foreground(userColor)) // user footprint
+		pinnedHdr := lipgloss.NewStyle().Foreground(userColor) // lavender: the user's own section
+		lines = append(lines, pinnedHdr.Render("Pinned"))
+		render(m.pinned, lipgloss.NewStyle(), true) // same colour as Local items (neutral)
 	}
 	lines = append(lines, hdr.Render("Local"))
-	render(m.system, lipgloss.NewStyle()) // neutral
+	render(m.system, lipgloss.NewStyle(), false) // neutral
 
 	if len(lines) > rows {
 		lines = lines[:rows]
 	}
 	return strings.Join(lines, "\n")
+}
+
+// shortenPinPath compacts a pinned directory for panel [1]: the home dir folds
+// to ~, and every segment but the last is cut to its first rune, so
+// ~/Documents/sideproj/filu shows as ~/D/s/filu. The caller left-truncates it
+// with a leading … when it still overflows.
+func shortenPinPath(path string) string {
+	segs := strings.Split(shortPath(path), "/")
+	for i := 0; i < len(segs)-1; i++ {
+		if r := []rune(segs[i]); len(r) > 1 && segs[i] != ".." {
+			segs[i] = string(r[0])
+		}
+	}
+	return strings.Join(segs, "/")
 }

@@ -108,11 +108,7 @@ func (m inputPopup) renderFull() string {
 	// description: the item exactly as panel [2] shows it — type icon + eza colour.
 	var desc string
 	if m.item.name != "" {
-		icon := iconFile
-		if m.item.isDir {
-			icon = iconDir
-		}
-		desc = " " + lipgloss.NewStyle().Foreground(fileColor(m.item)).Render(icon+" "+safeName(m.item.name))
+		desc = " " + lipgloss.NewStyle().Foreground(fileColor(m.item)).Render(fileIcon(m.item)+" "+safeName(m.item.name))
 	}
 
 	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
