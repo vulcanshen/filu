@@ -61,9 +61,9 @@ type AppModel struct {
 	height        int
 	focus         panelID
 	detail        detailTab
-	detailScroll  int          // panel [3] content scroll offset
-	tabs          [3]listModel // panel [2]'s fixed 3 directory tabs
-	tab           int          // active tab index
+	detailScroll  int         // panel [3] content scroll offset
+	tabs          []listModel // panel [2]'s directory tabs (1..maxTabs, user-created)
+	tab           int         // active tab index
 	preview       previewModel
 	places        placesModel
 	carry         carryModel
@@ -72,7 +72,7 @@ type AppModel struct {
 	sortMenu      spaceMenu    // sort picker (column→direction chain, kbu form)
 	sortStep      sortStep     // which step the sort picker is on
 	sortFlowCol   sortCol      // column carried from the column step to direction
-	quitMenu      spaceMenu    // cd-on-quit picker (launch dir + 3 tabs)
+	quitMenu      spaceMenu    // cd-on-quit picker (launch dir + distinct tab dirs)
 	launchDir     string       // the dir filu was started in (panel 1 CWD / quit option 1)
 	zoom          panelID      // 0 = normal; else the panel expanded full-width
 	confirm       confirmPopup // yes/no popup (delete / quit)
@@ -95,17 +95,20 @@ type AppModel struct {
 	watched       map[string]bool   // dirs currently registered with the watcher
 }
 
-// New returns the root model, focused on the file list. All 3 tabs open at the
-// current dir (they diverge as the user navigates each).
+// maxTabs caps panel [2]'s directory tabs. It opens with one (at the CWD); the
+// user creates more with `t` (up to this many) and closes them with `w`.
+const maxTabs = 3
+
+// New returns the root model, focused on the file list. Panel [2] opens with a
+// single tab at the current dir; extra tabs the user created last session are
+// restored by applyState.
 func New() AppModel {
 	dir, err := os.Getwd()
 	if err != nil {
 		dir = "/"
 	}
 	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
-	for i := range m.tabs {
-		m.tabs[i] = newList(dir)
-	}
+	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
 	}
@@ -294,9 +297,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var key string
 			var cmd tea.Cmd
 			m.quitMenu, key, cmd = m.quitMenu.update(msg)
-			if idx, err := strconv.Atoi(key); err == nil { // "1".."4" → that dir
-				if dirs := m.quitDirs(); idx >= 1 && idx <= len(dirs) {
-					return m, m.quitTo(dirs[idx-1])
+			if idx, err := strconv.Atoi(key); err == nil { // a number → that distinct dir
+				if targets := m.quitTargets(); idx >= 1 && idx <= len(targets) {
+					return m, m.quitTo(targets[idx-1].dir)
 				}
 			}
 			return m, cmd
@@ -373,6 +376,19 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		m.tab = (m.tab + 1) % len(m.tabs)
 	case "h", "left":
 		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
+	case "t": // new tab in the current tab's directory, made active (up to maxTabs)
+		if len(m.tabs) < maxTabs {
+			dir := m.cur().dir // capture before append may reallocate m.tabs
+			m.tabs = append(m.tabs, newList(dir))
+			m.tab = len(m.tabs) - 1
+		}
+	case "w": // close the active tab (always keep at least one)
+		if len(m.tabs) > 1 {
+			m.tabs = append(m.tabs[:m.tab], m.tabs[m.tab+1:]...)
+			if m.tab >= len(m.tabs) {
+				m.tab = len(m.tabs) - 1
+			}
+		}
 	case "p": // pick: toggle cursor item into the carries bucket
 		if it := l.cursorItem(); it.name != "" {
 			m.carry.toggle(filepath.Join(l.dir, it.name))
@@ -619,6 +635,14 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		panelOps = append(panelOps,
 			menuItem{label: "Search", key: "/", hint: "find a file under this dir (filter by content) + preview"})
+		if len(m.tabs) < maxTabs {
+			panelOps = append(panelOps,
+				menuItem{label: "Tab", key: "t", hint: "open a new tab in this directory"})
+		}
+		if len(m.tabs) > 1 {
+			panelOps = append(panelOps,
+				menuItem{label: "Close tab", key: "w", hint: "close the active tab"})
+		}
 		panelOps = append(panelOps,
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
 			menuItem{label: "Sort", key: "S", hint: "order by name / size / modified / ext"},

@@ -22,7 +22,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
  [] ~/Documents/sideproj/filu                         ← 路徑 bar([]=folder glyph)
 ┌──────────┬──────────────────┬──────────────────────┐
 │ [1] pin  │ [2] 檔案清單     │ [3] Preview │ Meta    │
-│  Local   │  （3 個目錄分頁）│                       │
+│  Local   │  （1–3 個分頁）  │                       │
 │  Pinned  │                  │   （active tab 全高） │
 ├──────────┴──────────────────┤                       │
 │ [4] Carries │ Tasks         │                       │
@@ -31,7 +31,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 ```
 
 - **[1] pin**:系統 Places(CWD / Home / 根目錄)+ 使用者釘選的目錄(`Pinned` 標題為 lavender)。釘選項目以**縮減 path** 呈現(`~/Documents/sideproj/filu` → `~/D/s/filu`,過長則前綴變 `…`)。純導覽 —— 選一個,`[2]` 就跳過去。
-- **[2] 清單**:當前目錄的檔案,固定 3 個目錄分頁(各自獨立 CWD + cursor)。每列 `<icon> <檔名>`,icon 與配色照 eza(見下方[配色](#功能))。檔案操作主戰場。
+- **[2] 清單**:當前目錄的檔案,1–3 個目錄分頁(各自獨立 CWD + cursor,標籤為羅馬數字 `Ⅰ`/`Ⅱ`/`Ⅲ`;預設開一個,`t` 在當前目錄開新分頁、`w` 關閉當前分頁)。每列 `<icon> <檔名>`,icon 與配色照 eza(見下方[配色](#功能))。檔案操作主戰場。
 - **[3] detail**:`Preview` / `Meta` 兩個 tab。Preview 依型別分五類呈現;Meta 是 `stat` 等級的詳細資訊。這是參考視角,失焦也不 dim。按 `y` 開 yank 視窗(vim 式 cursor + `v` visual selection):有選取時 `y` 複製選取內容,沒選取則複製全部。
 - **[4] carry**:`Carries`(搬運暫存區)/ `Tasks`(複製/搬移任務,含 running / done / pending / error 狀態)兩個 tab。
 
@@ -52,7 +52,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 - **Carry-bucket 搬檔**:`p` pick 把檔案拿進 bucket(panel 2 會**打綠勾**標記,等同 multi-select)→ 切到目標目錄 → `c` copy / `m` move 落地;Carries tab 可 `p` 只落地子集。落地跑 goroutine,進度在 Tasks tab 即時更新。
 - **Search(`/`,僅 panel 2)**:filu 原生的 file finder(snacks / Telescope 形式,非 fzf binary)—— 分割 popup:左清單 + 右預覽(窄寬改上下)。開啟即列當前目錄底下所有檔案+目錄;打字用 `ripgrep` **內容**過濾出含關鍵字的檔案(去重),游標選一個 → panel 2 跳到該檔;預覽自動 scroll 到命中行並 lavender 反白。輸入列走 snacks 樣式(peach chevron prompt + blinking block cursor)。
 - **Popup**(全走 kbu form:line→expand 動畫 + 層色 border):`Space` 情境選單(§A.1)、`?` 全域說明(§A.2)、刪除確認、Rename / Add 輸入框(chevron prompt + 閃爍游標,rename 描述帶型別 icon + 顏色)。
-- **Session 持久化**:分頁位置 + cursor、active tab、focus、detail tab、carry bucket、pinned、task log 都存進 `state.yaml`,下次啟動接續。
+- **Session 持久化**:多開的分頁(dir + cursor)、focus、detail tab、carry bucket、pinned、task log 都存進 `state.yaml`,下次啟動接續。第一個分頁固定在啟動當下的 CWD、且開機時為 active(所以每次啟動都從當前目錄開始)。
 
 ## 操作
 
@@ -68,19 +68,27 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 | `?` | 全域說明 |
 | `q` | 離開:跳選單選一個目錄 cd 過去(1–4 或 j/k+Enter) |
 
-面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`/` search(內容找檔 + 預覽)、`.` 顯示隱藏檔、`z` zoom。
+面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`/` search(內容找檔 + 預覽)、`t` 開新分頁、`w` 關分頁、`.` 顯示隱藏檔、`z` zoom。
 
-## cd-on-quit(離開時切換目錄)
+## cd-on-quit(離開時切換 shell 目錄)
 
-按 `q` 會跳出選單:選 **panel 1 的起始目錄** 或 **panel 2 三個分頁的當前目錄**,離開 filu 時把 shell 的 cwd 切過去(對標 superfile 的 `cd_on_quit`)。
+按 `q` 會跳出選單:從 **panel 1 的起始目錄**與**各分頁的當前目錄**裡挑一個(重複的目錄只列一次),離開 filu 時把 shell 的 cwd 切過去(對標 superfile 的 `cd_on_quit`)。
 
-需要一個 shell function wrapper。加到你的 `~/.zshrc` / `~/.bashrc`:
+### 為什麼需要一行 shell 設定(不是 filu 偷懶,是 OS 限制)
+
+一個程式只能改自己的工作目錄;**沒有任何 syscall 能改「父程序」(你的 shell)的 cwd** —— 這是 POSIX 鐵則。filu 是 shell 的子程序,自己 `cd` 不會影響 shell,離開後 shell 還在原地。唯一能原生改 shell cwd 的是 shell **內建指令**(如 `cd` 本身),而 filu 是外部 binary。所以 `yazi` / `lf` / `ranger` / `nnn` / `superfile` / `zoxide` 全都靠同一招:程式寫檔 → shell wrapper 讀檔再 `cd`。裝一行 `eval` 就是這類工具公認的「原生整合」。
+
+### 啟用
+
+filu 進 PATH 之後(`go install ./cmd/filu` 或 release binary),在 `~/.zshrc` / `~/.bashrc` 加一行:
 
 ```sh
 eval "$(filu shell)"
 ```
 
-原理:wrapper 給 filu 一個暫存檔路徑(`FILU_LAST_DIR_FILE`),filu 離開時把選定目錄寫進去,wrapper 再 `cd` 過去。沒裝 wrapper 直接跑 `filu` 也能用,只是離開時不會切目錄。
+之後用 **`filu`** 啟動(**不是 `./filu`** —— wrapper 是攔截 `filu` 這個指令名的 shell function,帶路徑呼叫不會經過它)。
+
+原理:wrapper 給 filu 一個暫存檔路徑(`FILU_LAST_DIR_FILE`),filu 離開時把選定目錄寫進去,wrapper `cat` 出來再 `cd`。**沒裝 wrapper 也能正常用 filu**,只是離開時不會切目錄(選了 cd 目標也不會有反應,因為少了那段 shell 整合)。
 
 ## 安裝
 

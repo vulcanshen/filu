@@ -23,6 +23,9 @@ var iconCells = 1
 // triangles/rounds) live in the PUA too but render single-width, so they are
 // excluded — only file-type icons get the +1 treatment.
 func isWideIcon(r rune) bool {
+	if r >= 0x2160 && r <= 0x2162 {
+		return true // Ⅰ Ⅱ Ⅲ tab numerals: ambiguous width, drawn wide on CJK fonts
+	}
 	if r >= 0xe0a0 && r <= 0xe0d7 {
 		return false // powerline caps — single-width even on CJK icon fonts
 	}

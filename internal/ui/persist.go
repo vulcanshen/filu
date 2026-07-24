@@ -8,13 +8,13 @@ import (
 )
 
 // sessionState is what filu restores on the next launch (IDEA.md: "where you
-// were is where you restart") — tabs [1]/[2] dirs + cursors, focus, detail tab,
-// carry bucket, pinned places, and the sort chain.
-// Tab [0] always reopens at the CWD and is the active tab on launch, and panel
-// [1] always lands on the CWD — so the first tab's state, the active-tab index,
-// and the places cursor are deliberately NOT persisted.
+// were is where you restart") — the tabs the user created beyond the CWD tab
+// (dirs + cursors), focus, detail tab, carry bucket, pinned places, and the sort
+// chain. Tab [0] always reopens at the CWD and is the active tab on launch, and
+// panel [1] always lands on the CWD — so the first tab's state, the active-tab
+// index, and the places cursor are deliberately NOT persisted.
 type sessionState struct {
-	Tabs   []tabState      `yaml:"tabs"` // tabs [1] and [2] only (tab [0] = CWD)
+	Tabs   []tabState      `yaml:"tabs"` // the tabs created beyond the CWD tab [0]
 	Focus  int             `yaml:"focus"`
 	Detail int             `yaml:"detail"`
 	Carry  []string        `yaml:"carry,omitempty"`
@@ -134,13 +134,14 @@ func (m *AppModel) applyState(st sessionState) {
 	for _, r := range st.Sort {
 		sortChain = append(sortChain, sortRule{col: sortCol(r.Col), asc: r.Asc})
 	}
-	for k := 0; k < len(st.Tabs) && k+1 < len(m.tabs); k++ { // st.Tabs[k] → tab [k+1]; tab [0] stays CWD
-		if st.Tabs[k].Dir == "" {
+	for _, ts := range st.Tabs { // restore the tabs the user created beyond the CWD tab
+		if ts.Dir == "" || len(m.tabs) >= maxTabs {
 			continue
 		}
-		m.tabs[k+1] = newList(st.Tabs[k].Dir)
-		m.tabs[k+1].cursor = st.Tabs[k].Cursor
-		m.tabs[k+1].clampCursor()
+		nl := newList(ts.Dir)
+		nl.cursor = ts.Cursor
+		nl.clampCursor()
+		m.tabs = append(m.tabs, nl)
 	}
 	if st.Focus >= int(panelPin) && st.Focus <= int(panelCarry) {
 		m.focus = panelID(st.Focus)

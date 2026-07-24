@@ -2,7 +2,6 @@ package ui
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -154,7 +153,7 @@ func (m AppModel) expandedListTabs(w, h int) string {
 	for i := range m.tabs {
 		cw := widths[i]
 		focused := m.focus == panelList && m.tab == i
-		cols[i] = m.panelBox(focused, singleChip("[2] "+pathBase(m.tabs[i].dir), focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried))
+		cols[i] = m.panelBox(focused, singleChip("[2] "+tabNumeral(i), focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried))
 	}
 	return joinH(cols...)
 }
@@ -196,21 +195,29 @@ func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
 	return joinH(carries, tasks)
 }
 
-// listTitle renders panel [2]'s fixed 3-tab bar. The tabs are always shown; when
-// the bar would overflow the column we shrink the per-tab labels rather than
-// collapsing to a single chip (the 3 tabs are a fixed part of the design).
+// listTitle renders panel [2]'s tab bar: one Roman-numeral chip per directory tab
+// (Ⅰ / Ⅱ / Ⅲ), no text — the active tab's path is shown by the header bar, so the
+// tabs only mark position and which is active. Fixed width, so the bar always fits.
 func (m AppModel) listTitle(w int) string {
 	focused := m.focus == panelList
 	labels := make([]string, len(m.tabs))
-	for maxLen := 10; ; maxLen-- {
-		for i, t := range m.tabs {
-			labels[i] = truncate(pathBase(t.dir), maxLen)
-		}
-		tb := tabBar("[2]", labels, m.tab, focused)
-		if maxLen == 1 || lipgloss.Width(tb) <= w-2 {
-			return tb
-		}
+	for i := range m.tabs {
+		labels[i] = tabNumeral(i)
 	}
+	return tabBar("[2]", labels, m.tab, focused)
+}
+
+// tabNumerals mark a tab's position: the Roman numerals Ⅰ / Ⅱ / Ⅲ (Unicode ROMAN
+// NUMERAL ONE..THREE). nf-md-roman_numeral_1 is absent from Nerd Fonts, so these
+// true Roman-numeral codepoints are used instead for a consistent set.
+var tabNumerals = []string{string(rune(0x2160)), string(rune(0x2161)), string(rune(0x2162))}
+
+// tabNumeral is the position mark for the idx-th (0-based) tab.
+func tabNumeral(idx int) string {
+	if idx >= 0 && idx < len(tabNumerals) {
+		return tabNumerals[idx]
+	}
+	return ""
 }
 
 // carryTitle renders panel [4]'s tab bar. Like panel [2] it prefers the full
@@ -296,13 +303,6 @@ func (m AppModel) headerBar(w int) string {
 func (m AppModel) footerBar(w int) string {
 	return lipgloss.NewStyle().Foreground(dimColor).
 		Render(padDisp(" space menu   ? help   tab/1-4 panels   q quit", w))
-}
-
-func pathBase(p string) string {
-	if b := filepath.Base(p); b != "." && b != string(filepath.Separator) {
-		return safeName(b)
-	}
-	return "/"
 }
 
 // shortPath folds the home dir to ~ (keeps normal / separators).

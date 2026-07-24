@@ -20,29 +20,50 @@ func writeLastDir(dir string) {
 	_ = os.WriteFile(path, []byte(dir), 0o644)
 }
 
-// quitDirs is the cd-on-quit menu's four targets: the launch dir (panel [1]'s
-// CWD) then the three list-tab directories.
-func (m AppModel) quitDirs() []string {
-	return []string{m.launchDir, m.tabs[0].dir, m.tabs[1].dir, m.tabs[2].dir}
+// quitTarget is one cd-on-quit destination: a directory plus a short note on
+// where it came from (the first source that offered it).
+type quitTarget struct {
+	dir  string
+	hint string
 }
 
-// openQuitMenu opens the quit picker: pick where to leave the shell (1–4 or
+// quitTargets is the cd-on-quit menu's distinct destinations: the launch dir
+// (panel [1]'s CWD) then each tab's dir, with duplicates dropped so a directory
+// that is open in several places is offered once. Order is launch-first, then
+// tab order; the hint names the first source that introduced each dir.
+func (m AppModel) quitTargets() []quitTarget {
+	var out []quitTarget
+	seen := map[string]bool{}
+	add := func(dir, hint string) {
+		if dir == "" || seen[dir] {
+			return
+		}
+		seen[dir] = true
+		out = append(out, quitTarget{dir, hint})
+	}
+	add(m.launchDir, "panel 1 (launch)")
+	for i, t := range m.tabs {
+		add(t.dir, "tab "+tabNumeral(i))
+	}
+	return out
+}
+
+// openQuitMenu opens the quit picker: pick where to leave the shell (a number or
 // j/k + Enter), or Esc to stay.
 func (m *AppModel) openQuitMenu() tea.Cmd {
-	dirs := m.quitDirs()
-	hints := []string{"panel 1 (launch)", "tab 1", "tab 2", "tab 3"}
+	targets := m.quitTargets()
 	labelMax := max(maxInnerWidth(m.width)-28, 12)
-	items := make([]menuItem, 0, len(dirs)+2)
+	items := make([]menuItem, 0, len(targets)+2)
 	if m.anyRunning() { // quitting abandons an in-flight copy/move
 		items = append(items,
 			menuItem{header: true, warn: true, label: "!!! a task is still running"},
 			menuItem{separator: true})
 	}
-	for i, d := range dirs {
+	for i, t := range targets {
 		items = append(items, menuItem{
-			label: truncPathLeft(shortPath(d), labelMax),
+			label: truncPathLeft(shortPath(t.dir), labelMax),
 			key:   strconv.Itoa(i + 1),
-			hint:  hints[i],
+			hint:  t.hint,
 		})
 	}
 	m.quitMenu.setItems(items, "Quit — cd to…")

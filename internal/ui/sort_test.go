@@ -78,9 +78,7 @@ func TestSortPickerFlow(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 	m := AppModel{sortMenu: newSortMenu(), taskCh: make(chan landMsg, 1), watched: map[string]bool{}}
-	for i := range m.tabs {
-		m.tabs[i] = newList(dir)
-	}
+	m.tabs = []listModel{newList(dir)}
 
 	m.openSortColumnPicker()
 	if m.sortStep != sortStepColumn {
@@ -122,7 +120,7 @@ func TestSortPersistRoundtrip(t *testing.T) {
 	sortChain = []sortRule{{sortSize, false}, {sortName, true}}
 
 	var m AppModel
-	m.tabs[0] = listModel{dir: "/tmp"}
+	m.tabs = []listModel{{dir: "/tmp"}}
 	data, err := yaml.Marshal(m.snapshotState())
 	if err != nil {
 		t.Fatal(err)

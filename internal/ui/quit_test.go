@@ -13,9 +13,7 @@ func minModel() AppModel {
 		focus: panelList, confirm: newConfirmPopup(), quitMenu: newQuitMenu(),
 		pty: newPtyPopup(), taskCh: make(chan landMsg, 1), watched: map[string]bool{},
 	}
-	for i := range m.tabs {
-		m.tabs[i] = listModel{dir: "/tmp"}
-	}
+	m.tabs = []listModel{{dir: "/tmp"}, {dir: "/tmp"}, {dir: "/tmp"}}
 	return m
 }
 
@@ -36,8 +34,27 @@ func TestQuitOpensCdMenu(t *testing.T) {
 	if !got.quitMenu.isActive() {
 		t.Fatal("q should open the cd-on-quit menu")
 	}
-	if len(got.quitMenu.items) != 4 {
-		t.Errorf("menu should offer 4 targets (launch + 3 tabs), got %d", len(got.quitMenu.items))
+	// /launch + three /tmp tabs → duplicates dropped → 2 distinct targets.
+	if len(got.quitMenu.items) != 2 {
+		t.Errorf("menu should offer 2 distinct targets, got %d", len(got.quitMenu.items))
+	}
+}
+
+func TestQuitTargetsDedup(t *testing.T) {
+	m := AppModel{launchDir: "/a"}
+	m.tabs = []listModel{{dir: "/a"}, {dir: "/b"}, {dir: "/b"}} // /a == launch, /b twice
+	tg := m.quitTargets()
+	if len(tg) != 2 {
+		t.Fatalf("want 2 distinct targets, got %d: %+v", len(tg), tg)
+	}
+	if tg[0].dir != "/a" || tg[1].dir != "/b" {
+		t.Errorf("targets = %+v, want /a then /b", tg)
+	}
+	if tg[0].hint != "panel 1 (launch)" {
+		t.Errorf("launch hint = %q", tg[0].hint)
+	}
+	if tg[1].hint != "tab "+tabNumeral(1) { // /b first appeared as tab Ⅱ (index 1)
+		t.Errorf("/b hint = %q, want tab %s", tg[1].hint, tabNumeral(1))
 	}
 }
 

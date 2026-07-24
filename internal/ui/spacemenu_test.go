@@ -55,7 +55,7 @@ func TestSpaceMenuRender(t *testing.T) {
 
 func TestBuildSpaceMenuList(t *testing.T) {
 	m := AppModel{focus: panelList}
-	m.tabs[0] = listModel{dir: "/tmp", items: []fileItem{{name: "foo.txt"}}}
+	m.tabs = []listModel{{dir: "/tmp", items: []fileItem{{name: "foo.txt"}}}}
 	items, title := m.buildSpaceMenu()
 	if title != "foo.txt" {
 		t.Errorf("title = %q, want foo.txt", title)
