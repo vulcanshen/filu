@@ -12,6 +12,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
   - CJK Nerd Font(如 `Maple Mono NF CN`)會把 icon 畫成全形(2 格),filu 啟動時用 CPR 自動偵測 icon 實際格寬並據以排版,框線不會破。
 - **平台**:macOS 或 Linux。不提供原生 Windows build(`GOOS=windows` 刻意編譯失敗);Windows 請走 WSL。
 - **Go**:1.26+。`CGO_ENABLED=0` 可靜態編譯。
+- **Search 用到的外部工具**:`ripgrep`(`/` 內容搜尋必需)、`fd`(列檔案清單;缺了退回純 Go walk)。`$EDITOR`(`e` edit,預設 `vi`)。
 
 ## 介面
 
@@ -46,7 +47,8 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 - **顏色**:eza catppuccin-mocha 檔案型別色 + executable-bit 綠。structural 藍 / user lavender / popup 層色的三層階層。
 - **Zoom**:每個有分頁的面板都能 `z` 展開佔滿,把分頁攤成等寬並排欄。
 - **Carry-bucket 搬檔**:`p` pick 把檔案拿進 bucket(panel 2 會**打綠勾**標記,等同 multi-select)→ 切到目標目錄 → `c` copy / `m` move 落地;Carries tab 可 `p` 只落地子集。落地跑 goroutine,進度在 Tasks tab 即時更新。
-- **Popup**(全走 kbu form:line→expand 動畫 + 層色 border):`Space` 情境選單(§A.1)、`?` 全域說明(§A.2)、刪除確認、Rename / Add 輸入框。
+- **Search(`/`,僅 panel 2)**:filu 原生的 file finder(snacks / Telescope 形式,非 fzf binary)—— 分割 popup:左清單 + 右預覽(窄寬改上下)。開啟即列當前目錄底下所有檔案+目錄;打字用 `ripgrep` **內容**過濾出含關鍵字的檔案(去重),游標選一個 → panel 2 跳到該檔;預覽自動 scroll 到命中行並 lavender 反白。輸入列走 snacks 樣式(peach chevron prompt + blinking block cursor)。
+- **Popup**(全走 kbu form:line→expand 動畫 + 層色 border):`Space` 情境選單(§A.1)、`?` 全域說明(§A.2)、刪除確認、Rename / Add 輸入框(chevron prompt + 閃爍游標,rename 描述帶型別 icon + 顏色)。
 - **Session 持久化**:分頁位置 + cursor、active tab、focus、detail tab、carry bucket、pinned、task log 都存進 `state.yaml`,下次啟動接續。
 
 ## 操作
@@ -63,7 +65,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 | `?` | 全域說明 |
 | `q` | 離開:跳選單選一個目錄 cd 過去(1–4 或 j/k+Enter) |
 
-面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`.` 顯示隱藏檔、`z` zoom。
+面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`/` search(內容找檔 + 預覽)、`.` 顯示隱藏檔、`z` zoom。
 
 ## cd-on-quit(離開時切換目錄)
 

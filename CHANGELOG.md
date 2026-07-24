@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Added
+- Search (`/`, panel [2]): a native file finder (snacks/Telescope form, not the
+  fzf binary) — a split popup with the file list on the left and a preview of the
+  selected file on the right (stacked when narrow). It lists everything under the
+  active tab's directory; typing filters that list by CONTENT via `ripgrep`
+  (`--files-with-matches`, so a file that matches many times still appears once).
+  Enter hands focus to the list; a second Enter reveals the pick in panel [2]. The
+  preview scrolls to the matched line and marks it with a lavender bar. `fd` (or a
+  Go walk) provides the initial file list.
 - Panel [2] now shows a green tick on files sitting in the carries bucket, so a
   Pick (`p`) reads the same as it does in the Carries tab — and picking several
   files gives a visible multi-select before you Copy/Move them.
@@ -30,6 +38,12 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- Text-entry fields (search, rename, add) now share one style: a peach chevron
+  prompt and a blinking block cursor, no background bar. The rename popup shows
+  the item exactly as panel [2] does — its type icon in its eza colour — with a
+  grey divider under the input.
+- The Space menu wraps a long action hint onto a continuation line instead of
+  overflowing the box, and popup titles/hints that exceed the box are clipped.
 - Line-number gutters now show just the number and a space — the "│" separator
   is gone — in both the text/binary preview and the panel [3] yank viewport, so
   the two share one form. The yank popup's content also starts flush against the

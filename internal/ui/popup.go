@@ -20,6 +20,15 @@ func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, inner
 	bStyle := lipgloss.NewStyle().Foreground(bc)
 	tStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)
 
+	// A title / hint wider than the box would push its border out and, when the
+	// box is joined beside another, open a gap — clip both to fit.
+	if lipgloss.Width(title) > innerW-1 {
+		title = truncate(title, innerW-1)
+	}
+	if lipgloss.Width(hint) > innerW-1 {
+		hint = truncate(hint, innerW-1)
+	}
+
 	var b strings.Builder
 	dashesTop := max(0, innerW-1-lipgloss.Width(title))
 	b.WriteString(bStyle.Render("╭─") + tStyle.Render(title) + bStyle.Render(strings.Repeat("─", dashesTop)+"╮") + "\n")

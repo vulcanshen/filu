@@ -10,7 +10,7 @@ import (
 
 func TestInputPopup(t *testing.T) {
 	m := newInputPopup()
-	m.open(inputRename, "Rename", "ab", "ab")
+	m.open(inputRename, "Rename", "ab", fileItem{name: "ab"})
 	m.anim.state = popupOpen // skip the open animation
 
 	m, _, _ = m.update(tea.KeyMsg{Type: tea.KeyBackspace})
@@ -32,7 +32,7 @@ func TestInputPopup(t *testing.T) {
 func TestInputPopupRender(t *testing.T) {
 	m := newInputPopup()
 	m.setSize(100)
-	m.open(inputAdd, "New (trailing / = dir)", "hello", "")
+	m.open(inputAdd, "New (trailing / = dir)", "hello", fileItem{})
 	plain := ansi.Strip(m.renderFull())
 	for _, want := range []string{"New", "hello", "confirm", "cancel"} {
 		if !strings.Contains(plain, want) {

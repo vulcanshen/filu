@@ -82,7 +82,8 @@ type AppModel struct {
 	help          helpPopup    // §A.2 global help cheatsheet
 	toast         toastModel   // transient notification (yank feedback)
 	detailYank    detailYank   // panel [3] yank viewport (cursor + visual selection)
-	pty           *ptyPopup    // embedded editor (text files); pointer — shared with its read goroutine
+	pty           *ptyPopup    // embedded editor; pointer — shared with its read goroutine
+	search        searchModel  // native fuzzy file/dir finder (Home-rooted)
 	tasks         []landTask   // land operations (Tasks tab: running + log)
 	taskCh        chan landMsg // land goroutines → UI
 	nextTaskID    int
@@ -101,7 +102,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
 	for i := range m.tabs {
 		m.tabs[i] = newList(dir)
 	}
@@ -160,6 +161,23 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.refreshPreview()
 		return m, nil
+	case filesLoadedMsg:
+		m.search.onFilesLoaded(msg)
+		return m, nil
+	case grepFireMsg:
+		return m, m.search.onGrepFire(msg)
+	case grepFilesMsg:
+		m.search.onGrepResult(msg)
+		return m, nil
+	case searchBlinkMsg:
+		return m, m.search.onBlink(msg)
+	case inputBlinkMsg:
+		return m, m.inputPopup.onBlink(msg)
+	case searchConfirmMsg:
+		m.revealPath(msg.path)
+		m.syncWatches() // the tab may have moved to a new dir
+		m.refreshPreview()
+		return m, nil
 	case spinnerTickMsg:
 		m.spinnerFrame++
 		if m.anyRunning() {
@@ -179,12 +197,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.toast.setSize(msg.Width)
 		m.detailYank.setSize(msg.Width, msg.Height)
 		m.pty.setSize(msg.Width, msg.Height)
+		m.search.setSize(msg.Width, msg.Height)
 		m.cur().ensureVisible(m.listRows()) // scroll a restored cursor into view
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg))
 	case tea.KeyMsg:
 		if m.pty.isActive() { // the embedded editor owns every keystroke
 			return m, m.pty.update(msg)
@@ -195,6 +214,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			m.detailYank, cmd = m.detailYank.update(msg)
+			return m, cmd
+		}
+		if m.search.isActive() { // fuzzy finder owns the keyboard while open
+			if !m.search.isInteractive() {
+				return m, nil
+			}
+			var cmd tea.Cmd
+			m.search, cmd = m.search.update(msg)
 			return m, cmd
 		}
 		if m.help.isActive() { // modal cheatsheet
@@ -369,10 +396,10 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		}
 	case "r": // rename cursor item (input popup: name as the description, pre-filled)
 		if it := l.cursorItem(); it.name != "" {
-			cmd = m.inputPopup.open(inputRename, "Rename", it.name, it.name)
+			cmd = m.inputPopup.open(inputRename, "Rename", it.name, it)
 		}
 	case "a": // add file/dir — lazyvim style: trailing / = dir (input popup)
-		cmd = m.inputPopup.open(inputAdd, "New (trailing / = dir)", "", "")
+		cmd = m.inputPopup.open(inputAdd, "New (trailing / = dir)", "", fileItem{})
 	case "y": // yank: copy the item's full path to the clipboard
 		if it := l.cursorItem(); it.name != "" {
 			cmd = copyToClipboardCmd(filepath.Join(l.dir, it.name), "Copied path to clipboard")
@@ -388,6 +415,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		}
 	case "S": // sort: open the column→direction picker
 		cmd = m.openSortColumnPicker()
+	case "/": // search: fzf + ripgrep in the embedded PTY, reveal the pick here
+		cmd = m.openSearch()
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
 		m.toggleZoom(panelList)
 	}
@@ -589,6 +618,8 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				menuItem{label: "Move here", key: "m", hint: "land carried items as move"})
 		}
 		panelOps = append(panelOps,
+			menuItem{label: "Search", key: "/", hint: "find a file under this dir (filter by content) + preview"})
+		panelOps = append(panelOps,
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
 			menuItem{label: "Sort", key: "S", hint: "order by name / size / modified / ext"},
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
@@ -668,7 +699,7 @@ func (m AppModel) previewWidth() int {
 // performInput applies the committed input popup (rename / add) to the CWD.
 func (m *AppModel) performInput() {
 	name := strings.TrimSpace(m.inputPopup.buffer)
-	kind, target := m.inputPopup.kind, m.inputPopup.target
+	kind, target := m.inputPopup.kind, m.inputPopup.item.name
 	if name == "" {
 		return
 	}

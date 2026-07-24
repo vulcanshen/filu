@@ -67,6 +67,9 @@ func (m AppModel) View() string {
 	if m.detailYank.isActive() { // yank viewport over the panels
 		out = overlay.Composite(m.detailYank.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.search.isActive() { // fuzzy finder over the panels
+		out = overlay.Composite(m.search.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.pty.isRendered() { // embedded editor sits above the panels
 		out = overlay.Composite(m.pty.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
