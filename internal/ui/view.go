@@ -2,6 +2,7 @@ package ui
 
 import (
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -38,12 +39,12 @@ func (m AppModel) View() string {
 	}
 
 	w, h := m.width, m.height
-	midH := h - 3 // minus header + separator + footer rows
+	midH := h - 3 // minus header + spacer + footer rows
 	if midH < 3 || w < 24 {
 		return "terminal too small"
 	}
 
-	out := joinV(m.headerBar(w), m.separatorBar(w), m.middleView(w, midH), m.footerBar(w))
+	out := joinV(m.headerBar(w), m.statusBar(w), m.middleView(w, midH), m.footerBar(w))
 	// Compose-don't-Replace: overlay popups onto the canvas (last = on top).
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
@@ -297,12 +298,85 @@ func (m AppModel) panelBox(focused bool, title string, w, h int, body string) st
 	return b.String()
 }
 
-// separatorBar is the horizontal rule between the powerline header and the panel
-// grid. The header's chips otherwise read as a panel title butting against panel
-// [1]/[2]'s top border; the rule sets it apart as its own content row. Dim
-// (surface2) so it recedes to the same tier as unfocused panel chrome.
-func (m AppModel) separatorBar(w int) string {
-	return lipgloss.NewStyle().Foreground(borderDim).Render(strings.Repeat("─", w))
+// statusBar is the top status row under the header: the active tab's directory
+// status — permissions, owner:group and item/hidden counts on the left, free /
+// total disk on the right. Every field is precomputed on reload (loadDirStat) or
+// read live from the loaded list, so the bar costs nothing to redraw per frame.
+// Data reads in subtext1; the unit words recede in the dim grey.
+// eza-style status-bar accents (catppuccin-mocha), matching eza's long-format
+// colouring: read=yellow, write=red, execute=green, sizes=green, owner=yellow.
+const (
+	ezaYellow = "#f9e2af" // read bit / owner
+	ezaRed    = "#f38ba8" // write bit
+	ezaGreen  = "#a6e3a1" // execute bit / sizes
+)
+
+func (m AppModel) statusBar(w int) string {
+	l := m.active()
+	dim := lipgloss.NewStyle().Foreground(dimColor)  // unit words, recessive
+	num := lipgloss.NewStyle().Foreground(handColor) // counts, subtext1
+	green := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaGreen))
+
+	var segs []string
+	if l.perm != "" {
+		segs = append(segs, colorPerm(l.perm))
+	}
+	if l.owner != "" {
+		segs = append(segs, colorOwner(l.owner))
+	}
+	count := num.Render(strconv.Itoa(len(l.items))) + dim.Render(" items")
+	if l.hidden > 0 {
+		count += dim.Render(" · ") + num.Render(strconv.Itoa(l.hidden)) + dim.Render(" hidden")
+	}
+	segs = append(segs, count)
+	left := " " + strings.Join(segs, "  ")
+
+	right := ""
+	if l.disk != "" {
+		right = green.Render(l.disk) + dim.Render(" free ") // eza colours sizes green
+	}
+	if dispWidth(right) > w-1 { // absurdly narrow terminal — drop the disk slot
+		right = ""
+	}
+	return padDisp(left, w-dispWidth(right)) + right
+}
+
+// colorPerm paints a mode string (drwxr-xr-x) eza-style: the type char blue,
+// read yellow, write red, execute green, and a bare '-' dim.
+func colorPerm(perm string) string {
+	typeS := lipgloss.NewStyle().Foreground(focusColor)
+	rS := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaYellow))
+	wS := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaRed))
+	xS := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaGreen))
+	dS := lipgloss.NewStyle().Foreground(dimColor)
+	var b strings.Builder
+	for i, r := range perm {
+		switch {
+		case i == 0: // type: d / - / l / …
+			b.WriteString(typeS.Render(string(r)))
+		case r == 'r':
+			b.WriteString(rS.Render("r"))
+		case r == 'w':
+			b.WriteString(wS.Render("w"))
+		case r == 'x' || r == 's' || r == 't' || r == 'S' || r == 'T':
+			b.WriteString(xS.Render(string(r)))
+		default: // '-'
+			b.WriteString(dS.Render(string(r)))
+		}
+	}
+	return b.String()
+}
+
+// colorOwner paints "owner:group": owner in eza's user yellow, the group in
+// subtext, the ':' dim.
+func colorOwner(s string) string {
+	owner := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaYellow))
+	group := lipgloss.NewStyle().Foreground(handColor)
+	dim := lipgloss.NewStyle().Foreground(dimColor)
+	if o, g, ok := strings.Cut(s, ":"); ok {
+		return owner.Render(o) + dim.Render(":") + group.Render(g)
+	}
+	return owner.Render(s)
 }
 
 func (m AppModel) footerBar(w int) string {

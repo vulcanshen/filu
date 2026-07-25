@@ -33,10 +33,16 @@ type fileItem struct {
 type listModel struct {
 	dir        string
 	items      []fileItem
+	hidden     int   // count of dotfile entries (whether shown or not) — for the status bar
 	err        error // last read error (permission denied, etc.)
 	cursor     int
 	offset     int
 	showHidden bool
+	// cached directory-own metadata for the top status bar, recomputed on reload
+	// (never per frame). See loadDirStat.
+	perm  string // dir mode string, e.g. drwxr-xr-x
+	owner string // "owner:group"
+	disk  string // "<free> / <total>" of the filesystem
 }
 
 func newList(dir string) listModel {
@@ -46,8 +52,28 @@ func newList(dir string) listModel {
 }
 
 func (m *listModel) reload() {
-	m.items, m.err = readEntries(m.dir, m.showHidden)
+	m.items, m.hidden, m.err = readEntries(m.dir, m.showHidden)
+	m.loadDirStat()
 	m.clampCursor()
+}
+
+// loadDirStat caches the directory's own cheap metadata for the top status bar:
+// perm + owner:group (one stat) and free/total disk (one statfs). Called from
+// reload, so it refreshes on every cd / external change but never per frame; the
+// item and hidden counts come live from the loaded list, costing nothing.
+func (m *listModel) loadDirStat() {
+	m.perm, m.owner, m.disk = "", "", ""
+	fi, err := os.Stat(m.dir)
+	if err != nil {
+		return
+	}
+	m.perm = fi.Mode().String()
+	if meta, ok := osStat(fi); ok {
+		m.owner = userName(meta.uid) + ":" + groupName(meta.gid)
+	}
+	if free, total, ok := diskUsage(m.dir); ok {
+		m.disk = humanSize(free) + " / " + humanSize(total)
+	}
 }
 
 // reloadPreserving re-reads the directory but keeps the cursor on the same named
@@ -70,15 +96,19 @@ func (m *listModel) reloadPreserving() {
 // readEntries lists a directory: directories first, alphabetical, dotfiles
 // hidden unless showHidden. The error (e.g. permission denied) is returned so
 // callers can distinguish "empty" from "unreadable".
-func readEntries(dir string, showHidden bool) ([]fileItem, error) {
+func readEntries(dir string, showHidden bool) ([]fileItem, int, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	var items []fileItem
+	hidden := 0
 	for _, e := range entries {
-		if !showHidden && strings.HasPrefix(e.Name(), ".") {
-			continue
+		if strings.HasPrefix(e.Name(), ".") {
+			hidden++
+			if !showHidden {
+				continue
+			}
 		}
 		it := fileItem{
 			name:   e.Name(),
@@ -95,7 +125,7 @@ func readEntries(dir string, showHidden bool) ([]fileItem, error) {
 		items = append(items, it)
 	}
 	sortItems(items) // directories first, then the active sort chain
-	return items, nil
+	return items, hidden, nil
 }
 
 // safeName strips control characters from a name before it is displayed, so an
