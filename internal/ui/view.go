@@ -101,6 +101,8 @@ func (m AppModel) middleView(w, midH int) string {
 		return m.zoomListView(w, midH)
 	case panelDetail:
 		return m.zoomDetailView(w, midH)
+	case panelMeta:
+		return m.zoomMetaView(w, midH)
 	case panelCarry:
 		return m.zoomCarryView(w, midH)
 	default:
@@ -112,10 +114,11 @@ func (m AppModel) middleView(w, midH int) string {
 //
 //	[1][2][3]
 //	[1][2][3]
-//	[4][4][3]
+//	[4][4][5]
 //
-// [1] places + [2] list share the top 2/3; [4] carry spans their two columns
-// along the bottom 1/3; [3] detail is the full-height right column.
+// [1] places + [2] list share the top 2/3, [4] carry spans their two columns
+// along the bottom 1/3; the right column mirrors that split — [3] preview on top,
+// [5] metadata below.
 func (m AppModel) normalMiddle(w, midH int) string {
 	leftW, midW := w/3, w/3
 	rightW := w - leftW - midW
@@ -134,8 +137,11 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	carry := m.panelBox(m.focus == panelCarry, m.carryTitle(carryW), carryW, botH, m.carryBody(carryW-2, botH-2))
 
 	leftRegion := joinV(top, carry)
-	detail := m.panelBox(m.focus == panelDetail, m.detailTitle(rightW), rightW, midH, m.detailBody(rightW-2, midH-2))
-	return joinH(leftRegion, detail)
+
+	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(rightW), rightW, topH, m.detailBody(rightW-2, topH-2))
+	meta := m.panelBox(m.focus == panelMeta, m.metaTitle(rightW), rightW, botH, m.metaBody(rightW-2, botH-2))
+	rightRegion := joinV(preview, meta)
+	return joinH(leftRegion, rightRegion)
 }
 
 // zoomListView (panel [2] zoom): [2] fully expanded over [4] fully expanded,
@@ -162,18 +168,16 @@ func (m AppModel) expandedListTabs(w, h int) string {
 	return joinH(cols...)
 }
 
-// zoomDetailView (panel [3] zoom): full-width, the two tabs become 1:1 panels;
-// the active tab (m.detail) is the focused column.
+// zoomDetailView (panel [3] zoom): the preview full-screen.
 func (m AppModel) zoomDetailView(w, midH int) string {
-	leftW := w / 2
-	rightW := w - leftW
-	pv := m.focus == panelDetail && m.detail == tabPreview
-	mt := m.focus == panelDetail && m.detail == tabMeta
-	preview := m.panelBox(pv, singleChip("Preview", pv), leftW, midH,
-		renderLinesFrom(m.preview.contentLines(), m.detailScroll, leftW-2, midH-2))
-	meta := m.panelBox(mt, singleChip("Meta", mt), rightW, midH,
-		renderLinesFrom(metaLines(m.active().cursorItem(), m.active().dir), 0, rightW-2, midH-2))
-	return joinH(preview, meta)
+	return m.panelBox(true, singleChip("Preview", true), w, midH,
+		renderLinesFrom(m.preview.contentLines(), m.detailScroll, w-2, midH-2))
+}
+
+// zoomMetaView (panel [5] zoom): the file metadata full-screen.
+func (m AppModel) zoomMetaView(w, midH int) string {
+	return m.panelBox(true, singleChip("Meta", true), w, midH,
+		renderLinesFrom(m.metaContent(), m.metaScroll, w-2, midH-2))
 }
 
 // zoomCarryView (panel [4] zoom): [4] full-screen, its three tabs 1:1:1.
@@ -244,29 +248,29 @@ func (m AppModel) carryBody(w, rows int) string {
 	return m.carry.view(w, rows, m.focus == panelCarry) // Carries
 }
 
-// detailTitle renders panel [3]'s Preview/Meta tab bar.
+// detailTitle renders panel [3]'s title chip (Preview only).
 func (m AppModel) detailTitle(w int) string {
-	focused := m.focus == panelDetail
-	labels := []string{"Preview", "Meta"}
-	if tb := tabBar("[3]", labels, int(m.detail), focused); lipgloss.Width(tb) <= w-2 {
-		return tb
-	}
-	return singleChip("[3] "+labels[m.detail], focused)
+	return singleChip("[3] Preview", m.focus == panelDetail)
 }
 
-// detailLines returns the full content of panel [3]'s active tab.
-func (m AppModel) detailLines() []string {
-	if m.detail == tabMeta {
-		return metaLines(m.active().cursorItem(), m.active().dir)
-	}
-	return m.preview.contentLines()
-}
+// detailLines is panel [3]'s full preview content.
+func (m AppModel) detailLines() []string { return m.preview.contentLines() }
 
-// detailBody renders panel [3]'s active tab from the scroll offset. Panel [3] is
-// a reference view (read while another panel has focus), so it keeps its colour
-// even when unfocused rather than dimming.
+// detailBody renders panel [3]'s preview from the scroll offset. Panels [3]/[5]
+// are reference views (read while another panel has focus), so they keep their
+// colour even when unfocused rather than dimming.
 func (m AppModel) detailBody(w, rows int) string {
 	return renderLinesFrom(m.detailLines(), m.detailScroll, w, rows)
+}
+
+// metaTitle renders panel [5]'s title chip.
+func (m AppModel) metaTitle(w int) string {
+	return singleChip("[5] Meta", m.focus == panelMeta)
+}
+
+// metaBody renders panel [5]'s file metadata from the scroll offset.
+func (m AppModel) metaBody(w, rows int) string {
+	return renderLinesFrom(m.metaContent(), m.metaScroll, w, rows)
 }
 
 // panelBox draws a bordered panel with the title embedded in the top border
@@ -381,7 +385,7 @@ func colorOwner(s string) string {
 
 func (m AppModel) footerBar(w int) string {
 	return lipgloss.NewStyle().Foreground(dimColor).
-		Render(padDisp(" space menu   ? help   tab/1-4 panels   q quit", w))
+		Render(padDisp(" space menu   ? help   tab/1-5 panels   q quit", w))
 }
 
 // shortPath folds the home dir to ~ (keeps normal / separators).

@@ -16,19 +16,19 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 
 ## 介面
 
-四個面板 + 上下兩條 content row。版面 grid 為 `[1][2][3] / [1][2][3] / [4][4][3]`:
+五個面板 + 上下兩條 content row。版面 grid 為 `[1][2][3] / [1][2][3] / [4][4][5]`:
 
 ```
   Ⅱ ⟩ ~ ⟩ Documents ⟩ sideproj ⟩ filu               ← header:powerline 麵包屑
  drwxr-xr-x  vulcan:staff  42 items · 3 hidden  …free   ← top status bar(目錄狀態)
 ┌──────────┬──────────────────┬──────────────────────┐
-│ [1] pin  │ [2] 檔案清單     │ [3] Preview │ Meta    │
-│  Local   │  （1–3 個分頁）  │                       │
-│  Pinned  │                  │   （active tab 全高） │
-├──────────┴──────────────────┤                       │
+│ [1] pin  │ [2] 檔案清單     │ [3] Preview           │
+│  Local   │  （1–3 個分頁）  │   （右欄上 2/3）       │
+│  Pinned  │                  ├──────────────────────┤
+├──────────┴──────────────────┤ [5] Meta（右欄下 1/3）│
 │ [4] Carries │ Tasks         │                       │
 └─────────────────────────────┴──────────────────────┘
- space menu   ? help   tab/1-4 panels   q quit         ← footer
+ space menu   ? help   tab/1-5 panels   q quit         ← footer
 ```
 
 - **header 路徑 bar**:當前分頁所在目錄的 **powerline 麵包屑**。開頭一個 chip 帶分頁羅馬數字 + folder glyph,整條從第一格起走 **blue → crust 漸層**(依 depth **連續內插**:root = blue、當前目錄 = crust);相鄰段落差夠大,capHard 三角分隔才切得出來。段內文字色**隨背景明度自動翻轉**(亮底深字、暗底亮字,依 WCAG 對比擇優),名稱在亮→暗全程都清楚。過長時從前段起縮成字首(`~/Documents/sideproj/filu` → `~/D/s/filu`),再不夠則中間 `…` 只留 root + 末段。
@@ -36,8 +36,9 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 
 - **[1] pin**:系統 Places(LaunchDir / Home / 根目錄)+ 使用者釘選的目錄(`Pinned` 標題為 lavender)。釘選項目以**縮減 path** 呈現,和 header 麵包屑**同一套漸進縮法**(空間夠全顯示 → 不夠從前段起逐段縮首字元 `~/D/s/filu` → 再不夠中間 `…` 只留 root + 末段)。純導覽 —— 選一個,`[2]` 就跳過去。
 - **[2] 清單**:當前目錄的檔案,1–3 個目錄分頁(各自獨立 CWD + cursor,標籤為羅馬數字 `Ⅰ`/`Ⅱ`/`Ⅲ`;預設開一個,`t` 在當前目錄開新分頁、`w` 關閉當前分頁)。每列 `<icon> <檔名>`,icon 與配色照 eza(見下方[配色](#功能))。檔案操作主戰場。
-- **[3] detail**:`Preview` / `Meta` 兩個 tab。Preview 依型別分五類呈現;Meta 是 `stat` 等級的詳細資訊。這是參考視角,失焦也不 dim。按 `y` 開 yank 視窗(vim 式 cursor + `v` visual selection):有選取時 `y` 複製選取內容,沒選取則複製全部。
+- **[3] Preview**(右欄上 2/3):游標檔的預覽,依型別分五類呈現。參考視角,失焦也不 dim。`j/k/u/d/g/G` 捲動、`y` 開 yank 視窗(vim 式 cursor + `v` visual selection)、`z` zoom 全螢幕。
 - **[4] carry**:`Carries`(搬運暫存區)/ `Tasks`(複製/搬移任務,含 running / done / pending / error 狀態)兩個 tab。
+- **[5] Meta**(右欄下 1/3):游標檔的 `stat` 等級 metadata(Name/Path/Type/Size/Owner/Group/Links/Inode/Perm/Octal/時間戳…)。同樣可 `j/k/u/d/g/G` 捲、`y` yank、`z` zoom。(原本 [3] 的 Preview/Meta 分頁已拆成 [3] 與 [5] 兩個獨立面板。)
 
 ## 功能
 
@@ -69,7 +70,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 |---|---|
 | `Enter` | 進入目錄 / 開檔(交給系統) |
 | `Esc` | 返回上層 / 關閉浮層 |
-| `Tab`、`1`–`4` | 切換面板 |
+| `Tab`、`1`–`5` | 切換面板 |
 | `h` / `l` | 切換當前面板的分頁 |
 | `Space` | 開「當前面板此刻能做什麼」的選單 |
 | `?` | 全域說明 |

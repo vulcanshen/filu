@@ -10,8 +10,7 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	var m AppModel
 	m.tabs = []listModel{{dir: "/tmp"}, {dir: "/usr", cursor: 2}, {dir: "/etc"}}
 	m.tab = 1
-	m.focus = panelDetail
-	m.detail = tabMeta
+	m.focus = panelMeta // the new [5] panel — verifies the restore range extends to it
 	m.carry.items = []string{"/a", "/b"}
 	m.places = placesModel{pinned: []place{{path: "/home/me/proj", icon: iconPin, label: "proj"}}, cursor: 2}
 
@@ -28,8 +27,8 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	got.tabs = []listModel{{dir: "/cwd"}} // like New(): one CWD tab, extras restored onto it
 	got.applyState(st)
 
-	if got.focus != panelDetail || got.detail != tabMeta {
-		t.Errorf("scalars: focus=%d detail=%d", got.focus, got.detail)
+	if got.focus != panelMeta {
+		t.Errorf("focus not restored: %d", got.focus)
 	}
 	if got.tab != 0 {
 		t.Errorf("tab [0] should always be active on launch, got tab=%d", got.tab)

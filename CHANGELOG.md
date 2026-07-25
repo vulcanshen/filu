@@ -70,6 +70,12 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- Panel [3]'s Preview and Meta tabs are split into two separate panels: `[3]`
+  Preview keeps the right column's top 2/3, and a new `[5]` Meta panel takes the
+  bottom 1/3 (mirroring the `[1]`/`[2]` over `[4]` split on the left). There is
+  no more Preview/Meta tab toggle — both are always visible, each with its own
+  scroll, yank, and zoom. Tab-cycling and the number keys now span five panels
+  (`1`–`5`), and the session no longer persists a detail-tab choice.
 - Panel [1]'s pinned directories now shorten with the same progressive scheme as
   the header breadcrumb (full → front-segment initials → middle `…` keeping root
   + folder name), instead of the old always-initials + left-truncate. The path
