@@ -45,6 +45,19 @@ func TestCarryViewShowsFullPath(t *testing.T) {
 	}
 }
 
+// TestCarryPickGlyphIsDistinct: a picked Carries item uses carryPickGlyph, never
+// panel [2]'s bucket pickGlyph — the two "picked" states must not read the same.
+func TestCarryPickGlyphIsDistinct(t *testing.T) {
+	m := carryModel{items: []string{"/a"}, picked: map[string]bool{"/a": true}}
+	out := ansi.Strip(m.view(60, 4, false))
+	if !strings.Contains(out, carryPickGlyph) {
+		t.Errorf("picked carry item should show carryPickGlyph, got %q", out)
+	}
+	if strings.Contains(out, pickGlyph) {
+		t.Errorf("panel [4] pick must not reuse panel [2]'s bucket glyph, got %q", out)
+	}
+}
+
 func TestHandleLandMsgFinish(t *testing.T) {
 	var m AppModel
 	m.tabs = []listModel{{}} // one tab so refreshPreview's cur() is valid

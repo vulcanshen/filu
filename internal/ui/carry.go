@@ -118,9 +118,14 @@ func centeredNote(w, rows int, text string) string {
 	return lipgloss.Place(w, rows, lipgloss.Center, lipgloss.Center, msg)
 }
 
-// pickGlyph marks a picked item — a distinct signal from the lavender "in
-// bucket" colour (§B: one element, one semantic).
-var pickGlyph = string(rune(0xf0bf3)) // nf-md-checkbox_marked_circle
+// pickGlyph marks a panel [2] file that sits in the carries bucket. carryPickGlyph
+// marks a panel [4] Carries item that is picked into the land subset — a distinct
+// glyph from the bucket mark so the two "picked" states never read as the same
+// thing (§B: one element, one semantic).
+var (
+	pickGlyph      = string(rune(0xf0bf3)) // nf-md-checkbox_marked_circle — "in bucket" (panel [2])
+	carryPickGlyph = string(rune(0xf05d))  // nf-fa-check_circle — "in land subset" (panel [4])
+)
 
 func (m carryModel) view(w, rows int, focused bool) string {
 	if len(m.items) == 0 {
@@ -141,7 +146,7 @@ func (m carryModel) view(w, rows int, focused bool) string {
 		picked := m.picked[p]
 		markW := 1
 		if picked {
-			markW = dispWidth(pickGlyph)
+			markW = dispWidth(carryPickGlyph)
 		}
 		// Fixed prefix cells: " <mark> <icon> " — reserve them, then fit the full
 		// path (home-folded) into the rest, trimmed from the left so the filename
@@ -151,13 +156,13 @@ func (m carryModel) view(w, rows int, focused bool) string {
 		if focused && i == m.cursor {
 			mark := " "
 			if picked {
-				mark = pickGlyph
+				mark = carryPickGlyph
 			}
 			b.WriteString(cur.Render(padDisp(" "+mark+" "+iconFile+" "+path, w)))
 		} else {
 			mark := " "
 			if picked {
-				mark = check.Render(pickGlyph)
+				mark = check.Render(carryPickGlyph)
 			}
 			b.WriteString(truncate(" "+mark+" "+us.Render(iconFile+" "+path), w))
 		}
