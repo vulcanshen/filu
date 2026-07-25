@@ -1,6 +1,6 @@
-// Package ui holds filu's Bubble Tea models. The 4-panel layout (pin,
-// carry bucket, list, tabbed detail) lives in AppModel. See
-// .forge/meta/IDEA.md for the target design.
+// Package ui holds filu's Bubble Tea models. The 5-panel layout (pin, list,
+// preview, carry bucket, metadata) lives in AppModel. See .forge/meta/IDEA.md
+// for the target design.
 package ui
 
 import (
@@ -18,16 +18,9 @@ type panelID int
 const (
 	panelPin    panelID = iota + 1 // [1] system places + pinned
 	panelList                      // [2] CWD file list (main surface)
-	panelDetail                    // [3] preview / info (tabbed)
+	panelDetail                    // [3] preview (right column, top 2/3)
 	panelCarry                     // [4] carry bucket
-)
-
-// detailTab selects panel [3]'s active tab.
-type detailTab int
-
-const (
-	tabPreview detailTab = iota
-	tabMeta
+	panelMeta                      // [5] file metadata (right column, bottom 1/3)
 )
 
 // inputKind selects what the input popup collects.
@@ -60,8 +53,8 @@ type AppModel struct {
 	width         int
 	height        int
 	focus         panelID
-	detail        detailTab
-	detailScroll  int         // panel [3] content scroll offset
+	detailScroll  int         // panel [3] preview scroll offset
+	metaScroll    int         // panel [5] meta scroll offset
 	tabs          []listModel // panel [2]'s directory tabs (1..maxTabs, user-created)
 	tab           int         // active tab index
 	pendingG      bool        // vim g-prefix chord: a lone g is armed, awaiting the second key
@@ -360,9 +353,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spaceMenu.setItems(items, title)
 			return m, m.spaceMenu.open()
 		case "tab":
-			m.setFocus(m.focus%4 + 1) // 1→2→3→4→1
+			m.setFocus(m.focus%5 + 1) // 1→2→3→4→5→1
 		case "shift+tab":
-			m.setFocus((m.focus+2)%4 + 1) // 1→4→3→2→1
+			m.setFocus((m.focus+3)%5 + 1) // 1→5→4→3→2→1
 		case "1":
 			m.setFocus(panelPin)
 		case "2":
@@ -371,6 +364,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setFocus(panelDetail)
 		case "4":
 			m.setFocus(panelCarry)
+		case "5":
+			m.setFocus(panelMeta)
 		default:
 			cmd := m.dispatchFocusKey(msg.String())
 			m.syncWatches() // navigation may have moved a tab to a new dir
@@ -488,17 +483,10 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	return cmd
 }
 
-// handleDetailKey routes keys to panel [3] while it is focused: h/l swap tab,
-// j/k/u/d/g/G scroll the content.
+// handleDetailKey routes keys to panel [3] (the preview) while it is focused:
+// j/k/u/d/g/G scroll, y yanks the preview, z zooms it full-screen.
 func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 	switch key {
-	case "h", "left", "l", "right":
-		if m.detail == tabPreview {
-			m.detail = tabMeta
-		} else {
-			m.detail = tabPreview
-		}
-		m.detailScroll = 0
 	case "j", "down":
 		m.detailScroll++
 	case "k", "up":
@@ -511,39 +499,77 @@ func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 		m.detailScroll = 0
 	case "G":
 		m.detailScroll = len(m.detailLines())
-	case "y": // yank: open the selection viewport over this tab's content
+	case "y":
 		return m.openDetailYank()
-	case "z": // zoom panel [3]: full-width, Preview | Meta side by side
+	case "z":
 		m.toggleZoom(panelDetail)
 	}
 	m.clampDetailScroll()
 	return nil
 }
 
-// openDetailYank opens the panel [3] yank viewport over the active detail tab.
-// Preview yanks the file's own content (body, no line-number gutter — that
-// becomes a display-only gutter in the viewport); Meta yanks the meta lines.
-func (m *AppModel) openDetailYank() tea.Cmd {
-	var lines []string
-	title, showGutter := "Yank: Preview", false
-	if m.detail == tabMeta {
-		lines = metaLines(m.active().cursorItem(), m.active().dir)
-		title = "Yank: Meta"
-	} else {
-		lines = m.preview.body
-		showGutter = m.preview.kind == previewText || m.preview.kind == previewBinary
+// handleMetaKey routes keys to panel [5] (file metadata): j/k/u/d/g/G scroll, y
+// yanks the meta lines, z zooms it full-screen.
+func (m *AppModel) handleMetaKey(key string) tea.Cmd {
+	switch key {
+	case "j", "down":
+		m.metaScroll++
+	case "k", "up":
+		m.metaScroll--
+	case "d", "ctrl+d":
+		m.metaScroll += m.metaRows() / 2
+	case "u", "ctrl+u":
+		m.metaScroll -= m.metaRows() / 2
+	case "g":
+		m.metaScroll = 0
+	case "G":
+		m.metaScroll = len(m.metaContent())
+	case "y":
+		return m.openMetaYank()
+	case "z":
+		m.toggleZoom(panelMeta)
 	}
+	m.clampMetaScroll()
+	return nil
+}
+
+// metaContent is the file-metadata lines for the cursor item (panel [5]).
+func (m AppModel) metaContent() []string {
+	return metaLines(m.active().cursorItem(), m.active().dir)
+}
+
+// openDetailYank opens the yank viewport over panel [3]'s preview — the file's
+// own content, with a display-only line-number gutter for text/binary.
+func (m *AppModel) openDetailYank() tea.Cmd {
+	lines := m.preview.body
+	if len(lines) == 0 {
+		return nil
+	}
+	showGutter := m.preview.kind == previewText || m.preview.kind == previewBinary
+	m.detailYank.setSize(m.width, m.height)
+	return m.detailYank.open("Yank: Preview", lines, showGutter)
+}
+
+// openMetaYank opens the yank viewport over panel [5]'s metadata lines.
+func (m *AppModel) openMetaYank() tea.Cmd {
+	lines := m.metaContent()
 	if len(lines) == 0 {
 		return nil
 	}
 	m.detailYank.setSize(m.width, m.height)
-	return m.detailYank.open(title, lines, showGutter)
+	return m.detailYank.open("Yank: Meta", lines, false)
 }
 
-// clampDetailScroll keeps panel [3] from scrolling past its last page.
+// clampDetailScroll keeps panel [3] (preview) from scrolling past its last page.
 func (m *AppModel) clampDetailScroll() {
 	maxScroll := max(len(m.detailLines())-m.detailRows(), 0)
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
+}
+
+// clampMetaScroll keeps panel [5] (meta) from scrolling past its last page.
+func (m *AppModel) clampMetaScroll() {
+	maxScroll := max(len(m.metaContent())-m.metaRows(), 0)
+	m.metaScroll = max(0, min(m.metaScroll, maxScroll))
 }
 
 // handleCarryKey routes keys to panel [4] while it is focused (h/l swap tab; on
@@ -646,6 +672,8 @@ func (m *AppModel) dispatchFocusKey(key string) tea.Cmd {
 		return m.handlePinKey(key)
 	case panelDetail:
 		return m.handleDetailKey(key)
+	case panelMeta:
+		return m.handleMetaKey(key)
 	case panelCarry:
 		return m.handleCarryKey(key)
 	}
@@ -707,11 +735,12 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		return items, "Places"
 	case panelDetail:
 		return groupedMenu(
-			[]menuItem{{label: "Yank", key: "y", hint: "select & copy content"}},
-			[]menuItem{
-				{label: "Tab", key: "l", hint: "switch Preview / Meta"},
-				{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
-			}), "Preview"
+			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview"}},
+			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "Preview"
+	case panelMeta:
+		return groupedMenu(
+			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the metadata"}},
+			[]menuItem{{label: "Zoom", key: "z", hint: "expand the metadata full-screen"}}), "Meta"
 	case panelCarry:
 		panelOps := []menuItem{
 			{label: "Tab", key: "l", hint: "switch Carries / Tasks"},
@@ -757,7 +786,7 @@ func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
 func (m *AppModel) refreshPreview() {
 	l := m.cur()
 	m.preview = loadPreview(l.cursorItem(), l.dir, m.previewWidth())
-	m.detailScroll = 0 // new content — back to the top
+	m.detailScroll, m.metaScroll = 0, 0 // new cursor item — both panels back to the top
 }
 
 // previewWidth is panel [3]'s inner content width (1:1:1 columns, minus border),
@@ -847,11 +876,15 @@ func (m *AppModel) syncPlaceToList() {
 	}
 }
 
+// midHeight is the panel region's height: total minus the header, status bar,
+// and footer rows.
+func (m AppModel) midHeight() int { return m.height - 3 }
+
 // listPanelHeight is panel [2]'s box height: full in the narrow list-only
 // fallback, otherwise the top 2/3 (both the normal grid and [2]-zoom put [2] over
 // [4] at 2/3 : 1/3).
 func (m AppModel) listPanelHeight() int {
-	midH := m.height - 2
+	midH := m.midHeight()
 	if m.width < 72 {
 		return midH
 	}
@@ -866,9 +899,19 @@ func (m AppModel) listRows() int {
 	return 1
 }
 
-// detailRows: panel [3] content rows (no section header there).
+// detailRows: panel [3] preview content rows (right column, top 2/3, minus its
+// two borders).
 func (m AppModel) detailRows() int {
-	if r := m.height - 4; r > 0 {
+	if r := m.midHeight()*2/3 - 2; r > 0 {
+		return r
+	}
+	return 1
+}
+
+// metaRows: panel [5] meta content rows (right column, bottom 1/3, minus borders).
+func (m AppModel) metaRows() int {
+	mid := m.midHeight()
+	if r := mid - mid*2/3 - 2; r > 0 {
 		return r
 	}
 	return 1

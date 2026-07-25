@@ -16,7 +16,6 @@ import (
 type sessionState struct {
 	Tabs   []tabState      `yaml:"tabs"` // the tabs created beyond the CWD tab [0]
 	Focus  int             `yaml:"focus"`
-	Detail int             `yaml:"detail"`
 	Carry  []string        `yaml:"carry,omitempty"`
 	Pinned []string        `yaml:"pinned,omitempty"`
 	Tasks  []persistedTask `yaml:"tasks,omitempty"`
@@ -106,9 +105,8 @@ func saveState(st sessionState) {
 // snapshotState captures the current model for persistence.
 func (m AppModel) snapshotState() sessionState {
 	st := sessionState{
-		Focus:  int(m.focus),
-		Detail: int(m.detail),
-		Carry:  m.carry.items,
+		Focus: int(m.focus),
+		Carry: m.carry.items,
 	}
 	for i := 1; i < len(m.tabs); i++ { // tab [0] always reopens at CWD — skip it
 		st.Tabs = append(st.Tabs, tabState{Dir: m.tabs[i].dir, Cursor: m.tabs[i].cursor})
@@ -143,11 +141,8 @@ func (m *AppModel) applyState(st sessionState) {
 		nl.clampCursor()
 		m.tabs = append(m.tabs, nl)
 	}
-	if st.Focus >= int(panelPin) && st.Focus <= int(panelCarry) {
+	if st.Focus >= int(panelPin) && st.Focus <= int(panelMeta) {
 		m.focus = panelID(st.Focus)
-	}
-	if st.Detail == int(tabPreview) || st.Detail == int(tabMeta) {
-		m.detail = detailTab(st.Detail)
 	}
 	m.carry.items = st.Carry
 	for _, p := range st.Pinned {
