@@ -1,139 +1,252 @@
 # filu
 
-> 用 ZLC(Zero Learning Curve)設計原則打造的終端機檔案管理器 —— 不看文件,第一次開就能用到底。
+<!-- <p align="center"><img src="docs/icon.svg" width="128" alt="filu icon" /></p> -->
 
-filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放在 **零學習曲線**:靠一套跨面板不變的基礎操作(`Tab` / `Enter` / `Esc` / `Space`)+ 一個 `?` 全域入口,不需要背 hotkey 就能走完整個 app。它是 `kbu` `u`-family 的成員,共用 kbu 的整套 ZLC 設計系統(structural/user/popup 三層色階、powerline 分頁、popup taxonomy)。
+[![GitHub Release](https://img.shields.io/github/v/release/vulcanshen/filu)](https://github.com/vulcanshen/filu/releases)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/vulcanshen/filu)](https://go.dev/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-> ⚠️ **狀態:開發中,已可跑。** 四面板骨架、預覽、carry-bucket 搬檔、async 落地、session 持久化都已實作;垃圾桶 / chmod / 壓縮 / 排序 / 即時刷新等仍在路上(見 `.forge/meta/IDEA.md`)。
+**Language**: English · [繁體中文](README-zh_TW.md)
 
-## 需求
+**A single-pane terminal file manager** — `Tab` / `Space` / `Enter` / `Esc` drive everything. No hotkey memorization, no setup, no learning curve. Carry-bucket copy/move, streaming file finders, live preview, and cd-on-quit are built in; your `$EDITOR` rides along in an embedded terminal.
 
-- **Nerd Font**:filu 用 Nerd Font glyph 當視覺語彙,是設計的一部分、不是 optional。
-  - CJK Nerd Font(如 `Maple Mono NF CN`)會把 icon 畫成全形(2 格),filu 啟動時用 CPR 自動偵測 icon 實際格寬並據以排版,框線不會破。
-- **平台**:macOS 或 Linux。不提供原生 Windows build(`GOOS=windows` 刻意編譯失敗);Windows 請走 WSL。
-- **Go**:1.26+。`CGO_ENABLED=0` 可靜態編譯。
-- **Search / Find 用到的外部工具**:`ripgrep`(`f` Find 內容搜尋必需)、`fd`(列檔案清單;缺了退回純 Go walk)。`$EDITOR`(`e` edit,預設 `vi`)。
+> _When in doubt, hit_ **`Space`**.
 
-## 介面
+filu is a member of the `u`-family and a filesystem-domain implementation of the same **ZLC** (Zero Learning Curve) design system as [kbu](https://github.com/vulcanshen/kbu) — see [`docs/zlc-filu-implementation.md`](docs/zlc-filu-implementation.md).
 
-五個面板 + 上下兩條 content row。版面 grid 為 `[1][2][3] / [1][2][3] / [4][4][5]`:
+## Demo
 
-```
-  Ⅱ ⟩ ~ ⟩ Documents ⟩ sideproj ⟩ filu               ← header:powerline 麵包屑
- drwxr-xr-x  vulcan:staff  42 items · 3 hidden  …free   ← top status bar(目錄狀態)
-┌──────────┬──────────────────┬──────────────────────┐
-│ [1] pin  │ [2] 檔案清單     │ [3] Preview           │
-│  Local   │  （1–3 個分頁）  │   （右欄上 2/3）       │
-│  Pinned  │                  ├──────────────────────┤
-├──────────┴──────────────────┤ [5] Meta（右欄下 1/3）│
-│ [4] Carries │ Tasks         │                       │
-└─────────────────────────────┴──────────────────────┘
- space menu   ? help   tab/1-5 panels   q quit         ← footer
-```
+> _Demo GIFs coming soon._
 
-- **header 路徑 bar**:當前分頁所在目錄的 **powerline 麵包屑**。開頭一個 chip 帶分頁羅馬數字 + folder glyph,整條從第一格起走 **blue → crust 漸層**(依 depth **連續內插**:root = blue、當前目錄 = crust);相鄰段落差夠大,capHard 三角分隔才切得出來。段內文字色**隨背景明度自動翻轉**(亮底深字、暗底亮字,依 WCAG 對比擇優),名稱在亮→暗全程都清楚。過長時從前段起縮成字首(`~/Documents/sideproj/filu` → `~/D/s/filu`),再不夠則中間 `…` 只留 root + 末段。
-- **top status bar**:header 下方一列,顯示**當前 tab 目錄本身**的狀態 —— `perm · owner:group · item count · hidden count`(左)+ `free / total` 磁碟(右),eza 配色(權限 `r`黃/`w`紅/`x`綠、owner 黃、size 綠)。全部在目錄載入時算一次(1 個 `stat` + 1 個 `statfs`,非遞迴)、counts 從已載入清單直接數,**每 frame 零 I/O**;不放會卡的遞迴目錄大小。
+<!--
+### Getting around filu
+![basics](docs/demo-basics.gif)
 
-- **[1] pin**:系統 Places(LaunchDir / Home / 根目錄)+ 使用者釘選的目錄(`Pinned` 標題為 lavender)。釘選項目以**縮減 path** 呈現,和 header 麵包屑**同一套漸進縮法**(空間夠全顯示 → 不夠從前段起逐段縮首字元 `~/D/s/filu` → 再不夠中間 `…` 只留 root + 末段)。純導覽 —— 選一個,`[2]` 就跳過去。
-- **[2] 清單**:當前目錄的檔案,1–3 個目錄分頁(各自獨立 CWD + cursor,標籤為羅馬數字 `Ⅰ`/`Ⅱ`/`Ⅲ`;預設開一個,`t` 在當前目錄開新分頁、`w` 關閉當前分頁)。每列 `<icon> <檔名>`,icon 與配色照 eza(見下方[配色](#功能))。檔案操作主戰場。
-- **[3] Preview**(右欄上 2/3):游標檔的預覽,依型別分五類呈現。參考視角,失焦也不 dim。`j/k/u/d/g/G` 捲動、`y` 開 yank 視窗(vim 式 cursor + `v` visual selection)、`z` zoom 全螢幕。
-- **[4] carry**:`Carries`(搬運暫存區)/ `Tasks`(複製/搬移任務,含 running / done / pending / error 狀態)兩個 tab。
-- **[5] Meta**(右欄下 1/3):游標檔的 `stat` 等級 metadata(Name/Path/Type/Size/Owner/Group/Links/Inode/Perm/Octal/時間戳…)。同樣可 `j/k/u/d/g/G` 捲、`y` yank、`z` zoom。(原本 [3] 的 Preview/Meta 分頁已拆成 [3] 與 [5] 兩個獨立面板。)
+### Carry-bucket copy & move
+![carry](docs/demo-carry.gif)
 
-## 功能
+### Streaming finders — name, content, goto
+![finders](docs/demo-finders.gif)
 
-- **Preview 五分類**(讀 magic bytes 判定):
-  - 目錄 → 內層 tree(eza `-T` 風格)
-  - 壓縮包(zip / tar / tar.gz…)→ 列包內清單
-  - 圖片 → base64 `data:` URI(SVG 例外,當 XML 語法highlight)
-  - 文字 → chroma 語法highlight + 行號(catppuccin-mocha)
-  - 二進位 → hex + ASCII(xxd 風)+ 行號
-  - PDF → 純 Go 抽文字 + 頁數
-- **Icon + 配色(照 eza)**:
-  - **Icon**:檔案型別 glyph 取自 eza 原始碼的完整對照表(`src/output/icons.rs`,~760 個)—— 目錄名 / 檔名走 exact-case、副檔名走小寫,涵蓋各語言、設定檔、壓縮/影音/圖片與 `README` / `Dockerfile` / `go.mod` 等特例。
-  - **顏色**:把一份 `vivid generate catppuccin-mocha` 的 `LS_COLORS`(該 palette 每個副檔名一個色)**烘進 binary**,依 eza 的優先序上色(目錄 → symlink → executable → 整名 suffix → 副檔名 → normal;executable 蓋過副檔名)。結果與使用者終端機的 `eza` / `ls` **完全一致**,且**不需要**環境有 `LS_COLORS` —— 別人裝了也是同一套配色。
-  - 面板層級另有 structural 藍 / user lavender / popup 層色的三層階層。
-- **Zoom**:每個有分頁的面板都能 `z` 展開佔滿,把分頁攤成等寬並排欄。
-- **Carry-bucket 搬檔**:`p` pick 把檔案拿進 bucket(panel 2 會在最前面固定保留一格、打上**綠色 check-circle** 標記,等同 multi-select;沒選時該格留白,選/不選不位移)→ 切到目標目錄 → `c` copy / `m` move 落地;Carries tab 可 `p` 只落地子集。落地跑 goroutine,進度在 Tasks tab 即時更新。
-- **Search(`/`)/ Find(`f`)/ Goto(`go`),僅 panel 2**:filu 原生的 file finder(snacks / Telescope 形式,非 fzf binary)。三種模式共用同一個 picker —— snacks 樣式輸入列(peach chevron + blinking block cursor)、打字即時過濾、`jkud` 選、Enter reveal 到 panel 2。清單態按 `q` 回輸入、`Esc` 離開(同 app 內其他 popup)。清單**邊掃邊串流**顯示(`fd` 一吐就出現、不等整趟走完、不排序,依 fd 走訪序),首批幾乎立即可見。三者都有右側預覽(窄寬改上下):
-  - **`/` Search**:當前 tab 子樹,對**檔名**做 **fuzzy** 比對(純記憶體、依匹配品質排序);預覽選中檔案(從頭)。
-  - **`f` Find**:當前 tab 子樹,用 `ripgrep` 對**內容**過濾出含關鍵字的檔案(去重);預覽自動 scroll 到命中行並 lavender 反白。
-  - **`go` Goto**:範圍是整個 `$HOME`、**只列目錄**、對**路徑**做 fuzzy;預覽選中目錄的 tree,Enter 把 tab **傳送**過去。掃描上限與要跳過的目錄由 `config.yaml`(見[設定](#設定configyaml))控制。
-- **Popup**(全走 kbu form:line→expand 動畫 + 層色 border):`Space` 情境選單(§A.1)、`?` 全域說明(§A.2)、刪除確認、Rename / Add 輸入框(chevron prompt + 閃爍游標,rename 描述帶型別 icon + 顏色)。
-- **Session 持久化**:多開的分頁(dir + cursor)、focus、detail tab、carry bucket、pinned、task log 都存進 `state.yaml`,下次啟動接續。第一個分頁固定在啟動當下的 CWD、且開機時為 active(所以每次啟動都從當前目錄開始)。
+### Preview & metadata side by side
+![preview](docs/demo-preview.gif)
+-->
 
-## 操作
+## Five keys to drive filu
 
-核心鍵(跨面板不變):
-
-| 鍵 | 作用 |
+| Key | Behavior |
 |---|---|
-| `Enter` | 進入目錄 / 開檔(交給系統) |
-| `Esc` | 返回上層 / 關閉浮層 |
-| `Tab`、`1`–`5` | 切換面板 |
-| `h` / `l` | 切換當前面板的分頁 |
-| `Space` | 開「當前面板此刻能做什麼」的選單 |
-| `?` | 全域說明 |
-| `q` | 離開:跳選單選一個目錄 cd 過去(1–4 或 j/k+Enter) |
+| **`Tab`** | Switch panel focus (or `1`–`5` directly) |
+| **`Enter`** | Enter a directory / open a file (hands off to the OS) / commit a choice |
+| **`Space`** | *What can I do here?* — opens a contextual menu on every panel |
+| **`Esc`** | Back out — up one directory / close any popup |
+| **`?`** | Global help — every app-wide action in one list |
 
-面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`/` search(fuzzy 檔名)、`f` find(內容 grep)、`go` goto(跳到 `$HOME` 下任一目錄)、`b` breadcrumb(彈出祖先目錄鏈、選一層跳上去)、`t` 開新分頁、`w` 關分頁、`.` 顯示隱藏檔、`z` zoom。
+When in doubt, press `Space`. Power-user hotkeys (`p` pick / `y` yank / `e` edit / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …) exist for speed — every one is also reachable through the `Space` menu, so nothing's required to memorize unless you want it.
 
-跳頂用 vim 的 **`gg`**(單 `g` 待命、等第二鍵;對齊 kbu),`G` 跳底 —— 適用 panel `[2]`/`[3]`/`[4]`;`Space` 選單與 finder 清單維持單 `g`。
+## Install
 
-## cd-on-quit(離開時切換 shell 目錄)
+> [!NOTE]
+> **Pre-release.** filu has no tagged release yet, so the release-binary channels
+> below (`install.sh`, Homebrew, the release badge) go live only after the first
+> `v*` tag. For now, **[build from source](#build-locally)** or `go install`.
 
-按 `q` 會跳出選單:從 **panel 1 的起始目錄**與**各分頁的當前目錄**裡挑一個(重複的目錄只列一次),離開 filu 時把 shell 的 cwd 切過去(對標 superfile 的 `cd_on_quit`)。
+> filu is **macOS / Linux only** (no native Windows build; use WSL).
 
-### 為什麼需要一行 shell 設定(不是 filu 偷懶,是 OS 限制)
+### Quick Install (macOS/Linux)
 
-一個程式只能改自己的工作目錄;**沒有任何 syscall 能改「父程序」(你的 shell)的 cwd** —— 這是 POSIX 鐵則。filu 是 shell 的子程序,自己 `cd` 不會影響 shell,離開後 shell 還在原地。唯一能原生改 shell cwd 的是 shell **內建指令**(如 `cd` 本身),而 filu 是外部 binary。所以 `yazi` / `lf` / `ranger` / `nnn` / `superfile` / `zoxide` 全都靠同一招:程式寫檔 → shell wrapper 讀檔再 `cd`。裝一行 `eval` 就是這類工具公認的「原生整合」。
+```bash
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/install.sh | sh
+```
 
-### 啟用
+Downloads the release binary and prints install hints for `ripgrep` / `fd` if they're missing.
 
-filu 進 PATH 之後(`go install ./cmd/filu` 或 release binary),在 `~/.zshrc` / `~/.bashrc` 加一行:
+### Homebrew (macOS/Linux)
+
+```bash
+brew install vulcanshen/tap/filu
+```
+
+The cask declares `ripgrep` + `fd` as dependencies, so Find and the finder listing work out of the box.
+
+### From source
+
+```bash
+go install github.com/vulcanshen/filu/cmd/filu@latest
+```
+
+### Build locally
+
+```bash
+git clone https://github.com/vulcanshen/filu.git
+cd filu
+CGO_ENABLED=0 go build -o filu ./cmd/filu
+./filu
+```
+
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh | sh
+```
+
+## Quick Start
+
+```bash
+filu
+```
+
+Opens on your current directory. Press `Enter` to enter a directory or open a file, `Space` for the contextual menu, `Esc` to back out, `Tab` to move between panels.
+
+To have filu change your shell's directory when you quit (the `q` picker), add one line to `~/.zshrc` / `~/.bashrc` and launch with **`filu`** (not `./filu`):
 
 ```sh
 eval "$(filu shell)"
 ```
 
-之後用 **`filu`** 啟動(**不是 `./filu`** —— wrapper 是攔截 `filu` 這個指令名的 shell function,帶路徑呼叫不會經過它)。
+Inspired by [yazi](https://github.com/sxyazi/yazi), [superfile](https://github.com/yorukot/superfile), [ranger](https://github.com/ranger/ranger), and [lazygit](https://github.com/jesseduffield/lazygit). Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
-原理:wrapper 給 filu 一個暫存檔路徑(`FILU_LAST_DIR_FILE`),filu 離開時把選定目錄寫進去,wrapper `cat` 出來再 `cd`。**沒裝 wrapper 也能正常用 filu**,只是離開時不會切目錄(選了 cd 目標也不會有反應,因為少了那段 shell 整合)。
+---
 
-## 設定(`config.yaml`)
+> The rest of this README is the operations manual — read on if you want the full feature surface, every keybinding, and configuration details.
 
-filu 從 `<OS config dir>/filu/config.yaml`(macOS 是 `~/Library/Application Support/filu/config.yaml`,與 `state.yaml` 同目錄)讀使用者設定 —— `config.yaml` 是給你**手改**的,`state.yaml` 則是自動管理的 session 狀態,兩者分開。第一次啟動會寫一份帶註解的預設檔;已存在的檔不會被覆蓋。目前兩顆旋鈕:
+## Features
 
-- **`finder_cap`**(預設 `50000`):finder(Search / Find / Goto)最多掃幾筆。Goto 會走整個 `$HOME`,所以這個值決定它的上限 —— 調大 = 更多目錄跳得到,但在很大的家目錄上每次打字的 fuzzy 過濾會變慢。覺得頓就調降,想要更廣就調高(每台機器效能不同,自己抓)。
-- **`ignore_dirs`**:finder 直接跳過的目錄名 —— 依賴快取、build 產物、IDE metadata、容器資料這些**不會 `cd` 進去**的地方。預設含 `node_modules`、`go/pkg`(Go module cache)、`OrbStack`、`Library`、`vendor`、`target`、`.git`、`.idea`、`.vscode`… 一般名字比對**任意層級**;含斜線(如 `go/pkg`)比對路徑。自由增刪;明確給空清單 `ignore_dirs: []` 代表不排除任何東西。
+- **Zero learning curve** — every action surfaces through the `Space` menu. Power-user hotkeys exist for speed but you can ignore the whole cheat sheet; `Space` walks you through the same menus, in context, on every panel. Onboarding doc: *"When in doubt, hit Space."*
+- **5-panel workspace** — `[1]` Places + Pinned, `[2]` the file list (main surface), `[3]` Preview, `[4]` Carries / Tasks, `[5]` file Metadata. Grid: `[1][2][3] / [1][2][3] / [4][4][5]` — the left column stacks list-over-carry, the right column mirrors it with preview-over-metadata. `Tab` cycles all five (or `1`–`5` to jump).
+- **Powerline breadcrumb header** — the active tab's full path renders as a powerline breadcrumb across the top, coloured along a `blue → crust` gradient by directory depth (root is blue, where you are is the darkest chip). Overflows shrink front segments to their initial (`~/Documents/x` → `~/D/x`), then collapse the middle to `…`. The tab-numeral + folder glyph lead the bar.
+- **Directory status bar** — under the header, an eza-coloured status line for the current directory: permissions (`r` yellow / `w` red / `x` green), owner:group, item + hidden counts, and free / total disk. Everything is computed once when the directory loads (one `stat` + one `statfs`, never a recursive size walk) so it stays instant.
+- **Carry-bucket copy & move** — deferred cp/mv, like Finder's Cmd+C / Cmd+V. `p` picks a file into the carries bucket (a green check-circle marks it in the list — an in-place multi-select), then you navigate to the target directory and `c` copies / `m` moves the whole bucket there. In the Carries tab (`[4]`), `p` picks a *subset* to land instead of the whole bucket (marked with its own distinct glyph). Copy leaves the bucket intact so you can land to several directories; move updates the bucket paths so they stay valid.
+- **Async land with a Tasks tab** — copy/move runs in the background; progress streams into `[4]`'s Tasks tab (running / done / pending / error). Same-disk moves are instant `rename`; cross-disk / copy shows progress. Interrupted tasks are saved to `state.yaml` and can be re-run with `R` next launch.
+- **Native streaming finders** — a filu-drawn split picker (list + preview), not the fzf binary. Four modes, all with a right-side preview, all streaming their listing (`fd`-order, first results near-instant, filter while it loads):
+  - **`/` Search** — fuzzy-match file *names* in the current tab's subtree.
+  - **`f` Find** — filter by *content* via `ripgrep`; the preview scrolls to the matched line and highlights it.
+  - **`go` Goto** — fuzzy-match *directory paths* under `$HOME` (directories only); `Enter` teleports the active tab there.
+  - **`b` Breadcrumb** — a popup of the current tab's ancestor directories; `Enter` jumps the tab up to any level.
+  - In the result list, `Esc` leaves and `q` returns to the input. Scan bounds (`finder_cap`) and skipped tool directories (`ignore_dirs`) are tunable in `config.yaml`.
+- **Preview by file kind** — detected from magic bytes: directory → inner tree, archive (zip / tar / tar.gz…) → contents, image → base64 `data:` URI, SVG → highlighted XML, text → syntax-highlighted with line numbers (Chroma / catppuccin-mocha), binary → hex + ASCII, PDF → extracted text + page count.
+- **File metadata panel** — `[5]` shows `stat`-level metadata for the cursor file (Name / Path / Type / Size / Owner / Group / Links / Inode / Perm / Octal / Modified / Accessed / Changed / Created).
+- **Yank with visual selection** — `y` on `[3]` Preview or `[5]` Meta opens a viewport with a vim-style cursor; `v` enters character-wise visual selection, `y` copies the selection (or the whole content when nothing is selected) via OSC 52 (works through tmux / SSH). `y` on a file row or a Carries item copies its full path.
+- **Edit via embedded PTY** — `e` opens a text file in `$EDITOR` (else `vi`) inside an in-app virtual terminal, so the editor never touches the host scrollback. Non-text files fall back to OS open; the directory reloads when the editor exits.
+- **Multi-tier sort** — `S` opens a column → direction picker that loops so you can stack tiers (later tiers break ties). Directories stay first; the active sort shows in the `[2]` Files header and persists per session.
+- **Delete to system trash** — `D` (with a confirmation dialog) moves to the OS trash (macOS Trash / Linux XDG). Restore via your file manager's trash UI.
+- **Dynamic directory tabs** — `[2]` opens with one tab; `t` opens a new tab in the current directory (up to three), `w` closes the active one. Tabs are labelled with Roman numerals (`Ⅰ` / `Ⅱ` / `Ⅲ`) — the path lives in the header, so the tab bar just marks position and which is active.
+- **eza icons + colours** — file-type glyphs come from eza's full icon table (~760 glyphs); colours come from a baked-in `vivid generate catppuccin-mocha` `LS_COLORS` palette resolved in eza's order (directory → symlink → executable → longest suffix → extension). No `LS_COLORS` needed at run time — every install shows the same palette, matching your terminal's `eza` / `ls`.
+- **Live refresh** — the list tabs watch their directories (fsnotify) and reload when files change externally, keeping the cursor on its entry; bursts are debounced.
+- **Session persistence** — extra tabs (dir + cursor), focus, carry bucket, pinned dirs, tasks, and sort are saved to `state.yaml`; the first tab always reopens at the launch directory.
+- **cd-on-quit** — `q` opens a picker to leave your shell in the launch directory or any tab's directory (with the shell wrapper installed; see [cd-on-quit](#cd-on-quit)).
+- **Vim-style navigation** — `j`/`k`, `u`/`d` half-page, `gg`/`G`, `h`/`l` switch the focused panel's tab.
+- **Pinned places** — `[1]` has system Places (LaunchDir / Home / Root) plus a Pinned section; `P` on a directory pins it, and pinned paths shorten the same progressive way the header does.
+- **Panel zoom** — `z` expands the focused panel full-screen; panels with tabs lay them out as equal columns (by the actual tab count). `z` again restores the grid.
+- **CJK Nerd Font width** — a startup CPR probe measures the real icon cell width so panel borders don't break on CJK Nerd Fonts (e.g. Maple Mono NF CN) that paint file-type icons two cells wide.
+- **unix-first, static binary** — macOS + Linux only (no native Windows build — `GOOS=windows` fails on purpose); `CGO_ENABLED=0` for a static binary.
 
-## 安裝
+## Key Bindings
 
-> 發佈基建已備妥(goreleaser + Homebrew tap + `install.sh`);以下管道在第一個 GitHub release(tag `v*`)後生效。目前請走下面的[建置](#建置)從原始碼編。
+### Primary interaction: five keys
 
-- **Homebrew**(macOS / Linux)—— 會一併裝 Search 需要的 `ripgrep` + `fd`:
-  ```sh
-  brew install vulcanshen/tap/filu
-  ```
-- **install script**(抓 release binary;缺 `ripgrep` / `fd` 時印各發行版安裝提示):
-  ```sh
-  curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/install.sh | sh
-  ```
-- **go install**:
-  ```sh
-  go install github.com/vulcanshen/filu/cmd/filu@latest
-  ```
+| Key | Behavior |
+|---|---|
+| **`Tab`** | **Panel** — move focus to the next panel (or `1`–`5` to jump directly) |
+| **`Enter`** | **Into** — enter a directory / open a file (OS) / commit a popup choice |
+| **`Space`** | **Menu** — open the contextual menu wherever focus is. Also closes any open popup |
+| **`Esc`** | **Back** — up one directory / close any popup |
+| **`?`** | **Help** — the global (non-contextual) action list |
 
-移除:`curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh | sh`。
+Where a contextual menu exists, `Space` is enough — you don't need to memorize the per-action keys. `h`/`l` switch the focused panel's tab (`[2]` directory tabs, `[4]` Carries / Tasks).
 
-## 建置
+### Accelerators — cursor + power triggers
+
+```
+ cursor    j k        u d        gg G        h l (switch this panel's tab)
+ panel 2   p pick     y yank     e edit      c copy   m move   r rename
+           a add      D delete   S sort      P pin    . hidden  z zoom
+ finders   / search   f find     go goto     b breadcrumb
+ tabs      t new tab  w close tab
+```
+
+`gg` (jump to top) is a vim g-prefix chord — a lone `g` arms and waits; `go` (open the Goto finder) is the same prefix. `G` jumps to the bottom.
+
+### Global
+
+| Key | Action |
+|---|---|
+| `?` | Help popup |
+| `q` | Quit — opens the cd-on-quit picker (leave the shell in a chosen directory) |
+| `Ctrl+C` | Quit immediately (kills any running copy/move) |
+| `y` | Copy the focused element's path / content to the clipboard (OSC 52) |
+
+### Panel Space menus
+
+| Focus | Menu items |
+|---|---|
+| **`[1]` Places** | Jump (`Enter`), UnPin (`P`, pinned rows) |
+| **`[2]` List** | Pick `p`, Yank `y`, Edit `e`, Rename `r`, Delete `D`, Pin `P` · Copy `c`, Move `m`, Search `/`, Find `f`, Goto `go`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Hidden `.`, Zoom `z` |
+| **`[3]` Preview** | Yank `y`, Zoom `z` |
+| **`[4]` Carries** | Pick `p`, Yank `y`, Delete `D` · Tab `l`, Zoom `z` |
+| **`[4]` Tasks** | Redo `R`, Delete `D` · Tab `l`, Zoom `z` |
+| **`[5]` Meta** | Yank `y`, Zoom `z` |
+
+## Editing files
+
+Pressing `e` on a text file (or picking `Edit` from the `Space` menu) opens it in your editor inside an **embedded PTY popup** — the editor renders within filu instead of taking over the host terminal. The editor is resolved by `$EDITOR` (or `config.yaml`'s `editor`, if set), falling back to `vi`. Non-text files are handed to the OS (`open` / `xdg-open`) instead. When the editor exits, the directory reloads via the file watch — no manual refresh.
+
+## cd-on-quit
+
+Pressing `q` opens a picker of distinct directories — the launch directory plus each tab's current directory — and, on exit, changes your shell's working directory to the one you pick (like superfile's `cd_on_quit`).
+
+**Why one line of shell config is needed (it's an OS limit, not laziness):** a process can only change *its own* working directory — no syscall can change the *parent* process's (your shell's) cwd. filu is a child of your shell, so its own `cd` doesn't affect the shell. The only thing that can natively change the shell's cwd is a shell **builtin**, and filu is an external binary. So `yazi` / `lf` / `ranger` / `nnn` / `superfile` / `zoxide` all use the same trick: the program writes a file, and a shell wrapper reads it and `cd`s. Add the wrapper to `~/.zshrc` / `~/.bashrc`:
 
 ```sh
-CGO_ENABLED=0 go build -o filu ./cmd/filu   # 靜態編譯
-go test ./...                               # 測試
-gofmt -l . && go vet ./...                  # 格式 / 靜態檢查
+eval "$(filu shell)"
 ```
+
+Then launch with **`filu`** (not `./filu` — the wrapper is a shell function intercepting the command name `filu`; a path-qualified call bypasses it). filu still works without the wrapper; it just won't change your shell's directory on exit.
+
+## Configuration
+
+filu reads user settings from `config.yaml` in the OS config directory. `state.yaml` (auto-managed session state) sits alongside it; the two are kept separate on purpose — `config.yaml` is your hand-edited file, `state.yaml` is rewritten every quit.
+
+| OS | Path |
+|---|---|
+| Linux | `$XDG_CONFIG_HOME/filu/` or `~/.config/filu/` |
+| macOS | `~/Library/Application Support/filu/` |
+
+A commented template is written on first launch (an existing file is never overwritten). Two knobs, both applying to the finders (Search / Find / Goto):
+
+```yaml
+# How many entries a finder scans before it stops. Goto walks all of $HOME,
+# so this bounds it — raise it to reach more directories, lower it if the
+# fuzzy filter lags on a large home.
+finder_cap: 50000
+
+# Directories the finders skip — caches, build output, IDE metadata, container
+# data you never cd into. A bare name matches at any depth; a name with a slash
+# (e.g. go/pkg) matches a path. Set to [] to exclude nothing.
+ignore_dirs:
+  - node_modules
+  - .git
+  - Library
+  - OrbStack
+  - go/pkg
+  - vendor
+  - target
+  - __pycache__
+  - .venv
+  - .idea
+  - .vscode
+  - .cache
+  - .Trash
+```
+
+## Requirements
+
+- **A Nerd Font** — filu uses Nerd Font glyphs (file-type icons, powerline chips) as visual vocabulary; it is part of the design, not optional. On a CJK Nerd Font (e.g. Maple Mono NF CN) that paints icons two cells wide, filu probes the real cell width at startup (CPR) and lays out to match, so borders stay aligned.
+- **ripgrep** — required for `f` Find (content search).
+- **fd** — used to list files for the finders; falls back to a Go walk if absent.
+- **macOS or Linux** — no native Windows build (`GOOS=windows` fails on purpose); use WSL.
+- **Go 1.26+** — to build from source (`CGO_ENABLED=0` for a static binary).
 
 ## License
 
-`<TBD>`
+[GPL-3.0](LICENSE)
