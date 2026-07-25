@@ -66,12 +66,14 @@
 
 ### Changed
 - The header path bar is now a powerline breadcrumb instead of a flat path: a
-  Lavender folder + active-tab-numeral chip, then one chip per path segment
-  coloured along a continuous lavender→sapphire gradient (the ZLC layer scale
-  interpolated by depth, current directory = Sapphire). When it overflows, front
-  segments shrink to their initial (`~/Documents/x` → `~/D/x`), then the middle
-  collapses to `…` keeping root + tail. A horizontal rule now separates the
-  header from the panel grid.
+  tab-numeral + folder-glyph chip, then one chip per path segment coloured along
+  a continuous blue→crust gradient (interpolated by depth: root = blue, current
+  directory = crust), the bar blue from the first cell. The wide contrast keeps
+  the triangle separators visible between adjacent segments, and each segment's
+  text flips dark/light by WCAG contrast so names stay legible across the span.
+  When it overflows, front segments shrink to their initial (`~/Documents/x` →
+  `~/D/x`), then the middle collapses to `…` keeping root + tail. A horizontal
+  rule separates the header from the panel grid.
 - The finder (Search / Find / Goto) now streams its listing: results appear as
   `fd` emits them, in fd's traversal order, instead of waiting for the whole walk
   and then showing a sorted list. The first results show almost immediately and
