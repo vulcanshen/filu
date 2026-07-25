@@ -34,7 +34,7 @@ type placesModel struct {
 func newPlaces() placesModel {
 	var ps []place
 	if cwd, err := os.Getwd(); err == nil {
-		ps = append(ps, place{"CWD", cwd, iconCWD}) // startup dir, first
+		ps = append(ps, place{"LaunchDir", cwd, iconCWD}) // startup dir, first
 	}
 	if home, err := os.UserHomeDir(); err == nil {
 		ps = append(ps, place{"Home", home, iconHome})

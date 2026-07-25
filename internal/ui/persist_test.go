@@ -40,8 +40,8 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	if got.tabs[1].dir != "/usr" || got.tabs[1].cursor != 2 {
 		t.Errorf("tab[1] not restored: dir=%q cursor=%d", got.tabs[1].dir, got.tabs[1].cursor)
 	}
-	if p, ok := got.places.current(); !ok || p.label != "CWD" {
-		t.Errorf("panel [1] should land on CWD, got %+v ok=%v", p, ok)
+	if p, ok := got.places.current(); !ok || p.label != "LaunchDir" {
+		t.Errorf("panel [1] should land on LaunchDir, got %+v ok=%v", p, ok)
 	}
 }
 
