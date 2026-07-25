@@ -104,7 +104,7 @@ To have filu change your shell's directory when you quit (the `q` picker), add o
 eval "$(filu shell)"
 ```
 
-Inspired by [yazi](https://github.com/sxyazi/yazi), [superfile](https://github.com/yorukot/superfile), [ranger](https://github.com/ranger/ranger), and [lazygit](https://github.com/jesseduffield/lazygit). Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
+filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `cd_on_quit`, and its Search / Find / Goto finders take after [LazyVim](https://github.com/LazyVim/LazyVim)'s search. Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
 ---
 
@@ -195,7 +195,7 @@ Pressing `e` on a text file (or picking `Edit` from the `Space` menu) opens it i
 
 Pressing `q` opens a picker of distinct directories — the launch directory plus each tab's current directory — and, on exit, changes your shell's working directory to the one you pick (like superfile's `cd_on_quit`).
 
-**Why one line of shell config is needed (it's an OS limit, not laziness):** a process can only change *its own* working directory — no syscall can change the *parent* process's (your shell's) cwd. filu is a child of your shell, so its own `cd` doesn't affect the shell. The only thing that can natively change the shell's cwd is a shell **builtin**, and filu is an external binary. So `yazi` / `lf` / `ranger` / `nnn` / `superfile` / `zoxide` all use the same trick: the program writes a file, and a shell wrapper reads it and `cd`s. Add the wrapper to `~/.zshrc` / `~/.bashrc`:
+**Why one line of shell config is needed (it's an OS limit, not laziness):** a process can only change *its own* working directory — no syscall can change the *parent* process's (your shell's) cwd. filu is a child of your shell, so its own `cd` doesn't affect the shell. The only thing that can natively change the shell's cwd is a shell **builtin**, and filu is an external binary. So the standard fix is a two-part handshake: the program writes the chosen directory to a file, and a shell wrapper reads it and `cd`s. Add the wrapper to `~/.zshrc` / `~/.bashrc`:
 
 ```sh
 eval "$(filu shell)"
