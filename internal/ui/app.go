@@ -68,25 +68,26 @@ type AppModel struct {
 	preview       previewModel
 	places        placesModel
 	carry         carryModel
-	carryTab      int          // panel [4] active tab: 0 carry / 1 progress / 2 history
-	spaceMenu     spaceMenu    // §A.1 contextual popup (kbu form)
-	sortMenu      spaceMenu    // sort picker (column→direction chain, kbu form)
-	sortStep      sortStep     // which step the sort picker is on
-	sortFlowCol   sortCol      // column carried from the column step to direction
-	quitMenu      spaceMenu    // cd-on-quit picker (launch dir + distinct tab dirs)
-	launchDir     string       // the dir filu was started in (panel 1 CWD / quit option 1)
-	zoom          panelID      // 0 = normal; else the panel expanded full-width
-	confirm       confirmPopup // yes/no popup (delete / quit)
-	confirmAction confirmKind  // what an accepted confirm commits to
-	pendingDelete string       // path awaiting delete confirmation
-	inputPopup    inputPopup   // text prompt (rename / add)
-	help          helpPopup    // §A.2 global help cheatsheet
-	toast         toastModel   // transient notification (yank feedback)
-	detailYank    detailYank   // panel [3] yank viewport (cursor + visual selection)
-	pty           *ptyPopup    // embedded editor; pointer — shared with its read goroutine
-	search        searchModel  // native fuzzy file/dir finder (Home-rooted)
-	tasks         []landTask   // land operations (Tasks tab: running + log)
-	taskCh        chan landMsg // land goroutines → UI
+	carryTab      int               // panel [4] active tab: 0 carry / 1 progress / 2 history
+	spaceMenu     spaceMenu         // §A.1 contextual popup (kbu form)
+	sortMenu      spaceMenu         // sort picker (column→direction chain, kbu form)
+	sortStep      sortStep          // which step the sort picker is on
+	sortFlowCol   sortCol           // column carried from the column step to direction
+	quitMenu      spaceMenu         // cd-on-quit picker (launch dir + distinct tab dirs)
+	launchDir     string            // the dir filu was started in (panel 1 CWD / quit option 1)
+	zoom          panelID           // 0 = normal; else the panel expanded full-width
+	confirm       confirmPopup      // yes/no popup (delete / quit)
+	confirmAction confirmKind       // what an accepted confirm commits to
+	pendingDelete string            // path awaiting delete confirmation
+	inputPopup    inputPopup        // text prompt (rename / add)
+	help          helpPopup         // §A.2 global help cheatsheet
+	toast         toastModel        // transient notification (yank feedback)
+	detailYank    detailYank        // panel [3] yank viewport (cursor + visual selection)
+	pty           *ptyPopup         // embedded editor; pointer — shared with its read goroutine
+	search        searchModel       // native fuzzy file/dir finder
+	searchCh      chan fileBatchMsg // finder's fd stream → UI
+	tasks         []landTask        // land operations (Tasks tab: running + log)
+	taskCh        chan landMsg      // land goroutines → UI
 	nextTaskID    int
 	spinnerFrame  int               // running-task spinner animation
 	spinning      bool              // a spinner tick is in flight
@@ -109,7 +110,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), taskCh: make(chan landMsg, 64), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
@@ -138,8 +139,14 @@ func (m *AppModel) cur() *listModel { return &m.tabs[m.tab] }
 // active returns the active tab by value (read-only paths).
 func (m AppModel) active() listModel { return m.tabs[m.tab] }
 
-func (m AppModel) Init() tea.Cmd { // persistent readers: land results + live-refresh events
-	return tea.Batch(m.waitLand(), m.waitWatch())
+func (m AppModel) Init() tea.Cmd { // persistent readers: land results, live-refresh, finder stream
+	return tea.Batch(m.waitLand(), m.waitWatch(), m.waitSearch())
+}
+
+// waitSearch reads one batch of the finder's streamed file listing.
+func (m AppModel) waitSearch() tea.Cmd {
+	ch := m.searchCh
+	return func() tea.Msg { return <-ch }
 }
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -166,9 +173,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.refreshPreview()
 		return m, nil
-	case filesLoadedMsg:
-		m.search.onFilesLoaded(msg)
-		return m, nil
+	case fileBatchMsg:
+		m.search.onStreamBatch(msg)
+		return m, m.waitSearch() // keep reading the stream
+
 	case grepFireMsg:
 		return m, m.search.onGrepFire(msg)
 	case grepFilesMsg:

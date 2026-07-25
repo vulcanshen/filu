@@ -50,10 +50,10 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
   - 面板層級另有 structural 藍 / user lavender / popup 層色的三層階層。
 - **Zoom**:每個有分頁的面板都能 `z` 展開佔滿,把分頁攤成等寬並排欄。
 - **Carry-bucket 搬檔**:`p` pick 把檔案拿進 bucket(panel 2 會**打綠勾**標記,等同 multi-select)→ 切到目標目錄 → `c` copy / `m` move 落地;Carries tab 可 `p` 只落地子集。落地跑 goroutine,進度在 Tasks tab 即時更新。
-- **Search(`/`)/ Find(`f`)/ Goto(`go`),僅 panel 2**:filu 原生的 file finder(snacks / Telescope 形式,非 fzf binary)。三種模式共用同一個 picker —— snacks 樣式輸入列(peach chevron + blinking block cursor)、打字即時過濾、`jkud` 選、Enter reveal 到 panel 2。清單態按 `q` 回輸入、`Esc` 離開(同 app 內其他 popup)。三者都有右側預覽(窄寬改上下):
+- **Search(`/`)/ Find(`f`)/ Goto(`go`),僅 panel 2**:filu 原生的 file finder(snacks / Telescope 形式,非 fzf binary)。三種模式共用同一個 picker —— snacks 樣式輸入列(peach chevron + blinking block cursor)、打字即時過濾、`jkud` 選、Enter reveal 到 panel 2。清單態按 `q` 回輸入、`Esc` 離開(同 app 內其他 popup)。清單**邊掃邊串流**顯示(`fd` 一吐就出現、不等整趟走完、不排序,依 fd 走訪序),首批幾乎立即可見。三者都有右側預覽(窄寬改上下):
   - **`/` Search**:當前 tab 子樹,對**檔名**做 **fuzzy** 比對(純記憶體、依匹配品質排序);預覽選中檔案(從頭)。
   - **`f` Find**:當前 tab 子樹,用 `ripgrep` 對**內容**過濾出含關鍵字的檔案(去重);預覽自動 scroll 到命中行並 lavender 反白。
-  - **`go` Goto**:範圍是整個 `$HOME`、**只列目錄**、對**路徑**做 fuzzy;預覽選中目錄的 tree,Enter 把 tab **傳送**過去。清單依 **mtime(新→舊)→ 字母序**排。掃描上限與要跳過的目錄由 `config.yaml`(見[設定](#設定configyaml))控制。
+  - **`go` Goto**:範圍是整個 `$HOME`、**只列目錄**、對**路徑**做 fuzzy;預覽選中目錄的 tree,Enter 把 tab **傳送**過去。掃描上限與要跳過的目錄由 `config.yaml`(見[設定](#設定configyaml))控制。
 - **Popup**(全走 kbu form:line→expand 動畫 + 層色 border):`Space` 情境選單(§A.1)、`?` 全域說明(§A.2)、刪除確認、Rename / Add 輸入框(chevron prompt + 閃爍游標,rename 描述帶型別 icon + 顏色)。
 - **Session 持久化**:多開的分頁(dir + cursor)、focus、detail tab、carry bucket、pinned、task log 都存進 `state.yaml`,下次啟動接續。第一個分頁固定在啟動當下的 CWD、且開機時為 active(所以每次啟動都從當前目錄開始)。
 

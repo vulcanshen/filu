@@ -80,11 +80,14 @@ type searchModel struct {
 // searchBlinkMsg toggles the input cursor; gen keeps one blink loop per open.
 type searchBlinkMsg struct{ gen int }
 
-// filesLoadedMsg carries the fd all-files listing back to the model.
-type filesLoadedMsg struct {
+// fileBatchMsg carries one streamed chunk of the fd listing back to the model,
+// tagged with the open generation + root so a reopen's stale batches are dropped.
+// done marks the final (possibly empty) batch.
+type fileBatchMsg struct {
 	gen   int
 	root  string
-	files []string
+	batch []string
+	done  bool
 }
 
 // grepFireMsg fires grepDebounce after a keystroke; if its gen still matches the
@@ -110,12 +113,12 @@ func newSearch() searchModel {
 
 // openSearch opens the by-name finder (`/`) over the active tab's directory.
 func (m *AppModel) openSearch() tea.Cmd {
-	return m.search.open(m.cur().dir, m.width, m.height, false, false)
+	return m.search.open(m.cur().dir, m.width, m.height, false, false, m.searchCh)
 }
 
 // openFind opens the by-content finder (`f`) over the active tab's directory.
 func (m *AppModel) openFind() tea.Cmd {
-	return m.search.open(m.cur().dir, m.width, m.height, true, false)
+	return m.search.open(m.cur().dir, m.width, m.height, true, false, m.searchCh)
 }
 
 // openGoto opens the finder over $HOME listing only directories (fuzzy on the
@@ -126,13 +129,14 @@ func (m *AppModel) openGoto() tea.Cmd {
 	if err != nil || home == "" {
 		home = m.cur().dir // no home known → fall back to the current dir
 	}
-	return m.search.open(home, m.width, m.height, false, true)
+	return m.search.open(home, m.width, m.height, false, true, m.searchCh)
 }
 
-// open resets the finder over root and loads the full file list immediately.
-// byContent selects Find (rg + preview) vs Search/Goto (name-only, no preview);
-// dirsOnly restricts the listing to directories (Goto).
-func (m *searchModel) open(root string, w, h int, byContent, dirsOnly bool) tea.Cmd {
+// open resets the finder over root and starts streaming the file list into ch.
+// byContent selects Find (rg + preview) vs Search/Goto (name-only); dirsOnly
+// restricts the listing to directories (Goto). Results appear as fd emits them —
+// no sort, no wait for the full walk.
+func (m *searchModel) open(root string, w, h int, byContent, dirsOnly bool, ch chan<- fileBatchMsg) tea.Cmd {
 	m.root = root
 	m.byContent = byContent
 	m.dirsOnly = dirsOnly
@@ -141,12 +145,12 @@ func (m *searchModel) open(root string, w, h int, byContent, dirsOnly bool) tea.
 	m.cursor, m.scroll = 0, 0
 	m.mode = searchInput
 	m.gen++     // invalidate any in-flight rg from a previous open
-	m.openGen++ // the all-files load is keyed on this, not the query gen
+	m.openGen++ // stale stream batches (wrong gen) are dropped
 	m.loading, m.searching = true, false
 	m.preview, m.previewFor = previewModel{}, ""
 	m.blink, m.blinkGen = true, m.blinkGen+1
 	m.width, m.height = w, h
-	return tea.Batch(m.anim.open(), listAllFilesCmd(m.openGen, root, dirsOnly), blinkTickCmd(m.blinkGen))
+	return tea.Batch(m.anim.open(), streamFilesCmd(m.openGen, root, dirsOnly, ch), blinkTickCmd(m.blinkGen))
 }
 
 // onBlink toggles the input cursor and reschedules, as long as this is still the
@@ -174,19 +178,20 @@ func (m *searchModel) handleTick(msg AnimTickMsg) tea.Cmd {
 	return m.anim.tick()
 }
 
-// onFilesLoaded installs the fd listing (keyed on openGen, so a query change
-// mid-load doesn't drop it). An empty query shows the full list; a pending
-// by-name query is applied now that the files exist; by-content queries are
-// driven by rg independently.
-func (m *searchModel) onFilesLoaded(msg filesLoadedMsg) {
+// onStreamBatch appends one streamed chunk (dropping a stale one from a previous
+// open) and re-applies the current view: an empty query shows everything so far,
+// a by-name query re-filters over the grown list, and a by-content query is left
+// to rg. done flips off the loading state.
+func (m *searchModel) onStreamBatch(msg fileBatchMsg) {
 	if !m.anim.isActive() || msg.gen != m.openGen || msg.root != m.root {
-		return
+		return // a stale batch (reopened), or the finder is closed
 	}
-	m.allFiles = m.allFiles[:0]
-	for _, p := range msg.files {
+	for _, p := range msg.batch {
 		m.allFiles = append(m.allFiles, fileMatch{path: p})
 	}
-	m.loading = false
+	if msg.done {
+		m.loading = false
+	}
 	switch {
 	case m.query == "":
 		m.files = m.allFiles
@@ -445,7 +450,7 @@ func (m *searchModel) refreshPreview() {
 
 // geometry lays out the two boxes. A wide screen puts the file list and the
 // preview side by side; a narrow one stacks them. Returns each box's inner width
-// and content-row count (content = rows drawn between the box's pad rows).
+// and content-row count (the content hugs the borders — no pad rows).
 func (m searchModel) geometry() (side bool, sW, sRows, pW, pRows int) {
 	if m.width >= 96 { // room for a list box + a useful preview box
 		side = true
@@ -454,7 +459,7 @@ func (m searchModel) geometry() (side bool, sW, sRows, pW, pRows int) {
 		sOuter := max(totalW*2/5, 32)
 		sW = max(sOuter-2, 20)
 		pW = max(totalW-sOuter-2, 20)
-		sRows = max(H-4, 4)
+		sRows = max(H-2, 4)
 		pRows = sRows
 		return
 	}
@@ -462,8 +467,8 @@ func (m searchModel) geometry() (side bool, sW, sRows, pW, pRows int) {
 	H := min(m.height-2, m.height*9/10)
 	sH := max(H*11/20, 8)
 	sW, pW = max(W-2, 20), max(W-2, 20)
-	sRows = max(sH-4, 4)
-	pRows = max(H-sH-4, 3)
+	sRows = max(sH-2, 4)
+	pRows = max(H-sH-2, 3)
 	return
 }
 
@@ -494,8 +499,8 @@ func (m searchModel) renderFull() string {
 	case m.byContent:
 		title = " Find"
 	}
-	sb := drawPopupBox(bc, title, m.hint(), m.listColumn(sW, sRows), sW)
-	pb := drawPopupBox(bc, m.previewTitle(), "", m.previewColumn(pW, pRows), pW)
+	sb := drawPopupBoxPad(bc, title, m.hint(), m.listColumn(sW, sRows), sW, false)
+	pb := drawPopupBoxPad(bc, m.previewTitle(), "", m.previewColumn(pW, pRows), pW, false)
 	if side {
 		h := strings.Count(sb, "\n") + 1 // a 1-col gap so the two boxes read as separate panels
 		gap := strings.TrimSuffix(strings.Repeat(" \n", h), "\n")
@@ -613,59 +618,75 @@ func (m searchModel) hint() string {
 
 // --- fd / ripgrep ---
 
-func listAllFilesCmd(gen int, root string, dirsOnly bool) tea.Cmd {
+// streamBatch is how many fd lines are gathered before a chunk is sent to the UI
+// — small enough that the first results show almost immediately.
+const streamBatch = 256
+
+// streamFilesCmd launches the fd stream in the background; batches arrive on ch
+// and are read by the app's waitSearch loop.
+func streamFilesCmd(gen int, root string, dirsOnly bool, ch chan<- fileBatchMsg) tea.Cmd {
 	return func() tea.Msg {
-		return filesLoadedMsg{gen: gen, root: root, files: listDirFiles(root, dirsOnly)}
+		go streamDirFiles(gen, root, dirsOnly, ch)
+		return nil
 	}
 }
 
-// listDirFiles lists entries under root via fd (Go walk fallback), streamed and
-// capped so a big tree can't stall the finder. Search / Find list files + dirs
-// including hidden ones; Goto (dirsOnly) lists only directories and skips hidden
-// ones, so a jump over $HOME isn't flooded by ~/.cache, ~/.local, and friends —
-// and its list is ordered newest-first (this runs in the load goroutine, so the
-// per-entry stat stays off the UI thread).
-func listDirFiles(root string, dirsOnly bool) []string {
-	var lines []string
-	got := false
-	if _, err := exec.LookPath("fd"); err == nil {
-		args := []string{"--type", "f", "--type", "d", "--hidden"}
-		if dirsOnly {
-			args = []string{"--type", "d"} // dirs only, no --hidden
-		}
-		args = append(args, "--strip-cwd-prefix")
-		for _, ig := range finderIgnoreDirs {
-			args = append(args, "--exclude", ig)
-		}
-		if l, ok := streamLines(root, "fd", args...); ok {
-			lines, got = l, true
-		}
+// streamDirFiles runs fd under root and streams its output to ch in batches,
+// tagged with gen+root so a reopen's stale batches are dropped. Search / Find
+// list files + dirs (incl. hidden); Goto (dirsOnly) lists directories only, no
+// hidden, with the ignore list applied. It stops at finderCap and always ends
+// with a done batch. No fd → a one-shot Go walk.
+func streamDirFiles(gen int, root string, dirsOnly bool, ch chan<- fileBatchMsg) {
+	send := func(batch []string, done bool) {
+		ch <- fileBatchMsg{gen: gen, root: root, batch: batch, done: done}
 	}
-	if !got {
-		lines = walkDirFiles(root, dirsOnly)
+	if _, err := exec.LookPath("fd"); err != nil {
+		send(walkDirFiles(root, dirsOnly), true)
+		return
 	}
+	args := []string{"--type", "f", "--type", "d", "--hidden"}
 	if dirsOnly {
-		sortByMtimeThenName(root, lines) // Goto default order
+		args = []string{"--type", "d"} // dirs only, no --hidden
 	}
-	return lines
-}
-
-// sortByMtimeThenName orders the rel paths under root by modification time,
-// newest first, breaking ties alphabetically — so Goto opens with the most
-// recently touched directories on top. Unreadable entries sort last (mtime 0).
-func sortByMtimeThenName(root string, paths []string) {
-	mtime := make(map[string]int64, len(paths))
-	for _, p := range paths {
-		if info, err := os.Stat(filepath.Join(root, p)); err == nil {
-			mtime[p] = info.ModTime().UnixNano()
+	args = append(args, "--strip-cwd-prefix")
+	for _, ig := range finderIgnoreDirs {
+		args = append(args, "--exclude", ig)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "fd", args...)
+	cmd.Dir = root
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		send(walkDirFiles(root, dirsOnly), true)
+		return
+	}
+	if err := cmd.Start(); err != nil {
+		send(walkDirFiles(root, dirsOnly), true)
+		return
+	}
+	sc := bufio.NewScanner(stdout)
+	sc.Buffer(make([]byte, 64*1024), 1<<20)
+	batch := make([]string, 0, streamBatch)
+	total := 0
+	for sc.Scan() {
+		line := sc.Text()
+		if line == "" {
+			continue
+		}
+		batch = append(batch, line)
+		total++
+		if len(batch) >= streamBatch {
+			send(batch, false)
+			batch = make([]string, 0, streamBatch)
+		}
+		if total >= finderCap {
+			break
 		}
 	}
-	sort.SliceStable(paths, func(i, j int) bool {
-		if a, b := mtime[paths[i]], mtime[paths[j]]; a != b {
-			return a > b // newer first
-		}
-		return paths[i] < paths[j] // tie → A→Z
-	})
+	cancel()
+	_ = cmd.Wait()
+	send(batch, true) // final (possibly empty) chunk marks done
 }
 
 func grepDebounceCmd(gen int, root, query string) tea.Cmd {

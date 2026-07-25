@@ -1,10 +1,7 @@
 package ui
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -20,9 +17,9 @@ func openedSearch(root string, files ...string) searchModel {
 func openedFinder(root string, byContent, dirsOnly bool, files ...string) searchModel {
 	m := newSearch()
 	m.setSize(120, 30)
-	m.open(root, 120, 30, byContent, dirsOnly)
-	m.anim.state = popupOpen // skip the open animation so update() is interactive
-	m.onFilesLoaded(filesLoadedMsg{gen: m.openGen, root: root, files: files})
+	m.open(root, 120, 30, byContent, dirsOnly, nil) // discard the stream cmd; inject below
+	m.anim.state = popupOpen                        // skip the open animation so update() is interactive
+	m.onStreamBatch(fileBatchMsg{gen: m.openGen, root: root, batch: files, done: true})
 	return m
 }
 
@@ -51,6 +48,29 @@ func TestSearchShowsAllFilesOnOpen(t *testing.T) {
 	}
 	if len(m.files) != 3 {
 		t.Fatalf("empty query should list all 3 files, got %d", len(m.files))
+	}
+}
+
+// TestStreamBatchesAccumulate: streamed batches append to the list, a stale-gen
+// batch is dropped, and the done batch ends the loading state.
+func TestStreamBatchesAccumulate(t *testing.T) {
+	m := newSearch()
+	m.setSize(120, 30)
+	m.open("/root", 120, 30, false, false, nil) // discard the stream cmd
+	m.anim.state = popupOpen
+	gen := m.openGen
+
+	m.onStreamBatch(fileBatchMsg{gen: gen, root: "/root", batch: []string{"a.go", "b.go"}})
+	if !m.loading || len(m.files) != 2 {
+		t.Fatalf("first (non-done) batch: loading=%v files=%d, want true/2", m.loading, len(m.files))
+	}
+	m.onStreamBatch(fileBatchMsg{gen: gen - 1, root: "/root", batch: []string{"stale.go"}})
+	if len(m.files) != 2 {
+		t.Errorf("a stale-gen batch must be dropped, got %d files", len(m.files))
+	}
+	m.onStreamBatch(fileBatchMsg{gen: gen, root: "/root", batch: []string{"c.go"}, done: true})
+	if m.loading || len(m.files) != 3 {
+		t.Errorf("after done: loading=%v files=%d, want false/3", m.loading, len(m.files))
 	}
 }
 
@@ -94,36 +114,6 @@ func TestFuzzyMatch(t *testing.T) {
 	mid, _ := fuzzyMatch("myapp.go", "app")
 	if pre <= mid {
 		t.Errorf("prefix match (%d) should outrank mid-word (%d)", pre, mid)
-	}
-}
-
-// TestSortByMtimeThenName: Goto's default order is newest-first, ties A→Z.
-func TestSortByMtimeThenName(t *testing.T) {
-	root := t.TempDir()
-	mk := func(name string, sec int64) {
-		p := filepath.Join(root, name)
-		if err := os.Mkdir(p, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		ts := time.Unix(sec, 0)
-		if err := os.Chtimes(p, ts, ts); err != nil {
-			t.Fatal(err)
-		}
-	}
-	mk("old", 1000)
-	mk("new", 3000)
-	mk("mid_a", 2000)
-	mk("mid_b", 2000) // same mtime as mid_a → tie broken alphabetically
-
-	paths := []string{"old", "new", "mid_b", "mid_a"}
-	sortByMtimeThenName(root, paths)
-
-	want := []string{"new", "mid_a", "mid_b", "old"}
-	for i := range want {
-		if paths[i] != want[i] {
-			t.Errorf("sorted = %v, want %v", paths, want)
-			break
-		}
 	}
 }
 

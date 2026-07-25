@@ -6,8 +6,7 @@
 - Goto (`go` in panel [2], or the Space menu's `[go]to`): a finder over `$HOME`
   that lists directories only and fuzzy-matches the path, so Enter teleports the
   active tab anywhere under home. The selected directory previews as its file
-  tree, and the list opens newest-first (by modification time, ties broken
-  alphabetically). Reached with the `go` chord.
+  tree. Reached with the `go` chord.
 - A user config file, `config.yaml`, next to `state.yaml` under the OS config dir
   (macOS: `~/Library/Application Support/filu/`), written with a commented
   template on first run (an existing file is never overwritten). `finder_cap`
@@ -61,6 +60,15 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- The finder (Search / Find / Goto) now streams its listing: results appear as
+  `fd` emits them, in fd's traversal order, instead of waiting for the whole walk
+  and then showing a sorted list. The first results show almost immediately and
+  filtering works while it loads. Goto is no longer ordered by modification time —
+  a filesystem mtime turned out to track "an OS/tool touched this" (a removed
+  Finder-sidebar entry, a dropped `.DS_Store`) rather than "you want to jump
+  here", so it was a poor signal; you type to find the directory instead.
+- The finder's list and preview boxes now hug their borders (no leading blank
+  row above the input or the preview), reclaiming those rows for content.
 - Jump-to-top is now the vim `gg` chord (was a single `g`) in panels [2]/[3]/[4]:
   a lone `g` arms and waits for the second key, matching kbu and freeing the `g`
   prefix for `go` (Goto). `G` still jumps to the bottom; the Space menu and the
