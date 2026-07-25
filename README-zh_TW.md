@@ -102,7 +102,7 @@ filu
 eval "$(filu shell)"
 ```
 
-靈感來自 [yazi](https://github.com/sxyazi/yazi)、[superfile](https://github.com/yorukot/superfile)、[ranger](https://github.com/ranger/ranger)、[lazygit](https://github.com/jesseduffield/lazygit)。以 Go 與 [Bubble Tea](https://github.com/charmbracelet/bubbletea) 打造。
+filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的 `cd_on_quit`,Search / Find / Goto finder 則取法 [LazyVim](https://github.com/LazyVim/LazyVim) 的 search。以 Go 與 [Bubble Tea](https://github.com/charmbracelet/bubbletea) 打造。
 
 ---
 
@@ -193,7 +193,7 @@ eval "$(filu shell)"
 
 按 `q` 會開一個 picker,列出 distinct 目錄 — 啟動目錄加上各分頁的當前目錄 — 離開時把你的 shell 工作目錄切到你選的那個(對標 superfile 的 `cd_on_quit`)。
 
-**為什麼需要一行 shell 設定(這是 OS 限制、不是偷懶):** 一個 process 只能改**自己**的工作目錄 — 沒有任何 syscall 能改**父** process(你的 shell)的 cwd。filu 是 shell 的子程序,自己 `cd` 影響不到 shell。唯一能原生改 shell cwd 的是 shell **內建指令**,而 filu 是外部 binary。所以 `yazi` / `lf` / `ranger` / `nnn` / `superfile` / `zoxide` 全都用同一招:程式寫檔、shell wrapper 讀檔再 `cd`。在 `~/.zshrc` / `~/.bashrc` 加上 wrapper:
+**為什麼需要一行 shell 設定(這是 OS 限制、不是偷懶):** 一個 process 只能改**自己**的工作目錄 — 沒有任何 syscall 能改**父** process(你的 shell)的 cwd。filu 是 shell 的子程序,自己 `cd` 影響不到 shell。唯一能原生改 shell cwd 的是 shell **內建指令**,而 filu 是外部 binary。所以標準解法是個兩段式 handshake:程式把選定目錄寫進檔案、shell wrapper 讀檔再 `cd`。在 `~/.zshrc` / `~/.bashrc` 加上 wrapper:
 
 ```sh
 eval "$(filu shell)"
