@@ -50,9 +50,10 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
   - 面板層級另有 structural 藍 / user lavender / popup 層色的三層階層。
 - **Zoom**:每個有分頁的面板都能 `z` 展開佔滿,把分頁攤成等寬並排欄。
 - **Carry-bucket 搬檔**:`p` pick 把檔案拿進 bucket(panel 2 會**打綠勾**標記,等同 multi-select)→ 切到目標目錄 → `c` copy / `m` move 落地;Carries tab 可 `p` 只落地子集。落地跑 goroutine,進度在 Tasks tab 即時更新。
-- **Search(`/`)/ Find(`f`),僅 panel 2**:filu 原生的 file finder(snacks / Telescope 形式,非 fzf binary),兩種模式共用同一個 picker —— snacks 樣式輸入列(peach chevron + blinking block cursor)、打字即時過濾、`jkud` 選、Enter 把 tab **潛進**選中檔案的所在子目錄。都以當前 tab 的**子樹**為範圍(遞迴)。
-  - **`/` Search**:對子樹**檔名**做 **fuzzy** 比對(純記憶體、依匹配品質排序),單欄、無預覽。
-  - **`f` Find**:用 `ripgrep` 對**內容**過濾出含關鍵字的檔案(去重),分割 popup(左清單 + 右預覽,窄寬改上下),預覽自動 scroll 到命中行並 lavender 反白。
+- **Search(`/`)/ Find(`f`)/ Goto(`go`),僅 panel 2**:filu 原生的 file finder(snacks / Telescope 形式,非 fzf binary)。三種模式共用同一個 picker —— snacks 樣式輸入列(peach chevron + blinking block cursor)、打字即時過濾、`jkud` 選、Enter reveal 到 panel 2。清單態按 `q` 回輸入、`Esc` 離開(同 app 內其他 popup)。三者都有右側預覽(窄寬改上下):
+  - **`/` Search**:當前 tab 子樹,對**檔名**做 **fuzzy** 比對(純記憶體、依匹配品質排序);預覽選中檔案(從頭)。
+  - **`f` Find**:當前 tab 子樹,用 `ripgrep` 對**內容**過濾出含關鍵字的檔案(去重);預覽自動 scroll 到命中行並 lavender 反白。
+  - **`go` Goto**:範圍是整個 `$HOME`、**只列目錄**、對**路徑**做 fuzzy;預覽選中目錄的 tree,Enter 把 tab **傳送**過去。清單依 **mtime(新→舊)→ 字母序**排。掃描上限與要跳過的目錄由 `config.yaml`(見[設定](#設定configyaml))控制。
 - **Popup**(全走 kbu form:line→expand 動畫 + 層色 border):`Space` 情境選單(§A.1)、`?` 全域說明(§A.2)、刪除確認、Rename / Add 輸入框(chevron prompt + 閃爍游標,rename 描述帶型別 icon + 顏色)。
 - **Session 持久化**:多開的分頁(dir + cursor)、focus、detail tab、carry bucket、pinned、task log 都存進 `state.yaml`,下次啟動接續。第一個分頁固定在啟動當下的 CWD、且開機時為 active(所以每次啟動都從當前目錄開始)。
 
@@ -70,7 +71,9 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 | `?` | 全域說明 |
 | `q` | 離開:跳選單選一個目錄 cd 過去(1–4 或 j/k+Enter) |
 
-面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`/` search(fuzzy 檔名)、`f` find(內容 grep + 預覽)、`t` 開新分頁、`w` 關分頁、`.` 顯示隱藏檔、`z` zoom。
+面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`/` search(fuzzy 檔名)、`f` find(內容 grep)、`go` goto(跳到 `$HOME` 下任一目錄)、`t` 開新分頁、`w` 關分頁、`.` 顯示隱藏檔、`z` zoom。
+
+跳頂用 vim 的 **`gg`**(單 `g` 待命、等第二鍵;對齊 kbu),`G` 跳底 —— 適用 panel `[2]`/`[3]`/`[4]`;`Space` 選單與 finder 清單維持單 `g`。
 
 ## cd-on-quit(離開時切換 shell 目錄)
 
@@ -91,6 +94,13 @@ eval "$(filu shell)"
 之後用 **`filu`** 啟動(**不是 `./filu`** —— wrapper 是攔截 `filu` 這個指令名的 shell function,帶路徑呼叫不會經過它)。
 
 原理:wrapper 給 filu 一個暫存檔路徑(`FILU_LAST_DIR_FILE`),filu 離開時把選定目錄寫進去,wrapper `cat` 出來再 `cd`。**沒裝 wrapper 也能正常用 filu**,只是離開時不會切目錄(選了 cd 目標也不會有反應,因為少了那段 shell 整合)。
+
+## 設定(`config.yaml`)
+
+filu 從 `<OS config dir>/filu/config.yaml`(macOS 是 `~/Library/Application Support/filu/config.yaml`,與 `state.yaml` 同目錄)讀使用者設定 —— `config.yaml` 是給你**手改**的,`state.yaml` 則是自動管理的 session 狀態,兩者分開。第一次啟動會寫一份帶註解的預設檔;已存在的檔不會被覆蓋。目前兩顆旋鈕:
+
+- **`finder_cap`**(預設 `50000`):finder(Search / Find / Goto)最多掃幾筆。Goto 會走整個 `$HOME`,所以這個值決定它的上限 —— 調大 = 更多目錄跳得到,但在很大的家目錄上每次打字的 fuzzy 過濾會變慢。覺得頓就調降,想要更廣就調高(每台機器效能不同,自己抓)。
+- **`ignore_dirs`**:finder 直接跳過的目錄名 —— 依賴快取、build 產物、IDE metadata、容器資料這些**不會 `cd` 進去**的地方。預設含 `node_modules`、`go/pkg`(Go module cache)、`OrbStack`、`Library`、`vendor`、`target`、`.git`、`.idea`、`.vscode`… 一般名字比對**任意層級**;含斜線(如 `go/pkg`)比對路徑。自由增刪;明確給空清單 `ignore_dirs: []` 代表不排除任何東西。
 
 ## 安裝
 

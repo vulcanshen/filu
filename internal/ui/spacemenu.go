@@ -159,18 +159,22 @@ func (m spaceMenu) prevSelectable(from int) int {
 }
 
 // bracketHotkey wraps the hotkey inside the label (vim-help style), preserving
-// the key's case so filu's C/c distinction reads correctly. When the key isn't a
-// letter of the label (punctuation, or a mismatch) it is prefixed instead so the
-// key is always visible. Multi-char keys (e.g. "Esc") render plain.
+// the key's case so filu's C/c distinction reads correctly. A key that appears in
+// the label is bracketed in place — a single letter ("[S]ort") or a chord that is
+// a substring ("[go]to"). A single key not in the label is prefixed ("[/] Search")
+// so it stays visible; a multi-char key not in the label (e.g. "Esc") renders plain.
 func bracketHotkey(label, key string) string {
-	if label == "" || key == "" || len(key) > 1 {
+	if label == "" || key == "" {
 		return label
 	}
 	idx := strings.Index(strings.ToUpper(label), strings.ToUpper(key))
 	if idx < 0 {
-		return "[" + key + "] " + label
+		if len(key) == 1 {
+			return "[" + key + "] " + label
+		}
+		return label
 	}
-	return label[:idx] + "[" + key + "]" + label[idx+1:]
+	return label[:idx] + "[" + key + "]" + label[idx+len(key):]
 }
 
 // renderFull draws the popup box, ported from kbu's panel2menu renderFullPopup:

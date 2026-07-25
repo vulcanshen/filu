@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -10,14 +13,14 @@ import (
 // list already loaded (skipping the async fd + open animation). Paths need not
 // exist — the preview just notes them unreadable, which the tests don't assert.
 func openedSearch(root string, files ...string) searchModel {
-	return openedFinder(root, true, files...)
+	return openedFinder(root, true, false, files...)
 }
 
-// openedFinder is openedSearch with an explicit mode (byContent).
-func openedFinder(root string, byContent bool, files ...string) searchModel {
+// openedFinder is openedSearch with an explicit mode (byContent / dirsOnly).
+func openedFinder(root string, byContent, dirsOnly bool, files ...string) searchModel {
 	m := newSearch()
 	m.setSize(120, 30)
-	m.open(root, 120, 30, byContent)
+	m.open(root, 120, 30, byContent, dirsOnly)
 	m.anim.state = popupOpen // skip the open animation so update() is interactive
 	m.onFilesLoaded(filesLoadedMsg{gen: m.openGen, root: root, files: files})
 	return m
@@ -94,8 +97,38 @@ func TestFuzzyMatch(t *testing.T) {
 	}
 }
 
+// TestSortByMtimeThenName: Goto's default order is newest-first, ties A→Z.
+func TestSortByMtimeThenName(t *testing.T) {
+	root := t.TempDir()
+	mk := func(name string, sec int64) {
+		p := filepath.Join(root, name)
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		ts := time.Unix(sec, 0)
+		if err := os.Chtimes(p, ts, ts); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mk("old", 1000)
+	mk("new", 3000)
+	mk("mid_a", 2000)
+	mk("mid_b", 2000) // same mtime as mid_a → tie broken alphabetically
+
+	paths := []string{"old", "new", "mid_b", "mid_a"}
+	sortByMtimeThenName(root, paths)
+
+	want := []string{"new", "mid_a", "mid_b", "old"}
+	for i := range want {
+		if paths[i] != want[i] {
+			t.Errorf("sorted = %v, want %v", paths, want)
+			break
+		}
+	}
+}
+
 func TestSearchByNameFiltersInMemory(t *testing.T) {
-	m := openedFinder("/root", false, "app.go", "search.go", "sub/app_test.go")
+	m := openedFinder("/root", false, false, "app.go", "search.go", "sub/app_test.go")
 
 	// typing narrows the list in-memory (no rg cmd, not "searching")
 	m, cmd := m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("app")})
@@ -143,9 +176,27 @@ func TestSearchModalFlow(t *testing.T) {
 		t.Error("Enter in nav mode should return a confirm cmd")
 	}
 
-	m, _ = m.update(tea.KeyMsg{Type: tea.KeyEsc})
+	// q (nav mode) returns to the input to refine the query
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	if m.mode != searchInput {
-		t.Error("Esc in nav mode should return to input mode")
+		t.Fatal("q in nav mode should return to input mode")
+	}
+
+	// Esc closes the finder from either mode (like every other popup) — never
+	// dropping back to input from nav.
+	if _, cmd := m.update(tea.KeyMsg{Type: tea.KeyEsc}); cmd == nil {
+		t.Error("Esc in input mode should close the finder")
+	}
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyEnter}) // back to nav
+	if m.mode != searchNav {
+		t.Fatal("Enter should switch back to nav mode")
+	}
+	m, cmd := m.update(tea.KeyMsg{Type: tea.KeyEsc})
+	if cmd == nil {
+		t.Error("Esc in nav mode should close the finder")
+	}
+	if m.mode != searchNav {
+		t.Error("Esc in nav mode must close, not drop back to input")
 	}
 }
 

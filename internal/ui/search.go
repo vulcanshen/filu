@@ -39,9 +39,6 @@ const (
 	searchNav                     // j/k/u/d move the result cursor
 )
 
-// searchCap bounds the file list so a huge tree / common word can't flood it.
-const searchCap = 10000
-
 // grepDebounce delays the re-filter after a keystroke, so a burst of typing runs
 // rg once (for the final query) instead of once per character.
 const grepDebounce = 120 * time.Millisecond
@@ -55,8 +52,9 @@ type fileMatch struct {
 }
 
 type searchModel struct {
-	root      string      // absolute search root (the active tab's dir)
-	byContent bool        // true = Find (rg content + preview); false = Search (name)
+	root      string      // absolute search root (the active tab's dir, or $HOME for goto)
+	byContent bool        // true = Find (rg content + preview); false = Search / Goto (name)
+	dirsOnly  bool        // true = Goto: list only directories (fd --type d), no hidden
 	query     string      // filter text
 	allFiles  []fileMatch // every file + dir under root (the empty-query list)
 	files     []fileMatch // current list: allFiles, or the name/content matches
@@ -112,19 +110,32 @@ func newSearch() searchModel {
 
 // openSearch opens the by-name finder (`/`) over the active tab's directory.
 func (m *AppModel) openSearch() tea.Cmd {
-	return m.search.open(m.cur().dir, m.width, m.height, false)
+	return m.search.open(m.cur().dir, m.width, m.height, false, false)
 }
 
 // openFind opens the by-content finder (`f`) over the active tab's directory.
 func (m *AppModel) openFind() tea.Cmd {
-	return m.search.open(m.cur().dir, m.width, m.height, true)
+	return m.search.open(m.cur().dir, m.width, m.height, true, false)
+}
+
+// openGoto opens the finder over $HOME listing only directories (fuzzy on the
+// path), so Enter teleports the active tab to any directory under home. The
+// chord `go` and the panel [2] Space menu both route here.
+func (m *AppModel) openGoto() tea.Cmd {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		home = m.cur().dir // no home known → fall back to the current dir
+	}
+	return m.search.open(home, m.width, m.height, false, true)
 }
 
 // open resets the finder over root and loads the full file list immediately.
-// byContent selects Find (rg + preview) vs Search (name-only, no preview).
-func (m *searchModel) open(root string, w, h int, byContent bool) tea.Cmd {
+// byContent selects Find (rg + preview) vs Search/Goto (name-only, no preview);
+// dirsOnly restricts the listing to directories (Goto).
+func (m *searchModel) open(root string, w, h int, byContent, dirsOnly bool) tea.Cmd {
 	m.root = root
 	m.byContent = byContent
+	m.dirsOnly = dirsOnly
 	m.query = ""
 	m.allFiles, m.files = nil, nil
 	m.cursor, m.scroll = 0, 0
@@ -135,7 +146,7 @@ func (m *searchModel) open(root string, w, h int, byContent bool) tea.Cmd {
 	m.preview, m.previewFor = previewModel{}, ""
 	m.blink, m.blinkGen = true, m.blinkGen+1
 	m.width, m.height = w, h
-	return tea.Batch(m.anim.open(), listAllFilesCmd(m.openGen, root), blinkTickCmd(m.blinkGen))
+	return tea.Batch(m.anim.open(), listAllFilesCmd(m.openGen, root, dirsOnly), blinkTickCmd(m.blinkGen))
 }
 
 // onBlink toggles the input cursor and reschedules, as long as this is still the
@@ -240,7 +251,9 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 	}
 	// nav mode
 	switch msg.String() {
-	case "esc": // back to the input
+	case "esc": // leave the finder, like every other popup in the app
+		return m, m.anim.close()
+	case "q": // back to the input to refine the query
 		m.mode = searchInput
 	case "enter": // confirm → reveal in the active tab, then close
 		if p := m.selectedAbs(); p != "" {
@@ -408,12 +421,11 @@ func (m searchModel) selectedLine() int {
 	return m.files[m.cursor].line
 }
 
-// refreshPreview loads the selected file's preview when the selection changes and
-// scrolls it so the matched line sits a few rows down (some context above).
+// refreshPreview loads the selected entry's preview when the selection changes.
+// All three finders preview: Search / Find show the selected file (Find scrolls
+// to the match line; Search has none, so it shows the top), Goto shows the
+// selected directory's tree.
 func (m *searchModel) refreshPreview() {
-	if !m.byContent {
-		return // the by-name finder shows no preview
-	}
 	abs := m.selectedAbs()
 	if abs != m.previewFor {
 		m.previewFor = abs
@@ -435,11 +447,6 @@ func (m *searchModel) refreshPreview() {
 // preview side by side; a narrow one stacks them. Returns each box's inner width
 // and content-row count (content = rows drawn between the box's pad rows).
 func (m searchModel) geometry() (side bool, sW, sRows, pW, pRows int) {
-	if !m.byContent { // by-name finder: a single list box, no preview
-		W := max(min(m.width-2, m.width*3/5), 32)
-		H := min(m.height-2, m.height*9/10)
-		return false, max(W-2, 20), max(H-4, 4), 0, 0
-	}
 	if m.width >= 96 { // room for a list box + a useful preview box
 		side = true
 		totalW := min(m.width-2, m.width*19/20)
@@ -474,19 +481,20 @@ func (m searchModel) previewTitle() string {
 
 func (m searchModel) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
-// renderFull draws the finder. Search (by-name) is a single list box; Find
-// (by-content) adds a preview box joined side by side (wide) or stacked (narrow).
+// renderFull draws the finder: a list box and a preview box joined side by side
+// (wide) or stacked (narrow). Find previews the file's content, Search the file
+// from the top, Goto the selected directory's tree.
 func (m searchModel) renderFull() string {
 	bc := popupLayerColor(1)
 	side, sW, sRows, pW, pRows := m.geometry()
 	title := " Search"
-	if m.byContent {
+	switch {
+	case m.dirsOnly:
+		title = " Goto"
+	case m.byContent:
 		title = " Find"
 	}
 	sb := drawPopupBox(bc, title, m.hint(), m.listColumn(sW, sRows), sW)
-	if !m.byContent {
-		return sb // by-name: list only, no preview
-	}
 	pb := drawPopupBox(bc, m.previewTitle(), "", m.previewColumn(pW, pRows), pW)
 	if side {
 		h := strings.Count(sb, "\n") + 1 // a 1-col gap so the two boxes read as separate panels
@@ -598,29 +606,66 @@ func (m searchModel) inputBar(w int) string {
 
 func (m searchModel) hint() string {
 	if m.mode == searchNav {
-		return " j/k/u/d · Enter=go · Esc=back "
+		return " j/k/u/d · Enter=go · q=input · Esc=close "
 	}
 	return " Enter=list · Esc=close "
 }
 
 // --- fd / ripgrep ---
 
-func listAllFilesCmd(gen int, root string) tea.Cmd {
+func listAllFilesCmd(gen int, root string, dirsOnly bool) tea.Cmd {
 	return func() tea.Msg {
-		return filesLoadedMsg{gen: gen, root: root, files: listDirFiles(root)}
+		return filesLoadedMsg{gen: gen, root: root, files: listDirFiles(root, dirsOnly)}
 	}
 }
 
-// listDirFiles lists files + dirs under root via fd (Go walk fallback), streamed
-// and capped so a big tree can't stall the finder.
-func listDirFiles(root string) []string {
+// listDirFiles lists entries under root via fd (Go walk fallback), streamed and
+// capped so a big tree can't stall the finder. Search / Find list files + dirs
+// including hidden ones; Goto (dirsOnly) lists only directories and skips hidden
+// ones, so a jump over $HOME isn't flooded by ~/.cache, ~/.local, and friends —
+// and its list is ordered newest-first (this runs in the load goroutine, so the
+// per-entry stat stays off the UI thread).
+func listDirFiles(root string, dirsOnly bool) []string {
+	var lines []string
+	got := false
 	if _, err := exec.LookPath("fd"); err == nil {
-		if lines, ok := streamLines(root, "fd", "--type", "f", "--type", "d",
-			"--hidden", "--strip-cwd-prefix", "--exclude", ".git"); ok {
-			return lines
+		args := []string{"--type", "f", "--type", "d", "--hidden"}
+		if dirsOnly {
+			args = []string{"--type", "d"} // dirs only, no --hidden
+		}
+		args = append(args, "--strip-cwd-prefix")
+		for _, ig := range finderIgnoreDirs {
+			args = append(args, "--exclude", ig)
+		}
+		if l, ok := streamLines(root, "fd", args...); ok {
+			lines, got = l, true
 		}
 	}
-	return walkDirFiles(root)
+	if !got {
+		lines = walkDirFiles(root, dirsOnly)
+	}
+	if dirsOnly {
+		sortByMtimeThenName(root, lines) // Goto default order
+	}
+	return lines
+}
+
+// sortByMtimeThenName orders the rel paths under root by modification time,
+// newest first, breaking ties alphabetically — so Goto opens with the most
+// recently touched directories on top. Unreadable entries sort last (mtime 0).
+func sortByMtimeThenName(root string, paths []string) {
+	mtime := make(map[string]int64, len(paths))
+	for _, p := range paths {
+		if info, err := os.Stat(filepath.Join(root, p)); err == nil {
+			mtime[p] = info.ModTime().UnixNano()
+		}
+	}
+	sort.SliceStable(paths, func(i, j int) bool {
+		if a, b := mtime[paths[i]], mtime[paths[j]]; a != b {
+			return a > b // newer first
+		}
+		return paths[i] < paths[j] // tie → A→Z
+	})
 }
 
 func grepDebounceCmd(gen int, root, query string) tea.Cmd {
@@ -670,7 +715,7 @@ func parseGrepLine(s string) (path string, line int, ok bool) {
 	return parts[0], n, true
 }
 
-// streamLines runs name+args with cwd=root, reading up to searchCap lines and
+// streamLines runs name+args with cwd=root, reading up to finderCap lines and
 // then killing the process — so we pay for the first N results, not a full scan.
 func streamLines(root, name string, args ...string) ([]string, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -690,7 +735,7 @@ func streamLines(root, name string, args ...string) ([]string, bool) {
 	for sc.Scan() {
 		if line := sc.Text(); line != "" {
 			out = append(out, line)
-			if len(out) >= searchCap {
+			if len(out) >= finderCap {
 				break
 			}
 		}
@@ -700,7 +745,13 @@ func streamLines(root, name string, args ...string) ([]string, bool) {
 	return out, true
 }
 
-func walkDirFiles(root string) []string {
+func walkDirFiles(root string, dirsOnly bool) []string {
+	ignore := make(map[string]bool, len(finderIgnoreDirs))
+	for _, ig := range finderIgnoreDirs {
+		if !strings.Contains(ig, "/") { // path-glob entries (e.g. go/pkg) are honoured by fd only
+			ignore[ig] = true
+		}
+	}
 	var out []string
 	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -709,13 +760,21 @@ func walkDirFiles(root string) []string {
 		if p == root {
 			return nil
 		}
-		if d.IsDir() && d.Name() == ".git" {
+		if d.IsDir() && ignore[d.Name()] {
 			return filepath.SkipDir
+		}
+		if dirsOnly {
+			if !d.IsDir() {
+				return nil // Goto lists directories only
+			}
+			if strings.HasPrefix(d.Name(), ".") {
+				return filepath.SkipDir // skip hidden dirs (and their subtrees), matching fd
+			}
 		}
 		if rel, e := filepath.Rel(root, p); e == nil {
 			out = append(out, rel)
 		}
-		if len(out) >= searchCap {
+		if len(out) >= finderCap {
 			return filepath.SkipAll
 		}
 		return nil
