@@ -70,6 +70,10 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- Panel [1]'s pinned directories now shorten with the same progressive scheme as
+  the header breadcrumb (full → front-segment initials → middle `…` keeping root
+  + folder name), instead of the old always-initials + left-truncate. The path
+  fitting is one shared helper now.
 - Panel [1]'s startup-directory entry is now labelled `LaunchDir` (was `CWD`),
   and the cd-on-quit picker names that destination with the same glyph + label
   (`<CWD glyph> LaunchDir`) instead of the terser `panel 1 (launch)`.
