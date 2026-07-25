@@ -6,26 +6,31 @@ import (
 	"testing"
 )
 
-// TestShortenPinPath checks the compact-path rendering for pinned dirs: home
-// folds to ~, every segment but the last is cut to its first rune, and the last
-// segment (the folder name) is kept whole.
-func TestShortenPinPath(t *testing.T) {
+// TestFitPath checks the compact-path rendering for pinned dirs, now shared with
+// the header breadcrumb: it fits when it fits, then abbreviates front segments to
+// their initial, then collapses the middle to … keeping root + current.
+func TestFitPath(t *testing.T) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		t.Skip("no home dir")
 	}
 	underHome := filepath.Join(home, "Documents", "sideproj", "filu")
 
-	cases := map[string]string{
-		underHome:        "~/D/s/filu",
-		home:             "~",
-		"/usr/local/bin": "/u/l/bin",
-		"/":              "/",
-		"/single":        "/single", // one segment past root stays whole
+	cases := []struct {
+		path string
+		w    int
+		want string
+	}{
+		{underHome, 100, "~/Documents/sideproj/filu"}, // fits → full
+		{underHome, 12, "~/D/s/filu"},                 // front initials
+		{underHome, 8, "~/…/filu"},                    // middle collapse: root + current
+		{"/usr/local/bin", 8, "/u/l/bin"},
+		{"/", 5, "/"},
+		{"/single", 20, "/single"}, // one segment past root stays whole
 	}
-	for in, want := range cases {
-		if got := shortenPinPath(in); got != want {
-			t.Errorf("shortenPinPath(%q) = %q, want %q", in, got, want)
+	for _, c := range cases {
+		if got := fitPath(c.path, c.w); got != c.want {
+			t.Errorf("fitPath(%q, %d) = %q, want %q", c.path, c.w, got, c.want)
 		}
 	}
 }

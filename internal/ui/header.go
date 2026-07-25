@@ -160,26 +160,23 @@ func renderCrumb(segs []string) string {
 	return b.String()
 }
 
-// breadcrumbSegments shrinks a directory's path segments to fit budget display
-// cells: full names first, then front-to-back initial abbreviation, then a
-// middle … collapse keeping root + tail, then the current segment alone (which
-// padDisp clips if even that overflows).
-func breadcrumbSegments(dir string, budget int) []string {
-	segs := pathSegments(dir)
-	fits := func(s []string) bool { return dispWidth(renderCrumb(s)) <= budget }
+// fitPathSegments shrinks path segments until fits reports they satisfy the
+// budget, in three progressive stages: full names first, then front-to-back
+// initial abbreviation (never the current / last segment), then a middle …
+// collapse keeping the root + as many tail segments as fit, then the current
+// segment alone. The fits predicate lets each caller measure in its own units —
+// the header measures rendered powerline width, panel [1] plain path width.
+func fitPathSegments(segs []string, fits func([]string) bool) []string {
 	if fits(segs) {
 		return segs
 	}
-	// stage 2: abbreviate front segments to their initial, one at a time; never
-	// the current (last) segment.
-	for i := 0; i < len(segs)-1; i++ {
+	for i := 0; i < len(segs)-1; i++ { // stage 2: front initials, one at a time
 		segs[i] = firstRune(segs[i])
 		if fits(segs) {
 			return segs
 		}
 	}
-	// stage 3: collapse the middle to …, keeping root + as many tail segments as
-	// fit (grow the tail until one more segment overflows).
+	// stage 3: collapse the middle to …, growing the tail until one more overflows.
 	var best []string
 	for tailStart := len(segs) - 1; tailStart >= 1; tailStart-- {
 		cand := append([]string{segs[0], "…"}, segs[tailStart:]...)
@@ -192,6 +189,33 @@ func breadcrumbSegments(dir string, budget int) []string {
 	if best != nil {
 		return best
 	}
-	// stage 4: not even root + … + current fits — show just the current segment.
-	return []string{segs[len(segs)-1]}
+	return []string{segs[len(segs)-1]} // stage 4: current segment alone
+}
+
+// breadcrumbSegments shrinks a directory's path segments to fit budget display
+// cells of rendered powerline width (see fitPathSegments); padDisp clips if even
+// the current segment alone overflows.
+func breadcrumbSegments(dir string, budget int) []string {
+	return fitPathSegments(pathSegments(dir), func(s []string) bool {
+		return dispWidth(renderCrumb(s)) <= budget
+	})
+}
+
+// joinSegs rebuilds a path string from segments, keeping a leading "/" root from
+// doubling (pathSegments emits "/" as its own first segment for absolute paths).
+func joinSegs(segs []string) string {
+	if len(segs) > 0 && segs[0] == "/" {
+		return "/" + strings.Join(segs[1:], "/")
+	}
+	return strings.Join(segs, "/")
+}
+
+// fitPath shortens a directory into a plain (home-folded) path string of at most
+// w display cells, using the same progressive scheme as the header breadcrumb
+// (full → front initials → middle …). Used by panel [1] so pinned dirs and the
+// header shorten the same way.
+func fitPath(dir string, w int) string {
+	return joinSegs(fitPathSegments(pathSegments(dir), func(s []string) bool {
+		return dispWidth(joinSegs(s)) <= w
+	}))
 }

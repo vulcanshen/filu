@@ -123,7 +123,7 @@ func (m placesModel) view(w, rows int, focused bool) string {
 			label := safeName(p.label)
 			if asPath {
 				avail := w - 1 - dispWidth(p.icon) - 2 // leading space + icon + 2 gaps
-				label = truncPathLeft(safeName(shortenPinPath(p.path)), avail)
+				label = fitPath(p.path, avail)         // same progressive shortening as the header
 			}
 			line := truncate(" "+p.icon+"  "+label, w)
 			switch {
@@ -151,18 +151,4 @@ func (m placesModel) view(w, rows int, focused bool) string {
 		lines = lines[:rows]
 	}
 	return strings.Join(lines, "\n")
-}
-
-// shortenPinPath compacts a pinned directory for panel [1]: the home dir folds
-// to ~, and every segment but the last is cut to its first rune, so
-// ~/Documents/sideproj/filu shows as ~/D/s/filu. The caller left-truncates it
-// with a leading … when it still overflows.
-func shortenPinPath(path string) string {
-	segs := strings.Split(shortPath(path), "/")
-	for i := 0; i < len(segs)-1; i++ {
-		if r := []rune(segs[i]); len(r) > 1 && segs[i] != ".." {
-			segs[i] = string(r[0])
-		}
-	}
-	return strings.Join(segs, "/")
 }

@@ -34,7 +34,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 - **header 路徑 bar**:當前分頁所在目錄的 **powerline 麵包屑**。開頭一個 chip 帶分頁羅馬數字 + folder glyph,整條從第一格起走 **blue → crust 漸層**(依 depth **連續內插**:root = blue、當前目錄 = crust);相鄰段落差夠大,capHard 三角分隔才切得出來。段內文字色**隨背景明度自動翻轉**(亮底深字、暗底亮字,依 WCAG 對比擇優),名稱在亮→暗全程都清楚。過長時從前段起縮成字首(`~/Documents/sideproj/filu` → `~/D/s/filu`),再不夠則中間 `…` 只留 root + 末段。
 - **top status bar**:header 下方一列,顯示**當前 tab 目錄本身**的狀態 —— `perm · owner:group · item count · hidden count`(左)+ `free / total` 磁碟(右),eza 配色(權限 `r`黃/`w`紅/`x`綠、owner 黃、size 綠)。全部在目錄載入時算一次(1 個 `stat` + 1 個 `statfs`,非遞迴)、counts 從已載入清單直接數,**每 frame 零 I/O**;不放會卡的遞迴目錄大小。
 
-- **[1] pin**:系統 Places(LaunchDir / Home / 根目錄)+ 使用者釘選的目錄(`Pinned` 標題為 lavender)。釘選項目以**縮減 path** 呈現(`~/Documents/sideproj/filu` → `~/D/s/filu`,過長則前綴變 `…`)。純導覽 —— 選一個,`[2]` 就跳過去。
+- **[1] pin**:系統 Places(LaunchDir / Home / 根目錄)+ 使用者釘選的目錄(`Pinned` 標題為 lavender)。釘選項目以**縮減 path** 呈現,和 header 麵包屑**同一套漸進縮法**(空間夠全顯示 → 不夠從前段起逐段縮首字元 `~/D/s/filu` → 再不夠中間 `…` 只留 root + 末段)。純導覽 —— 選一個,`[2]` 就跳過去。
 - **[2] 清單**:當前目錄的檔案,1–3 個目錄分頁(各自獨立 CWD + cursor,標籤為羅馬數字 `Ⅰ`/`Ⅱ`/`Ⅲ`;預設開一個,`t` 在當前目錄開新分頁、`w` 關閉當前分頁)。每列 `<icon> <檔名>`,icon 與配色照 eza(見下方[配色](#功能))。檔案操作主戰場。
 - **[3] detail**:`Preview` / `Meta` 兩個 tab。Preview 依型別分五類呈現;Meta 是 `stat` 等級的詳細資訊。這是參考視角,失焦也不 dim。按 `y` 開 yank 視窗(vim 式 cursor + `v` visual selection):有選取時 `y` 複製選取內容,沒選取則複製全部。
 - **[4] carry**:`Carries`(搬運暫存區)/ `Tasks`(複製/搬移任務,含 running / done / pending / error 狀態)兩個 tab。
