@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 ### Added
+- Breadcrumb (`b` in panel [2], or the Space menu's `[b]readcrumb`): a popup
+  listing the active tab's ancestor directories (root at top, current at the
+  bottom); `j`/`k` move, Enter jumps the tab up to that ancestor, Esc/`b`/Space
+  close. The cursor starts on the current level, so Enter is a no-op until you
+  move.
 - Goto (`go` in panel [2], or the Space menu's `[go]to`): a finder over `$HOME`
   that lists directories only and fuzzy-matches the path, so Enter teleports the
   active tab anywhere under home. The selected directory previews as its file
@@ -60,6 +65,13 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- The header path bar is now a powerline breadcrumb instead of a flat path: a
+  Lavender folder + active-tab-numeral chip, then one chip per path segment
+  coloured along a continuous lavender→sapphire gradient (the ZLC layer scale
+  interpolated by depth, current directory = Sapphire). When it overflows, front
+  segments shrink to their initial (`~/Documents/x` → `~/D/x`), then the middle
+  collapses to `…` keeping root + tail. A horizontal rule now separates the
+  header from the panel grid.
 - The finder (Search / Find / Goto) now streams its listing: results appear as
   `fd` emits them, in fd's traversal order, instead of waiting for the whole walk
   and then showing a sorted list. The first results show almost immediately and

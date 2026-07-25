@@ -38,12 +38,12 @@ func (m AppModel) View() string {
 	}
 
 	w, h := m.width, m.height
-	midH := h - 2 // minus header + footer rows
+	midH := h - 3 // minus header + separator + footer rows
 	if midH < 3 || w < 24 {
 		return "terminal too small"
 	}
 
-	out := joinV(m.headerBar(w), m.middleView(w, midH), m.footerBar(w))
+	out := joinV(m.headerBar(w), m.separatorBar(w), m.middleView(w, midH), m.footerBar(w))
 	// Compose-don't-Replace: overlay popups onto the canvas (last = on top).
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
@@ -68,6 +68,9 @@ func (m AppModel) View() string {
 	}
 	if m.search.isActive() { // fuzzy finder over the panels
 		out = overlay.Composite(m.search.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.breadcrumb.isActive() { // ancestor-jump popup over the panels
+		out = overlay.Composite(m.breadcrumb.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.pty.isRendered() { // embedded editor sits above the panels
 		out = overlay.Composite(m.pty.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
@@ -294,10 +297,12 @@ func (m AppModel) panelBox(focused bool, title string, w, h int, body string) st
 	return b.String()
 }
 
-func (m AppModel) headerBar(w int) string {
-	glyph := string(rune(0xf07c)) // nf-fa-folder-open
-	return lipgloss.NewStyle().Foreground(userColor).
-		Render(padDisp(" "+glyph+" "+safeName(shortPath(m.active().dir)), w))
+// separatorBar is the horizontal rule between the powerline header and the panel
+// grid. The header's chips otherwise read as a panel title butting against panel
+// [1]/[2]'s top border; the rule sets it apart as its own content row. Dim
+// (surface2) so it recedes to the same tier as unfocused panel chrome.
+func (m AppModel) separatorBar(w int) string {
+	return lipgloss.NewStyle().Foreground(borderDim).Render(strings.Repeat("─", w))
 }
 
 func (m AppModel) footerBar(w int) string {
