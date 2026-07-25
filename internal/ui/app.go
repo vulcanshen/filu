@@ -86,6 +86,7 @@ type AppModel struct {
 	pty           *ptyPopup         // embedded editor; pointer — shared with its read goroutine
 	search        searchModel       // native fuzzy file/dir finder
 	searchCh      chan fileBatchMsg // finder's fd stream → UI
+	breadcrumb    breadcrumbPopup   // [b] ancestor-directory jump popup
 	tasks         []landTask        // land operations (Tasks tab: running + log)
 	taskCh        chan landMsg      // land goroutines → UI
 	nextTaskID    int
@@ -110,7 +111,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
@@ -211,12 +212,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.detailYank.setSize(msg.Width, msg.Height)
 		m.pty.setSize(msg.Width, msg.Height)
 		m.search.setSize(msg.Width, msg.Height)
+		m.breadcrumb.setSize(msg.Width)
 		m.cur().ensureVisible(m.listRows()) // scroll a restored cursor into view
 		if m.preview.kind == previewImage && m.previewWidth() != oldW {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case tea.KeyMsg:
 		if m.pty.isActive() { // the embedded editor owns every keystroke
 			return m, m.pty.update(msg)
@@ -235,6 +237,20 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			m.search, cmd = m.search.update(msg)
+			return m, cmd
+		}
+		if m.breadcrumb.isActive() { // ancestor-jump popup owns the keyboard while open
+			if !m.breadcrumb.isInteractive() {
+				return m, nil
+			}
+			var path string
+			var cmd tea.Cmd
+			m.breadcrumb, path, cmd = m.breadcrumb.update(msg)
+			if path != "" { // Enter on a level: jump the active tab there
+				m.revealPath(path)
+				m.cur().ensureVisible(m.listRows())
+				m.refreshPreview()
+			}
 			return m, cmd
 		}
 		if m.help.isActive() { // modal cheatsheet
@@ -462,6 +478,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.openFind()
 	case "go": // Goto: fuzzy-jump this tab to any directory under $HOME (chord `go`)
 		cmd = m.openGoto()
+	case "b": // Breadcrumb: jump this tab up to any ancestor directory
+		cmd = m.breadcrumb.open(m.cur().dir)
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
 		m.toggleZoom(panelList)
 	}
@@ -665,7 +683,8 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		panelOps = append(panelOps,
 			menuItem{label: "Search", key: "/", hint: "find a file by name in this tree"},
 			menuItem{label: "Find", key: "f", hint: "find a file by content (grep) + preview"},
-			menuItem{label: "Goto", key: "go", hint: "jump this tab to any directory under home"})
+			menuItem{label: "Goto", key: "go", hint: "jump this tab to any directory under home"},
+			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
 		if len(m.tabs) < maxTabs {
 			panelOps = append(panelOps,
 				menuItem{label: "Tab", key: "t", hint: "open a new tab in this directory"})

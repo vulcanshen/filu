@@ -19,7 +19,8 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 四個面板 + 上下兩條 content row。版面 grid 為 `[1][2][3] / [1][2][3] / [4][4][3]`:
 
 ```
- [] ~/Documents/sideproj/filu                         ← 路徑 bar([]=folder glyph)
+  Ⅱ ⟩ ~ ⟩ Documents ⟩ sideproj ⟩ filu               ← header:powerline 麵包屑
+─────────────────────────────────────────────────────  ← 分隔線
 ┌──────────┬──────────────────┬──────────────────────┐
 │ [1] pin  │ [2] 檔案清單     │ [3] Preview │ Meta    │
 │  Local   │  （1–3 個分頁）  │                       │
@@ -29,6 +30,8 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 └─────────────────────────────┴──────────────────────┘
  space menu   ? help   tab/1-4 panels   q quit         ← footer
 ```
+
+- **header 路徑 bar**:當前分頁所在目錄的 **powerline 麵包屑**。開頭一個 chip 帶 folder glyph + 分頁羅馬數字(lavender),接著每層目錄一段,顏色沿 ZLC 的 lavender→sapphire 漸層**連續內插**(層數決定色碼,當前目錄最深 = Sapphire)。過長時從前段起縮成字首(`~/Documents/sideproj/filu` → `~/D/s/filu`),再不夠則中間 `…` 只留 root + 末段。header 與面板之間有一條水平分隔線。
 
 - **[1] pin**:系統 Places(CWD / Home / 根目錄)+ 使用者釘選的目錄(`Pinned` 標題為 lavender)。釘選項目以**縮減 path** 呈現(`~/Documents/sideproj/filu` → `~/D/s/filu`,過長則前綴變 `…`)。純導覽 —— 選一個,`[2]` 就跳過去。
 - **[2] 清單**:當前目錄的檔案,1–3 個目錄分頁(各自獨立 CWD + cursor,標籤為羅馬數字 `Ⅰ`/`Ⅱ`/`Ⅲ`;預設開一個,`t` 在當前目錄開新分頁、`w` 關閉當前分頁)。每列 `<icon> <檔名>`,icon 與配色照 eza(見下方[配色](#功能))。檔案操作主戰場。
@@ -71,7 +74,7 @@ filu 是一個 TUI 檔案管理器,定位對標 yazi / superfile,但把重心放
 | `?` | 全域說明 |
 | `q` | 離開:跳選單選一個目錄 cd 過去(1–4 或 j/k+Enter) |
 
-面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`/` search(fuzzy 檔名)、`f` find(內容 grep)、`go` goto(跳到 `$HOME` 下任一目錄)、`t` 開新分頁、`w` 關分頁、`.` 顯示隱藏檔、`z` zoom。
+面板 `[2]` 的字母 hotkey(皆列在 `Space` 選單裡):`p` pick(拿進 carries bucket)、`y` yank(複製 full path 到剪貼簿)、`e` edit(文字檔在內嵌 `$EDITOR` 編輯,非文字走系統開啟)、`c` copy(落地複製)、`m` move(落地搬移)、`P` pin、`r` rename、`a` add、`D` delete、`S` sort、`/` search(fuzzy 檔名)、`f` find(內容 grep)、`go` goto(跳到 `$HOME` 下任一目錄)、`b` breadcrumb(彈出祖先目錄鏈、選一層跳上去)、`t` 開新分頁、`w` 關分頁、`.` 顯示隱藏檔、`z` zoom。
 
 跳頂用 vim 的 **`gg`**(單 `g` 待命、等第二鍵;對齊 kbu),`G` 跳底 —— 適用 panel `[2]`/`[3]`/`[4]`;`Space` 選單與 finder 清單維持單 `g`。
 
