@@ -70,6 +70,9 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- The Carries tab's pick mark (an item in the land subset) now uses its own
+  check-circle glyph, distinct from panel [2]'s carry-bucket mark, so the two
+  "picked" states never read as the same thing.
 - Panel [3]'s Preview and Meta tabs are split into two separate panels: `[3]`
   Preview keeps the right column's top 2/3, and a new `[5]` Meta panel takes the
   bottom 1/3 (mirroring the `[1]`/`[2]` over `[4]` split on the left). There is
