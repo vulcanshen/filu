@@ -1,77 +1,50 @@
 package ui
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
 
-// hexRGB parses "#rrggbb" into its three channel ints.
-func hexRGB(t *testing.T, s string) (int, int, int) {
-	t.Helper()
-	var r, g, b int
-	if _, err := fmt.Sscanf(s, "#%02x%02x%02x", &r, &g, &b); err != nil {
-		t.Fatalf("bad hex %q: %v", s, err)
-	}
-	return r, g, b
-}
-
-func TestGradientColorStops(t *testing.T) {
-	// Endpoints are exact; the interior stops match kbu's published Lavenphire
-	// scale to within ±1 LSB (naive sRGB vs linear-RGB lerp).
-	cases := []struct {
-		t         float64
-		want      string
-		tolerance int
-	}{
-		{0.0, "#b4befe", 0},  // Lavender anchor
-		{0.25, "#a4c0fa", 1}, // Lavenphire25
-		{0.50, "#94c3f5", 1}, // Lavenphire50
-		{0.75, "#84c5f0", 1}, // Lavenphire75
-		{1.0, "#74c7ec", 0},  // Sapphire ceiling
-	}
-	for _, c := range cases {
-		got := string(gradientColor(c.t))
-		gr, gg, gb := hexRGB(t, got)
-		wr, wg, wb := hexRGB(t, c.want)
-		off := abs(gr-wr) + abs(gg-wg) + abs(gb-wb)
-		if off > c.tolerance {
-			t.Errorf("gradientColor(%.2f) = %s, want ~%s (off %d > tol %d)", c.t, got, c.want, off, c.tolerance)
-		}
-	}
-}
-
-func abs(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
-}
-
-// TestGradientColorMonotone: blue must fall monotonically from Lavender→Sapphire
-// (254→236) as t rises, confirming the interpolation never reverses the z-axis.
-func TestGradientColorMonotone(t *testing.T) {
-	prev := 999
-	for i := 0; i <= 10; i++ {
-		_, _, b := hexRGB(t, string(gradientColor(float64(i)/10)))
-		if b > prev {
-			t.Fatalf("blue rose at t=%.1f (%d > %d): z-axis reversed", float64(i)/10, b, prev)
-		}
-		prev = b
-	}
-}
-
 func TestCrumbColorEndpoints(t *testing.T) {
-	// Root of a multi-segment path = Lavenphire25 (t=0.25); current = Sapphire.
-	if got := string(crumbColor(0, 4)); got != string(gradientColor(0.25)) {
-		t.Errorf("crumbColor(0,4) = %s, want Lavenphire25 %s", got, gradientColor(0.25))
+	// Root of a path = blue; current = crust; a single-segment path is the crust
+	// (current) endpoint.
+	if got := string(crumbColor(0, 4)); got != "#89b4fa" {
+		t.Errorf("crumbColor(0,4) = %s, want blue #89b4fa (root)", got)
 	}
-	if got := string(crumbColor(3, 4)); got != string(gradientColor(1)) {
-		t.Errorf("crumbColor(3,4) = %s, want Sapphire %s", got, gradientColor(1))
+	if got := string(crumbColor(3, 4)); got != "#11111b" {
+		t.Errorf("crumbColor(3,4) = %s, want crust #11111b (current)", got)
 	}
-	// Single-segment path (root == current) is the Sapphire endpoint.
-	if got := string(crumbColor(0, 1)); got != string(gradientColor(1)) {
-		t.Errorf("crumbColor(0,1) = %s, want Sapphire %s", got, gradientColor(1))
+	if got := string(crumbColor(0, 1)); got != "#11111b" {
+		t.Errorf("crumbColor(0,1) = %s, want crust (single segment = current)", got)
+	}
+}
+
+// TestCrumbGradientMonotone: perceived luminance must fall monotonically from
+// the blue root to the crust current, so the z-axis never reverses across depth.
+func TestCrumbGradientMonotone(t *testing.T) {
+	lum := func(t float64) int { r, g, b := crumbRGB(t); return (299*r + 587*g + 114*b) / 1000 }
+	prev := 1 << 30
+	for i := 0; i <= 10; i++ {
+		if l := lum(float64(i) / 10); l > prev {
+			t.Fatalf("luminance rose at t=%.1f (%d > %d)", float64(i)/10, l, prev)
+		} else {
+			prev = l
+		}
+	}
+}
+
+// TestCrumbTextFlips: dark text on the bright blue end (and still dark a third of
+// the way in — the flip must not come too early), light text on the dark crust
+// end, so the segment name never renders dark-on-dark.
+func TestCrumbTextFlips(t *testing.T) {
+	if got := string(crumbTextAt(0)); got != baseHex {
+		t.Errorf("crumbTextAt(0) = %s, want dark %s on the blue end", got, baseHex)
+	}
+	if got := string(crumbTextAt(0.3)); got != baseHex {
+		t.Errorf("crumbTextAt(0.3) = %s, want dark %s (flip must not be too early)", got, baseHex)
+	}
+	if got := string(crumbTextAt(1)); got != crumbLightText {
+		t.Errorf("crumbTextAt(1) = %s, want light %s on the crust end", got, crumbLightText)
 	}
 }
 
