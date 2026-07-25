@@ -70,6 +70,9 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- Panel [1]'s startup-directory entry is now labelled `LaunchDir` (was `CWD`),
+  and the cd-on-quit picker names that destination with the same glyph + label
+  (`<CWD glyph> LaunchDir`) instead of the terser `panel 1 (launch)`.
 - The panel [2] pick mark is now a filled check-circle glyph (was a plain tick),
   and every row reserves the mark cell plus a following space — so picking a file
   only swaps blank↔glyph in place: the icon no longer shifts or butts against the

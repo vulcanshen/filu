@@ -50,7 +50,7 @@ func TestQuitTargetsDedup(t *testing.T) {
 	if tg[0].dir != "/a" || tg[1].dir != "/b" {
 		t.Errorf("targets = %+v, want /a then /b", tg)
 	}
-	if tg[0].hint != "panel 1 (launch)" {
+	if tg[0].hint != iconCWD+" LaunchDir" {
 		t.Errorf("launch hint = %q", tg[0].hint)
 	}
 	if tg[1].hint != "tab "+tabNumeral(1) { // /b first appeared as tab Ⅱ (index 1)

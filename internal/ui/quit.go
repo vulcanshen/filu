@@ -41,7 +41,7 @@ func (m AppModel) quitTargets() []quitTarget {
 		seen[dir] = true
 		out = append(out, quitTarget{dir, hint})
 	}
-	add(m.launchDir, "panel 1 (launch)")
+	add(m.launchDir, iconCWD+" LaunchDir") // panel [1]'s CWD entry, same glyph + label
 	for i, t := range m.tabs {
 		add(t.dir, "tab "+tabNumeral(i))
 	}
