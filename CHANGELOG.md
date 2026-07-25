@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 ### Added
+- A top status bar under the header shows the active tab's directory status:
+  eza-coloured permissions (read yellow, write red, execute green), owner:group,
+  item and hidden counts, and free / total disk on the right. The stat and
+  statfs are computed once when the directory loads (never per frame — no
+  recursive size sum), and the counts read live from the loaded list.
 - Breadcrumb (`b` in panel [2], or the Space menu's `[b]readcrumb`): a popup
   listing the active tab's ancestor directories (root at top, current at the
   bottom); `j`/`k` move, Enter jumps the tab up to that ancestor, Esc/`b`/Space
@@ -72,8 +77,7 @@
   the triangle separators visible between adjacent segments, and each segment's
   text flips dark/light by WCAG contrast so names stay legible across the span.
   When it overflows, front segments shrink to their initial (`~/Documents/x` →
-  `~/D/x`), then the middle collapses to `…` keeping root + tail. A horizontal
-  rule separates the header from the panel grid.
+  `~/D/x`), then the middle collapses to `…` keeping root + tail.
 - The finder (Search / Find / Goto) now streams its listing: results appear as
   `fd` emits them, in fd's traversal order, instead of waiting for the whole walk
   and then showing a sorted list. The first results show almost immediately and

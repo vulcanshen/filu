@@ -144,7 +144,7 @@ func treeLines(root string, maxDepth int) []string {
 	var lines []string
 	var walk func(dir, prefix string, depth int)
 	walk = func(dir, prefix string, depth int) {
-		items, _ := readEntries(dir, false)
+		items, _, _ := readEntries(dir, false)
 		for i, it := range items {
 			if len(lines) >= treeMaxLines {
 				return
