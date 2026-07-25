@@ -3,6 +3,19 @@
 ## [Unreleased]
 
 ### Added
+- Goto (`go` in panel [2], or the Space menu's `[go]to`): a finder over `$HOME`
+  that lists directories only and fuzzy-matches the path, so Enter teleports the
+  active tab anywhere under home. The selected directory previews as its file
+  tree, and the list opens newest-first (by modification time, ties broken
+  alphabetically). Reached with the `go` chord.
+- A user config file, `config.yaml`, next to `state.yaml` under the OS config dir
+  (macOS: `~/Library/Application Support/filu/`), written with a commented
+  template on first run (an existing file is never overwritten). `finder_cap`
+  (default 50000) bounds how many entries a finder scans — Goto walks all of
+  `$HOME`, so raise it for reach or lower it if the fuzzy filter lags on a big
+  home. `ignore_dirs` lists tool-generated directories the finders skip
+  (`node_modules`, the Go module cache `go/pkg`, `OrbStack`, `Library`, `.git`,
+  `.idea`, …); an entry matches that name anywhere, or a path when it has a slash.
 - File-type icons now come from eza's full icon table (~760 glyphs, generated
   from eza's source). Every row in panel [2], the rename popup, and the Search
   list shows its eza glyph — languages, config files, archives, media, and
@@ -48,8 +61,19 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
-- Search (`/`, panel [2]) is now a by-name fuzzy finder — a single list box, no
-  preview — and content search moved to a new Find (`f`). Both share the same
+- Jump-to-top is now the vim `gg` chord (was a single `g`) in panels [2]/[3]/[4]:
+  a lone `g` arms and waits for the second key, matching kbu and freeing the `g`
+  prefix for `go` (Goto). `G` still jumps to the bottom; the Space menu and the
+  finder result list keep a single `g`.
+- Every finder now shows a preview. Search (`/`) gained the split list+preview
+  that Find (`f`) already had — it previews the selected file from the top — so
+  Search and Find now differ only in what they match (name vs content), not in
+  layout. (Goto previews the selected directory's tree.)
+- In a finder's result list, `Esc` now leaves the finder — matching every other
+  popup in the app — and `q` returns to the input to refine the query. Previously
+  `Esc` in the list dropped back to the input, which read inconsistently.
+- Search (`/`, panel [2]) is now a by-name fuzzy finder and content search moved
+  to a new Find (`f`). Both share the same
   picker over the current tab's subtree: `/` fuzzy-matches file names in memory
   and ranks the best matches first (word-boundary, contiguous, and basename hits
   score highest); `f` filters by content via `ripgrep` and keeps the split

@@ -64,6 +64,7 @@ type AppModel struct {
 	detailScroll  int         // panel [3] content scroll offset
 	tabs          []listModel // panel [2]'s directory tabs (1..maxTabs, user-created)
 	tab           int         // active tab index
+	pendingG      bool        // vim g-prefix chord: a lone g is armed, awaiting the second key
 	preview       previewModel
 	places        placesModel
 	carry         carryModel
@@ -103,6 +104,7 @@ const maxTabs = 3
 // single tab at the current dir; extra tabs the user created last session are
 // restored by applyState.
 func New() AppModel {
+	loadConfig() // apply config.yaml (finder cap) before any finder can open
 	dir, err := os.Getwd()
 	if err != nil {
 		dir = "/"
@@ -304,6 +306,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
+		// vim g-prefix chord for the focused panel (kbu parity). Every popup above
+		// owns the keyboard while open, so we only reach here for the main panels: a
+		// lone g arms and waits, then `gg` jumps to the top (falling through to the
+		// handlers' `case "g"`) and `go` opens goto. Any other second key cancels and
+		// runs normally. (The Space menu and the finder keep a single g, as they do
+		// in kbu; the panel [3] yank viewport carries its own gg.)
+		if m.pendingG {
+			m.pendingG = false
+			if msg.String() == "o" && m.focus == panelList { // `go` → goto
+				return m, m.handleListKey("go")
+			}
+		} else if msg.String() == "g" {
+			m.pendingG = true
+			return m, nil
+		}
 		switch msg.String() {
 		case "ctrl+c": // hard quit — abandon any running task, no cd-on-quit
 			return m, m.shutdown()
@@ -435,6 +452,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.openSearch()
 	case "f": // Find: by-content finder (rg) with preview, reveal the pick here
 		cmd = m.openFind()
+	case "go": // Goto: fuzzy-jump this tab to any directory under $HOME (chord `go`)
+		cmd = m.openGoto()
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
 		m.toggleZoom(panelList)
 	}
@@ -637,7 +656,8 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		panelOps = append(panelOps,
 			menuItem{label: "Search", key: "/", hint: "find a file by name in this tree"},
-			menuItem{label: "Find", key: "f", hint: "find a file by content (grep) + preview"})
+			menuItem{label: "Find", key: "f", hint: "find a file by content (grep) + preview"},
+			menuItem{label: "Goto", key: "go", hint: "jump this tab to any directory under home"})
 		if len(m.tabs) < maxTabs {
 			panelOps = append(panelOps,
 				menuItem{label: "Tab", key: "t", hint: "open a new tab in this directory"})
