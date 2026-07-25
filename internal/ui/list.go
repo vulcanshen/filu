@@ -248,11 +248,10 @@ func (m listModel) view(w, rows int, focused bool, carried map[string]bool) stri
 	var b strings.Builder
 	b.WriteString(hdr + "\n")
 	end := min(m.offset+rows, len(m.items))
-	// The leftmost cell is the carry mark: a tick when the file is in the bucket,
-	// otherwise blank. Reserving exactly the tick's display width keeps ticked and
-	// un-ticked rows aligned, and on a normal font it is one cell — so a plain row
-	// reads " <icon> <name>", the original layout, with the tick sitting where
-	// that leading space was.
+	// Every row starts with a fixed mark cell — the pick glyph when the file is in
+	// the bucket, otherwise blank of the same display width — then a space, then
+	// the icon. Reserving the cell AND keeping the space means picking only swaps
+	// blank↔glyph: the icon never shifts and the glyph never butts against it.
 	markW := dispWidth(pickGlyph)
 	blank := strings.Repeat(" ", markW)
 	for i := m.offset; i < end; i++ {
@@ -266,7 +265,7 @@ func (m listModel) view(w, rows int, focused bool, carried map[string]bool) stri
 			if inBucket {
 				lead = pickGlyph
 			}
-			line = cursorStyle.Render(padDisp(lead+body, w))
+			line = cursorStyle.Render(padDisp(lead+" "+body, w))
 		default:
 			lead := blank
 			if inBucket {
@@ -277,7 +276,7 @@ func (m listModel) view(w, rows int, focused bool, carried map[string]bool) stri
 			} else {
 				body = dimStyle.Render(body) // unfocused panel: recede
 			}
-			line = truncate(lead+body, w)
+			line = truncate(lead+" "+body, w)
 		}
 		b.WriteString(line)
 		if i < end-1 {

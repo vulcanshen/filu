@@ -70,6 +70,10 @@
   on its entry. Bursts are debounced into a single reload.
 
 ### Changed
+- The panel [2] pick mark is now a filled check-circle glyph (was a plain tick),
+  and every row reserves the mark cell plus a following space — so picking a file
+  only swaps blank↔glyph in place: the icon no longer shifts or butts against the
+  mark.
 - The header path bar is now a powerline breadcrumb instead of a flat path: a
   tab-numeral + folder-glyph chip, then one chip per path segment coloured along
   a continuous blue→crust gradient (interpolated by depth: root = blue, current
