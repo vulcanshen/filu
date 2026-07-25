@@ -120,7 +120,7 @@ func centeredNote(w, rows int, text string) string {
 
 // pickGlyph marks a picked item — a distinct signal from the lavender "in
 // bucket" colour (§B: one element, one semantic).
-var pickGlyph = string(rune(0xf00c)) // nf-fa-check
+var pickGlyph = string(rune(0xf0bf3)) // nf-md-checkbox_marked_circle
 
 func (m carryModel) view(w, rows int, focused bool) string {
 	if len(m.items) == 0 {
