@@ -42,7 +42,7 @@ filu 是 `u`-family 的成員,是與 [kbu](https://github.com/vulcanshen/kbu) �
 | **`Esc`** | 退出 — 回上層目錄 / 關閉任何浮層 |
 | **`?`** | 全域說明 — 所有 app 層級動作一次列出 |
 
-遇事不決就按 `Space`。進階快捷鍵(`o` open / `O` open-with / `p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …)是為了加速而存在 — 每一個也都能從 `Space` 選單走到,所以除非你想背,否則什麼都不必記。
+遇事不決就按 `Space`。進階快捷鍵(`o` open / `O` open-with / `p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …)是為了加速而存在 — 每一個也都能從 `Space` 選單走到,所以除非你想背,否則什麼都不必記。
 
 ## 安裝
 
@@ -126,7 +126,6 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 - **依型別預覽** — 讀 magic bytes 判定:目錄 → 內層 tree、壓縮包(zip / tar / tar.gz…)→ 內容清單、圖片 → base64 `data:` URI、SVG → 語法高亮的 XML、文字 → 語法高亮 + 行號(Chroma / catppuccin-mocha)、二進位 → hex + ASCII、PDF → 抽出的文字 + 頁數。
 - **檔案 metadata 面板** — `[5]` 顯示游標檔的 `stat` 等級 metadata(Name / Path / Type / Size / Owner / Group / Links / Inode / Perm / Octal / Modified / Accessed / Changed / Created)。
 - **Yank 含 visual 選取** — 在 `[3]` Preview 或 `[5]` Meta 按 `y` 開一個帶 vim 式游標的 viewport;`v` 進字元級 visual 選取,`y` 複製選取內容(沒選取則複製全部),走 OSC 52(可穿 tmux / SSH)。在檔案列或 Carries 項按 `y` 複製它的完整路徑。
-- **多層排序** — `S` 開一個 column → direction 的 picker,會循環讓你疊多層(後面的層當 tie-breaker)。目錄永遠排前面;當前排序顯示在 `[2]` Files 標題、並存進 session。
 - **刪到系統垃圾桶** — `D`(帶確認對話框)把檔案移到 OS 垃圾桶(macOS Trash / Linux XDG)。還原走你的檔案管理器垃圾桶介面。
 - **動態目錄分頁** — `[2]` 預設開一個分頁;`t` 在當前目錄開新分頁、`T` 走 Goto 選一個目錄開新分頁(合計最多五個)、`w` 關掉 active;到上限會 toast 提示、不再默默沒反應。分頁用羅馬數字(`Ⅰ` … `Ⅴ`)標 — 路徑在 header,分頁列只標位置與哪個 active。
 - **eza icon + 配色** — 檔案型別 glyph 取自 eza 完整 icon 表(~760 個);顏色來自烘進 binary 的 `vivid generate catppuccin-mocha` `LS_COLORS` palette,依 eza 的優先序解析(目錄 → symlink → executable → 最長 suffix → 副檔名)。執行時不需要 `LS_COLORS` — 每個安裝都是同一套配色,與你終端的 `eza` / `ls` 一致。
@@ -158,7 +157,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 ```
  游標      j k        u d        gg G        h l(切本面板分頁)
  面板 2    o open     O open-with  p pick    y yank   c copy   m move
-           r rename   a add        D delete  S sort   P pin    . hidden  z zoom
+           r rename   a add        D delete  P pin    . hidden  z zoom
  finder    / search   f find     go goto     b breadcrumb
  分頁      t 開分頁   T goto 開新分頁  w 關分頁
 ```
@@ -179,7 +178,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 | Focus | 選單項目 |
 |---|---|
 | **`[1]` Places** | Jump(`Enter`)、UnPin(`P`,pinned 列) |
-| **`[2]` List** | Open `o`、Open with `O`、Pick `p`、Yank `y`、Rename `r`、Delete `D`、Pin `P` · Copy `c`、Move `m`、Search `/`、Find `f`、Goto `go`、Breadcrumb `b`、Tab `t`、Tab @ goto `T`、Close tab `w`、Add `a`、Sort `S`、Hidden `.`、Zoom `z` |
+| **`[2]` List** | Open `o`、Open with `O`、Pick `p`、Yank `y`、Rename `r`、Delete `D`、Pin `P` · Copy `c`、Move `m`、Search `/`、Find `f`、Goto `go`、Breadcrumb `b`、Tab `t`、Tab @ goto `T`、Close tab `w`、Add `a`、Hidden `.`、Zoom `z` |
 | **`[3]` Preview** | Yank `y`、Zoom `z` |
 | **`[4]` Carries** | Pick `p`、Yank `y`、Delete `D` · Tab `l`、Zoom `z` |
 | **`[4]` Tasks** | Redo `R`、Delete `D` · Tab `l`、Zoom `z` |
