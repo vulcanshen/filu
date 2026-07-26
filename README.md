@@ -8,7 +8,7 @@
 
 **Language**: English · [繁體中文](README-zh_TW.md)
 
-**A single-pane terminal file manager** — `Tab` / `Space` / `Enter` / `Esc` drive everything. No hotkey memorization, no setup, no learning curve. Carry-bucket copy/move, streaming file finders, live preview, and cd-on-quit are built in; your `$EDITOR` rides along in an embedded terminal.
+**A single-pane terminal file manager** — `Tab` / `Space` / `Enter` / `Esc` drive everything. No hotkey memorization, no setup, no learning curve. Carry-bucket copy/move, streaming file finders, live preview, and cd-on-quit are built in.
 
 > _When in doubt, hit_ **`Space`**.
 
@@ -42,7 +42,7 @@ filu is a member of the `u`-family and a filesystem-domain implementation of the
 | **`Esc`** | Back out — up one directory / close any popup |
 | **`?`** | Global help — every app-wide action in one list |
 
-When in doubt, press `Space`. Power-user hotkeys (`p` pick / `y` yank / `e` edit / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …) exist for speed — every one is also reachable through the `Space` menu, so nothing's required to memorize unless you want it.
+When in doubt, press `Space`. Power-user hotkeys (`p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …) exist for speed — every one is also reachable through the `Space` menu, so nothing's required to memorize unless you want it.
 
 ## Install
 
@@ -127,7 +127,6 @@ filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `c
 - **Preview by file kind** — detected from magic bytes: directory → inner tree, archive (zip / tar / tar.gz…) → contents, image → base64 `data:` URI, SVG → highlighted XML, text → syntax-highlighted with line numbers (Chroma / catppuccin-mocha), binary → hex + ASCII, PDF → extracted text + page count.
 - **File metadata panel** — `[5]` shows `stat`-level metadata for the cursor file (Name / Path / Type / Size / Owner / Group / Links / Inode / Perm / Octal / Modified / Accessed / Changed / Created).
 - **Yank with visual selection** — `y` on `[3]` Preview or `[5]` Meta opens a viewport with a vim-style cursor; `v` enters character-wise visual selection, `y` copies the selection (or the whole content when nothing is selected) via OSC 52 (works through tmux / SSH). `y` on a file row or a Carries item copies its full path.
-- **Edit via embedded PTY** — `e` opens a text file in `$EDITOR` (else `vi`) inside an in-app virtual terminal, so the editor never touches the host scrollback. Non-text files fall back to OS open; the directory reloads when the editor exits.
 - **Multi-tier sort** — `S` opens a column → direction picker that loops so you can stack tiers (later tiers break ties). Directories stay first; the active sort shows in the `[2]` Files header and persists per session.
 - **Delete to system trash** — `D` (with a confirmation dialog) moves to the OS trash (macOS Trash / Linux XDG). Restore via your file manager's trash UI.
 - **Dynamic directory tabs** — `[2]` opens with one tab; `t` opens a new tab in the current directory (up to five), `w` closes the active one. Tabs are labelled with Roman numerals (`Ⅰ` … `Ⅴ`) — the path lives in the header, so the tab bar just marks position and which is active.
@@ -159,7 +158,7 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
 
 ```
  cursor    j k        u d        gg G        h l (switch this panel's tab)
- panel 2   p pick     y yank     e edit      c copy   m move   r rename
+ panel 2   p pick     y yank     c copy      m move   r rename
            a add      D delete   S sort      P pin    . hidden  z zoom
  finders   / search   f find     go goto     b breadcrumb
  tabs      t new tab  w close tab
@@ -181,15 +180,11 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
 | Focus | Menu items |
 |---|---|
 | **`[1]` Places** | Jump (`Enter`), UnPin (`P`, pinned rows) |
-| **`[2]` List** | Pick `p`, Yank `y`, Edit `e`, Rename `r`, Delete `D`, Pin `P` · Copy `c`, Move `m`, Search `/`, Find `f`, Goto `go`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Hidden `.`, Zoom `z` |
+| **`[2]` List** | Pick `p`, Yank `y`, Rename `r`, Delete `D`, Pin `P` · Copy `c`, Move `m`, Search `/`, Find `f`, Goto `go`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Hidden `.`, Zoom `z` |
 | **`[3]` Preview** | Yank `y`, Zoom `z` |
 | **`[4]` Carries** | Pick `p`, Yank `y`, Delete `D` · Tab `l`, Zoom `z` |
 | **`[4]` Tasks** | Redo `R`, Delete `D` · Tab `l`, Zoom `z` |
 | **`[5]` Meta** | Yank `y`, Zoom `z` |
-
-## Editing files
-
-Pressing `e` on a text file (or picking `Edit` from the `Space` menu) opens it in your editor inside an **embedded PTY popup** — the editor renders within filu instead of taking over the host terminal. The editor is resolved by `$EDITOR` (or `config.yaml`'s `editor`, if set), falling back to `vi`. Non-text files are handed to the OS (`open` / `xdg-open`) instead. When the editor exits, the directory reloads via the file watch — no manual refresh.
 
 ## cd-on-quit
 

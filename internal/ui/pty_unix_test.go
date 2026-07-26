@@ -4,33 +4,13 @@ package ui
 
 import (
 	"bytes"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
-
-func TestIsTextFile(t *testing.T) {
-	dir := t.TempDir()
-	txt := filepath.Join(dir, "a.txt")
-	bin := filepath.Join(dir, "b.bin")
-	if err := os.WriteFile(txt, []byte("hello\nworld\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(bin, []byte{0x00, 0x01, 0xff, 0xfe, 0x03}, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if !isTextFile(txt) {
-		t.Error("a UTF-8 file should be editable text")
-	}
-	if isTextFile(bin) {
-		t.Error("a binary file should not be treated as text")
-	}
-}
 
 func TestBuildEditorCmd(t *testing.T) {
 	t.Setenv("VISUAL", "")

@@ -456,15 +456,6 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		if it := l.cursorItem(); it.name != "" {
 			cmd = copyToClipboardCmd(filepath.Join(l.dir, it.name), "Copied path to clipboard")
 		}
-	case "e": // edit: text files open in the embedded editor, else hand to the OS
-		if it := l.cursorItem(); it.name != "" {
-			full := filepath.Join(l.dir, it.name)
-			if !it.isDir && isTextFile(full) {
-				cmd = m.pty.start(buildEditorCmd(full), "Edit: "+it.name, l.dir, m.width, m.height)
-			} else {
-				cmd = openFileCmd(full)
-			}
-		}
 	case "S": // sort: open the column→direction picker
 		cmd = m.openSortColumnPicker()
 	case "/": // Search: by-name finder over the subtree, reveal the pick here
@@ -696,7 +687,6 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			itemOps = append(itemOps,
 				menuItem{label: "Pick", key: "p", hint: `add to "carries" bucket`},
 				menuItem{label: "Yank", key: "y", hint: "copy full path to clipboard"},
-				menuItem{label: "Edit", key: "e", hint: "edit a text file in $EDITOR (else OS open)"},
 				menuItem{label: "Rename", key: "r", hint: "rename this item"},
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
 		}

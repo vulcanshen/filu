@@ -8,7 +8,7 @@
 
 **語言**: [English](README.md) · 繁體中文
 
-**單一視窗的終端機檔案管理器** — `Tab` / `Space` / `Enter` / `Esc` 驅動一切。不用背快捷鍵、不用設定、零學習成本。carry-bucket 延遲複製/搬移、串流檔案 finder、即時預覽、cd-on-quit 全都內建;你的 `$EDITOR` 也在內嵌終端裡一起掛著跑。
+**單一視窗的終端機檔案管理器** — `Tab` / `Space` / `Enter` / `Esc` 驅動一切。不用背快捷鍵、不用設定、零學習成本。carry-bucket 延遲複製/搬移、串流檔案 finder、即時預覽、cd-on-quit 全都內建。
 
 > _遇事不決,就按_ **`Space`**。
 
@@ -42,7 +42,7 @@ filu 是 `u`-family 的成員,是與 [kbu](https://github.com/vulcanshen/kbu) �
 | **`Esc`** | 退出 — 回上層目錄 / 關閉任何浮層 |
 | **`?`** | 全域說明 — 所有 app 層級動作一次列出 |
 
-遇事不決就按 `Space`。進階快捷鍵(`p` pick / `y` yank / `e` edit / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …)是為了加速而存在 — 每一個也都能從 `Space` 選單走到,所以除非你想背,否則什麼都不必記。
+遇事不決就按 `Space`。進階快捷鍵(`p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …)是為了加速而存在 — 每一個也都能從 `Space` 選單走到,所以除非你想背,否則什麼都不必記。
 
 ## 安裝
 
@@ -125,7 +125,6 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 - **依型別預覽** — 讀 magic bytes 判定:目錄 → 內層 tree、壓縮包(zip / tar / tar.gz…)→ 內容清單、圖片 → base64 `data:` URI、SVG → 語法高亮的 XML、文字 → 語法高亮 + 行號(Chroma / catppuccin-mocha)、二進位 → hex + ASCII、PDF → 抽出的文字 + 頁數。
 - **檔案 metadata 面板** — `[5]` 顯示游標檔的 `stat` 等級 metadata(Name / Path / Type / Size / Owner / Group / Links / Inode / Perm / Octal / Modified / Accessed / Changed / Created)。
 - **Yank 含 visual 選取** — 在 `[3]` Preview 或 `[5]` Meta 按 `y` 開一個帶 vim 式游標的 viewport;`v` 進字元級 visual 選取,`y` 複製選取內容(沒選取則複製全部),走 OSC 52(可穿 tmux / SSH)。在檔案列或 Carries 項按 `y` 複製它的完整路徑。
-- **內嵌 PTY 編輯** — `e` 把文字檔在 `$EDITOR`(否則 `vi`)裡開,跑在 filu 內的虛擬終端,所以編輯器不會碰到 host 的 scrollback。非文字檔交給 OS 開;編輯器離開時目錄自動 reload。
 - **多層排序** — `S` 開一個 column → direction 的 picker,會循環讓你疊多層(後面的層當 tie-breaker)。目錄永遠排前面;當前排序顯示在 `[2]` Files 標題、並存進 session。
 - **刪到系統垃圾桶** — `D`(帶確認對話框)把檔案移到 OS 垃圾桶(macOS Trash / Linux XDG)。還原走你的檔案管理器垃圾桶介面。
 - **動態目錄分頁** — `[2]` 預設開一個分頁;`t` 在當前目錄開新分頁(最多五個)、`w` 關掉 active。分頁用羅馬數字(`Ⅰ` … `Ⅴ`)標 — 路徑在 header,分頁列只標位置與哪個 active。
@@ -157,7 +156,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 
 ```
  游標      j k        u d        gg G        h l(切本面板分頁)
- 面板 2    p pick     y yank     e edit      c copy   m move   r rename
+ 面板 2    p pick     y yank     c copy      m move   r rename
            a add      D delete   S sort      P pin    . hidden  z zoom
  finder    / search   f find     go goto     b breadcrumb
  分頁      t 開分頁   w 關分頁
@@ -179,15 +178,11 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 | Focus | 選單項目 |
 |---|---|
 | **`[1]` Places** | Jump(`Enter`)、UnPin(`P`,pinned 列) |
-| **`[2]` List** | Pick `p`、Yank `y`、Edit `e`、Rename `r`、Delete `D`、Pin `P` · Copy `c`、Move `m`、Search `/`、Find `f`、Goto `go`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Hidden `.`、Zoom `z` |
+| **`[2]` List** | Pick `p`、Yank `y`、Rename `r`、Delete `D`、Pin `P` · Copy `c`、Move `m`、Search `/`、Find `f`、Goto `go`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Hidden `.`、Zoom `z` |
 | **`[3]` Preview** | Yank `y`、Zoom `z` |
 | **`[4]` Carries** | Pick `p`、Yank `y`、Delete `D` · Tab `l`、Zoom `z` |
 | **`[4]` Tasks** | Redo `R`、Delete `D` · Tab `l`、Zoom `z` |
 | **`[5]` Meta** | Yank `y`、Zoom `z` |
-
-## 編輯檔案
-
-對文字檔按 `e`(或從 `Space` 選單選 `Edit`),會把它用你的編輯器開在一個**內嵌 PTY popup** 裡 — 編輯器在 filu 內 render、不會接管 host 終端。編輯器由 `$EDITOR`(或 `config.yaml` 的 `editor`,若有設)解析,fallback 到 `vi`。非文字檔改交給 OS 開(`open` / `xdg-open`)。編輯器離開時,目錄透過 file watch 自動 reload — 不用手動刷新。
 
 ## cd-on-quit
 

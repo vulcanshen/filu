@@ -58,3 +58,22 @@ func TestEnterDescendsDirNotOpenFile(t *testing.T) {
 		t.Errorf("entering a dir must not open anything, opened %q", opened)
 	}
 }
+
+// TestOpenFileCmd covers the retained OS-open primitive directly. No UI key
+// wires it up right now (Enter navigates, edit is gone), but [o]pen / open-with
+// will reuse it for the default-app path, so it stays tested.
+func TestOpenFileCmd(t *testing.T) {
+	var opened string
+	old := openFile
+	openFile = func(p string) error { opened = p; return nil }
+	defer func() { openFile = old }()
+
+	cmd := openFileCmd("/tmp/x.txt")
+	if cmd == nil {
+		t.Fatal("openFileCmd should return a cmd")
+	}
+	cmd() // execute the tea.Cmd
+	if opened != "/tmp/x.txt" {
+		t.Errorf("openFileCmd opened %q, want /tmp/x.txt", opened)
+	}
+}
