@@ -17,6 +17,7 @@ func TestIsWideIcon(t *testing.T) {
 		{0xf15b, true, "file icon"},
 		{0xf450, true, "oct file-directory"},
 		{0xf00c, true, "check"},
+		{0x2164, true, "roman numeral Ⅴ tab numeral"},
 		{0xe0b0, false, "powerline hard cap"},
 		{0xe0b6, false, "powerline round-left"},
 		{0x2502, false, "box vertical"},

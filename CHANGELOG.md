@@ -50,7 +50,7 @@
   vim-style cursor and character-wise visual selection (`v`); `y` copies the
   selection, or the whole content when nothing is selected (OSC 52 + toast).
 - cd-on-quit: `q` now opens a picker to leave the shell in panel [1]'s launch
-  directory or any of the three list tabs' current directories (1–4 or j/k +
+  directory or any list tab's current directory (pick by number, or j/k +
   Enter; Esc stays). With the shell wrapper installed (`eval "$(filu shell)"`),
   the shell cd's there on exit; `Ctrl+C` still hard-quits without cd-ing.
 - Edit (`e`) opens a text file in `$EDITOR` inside an embedded PTY popup — the
@@ -126,9 +126,9 @@
   preview that scrolls to the matched line. Enter reveals the pick and descends
   the tab into its directory.
 - Panel [2] tabs are now dynamic: it opens with a single directory tab, `t`
-  opens a new tab in the current directory (up to three) and `w` closes the
+  opens a new tab in the current directory (up to five) and `w` closes the
   active one — replacing the old fixed three tabs. Tabs are labelled with Roman
-  numerals (Ⅰ / Ⅱ / Ⅲ) rather than the directory basename, since the active
+  numerals (Ⅰ … Ⅴ) rather than the directory basename, since the active
   tab's full path already shows in the header bar; Zoom lays out however many
   tabs are open. The extra tabs you open persist across sessions, but the first
   tab always reopens at the launch directory and is active on start.

@@ -128,7 +128,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 - **內嵌 PTY 編輯** — `e` 把文字檔在 `$EDITOR`(否則 `vi`)裡開,跑在 filu 內的虛擬終端,所以編輯器不會碰到 host 的 scrollback。非文字檔交給 OS 開;編輯器離開時目錄自動 reload。
 - **多層排序** — `S` 開一個 column → direction 的 picker,會循環讓你疊多層(後面的層當 tie-breaker)。目錄永遠排前面;當前排序顯示在 `[2]` Files 標題、並存進 session。
 - **刪到系統垃圾桶** — `D`(帶確認對話框)把檔案移到 OS 垃圾桶(macOS Trash / Linux XDG)。還原走你的檔案管理器垃圾桶介面。
-- **動態目錄分頁** — `[2]` 預設開一個分頁;`t` 在當前目錄開新分頁(最多三個)、`w` 關掉 active。分頁用羅馬數字(`Ⅰ` / `Ⅱ` / `Ⅲ`)標 — 路徑在 header,分頁列只標位置與哪個 active。
+- **動態目錄分頁** — `[2]` 預設開一個分頁;`t` 在當前目錄開新分頁(最多五個)、`w` 關掉 active。分頁用羅馬數字(`Ⅰ` … `Ⅴ`)標 — 路徑在 header,分頁列只標位置與哪個 active。
 - **eza icon + 配色** — 檔案型別 glyph 取自 eza 完整 icon 表(~760 個);顏色來自烘進 binary 的 `vivid generate catppuccin-mocha` `LS_COLORS` palette,依 eza 的優先序解析(目錄 → symlink → executable → 最長 suffix → 副檔名)。執行時不需要 `LS_COLORS` — 每個安裝都是同一套配色,與你終端的 `eza` / `ls` 一致。
 - **即時刷新** — 清單分頁監看自己的目錄(fsnotify),外部增刪檔案時自動 reload、保留游標;連續事件會 debounce。
 - **session 持久化** — 多開的分頁(dir + cursor)、focus、carry bucket、pinned、tasks、sort 都存進 `state.yaml`;第一個分頁永遠開在啟動目錄。
