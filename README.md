@@ -42,7 +42,7 @@ filu is a member of the `u`-family and a filesystem-domain implementation of the
 | **`Esc`** | Back out — up one directory / close any popup |
 | **`?`** | Global help — every app-wide action in one list |
 
-When in doubt, press `Space`. Power-user hotkeys (`p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …) exist for speed — every one is also reachable through the `Space` menu, so nothing's required to memorize unless you want it.
+When in doubt, press `Space`. Power-user hotkeys (`o` open / `p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …) exist for speed — every one is also reachable through the `Space` menu, so nothing's required to memorize unless you want it.
 
 ## Install
 
@@ -124,6 +124,7 @@ filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `c
   - **`go` Goto** — fuzzy-match *directory paths* under `$HOME` (directories only); `Enter` teleports the active tab there.
   - **`b` Breadcrumb** — a popup of the current tab's ancestor directories; `Enter` jumps the tab up to any level.
   - In the result list, `Esc` leaves and `q` returns to the input. Scan bounds (`finder_cap`) and skipped tool directories (`ignore_dirs`) are tunable in `config.yaml`.
+- **Open with an app** — `o` on a file or directory opens a picker: **Default** (the OS default app) plus any apps you list under `open_with` in `config.yaml` (VSCode, IntelliJ IDEA, …). Pick one and filu runs `<cmd> <path>` — handy for opening the current folder in your IDE. In filu, this — not `Enter` — is how you open a file; `Enter` is navigation only.
 - **Preview by file kind** — detected from magic bytes: directory → inner tree, archive (zip / tar / tar.gz…) → contents, image → base64 `data:` URI, SVG → highlighted XML, text → syntax-highlighted with line numbers (Chroma / catppuccin-mocha), binary → hex + ASCII, PDF → extracted text + page count.
 - **File metadata panel** — `[5]` shows `stat`-level metadata for the cursor file (Name / Path / Type / Size / Owner / Group / Links / Inode / Perm / Octal / Modified / Accessed / Changed / Created).
 - **Yank with visual selection** — `y` on `[3]` Preview or `[5]` Meta opens a viewport with a vim-style cursor; `v` enters character-wise visual selection, `y` copies the selection (or the whole content when nothing is selected) via OSC 52 (works through tmux / SSH). `y` on a file row or a Carries item copies its full path.
@@ -158,7 +159,7 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
 
 ```
  cursor    j k        u d        gg G        h l (switch this panel's tab)
- panel 2   p pick     y yank     c copy      m move   r rename
+ panel 2   o open     p pick     y yank      c copy   m move   r rename
            a add      D delete   S sort      P pin    . hidden  z zoom
  finders   / search   f find     go goto     b breadcrumb
  tabs      t new tab  w close tab
@@ -180,7 +181,7 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
 | Focus | Menu items |
 |---|---|
 | **`[1]` Places** | Jump (`Enter`), UnPin (`P`, pinned rows) |
-| **`[2]` List** | Pick `p`, Yank `y`, Rename `r`, Delete `D`, Pin `P` · Copy `c`, Move `m`, Search `/`, Find `f`, Goto `go`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Hidden `.`, Zoom `z` |
+| **`[2]` List** | Open `o`, Pick `p`, Yank `y`, Rename `r`, Delete `D`, Pin `P` · Copy `c`, Move `m`, Search `/`, Find `f`, Goto `go`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Hidden `.`, Zoom `z` |
 | **`[3]` Preview** | Yank `y`, Zoom `z` |
 | **`[4]` Carries** | Pick `p`, Yank `y`, Delete `D` · Tab `l`, Zoom `z` |
 | **`[4]` Tasks** | Redo `R`, Delete `D` · Tab `l`, Zoom `z` |
@@ -207,7 +208,7 @@ filu reads user settings from `config.yaml` in the OS config directory. `state.y
 | Linux | `$XDG_CONFIG_HOME/filu/` or `~/.config/filu/` |
 | macOS | `~/Library/Application Support/filu/` |
 
-A commented template is written on first launch (an existing file is never overwritten). Two knobs, both applying to the finders (Search / Find / Goto):
+A commented template is written on first launch (an existing file is never overwritten). The finder knobs (`finder_cap`, `ignore_dirs`) plus the `[o]pen` app list:
 
 ```yaml
 # How many entries a finder scans before it stops. Goto walks all of $HOME,
@@ -232,6 +233,15 @@ ignore_dirs:
   - .vscode
   - .cache
   - .Trash
+
+# Apps for the [o]pen picker (press o on a file or directory). Each entry is a
+# name + a command; filu runs `<cmd> <path>`. "Default" (the OS default app) is
+# always offered first; an empty list means only Default.
+open_with:
+  - name: VSCode
+    cmd: code
+  - name: IntelliJ IDEA
+    cmd: idea
 ```
 
 ## Requirements

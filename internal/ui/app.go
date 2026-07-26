@@ -67,6 +67,8 @@ type AppModel struct {
 	sortStep      sortStep          // which step the sort picker is on
 	sortFlowCol   sortCol           // column carried from the column step to direction
 	quitMenu      spaceMenu         // cd-on-quit picker (launch dir + distinct tab dirs)
+	openWithMenu  spaceMenu         // [o]pen picker (Default + config.yaml open_with apps)
+	openWithPath  string            // path the open-with picker acts on (captured when it opens)
 	launchDir     string            // the dir filu was started in (panel 1 CWD / quit option 1)
 	zoom          panelID           // 0 = normal; else the panel expanded full-width
 	confirm       confirmPopup      // yes/no popup (delete / quit)
@@ -104,7 +106,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
@@ -198,6 +200,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spaceMenu.setSize(msg.Width)
 		m.sortMenu.setSize(msg.Width)
 		m.quitMenu.setSize(msg.Width)
+		m.openWithMenu.setSize(msg.Width)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
@@ -211,7 +214,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case tea.KeyMsg:
 		if m.pty.isActive() { // the embedded editor owns every keystroke
 			return m, m.pty.update(msg)
@@ -319,6 +322,20 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if idx, err := strconv.Atoi(key); err == nil { // a number → that distinct dir
 				if targets := m.quitTargets(); idx >= 1 && idx <= len(targets) {
 					return m, m.quitTo(targets[idx-1].dir)
+				}
+			}
+			return m, cmd
+		}
+		if m.openWithMenu.isActive() { // [o]pen picker; a commit launches the app
+			if !m.openWithMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.openWithMenu, key, cmd = m.openWithMenu.update(msg)
+			if idx, err := strconv.Atoi(key); err == nil { // a number → that app (1 = Default)
+				if run := m.runOpenWith(idx); run != nil {
+					return m, tea.Batch(run, m.openWithMenu.close())
 				}
 			}
 			return m, cmd
@@ -456,6 +473,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		if it := l.cursorItem(); it.name != "" {
 			cmd = copyToClipboardCmd(filepath.Join(l.dir, it.name), "Copied path to clipboard")
 		}
+	case "o": // open-with: pick an app (Default OS open, or a configured one)
+		cmd = m.openOpenWith()
 	case "S": // sort: open the column→direction picker
 		cmd = m.openSortColumnPicker()
 	case "/": // Search: by-name finder over the subtree, reveal the pick here
@@ -685,6 +704,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		var itemOps, panelOps []menuItem
 		if it.name != "" {
 			itemOps = append(itemOps,
+				menuItem{label: "Open", key: "o", hint: "open with an app (Default = OS)"},
 				menuItem{label: "Pick", key: "p", hint: `add to "carries" bucket`},
 				menuItem{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				menuItem{label: "Rename", key: "r", hint: "rename this item"},

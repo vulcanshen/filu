@@ -59,6 +59,12 @@ func newQuitMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("quitmenu", popupLayerColor(1))}
 }
 
+// newOpenWithMenu is a fourth spaceMenu instance reused as the [o]pen picker
+// (Default + the apps configured in config.yaml's open_with).
+func newOpenWithMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("openwithmenu", popupLayerColor(1))}
+}
+
 func (m *spaceMenu) setItems(items []menuItem, title string) {
 	m.items = items
 	m.title = title
