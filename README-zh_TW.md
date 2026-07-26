@@ -37,7 +37,7 @@ filu 是 `u`-family 的成員,是與 [kbu](https://github.com/vulcanshen/kbu) �
 | 鍵 | 行為 |
 |---|---|
 | **`Tab`** | 切換面板 focus(或 `1`–`5` 直達) |
-| **`Enter`** | 進入目錄 / 開檔(交給 OS)/ 確認一個選擇 |
+| **`Enter`** | 進入目錄 / 確認一個選擇 |
 | **`Space`** | *這裡我能做什麼?* — 在任何面板跳出情境選單 |
 | **`Esc`** | 退出 — 回上層目錄 / 關閉任何浮層 |
 | **`?`** | 全域說明 — 所有 app 層級動作一次列出 |
@@ -94,7 +94,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh |
 filu
 ```
 
-開在你當前的目錄。`Enter` 進目錄 / 開檔,`Space` 開情境選單,`Esc` 退回,`Tab` 切換面板。
+開在你當前的目錄。`Enter` 進目錄,`Space` 開情境選單,`Esc` 退回,`Tab` 切換面板。
 
 想讓 filu 在離開時把你的 shell 切到某個目錄(`q` picker),在 `~/.zshrc` / `~/.bashrc` 加一行,並用 **`filu`**(不是 `./filu`)啟動:
 
@@ -146,7 +146,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 | 鍵 | 行為 |
 |---|---|
 | **`Tab`** | **面板** — focus 移到下個面板(或 `1`–`5` 直達) |
-| **`Enter`** | **進入** — 進目錄 / 開檔(OS)/ 確認浮層選擇 |
+| **`Enter`** | **進入** — 進目錄 / 確認浮層選擇 |
 | **`Space`** | **選單** — 在當前 focus 開情境選單。也關閉任何開著的浮層 |
 | **`Esc`** | **返回** — 回上層目錄 / 關閉任何浮層 |
 | **`?`** | **說明** — 全域(非情境)動作清單 |
