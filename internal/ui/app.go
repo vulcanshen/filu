@@ -401,10 +401,10 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "d", "ctrl+d":
 		l.move(m.listRows() / 2)
 	case "enter":
+		// Enter navigates into directories only — in filu it is not "open a file".
+		// Opening a file is [o]pen's job (open-with); a file row Enter is a no-op.
 		if it := l.cursorItem(); it.isDir {
 			l.enter()
-		} else if it.name != "" {
-			cmd = openFileCmd(filepath.Join(l.dir, it.name)) // hand files to the OS
 		}
 	case "esc":
 		l.parent()

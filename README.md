@@ -37,7 +37,7 @@ filu is a member of the `u`-family and a filesystem-domain implementation of the
 | Key | Behavior |
 |---|---|
 | **`Tab`** | Switch panel focus (or `1`–`5` directly) |
-| **`Enter`** | Enter a directory / open a file (hands off to the OS) / commit a choice |
+| **`Enter`** | Enter a directory / commit a choice |
 | **`Space`** | *What can I do here?* — opens a contextual menu on every panel |
 | **`Esc`** | Back out — up one directory / close any popup |
 | **`?`** | Global help — every app-wide action in one list |
@@ -96,7 +96,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh |
 filu
 ```
 
-Opens on your current directory. Press `Enter` to enter a directory or open a file, `Space` for the contextual menu, `Esc` to back out, `Tab` to move between panels.
+Opens on your current directory. Press `Enter` to enter a directory, `Space` for the contextual menu, `Esc` to back out, `Tab` to move between panels.
 
 To have filu change your shell's directory when you quit (the `q` picker), add one line to `~/.zshrc` / `~/.bashrc` and launch with **`filu`** (not `./filu`):
 
@@ -148,7 +148,7 @@ filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `c
 | Key | Behavior |
 |---|---|
 | **`Tab`** | **Panel** — move focus to the next panel (or `1`–`5` to jump directly) |
-| **`Enter`** | **Into** — enter a directory / open a file (OS) / commit a popup choice |
+| **`Enter`** | **Into** — enter a directory / commit a popup choice |
 | **`Space`** | **Menu** — open the contextual menu wherever focus is. Also closes any open popup |
 | **`Esc`** | **Back** — up one directory / close any popup |
 | **`?`** | **Help** — the global (non-contextual) action list |
