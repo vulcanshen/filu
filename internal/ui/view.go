@@ -204,7 +204,7 @@ func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
 }
 
 // listTitle renders panel [2]'s tab bar: one Roman-numeral chip per directory tab
-// (Ⅰ / Ⅱ / Ⅲ), no text — the active tab's path is shown by the header bar, so the
+// (Ⅰ … Ⅴ), no text — the active tab's path is shown by the header bar, so the
 // tabs only mark position and which is active. Fixed width, so the bar always fits.
 func (m AppModel) listTitle(w int) string {
 	focused := m.focus == panelList
@@ -215,10 +215,13 @@ func (m AppModel) listTitle(w int) string {
 	return tabBar("[2]", labels, m.tab, focused)
 }
 
-// tabNumerals mark a tab's position: the Roman numerals Ⅰ / Ⅱ / Ⅲ (Unicode ROMAN
-// NUMERAL ONE..THREE). nf-md-roman_numeral_1 is absent from Nerd Fonts, so these
+// tabNumerals mark a tab's position: the Roman numerals Ⅰ … Ⅴ (Unicode ROMAN
+// NUMERAL ONE..FIVE). nf-md-roman_numeral_1 is absent from Nerd Fonts, so these
 // true Roman-numeral codepoints are used instead for a consistent set.
-var tabNumerals = []string{string(rune(0x2160)), string(rune(0x2161)), string(rune(0x2162))}
+var tabNumerals = []string{
+	string(rune(0x2160)), string(rune(0x2161)), string(rune(0x2162)),
+	string(rune(0x2163)), string(rune(0x2164)),
+}
 
 // tabNumeral is the position mark for the idx-th (0-based) tab.
 func tabNumeral(idx int) string {

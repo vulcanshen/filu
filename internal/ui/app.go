@@ -93,7 +93,7 @@ type AppModel struct {
 
 // maxTabs caps panel [2]'s directory tabs. It opens with one (at the CWD); the
 // user creates more with `t` (up to this many) and closes them with `w`.
-const maxTabs = 3
+const maxTabs = 5
 
 // New returns the root model, focused on the file list. Panel [2] opens with a
 // single tab at the current dir; extra tabs the user created last session are

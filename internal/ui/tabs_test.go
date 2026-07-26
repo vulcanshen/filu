@@ -35,8 +35,9 @@ func TestNewAndCloseTab(t *testing.T) {
 		t.Errorf("new tab dir = %q, want current tab's %q", m.tabs[1].dir, d1)
 	}
 
-	m.handleListKey("t") // 3rd
-	m.handleListKey("t") // 4th would exceed the cap
+	for i := len(m.tabs); i <= maxTabs; i++ { // fill to the cap, then one more that must no-op
+		m.handleListKey("t")
+	}
 	if len(m.tabs) != maxTabs {
 		t.Errorf("tab count should cap at %d, got %d", maxTabs, len(m.tabs))
 	}
