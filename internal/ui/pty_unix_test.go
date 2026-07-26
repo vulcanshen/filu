@@ -109,6 +109,16 @@ func TestPtyPopupBorderAligns(t *testing.T) {
 			t.Errorf("row %d width %d != %d (border misaligned):\n%q", i, w, want, ln)
 		}
 	}
+
+	// Full width, and tall enough that pinned at row ptyChromeRows it reaches the
+	// bottom: height == hostH - chrome (so header + status stay visible, footer is
+	// covered).
+	if want != 100 {
+		t.Errorf("popup width = %d, want full host width 100", want)
+	}
+	if got := len(lines); got != 30-ptyChromeRows {
+		t.Errorf("popup height = %d rows, want %d (hostH - chrome)", got, 30-ptyChromeRows)
+	}
 }
 
 func TestPtyLifecycle(t *testing.T) {

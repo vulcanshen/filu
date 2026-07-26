@@ -76,8 +76,8 @@ func (m AppModel) View() string {
 	if m.breadcrumb.isActive() { // ancestor-jump popup over the panels
 		out = overlay.Composite(m.breadcrumb.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
-	if m.pty.isRendered() { // embedded editor sits above the panels
-		out = overlay.Composite(m.pty.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	if m.pty.isRendered() { // shell popup: full width, pinned below header+status, down to the bottom
+		out = overlay.Composite(m.pty.renderPopup(), out, overlay.Left, overlay.Top, 0, ptyChromeRows)
 	}
 	if m.toast.isActive() { // transient, always on top
 		out = overlay.Composite(m.toast.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)

@@ -187,10 +187,19 @@ func (p *ptyPopup) setSize(hostW, hostH int) {
 	p.mu.Unlock()
 }
 
-// dims is the PTY content size inside the popup (minus margins + border + title).
+// ptyChromeRows is how many rows of filu stay visible above the shell popup: the
+// header bar + the directory status line. The popup pins just below them so the
+// "where am I" context shows without the shell having to print it (see view.go's
+// overlay offset, which must match).
+const ptyChromeRows = 2
+
+// dims is the PTY content size inside the popup. The popup is full width and runs
+// from just below filu's header+status down to the very bottom (covering the
+// panels + footer), so the content is the full width minus the two side borders,
+// and the height below the chrome minus the top/bottom border.
 func (p *ptyPopup) dims() (cols, rows int) {
-	cols = p.hostW - 4 - 2 // 2-col margin each side + 2 border
-	rows = p.hostH - 2 - 3 // 1-row margin each side + top/bottom border + title row
+	cols = p.hostW - 2                 // full width, minus the two │ borders
+	rows = p.hostH - ptyChromeRows - 2 // below header+status, minus top/bottom border
 	if cols < 20 {
 		cols = 20
 	}
