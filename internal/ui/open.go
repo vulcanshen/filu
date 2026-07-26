@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"os/exec"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -15,6 +18,22 @@ var openFile = osOpen
 func openFileCmd(path string) tea.Cmd {
 	return func() tea.Msg {
 		_ = openFile(path)
+		return nil
+	}
+}
+
+// openWithCmd launches `cmd path` off the UI goroutine — the [o]pen picker's
+// action for a configured app. cmd may carry args (e.g. "code -n"); path is
+// appended as the last argument. Fire-and-forget: GUI editors fork and return,
+// so we Start and don't wait, and (like openFileCmd) errors are dropped.
+func openWithCmd(cmd, path string) tea.Cmd {
+	return func() tea.Msg {
+		fields := strings.Fields(cmd)
+		if len(fields) == 0 {
+			return nil
+		}
+		c := exec.Command(fields[0], append(fields[1:], path)...)
+		_ = c.Start()
 		return nil
 	}
 }

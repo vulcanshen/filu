@@ -42,7 +42,7 @@ filu 是 `u`-family 的成員,是與 [kbu](https://github.com/vulcanshen/kbu) �
 | **`Esc`** | 退出 — 回上層目錄 / 關閉任何浮層 |
 | **`?`** | 全域說明 — 所有 app 層級動作一次列出 |
 
-遇事不決就按 `Space`。進階快捷鍵(`p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …)是為了加速而存在 — 每一個也都能從 `Space` 選單走到,所以除非你想背,否則什麼都不必記。
+遇事不決就按 `Space`。進階快捷鍵(`o` open / `p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `S` sort / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …)是為了加速而存在 — 每一個也都能從 `Space` 選單走到,所以除非你想背,否則什麼都不必記。
 
 ## 安裝
 
@@ -122,6 +122,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
   - **`go` Goto** — 對 `$HOME` 底下的**目錄路徑** fuzzy(只列目錄);`Enter` 把當前分頁傳送過去。
   - **`b` Breadcrumb** — 當前分頁祖先目錄的 popup;`Enter` 把分頁跳上任一層。
   - 在結果清單裡,`Esc` 離開、`q` 回到輸入列。掃描上限(`finder_cap`)與要跳過的工具目錄(`ignore_dirs`)可在 `config.yaml` 調。
+- **用 app 開啟** — 對檔案或目錄按 `o` 開一個 picker:**Default**(OS 預設 app)加上你在 `config.yaml` 的 `open_with` 列的 app(VSCode、IntelliJ IDEA…)。選一個,filu 就跑 `<cmd> <path>` —— 拿來用 IDE 開當前資料夾很方便。在 filu,開檔靠這個(不是 `Enter`);`Enter` 只導覽。
 - **依型別預覽** — 讀 magic bytes 判定:目錄 → 內層 tree、壓縮包(zip / tar / tar.gz…)→ 內容清單、圖片 → base64 `data:` URI、SVG → 語法高亮的 XML、文字 → 語法高亮 + 行號(Chroma / catppuccin-mocha)、二進位 → hex + ASCII、PDF → 抽出的文字 + 頁數。
 - **檔案 metadata 面板** — `[5]` 顯示游標檔的 `stat` 等級 metadata(Name / Path / Type / Size / Owner / Group / Links / Inode / Perm / Octal / Modified / Accessed / Changed / Created)。
 - **Yank 含 visual 選取** — 在 `[3]` Preview 或 `[5]` Meta 按 `y` 開一個帶 vim 式游標的 viewport;`v` 進字元級 visual 選取,`y` 複製選取內容(沒選取則複製全部),走 OSC 52(可穿 tmux / SSH)。在檔案列或 Carries 項按 `y` 複製它的完整路徑。
@@ -156,7 +157,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 
 ```
  游標      j k        u d        gg G        h l(切本面板分頁)
- 面板 2    p pick     y yank     c copy      m move   r rename
+ 面板 2    o open     p pick     y yank      c copy   m move   r rename
            a add      D delete   S sort      P pin    . hidden  z zoom
  finder    / search   f find     go goto     b breadcrumb
  分頁      t 開分頁   w 關分頁
@@ -178,7 +179,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 | Focus | 選單項目 |
 |---|---|
 | **`[1]` Places** | Jump(`Enter`)、UnPin(`P`,pinned 列) |
-| **`[2]` List** | Pick `p`、Yank `y`、Rename `r`、Delete `D`、Pin `P` · Copy `c`、Move `m`、Search `/`、Find `f`、Goto `go`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Hidden `.`、Zoom `z` |
+| **`[2]` List** | Open `o`、Pick `p`、Yank `y`、Rename `r`、Delete `D`、Pin `P` · Copy `c`、Move `m`、Search `/`、Find `f`、Goto `go`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Hidden `.`、Zoom `z` |
 | **`[3]` Preview** | Yank `y`、Zoom `z` |
 | **`[4]` Carries** | Pick `p`、Yank `y`、Delete `D` · Tab `l`、Zoom `z` |
 | **`[4]` Tasks** | Redo `R`、Delete `D` · Tab `l`、Zoom `z` |
@@ -205,7 +206,7 @@ filu 從 OS config 目錄的 `config.yaml` 讀使用者設定。`state.yaml`(自
 | Linux | `$XDG_CONFIG_HOME/filu/` 或 `~/.config/filu/` |
 | macOS | `~/Library/Application Support/filu/` |
 
-首次啟動會寫一份帶註解的模板(已存在的檔永不覆蓋)。兩顆旋鈕,都套用在 finder(Search / Find / Goto):
+首次啟動會寫一份帶註解的模板(已存在的檔永不覆蓋)。finder 旋鈕(`finder_cap`、`ignore_dirs`)加上 `[o]pen` 的 app 清單:
 
 ```yaml
 # finder 最多掃幾筆才停。Goto 會走整個 $HOME,所以這個值決定它的上限 ——
@@ -229,6 +230,14 @@ ignore_dirs:
   - .vscode
   - .cache
   - .Trash
+
+# [o]pen picker 的 app(對檔案或目錄按 o)。每個 entry 是 name + 一個指令,
+# filu 會跑 `<cmd> <path>`。「Default」(OS 預設 app)永遠排第一;空清單 = 只有 Default。
+open_with:
+  - name: VSCode
+    cmd: code
+  - name: IntelliJ IDEA
+    cmd: idea
 ```
 
 ## 系統需求

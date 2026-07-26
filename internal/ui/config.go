@@ -30,6 +30,7 @@ var defaultIgnoreDirs = []string{
 var (
 	finderCap        = defaultFinderCap
 	finderIgnoreDirs = defaultIgnoreDirs
+	openWithApps     []openWithApp
 )
 
 // fileConfig is the user-editable configuration (config.yaml, hand-edited) — kept
@@ -37,8 +38,18 @@ var (
 // session state. IgnoreDirs is a pointer so an absent key falls back to the
 // default while an explicit empty list means "exclude nothing".
 type fileConfig struct {
-	FinderCap  int       `yaml:"finder_cap"`
-	IgnoreDirs *[]string `yaml:"ignore_dirs"`
+	FinderCap  int           `yaml:"finder_cap"`
+	IgnoreDirs *[]string     `yaml:"ignore_dirs"`
+	OpenWith   []openWithApp `yaml:"open_with"`
+}
+
+// openWithApp is one entry in config.yaml's open_with: a display name and the
+// command filu runs as `<cmd> <path>` when it is picked from the [o]pen menu.
+// The command may carry args (e.g. "code -n"); the path is appended as the last
+// argument.
+type openWithApp struct {
+	Name string `yaml:"name"`
+	Cmd  string `yaml:"cmd"`
 }
 
 var configPathOverride string // tests redirect config I/O here
@@ -78,6 +89,7 @@ func loadConfig() {
 	if c.IgnoreDirs != nil {
 		finderIgnoreDirs = *c.IgnoreDirs
 	}
+	openWithApps = c.OpenWith
 }
 
 // configHeader is the top-of-file comment; the keys themselves are marshalled
@@ -94,10 +106,20 @@ const configHeader = `# filu configuration — hand-edited, and separate from th
 #   entry matches that name anywhere in the tree; an entry with a slash (e.g.
 #   go/pkg) matches that path. Add or remove freely.
 #
+# open_with: apps for the [o]pen picker (press o on a file or directory). Each
+#   entry has a name and a command; filu runs "<cmd> <path>" when you pick it.
+#   The picker always offers "Default" (the OS default app) first, then these —
+#   handy for opening a folder in your IDE. Example (edit to the tools you have):
+#     open_with:
+#       - name: VSCode
+#         cmd: code
+#       - name: IntelliJ IDEA
+#         cmd: idea
+#
 `
 
 func defaultConfigBytes() []byte {
-	body, _ := yaml.Marshal(fileConfig{FinderCap: defaultFinderCap, IgnoreDirs: &defaultIgnoreDirs})
+	body, _ := yaml.Marshal(fileConfig{FinderCap: defaultFinderCap, IgnoreDirs: &defaultIgnoreDirs, OpenWith: []openWithApp{}})
 	return append([]byte(configHeader), body...)
 }
 
