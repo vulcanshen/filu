@@ -53,9 +53,6 @@
   directory or any list tab's current directory (pick by number, or j/k +
   Enter; Esc stays). With the shell wrapper installed (`eval "$(filu shell)"`),
   the shell cd's there on exit; `Ctrl+C` still hard-quits without cd-ing.
-- Edit (`e`) opens a text file in `$EDITOR` inside an embedded PTY popup — the
-  editor renders within filu instead of taking over the screen. Non-text files
-  fall back to OS open; the directory reloads when the editor exits.
 - Yank (`y`) in panel [2] or the Carries tab copies the item's full path to the
   system clipboard via OSC 52 (works over SSH and tmux), with a toast
   confirmation.
