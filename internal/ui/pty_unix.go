@@ -55,8 +55,9 @@ func newPtyPopup() *ptyPopup {
 func (p *ptyPopup) isActive() bool   { return p != nil && p.active }
 func (p *ptyPopup) isRendered() bool { return p != nil && (p.active || p.anim.isActive()) }
 
-// start launches cmd in a PTY sized to a popup inside hostW×hostH; dir is
-// reloaded when the editor exits.
+// start launches cmd in a PTY sized to a popup inside hostW×hostH, rooted at dir
+// — a shell takes no path argument, so cmd.Dir is what puts it in the active
+// tab's directory; dir is also the directory reloaded when the process exits.
 func (p *ptyPopup) start(cmd *exec.Cmd, title, dir string, hostW, hostH int) tea.Cmd {
 	p.active = true
 	p.stopPending = false
@@ -69,6 +70,7 @@ func (p *ptyPopup) start(cmd *exec.Cmd, title, dir string, hostW, hostH int) tea
 
 	cols, rows := p.dims()
 	p.term = vt10x.New(vt10x.WithSize(cols, rows))
+	cmd.Dir = dir // root the process in the tab's directory (the shell opens here)
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})
 	if err != nil {
 		p.active = false

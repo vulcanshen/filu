@@ -121,6 +121,19 @@ func TestPtyPopupBorderAligns(t *testing.T) {
 	}
 }
 
+// TestPtyStartsInDir guards that the PTY process is rooted at the directory it
+// was started with — a shell has no path argument, so without cmd.Dir it would
+// open in filu's own cwd (the launch dir) instead of the active tab's directory.
+func TestPtyStartsInDir(t *testing.T) {
+	dir := t.TempDir()
+	p := newPtyPopup()
+	p.start(exec.Command("true"), "Shell", dir, 100, 30)
+	defer p.stop()
+	if p.cmd.Dir != dir {
+		t.Errorf("cmd.Dir = %q, want the tab's dir %q", p.cmd.Dir, dir)
+	}
+}
+
 func TestPtyLifecycle(t *testing.T) {
 	p := newPtyPopup()
 	p.start(exec.Command("true"), "test", "/tmp", 80, 24) // exits immediately
