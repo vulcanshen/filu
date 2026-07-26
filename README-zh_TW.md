@@ -128,7 +128,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 - **Yank 含 visual 選取** — 在 `[3]` Preview 或 `[5]` Meta 按 `y` 開一個帶 vim 式游標的 viewport;`v` 進字元級 visual 選取,`y` 複製選取內容(沒選取則複製全部),走 OSC 52(可穿 tmux / SSH)。在檔案列或 Carries 項按 `y` 複製它的完整路徑。
 - **多層排序** — `S` 開一個 column → direction 的 picker,會循環讓你疊多層(後面的層當 tie-breaker)。目錄永遠排前面;當前排序顯示在 `[2]` Files 標題、並存進 session。
 - **刪到系統垃圾桶** — `D`(帶確認對話框)把檔案移到 OS 垃圾桶(macOS Trash / Linux XDG)。還原走你的檔案管理器垃圾桶介面。
-- **動態目錄分頁** — `[2]` 預設開一個分頁;`t` 在當前目錄開新分頁(最多五個)、`w` 關掉 active。分頁用羅馬數字(`Ⅰ` … `Ⅴ`)標 — 路徑在 header,分頁列只標位置與哪個 active。
+- **動態目錄分頁** — `[2]` 預設開一個分頁;`t` 在當前目錄開新分頁、`T` 走 Goto 選一個目錄開新分頁(合計最多五個)、`w` 關掉 active;到上限會 toast 提示、不再默默沒反應。分頁用羅馬數字(`Ⅰ` … `Ⅴ`)標 — 路徑在 header,分頁列只標位置與哪個 active。
 - **eza icon + 配色** — 檔案型別 glyph 取自 eza 完整 icon 表(~760 個);顏色來自烘進 binary 的 `vivid generate catppuccin-mocha` `LS_COLORS` palette,依 eza 的優先序解析(目錄 → symlink → executable → 最長 suffix → 副檔名)。執行時不需要 `LS_COLORS` — 每個安裝都是同一套配色,與你終端的 `eza` / `ls` 一致。
 - **即時刷新** — 清單分頁監看自己的目錄(fsnotify),外部增刪檔案時自動 reload、保留游標;連續事件會 debounce。
 - **session 持久化** — 多開的分頁(dir + cursor)、focus、carry bucket、pinned、tasks、sort 都存進 `state.yaml`;第一個分頁永遠開在啟動目錄。
@@ -160,7 +160,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
  面板 2    o open     O open-with  p pick    y yank   c copy   m move
            r rename   a add        D delete  S sort   P pin    . hidden  z zoom
  finder    / search   f find     go goto     b breadcrumb
- 分頁      t 開分頁   w 關分頁
+ 分頁      t 開分頁   T goto 開新分頁  w 關分頁
 ```
 
 `gg`(跳頂)是 vim g-prefix chord — 單 `g` 待命等第二鍵;`go`(開 Goto finder)用同一個前綴。`G` 跳底。
@@ -179,7 +179,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 | Focus | 選單項目 |
 |---|---|
 | **`[1]` Places** | Jump(`Enter`)、UnPin(`P`,pinned 列) |
-| **`[2]` List** | Open `o`、Open with `O`、Pick `p`、Yank `y`、Rename `r`、Delete `D`、Pin `P` · Copy `c`、Move `m`、Search `/`、Find `f`、Goto `go`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Hidden `.`、Zoom `z` |
+| **`[2]` List** | Open `o`、Open with `O`、Pick `p`、Yank `y`、Rename `r`、Delete `D`、Pin `P` · Copy `c`、Move `m`、Search `/`、Find `f`、Goto `go`、Breadcrumb `b`、Tab `t`、Tab @ goto `T`、Close tab `w`、Add `a`、Sort `S`、Hidden `.`、Zoom `z` |
 | **`[3]` Preview** | Yank `y`、Zoom `z` |
 | **`[4]` Carries** | Pick `p`、Yank `y`、Delete `D` · Tab `l`、Zoom `z` |
 | **`[4]` Tasks** | Redo `R`、Delete `D` · Tab `l`、Zoom `z` |
