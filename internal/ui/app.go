@@ -174,7 +174,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ptyTickMsg:
 		return m, m.pty.update(msg)
 	case ptyExitMsg:
-		for i := range m.tabs { // an edit may have changed the file — reload its dir
+		for i := range m.tabs { // an edit or shell session may have changed files — reload its dir
 			if m.tabs[i].dir == msg.dir {
 				m.tabs[i].reloadPreserving()
 			}
@@ -501,6 +501,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.openDefault()
 	case "O": // Open with: pick an app (Default OS open, or a configured one)
 		cmd = m.openOpenWith()
+	case "s": // shell: drop into $SHELL in this tab's directory (exit to return)
+		cmd = m.pty.start(buildShellCmd(), "Shell: "+shortPath(l.dir), l.dir, m.width, m.height)
 	// [S]ort has no key binding: filu shows no columns, so a column sort reads
 	// oddly. The sort machinery (sort.go, the sortMenu flow) is kept and still
 	// orders the list (dirs first + any persisted chain) — re-add a key here to
@@ -763,6 +765,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		panelOps = append(panelOps,
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
+			menuItem{label: "Shell", key: "s", hint: "drop into $SHELL here (exit to return)"},
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
 			menuItem{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"})
 		return groupedMenu(itemOps, panelOps), title
