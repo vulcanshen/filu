@@ -42,7 +42,7 @@ filu is a member of the `u`-family and a filesystem-domain implementation of the
 | **`Esc`** | Back out — up one directory / close any popup |
 | **`?`** | Global help — every app-wide action in one list |
 
-When in doubt, press `Space`. Power-user hotkeys (`o` open / `O` open-with / `p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `D` delete / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …) exist for speed — every one is also reachable through the `Space` menu, so nothing's required to memorize unless you want it.
+When in doubt, press `Space`. Power-user hotkeys (`o` open / `O` open-with / `p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `s` shell / `D` delete / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …) exist for speed — every one is also reachable through the `Space` menu, so nothing's required to memorize unless you want it.
 
 ## Install
 
@@ -125,6 +125,7 @@ filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `c
   - **`b` Breadcrumb** — a popup of the current tab's ancestor directories; `Enter` jumps the tab up to any level.
   - In the result list, `Esc` leaves and `q` returns to the input. Scan bounds (`finder_cap`) and skipped tool directories (`ignore_dirs`) are tunable in `config.yaml`.
 - **Open, and open-with** — `o` opens the cursor file or directory with the OS default app. `O` (shift-o) opens a picker instead: **Default** plus the apps you list under `open_with` in `config.yaml` (VSCode, IntelliJ IDEA, …), each run as `<cmd> <path>` — handy for opening the current folder in your IDE. In filu, `o` / `O` — not `Enter` — open things; `Enter` is navigation only.
+- **Drop to a shell** — `s` opens your `$SHELL` in the active tab's directory inside the embedded terminal; run a few commands and `exit` to come back (the directory reloads in case files changed). It's a modal sub-shell — you leave it by exiting, not by switching away — so quick per-tab work never needs you to quit filu.
 - **Preview by file kind** — detected from magic bytes: directory → inner tree, archive (zip / tar / tar.gz…) → contents, image → base64 `data:` URI, SVG → highlighted XML, text → syntax-highlighted with line numbers (Chroma / catppuccin-mocha), binary → hex + ASCII, PDF → extracted text + page count.
 - **File metadata panel** — `[5]` shows `stat`-level metadata for the cursor file (Name / Path / Type / Size / Owner / Group / Links / Inode / Perm / Octal / Modified / Accessed / Changed / Created).
 - **Yank with visual selection** — `y` on `[3]` Preview or `[5]` Meta opens a viewport with a vim-style cursor; `v` enters character-wise visual selection, `y` copies the selection (or the whole content when nothing is selected) via OSC 52 (works through tmux / SSH). `y` on a file row or a Carries item copies its full path.
@@ -158,8 +159,8 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
 
 ```
  cursor    j k        u d        gg G        h l (switch this panel's tab)
- panel 2   o open     O open-with  p pick    y yank   c copy   m move
-           r rename   a add        D delete  P pin    . hidden  z zoom
+ panel 2   o open     O open-with  p pick    y yank    c copy   m move
+           r rename   a add        s shell   D delete  P pin    . hidden  z zoom
  finders   / search   f find     go goto     b breadcrumb
  tabs      t new tab  T new tab @ goto  w close tab
 ```
@@ -180,7 +181,7 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
 | Focus | Menu items |
 |---|---|
 | **`[1]` Places** | Jump (`Enter`), UnPin (`P`, pinned rows) |
-| **`[2]` List** | Open `o`, Open with `O`, Pick `p`, Yank `y`, Rename `r`, Delete `D`, Pin `P` · Copy `c`, Move `m`, Search `/`, Find `f`, Goto `go`, Breadcrumb `b`, Tab `t`, Tab @ goto `T`, Close tab `w`, Add `a`, Hidden `.`, Zoom `z` |
+| **`[2]` List** | Open `o`, Open with `O`, Pick `p`, Yank `y`, Rename `r`, Delete `D`, Pin `P` · Copy `c`, Move `m`, Search `/`, Find `f`, Goto `go`, Breadcrumb `b`, Tab `t`, Tab @ goto `T`, Close tab `w`, Add `a`, Shell `s`, Hidden `.`, Zoom `z` |
 | **`[3]` Preview** | Yank `y`, Zoom `z` |
 | **`[4]` Carries** | Pick `p`, Yank `y`, Delete `D` · Tab `l`, Zoom `z` |
 | **`[4]` Tasks** | Redo `R`, Delete `D` · Tab `l`, Zoom `z` |

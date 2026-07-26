@@ -323,6 +323,20 @@ func buildEditorCmd(path string) *exec.Cmd {
 	return c
 }
 
+// buildShellCmd runs the user's shell ($SHELL, else /bin/sh) with the env
+// sanitised for vt10x (same as the editor). ptyPopup.start attaches it to a PTY,
+// so the shell sees a tty and starts interactive, and sets the working
+// directory; exit the shell to return to filu.
+func buildShellCmd() *exec.Cmd {
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/sh"
+	}
+	c := exec.Command(shell)
+	c.Env = sanitizeEditorEnv()
+	return c
+}
+
 func sanitizeEditorEnv() []string {
 	out := make([]string, 0, len(os.Environ())+1)
 	for _, kv := range os.Environ() {

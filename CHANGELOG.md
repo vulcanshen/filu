@@ -61,6 +61,10 @@
   under `open_with` in `config.yaml` (each a name + command; filu runs
   `<cmd> <path>`), so opening the current folder in your IDE is a keystroke away.
   This is how things are opened in filu — Enter is navigation only.
+- Drop to a shell: `s` opens `$SHELL` (else `/bin/sh`) in the active tab's
+  directory inside the embedded terminal — a modal sub-shell you leave by
+  `exit`, after which the directory reloads. Quick per-tab work no longer needs
+  quitting filu.
 - Enter descends into a directory. In filu, Enter is navigation only — opening a
   file is not Enter's job (that role is the `[o]pen` / open-with menu); a file row
   Enter is a no-op.

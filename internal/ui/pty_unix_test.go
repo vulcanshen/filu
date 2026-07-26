@@ -38,6 +38,36 @@ func TestBuildEditorCmd(t *testing.T) {
 	}
 }
 
+func TestBuildShellCmd(t *testing.T) {
+	t.Setenv("TERM_PROGRAM", "iTerm.app")
+
+	t.Setenv("SHELL", "/bin/zsh")
+	c := buildShellCmd()
+	if len(c.Args) != 1 || c.Args[0] != "/bin/zsh" {
+		t.Errorf("args = %v, want [/bin/zsh]", c.Args)
+	}
+	var hasTerm, hasProg bool
+	for _, kv := range c.Env {
+		if kv == "TERM=xterm-256color" {
+			hasTerm = true
+		}
+		if strings.HasPrefix(kv, "TERM_PROGRAM=") {
+			hasProg = true
+		}
+	}
+	if !hasTerm {
+		t.Error("env should set TERM=xterm-256color for vt10x")
+	}
+	if hasProg {
+		t.Error("env should strip TERM_PROGRAM")
+	}
+
+	t.Setenv("SHELL", "") // no $SHELL → /bin/sh
+	if c := buildShellCmd(); len(c.Args) != 1 || c.Args[0] != "/bin/sh" {
+		t.Errorf("no SHELL should fall back to /bin/sh, got %v", c.Args)
+	}
+}
+
 func TestPtyKeyBytes(t *testing.T) {
 	cases := []struct {
 		msg  tea.KeyMsg
