@@ -68,6 +68,10 @@
 - Enter descends into a directory. In filu, Enter is navigation only — opening a
   file is not Enter's job (that role is the `[o]pen` / open-with menu); a file row
   Enter is a no-op.
+- New tab at a chosen directory: `T` (shift-t) opens the Goto finder and, on
+  Enter, opens the picked directory as a new panel [2] tab (`t` still opens one in
+  the current directory). Both toast when the tab limit (5) is reached instead of
+  silently doing nothing.
 - Live refresh: the list tabs now watch their directories (fsnotify) and reload
   automatically when files are added or removed externally, keeping the cursor
   on its entry. Bursts are debounced into a single reload.

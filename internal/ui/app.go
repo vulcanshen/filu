@@ -132,6 +132,18 @@ func (m *AppModel) shutdown() tea.Cmd {
 // cur returns a pointer to the active directory tab.
 func (m *AppModel) cur() *listModel { return &m.tabs[m.tab] }
 
+// addTab appends a new panel [2] tab at dir and makes it active. Callers guard
+// against exceeding maxTabs.
+func (m *AppModel) addTab(dir string) {
+	m.tabs = append(m.tabs, newList(dir))
+	m.tab = len(m.tabs) - 1
+}
+
+// tabLimitToast is the message shown when t / T would exceed maxTabs.
+func tabLimitToast() string {
+	return "Tab limit reached (" + strconv.Itoa(maxTabs) + ") — close one with w"
+}
+
 // active returns the active tab by value (read-only paths).
 func (m AppModel) active() listModel { return m.tabs[m.tab] }
 
@@ -183,7 +195,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case inputBlinkMsg:
 		return m, m.inputPopup.onBlink(msg)
 	case searchConfirmMsg:
-		m.revealPath(msg.path)
+		if msg.newTab { // T: the picked directory becomes a new tab
+			if len(m.tabs) < maxTabs {
+				m.addTab(msg.path)
+			}
+		} else {
+			m.revealPath(msg.path)
+		}
 		m.syncWatches() // the tab may have moved to a new dir
 		m.refreshPreview()
 		return m, nil
@@ -431,9 +449,15 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
 	case "t": // new tab in the current tab's directory, made active (up to maxTabs)
 		if len(m.tabs) < maxTabs {
-			dir := m.cur().dir // capture before append may reallocate m.tabs
-			m.tabs = append(m.tabs, newList(dir))
-			m.tab = len(m.tabs) - 1
+			m.addTab(m.cur().dir)
+		} else {
+			cmd = m.toast.show(tabLimitToast())
+		}
+	case "T": // new tab at a directory chosen via Goto (up to maxTabs)
+		if len(m.tabs) < maxTabs {
+			cmd = m.openGotoNewTab()
+		} else {
+			cmd = m.toast.show(tabLimitToast())
 		}
 	case "w": // close the active tab (always keep at least one)
 		if len(m.tabs) > 1 {
@@ -728,7 +752,8 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
 		if len(m.tabs) < maxTabs {
 			panelOps = append(panelOps,
-				menuItem{label: "Tab", key: "t", hint: "open a new tab in this directory"})
+				menuItem{label: "Tab", key: "t", hint: "open a new tab in this directory"},
+				menuItem{label: "Tab @ goto", key: "T", hint: "open a new tab at a directory you pick"})
 		}
 		if len(m.tabs) > 1 {
 			panelOps = append(panelOps,

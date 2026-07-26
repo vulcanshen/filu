@@ -55,6 +55,7 @@ type searchModel struct {
 	root      string      // absolute search root (the active tab's dir, or $HOME for goto)
 	byContent bool        // true = Find (rg content + preview); false = Search / Goto (name)
 	dirsOnly  bool        // true = Goto: list only directories (fd --type d), no hidden
+	newTab    bool        // true = Goto opened by T: confirm opens a new tab, not a reveal
 	query     string      // filter text
 	allFiles  []fileMatch // every file + dir under root (the empty-query list)
 	files     []fileMatch // current list: allFiles, or the name/content matches
@@ -104,8 +105,12 @@ type grepFilesMsg struct {
 	matches []fileMatch
 }
 
-// searchConfirmMsg asks the app to reveal an absolute path in the active tab.
-type searchConfirmMsg struct{ path string }
+// searchConfirmMsg asks the app to act on an absolute path chosen in a finder:
+// reveal it in the active tab, or (newTab) open it as a new panel [2] tab.
+type searchConfirmMsg struct {
+	path   string
+	newTab bool
+}
 
 func newSearch() searchModel {
 	return searchModel{anim: newPopupAnimator("search", popupLayerColor(1))}
@@ -132,6 +137,15 @@ func (m *AppModel) openGoto() tea.Cmd {
 	return m.search.open(home, m.width, m.height, false, true, m.searchCh)
 }
 
+// openGotoNewTab opens the same Goto finder as openGoto (`T`), but its confirm
+// opens the chosen directory as a NEW panel [2] tab instead of teleporting the
+// active one. The caller has already checked the tab count is under maxTabs.
+func (m *AppModel) openGotoNewTab() tea.Cmd {
+	cmd := m.openGoto()
+	m.search.newTab = true
+	return cmd
+}
+
 // open resets the finder over root and starts streaming the file list into ch.
 // byContent selects Find (rg + preview) vs Search/Goto (name-only); dirsOnly
 // restricts the listing to directories (Goto). Results appear as fd emits them —
@@ -140,6 +154,7 @@ func (m *searchModel) open(root string, w, h int, byContent, dirsOnly bool, ch c
 	m.root = root
 	m.byContent = byContent
 	m.dirsOnly = dirsOnly
+	m.newTab = false // normal opens reveal in place; only openGotoNewTab flips this
 	m.query = ""
 	m.allFiles, m.files = nil, nil
 	m.cursor, m.scroll = 0, 0
@@ -262,7 +277,7 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 		m.mode = searchInput
 	case "enter": // confirm → reveal in the active tab, then close
 		if p := m.selectedAbs(); p != "" {
-			return m, tea.Batch(m.anim.close(), func() tea.Msg { return searchConfirmMsg{p} })
+			return m, tea.Batch(m.anim.close(), func() tea.Msg { return searchConfirmMsg{path: p, newTab: m.newTab} })
 		}
 		return m, m.anim.close()
 	case "j", "down":

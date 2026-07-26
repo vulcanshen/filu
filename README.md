@@ -130,7 +130,7 @@ filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `c
 - **Yank with visual selection** — `y` on `[3]` Preview or `[5]` Meta opens a viewport with a vim-style cursor; `v` enters character-wise visual selection, `y` copies the selection (or the whole content when nothing is selected) via OSC 52 (works through tmux / SSH). `y` on a file row or a Carries item copies its full path.
 - **Multi-tier sort** — `S` opens a column → direction picker that loops so you can stack tiers (later tiers break ties). Directories stay first; the active sort shows in the `[2]` Files header and persists per session.
 - **Delete to system trash** — `D` (with a confirmation dialog) moves to the OS trash (macOS Trash / Linux XDG). Restore via your file manager's trash UI.
-- **Dynamic directory tabs** — `[2]` opens with one tab; `t` opens a new tab in the current directory (up to five), `w` closes the active one. Tabs are labelled with Roman numerals (`Ⅰ` … `Ⅴ`) — the path lives in the header, so the tab bar just marks position and which is active.
+- **Dynamic directory tabs** — `[2]` opens with one tab; `t` opens a new tab in the current directory, `T` opens one at a directory you pick via Goto (up to five total), `w` closes the active one; reaching the limit toasts instead of silently doing nothing. Tabs are labelled with Roman numerals (`Ⅰ` … `Ⅴ`) — the path lives in the header, so the tab bar just marks position and which is active.
 - **eza icons + colours** — file-type glyphs come from eza's full icon table (~760 glyphs); colours come from a baked-in `vivid generate catppuccin-mocha` `LS_COLORS` palette resolved in eza's order (directory → symlink → executable → longest suffix → extension). No `LS_COLORS` needed at run time — every install shows the same palette, matching your terminal's `eza` / `ls`.
 - **Live refresh** — the list tabs watch their directories (fsnotify) and reload when files change externally, keeping the cursor on its entry; bursts are debounced.
 - **Session persistence** — extra tabs (dir + cursor), focus, carry bucket, pinned dirs, tasks, and sort are saved to `state.yaml`; the first tab always reopens at the launch directory.
@@ -162,7 +162,7 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
  panel 2   o open     O open-with  p pick    y yank   c copy   m move
            r rename   a add        D delete  S sort   P pin    . hidden  z zoom
  finders   / search   f find     go goto     b breadcrumb
- tabs      t new tab  w close tab
+ tabs      t new tab  T new tab @ goto  w close tab
 ```
 
 `gg` (jump to top) is a vim g-prefix chord — a lone `g` arms and waits; `go` (open the Goto finder) is the same prefix. `G` jumps to the bottom.
@@ -181,7 +181,7 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
 | Focus | Menu items |
 |---|---|
 | **`[1]` Places** | Jump (`Enter`), UnPin (`P`, pinned rows) |
-| **`[2]` List** | Open `o`, Open with `O`, Pick `p`, Yank `y`, Rename `r`, Delete `D`, Pin `P` · Copy `c`, Move `m`, Search `/`, Find `f`, Goto `go`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Hidden `.`, Zoom `z` |
+| **`[2]` List** | Open `o`, Open with `O`, Pick `p`, Yank `y`, Rename `r`, Delete `D`, Pin `P` · Copy `c`, Move `m`, Search `/`, Find `f`, Goto `go`, Breadcrumb `b`, Tab `t`, Tab @ goto `T`, Close tab `w`, Add `a`, Sort `S`, Hidden `.`, Zoom `z` |
 | **`[3]` Preview** | Yank `y`, Zoom `z` |
 | **`[4]` Carries** | Pick `p`, Yank `y`, Delete `D` · Tab `l`, Zoom `z` |
 | **`[4]` Tasks** | Redo `R`, Delete `D` · Tab `l`, Zoom `z` |
