@@ -501,8 +501,10 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.openDefault()
 	case "O": // Open with: pick an app (Default OS open, or a configured one)
 		cmd = m.openOpenWith()
-	case "S": // sort: open the column→direction picker
-		cmd = m.openSortColumnPicker()
+	// [S]ort has no key binding: filu shows no columns, so a column sort reads
+	// oddly. The sort machinery (sort.go, the sortMenu flow) is kept and still
+	// orders the list (dirs first + any persisted chain) — re-add a key here to
+	// re-expose the picker.
 	case "/": // Search: by-name finder over the subtree, reveal the pick here
 		cmd = m.openSearch()
 	case "f": // Find: by-content finder (rg) with preview, reveal the pick here
@@ -761,7 +763,6 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		panelOps = append(panelOps,
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
-			menuItem{label: "Sort", key: "S", hint: "order by name / size / modified / ext"},
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
 			menuItem{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"})
 		return groupedMenu(itemOps, panelOps), title
