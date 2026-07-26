@@ -229,7 +229,10 @@ func (p *ptyPopup) renderPopup() string {
 	if lipgloss.Width(title) > cols-2 {
 		title = " "
 	}
-	trail := max(cols-lipgloss.Width(title)-2, 0)
+	// The box interior is cols wide; the top row is ╭ + ─ + title + trail─ + ╮, so
+	// the runs after ╭ (one ─, the title, the trail) must sum to cols → trail =
+	// cols - width(title) - 1. (The bottom row below uses the same arithmetic.)
+	trail := max(cols-lipgloss.Width(title)-1, 0)
 	top := bs.Render("╭─") + ts.Render(title) + bs.Render(strings.Repeat("─", trail)+"╮")
 	vbar := bs.Render("│")
 

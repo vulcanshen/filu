@@ -10,6 +10,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestBuildEditorCmd(t *testing.T) {
@@ -84,6 +85,28 @@ func TestPtyKeyBytes(t *testing.T) {
 	for _, c := range cases {
 		if got := ptyKeyBytes(c.msg, c.app); !bytes.Equal(got, c.want) {
 			t.Errorf("ptyKeyBytes(%+v, app=%v) = %v, want %v", c.msg, c.app, got, c.want)
+		}
+	}
+}
+
+// TestPtyPopupBorderAligns guards the bordered box: every row — the titled top,
+// the content rows, and the hint bottom — must be the same display width, or the
+// right edge steps in and out (the long "Shell: <path>" title exposed a top-row
+// off-by-one that short editor titles hid).
+func TestPtyPopupBorderAligns(t *testing.T) {
+	p := newPtyPopup()
+	p.start(exec.Command("true"), "Shell: ~/Documents/sideproj/kbu", "/tmp", 100, 30)
+	defer p.stop()
+	p.anim.state = popupOpen // settle the open animation so renderFrame returns the box as-is
+
+	lines := strings.Split(strings.TrimRight(p.renderPopup(), "\n"), "\n")
+	if len(lines) < 3 {
+		t.Fatalf("expected a bordered box, got %d lines", len(lines))
+	}
+	want := lipgloss.Width(lines[0])
+	for i, ln := range lines {
+		if w := lipgloss.Width(ln); w != want {
+			t.Errorf("row %d width %d != %d (border misaligned):\n%q", i, w, want, ln)
 		}
 	}
 }
