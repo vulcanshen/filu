@@ -92,8 +92,8 @@
   mark.
 - The header path bar is now a powerline breadcrumb instead of a flat path: a
   tab-numeral + folder-glyph chip, then one chip per path segment coloured along
-  a continuous blue→crust gradient (interpolated by depth: root = blue, current
-  directory = crust), the bar blue from the first cell. The wide contrast keeps
+  a continuous crust→blue gradient (interpolated by depth: root = crust, current
+  directory = blue), the bar dark from the first cell. The wide contrast keeps
   the triangle separators visible between adjacent segments, and each segment's
   text flips dark/light by WCAG contrast so names stay legible across the span.
   When it overflows, front segments shrink to their initial (`~/Documents/x` →

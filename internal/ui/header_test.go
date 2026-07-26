@@ -6,45 +6,45 @@ import (
 )
 
 func TestCrumbColorEndpoints(t *testing.T) {
-	// Root of a path = blue; current = crust; a single-segment path is the crust
+	// Root of a path = crust; current = blue; a single-segment path is the blue
 	// (current) endpoint.
-	if got := string(crumbColor(0, 4)); got != "#89b4fa" {
-		t.Errorf("crumbColor(0,4) = %s, want blue #89b4fa (root)", got)
+	if got := string(crumbColor(0, 4)); got != "#11111b" {
+		t.Errorf("crumbColor(0,4) = %s, want crust #11111b (root)", got)
 	}
-	if got := string(crumbColor(3, 4)); got != "#11111b" {
-		t.Errorf("crumbColor(3,4) = %s, want crust #11111b (current)", got)
+	if got := string(crumbColor(3, 4)); got != "#89b4fa" {
+		t.Errorf("crumbColor(3,4) = %s, want blue #89b4fa (current)", got)
 	}
-	if got := string(crumbColor(0, 1)); got != "#11111b" {
-		t.Errorf("crumbColor(0,1) = %s, want crust (single segment = current)", got)
+	if got := string(crumbColor(0, 1)); got != "#89b4fa" {
+		t.Errorf("crumbColor(0,1) = %s, want blue (single segment = current)", got)
 	}
 }
 
-// TestCrumbGradientMonotone: perceived luminance must fall monotonically from
-// the blue root to the crust current, so the z-axis never reverses across depth.
+// TestCrumbGradientMonotone: perceived luminance must rise monotonically from
+// the crust root to the blue current, so the z-axis never reverses across depth.
 func TestCrumbGradientMonotone(t *testing.T) {
 	lum := func(t float64) int { r, g, b := crumbRGB(t); return (299*r + 587*g + 114*b) / 1000 }
-	prev := 1 << 30
+	prev := -1
 	for i := 0; i <= 10; i++ {
-		if l := lum(float64(i) / 10); l > prev {
-			t.Fatalf("luminance rose at t=%.1f (%d > %d)", float64(i)/10, l, prev)
+		if l := lum(float64(i) / 10); l < prev {
+			t.Fatalf("luminance fell at t=%.1f (%d < %d)", float64(i)/10, l, prev)
 		} else {
 			prev = l
 		}
 	}
 }
 
-// TestCrumbTextFlips: dark text on the bright blue end (and still dark a third of
-// the way in — the flip must not come too early), light text on the dark crust
+// TestCrumbTextFlips: light text on the dark crust end (and still light a third of
+// the way in — the flip must not come too early), dark text on the bright blue
 // end, so the segment name never renders dark-on-dark.
 func TestCrumbTextFlips(t *testing.T) {
-	if got := string(crumbTextAt(0)); got != baseHex {
-		t.Errorf("crumbTextAt(0) = %s, want dark %s on the blue end", got, baseHex)
+	if got := string(crumbTextAt(0)); got != crumbLightText {
+		t.Errorf("crumbTextAt(0) = %s, want light %s on the crust end", got, crumbLightText)
 	}
-	if got := string(crumbTextAt(0.3)); got != baseHex {
-		t.Errorf("crumbTextAt(0.3) = %s, want dark %s (flip must not be too early)", got, baseHex)
+	if got := string(crumbTextAt(0.3)); got != crumbLightText {
+		t.Errorf("crumbTextAt(0.3) = %s, want light %s (flip must not be too early)", got, crumbLightText)
 	}
-	if got := string(crumbTextAt(1)); got != crumbLightText {
-		t.Errorf("crumbTextAt(1) = %s, want light %s on the crust end", got, crumbLightText)
+	if got := string(crumbTextAt(1)); got != baseHex {
+		t.Errorf("crumbTextAt(1) = %s, want dark %s on the blue end", got, baseHex)
 	}
 }
 
