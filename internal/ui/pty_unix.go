@@ -250,7 +250,7 @@ func (p *ptyPopup) renderPopup() string {
 	for _, line := range lines {
 		out.WriteString(vbar + line + vbar + "\n")
 	}
-	out.WriteString(bs.Render("╰─") + ts.Render(" Esc/:q closes ") + bs.Render(strings.Repeat("─", max(cols-len(" Esc/:q closes ")-1, 0))+"╯"))
+	out.WriteString(bs.Render("╰─") + ts.Render(" type exit to close ") + bs.Render(strings.Repeat("─", max(cols-len(" type exit to close ")-1, 0))+"╯"))
 	return p.anim.renderFrame(out.String())
 }
 
