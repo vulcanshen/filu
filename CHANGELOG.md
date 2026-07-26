@@ -60,10 +60,11 @@
   menu). A kbu-style column → direction picker builds a multi-tier sort chain
   (later tiers break ties), with per-column unset and a reset; directories stay
   first, the active sort shows in the Files header, and it persists per session.
-- Open with an app: `o` on a file or directory opens a picker of **Default** (the
-  OS default app) plus the apps you configure under `open_with` in `config.yaml`
-  (each a name + command; filu runs `<cmd> <path>`). Opening the current folder
-  in your IDE is a `<cmd> <dir>` away. This is how files are opened in filu.
+- Open (`o`) opens the cursor file or directory with the OS default app.
+  Open-with (`O`) opens a picker instead: **Default** plus the apps you configure
+  under `open_with` in `config.yaml` (each a name + command; filu runs
+  `<cmd> <path>`), so opening the current folder in your IDE is a keystroke away.
+  This is how things are opened in filu — Enter is navigation only.
 - Enter descends into a directory. In filu, Enter is navigation only — opening a
   file is not Enter's job (that role is the `[o]pen` / open-with menu); a file row
   Enter is a no-op.

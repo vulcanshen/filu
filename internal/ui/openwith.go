@@ -7,8 +7,20 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// openOpenWith opens the [o]pen picker for the cursor item: a "Default" entry
-// (the OS default app) followed by each app configured in config.yaml's
+// openDefault opens the cursor item straight away with the OS default app — the
+// [o] fast path (no picker). [O] (openOpenWith) shows the app chooser instead.
+// It works on a file or a directory.
+func (m *AppModel) openDefault() tea.Cmd {
+	l := m.cur()
+	it := l.cursorItem()
+	if it.name == "" {
+		return nil
+	}
+	return openFileCmd(filepath.Join(l.dir, it.name))
+}
+
+// openOpenWith opens the [O]pen-with picker for the cursor item: a "Default"
+// entry (the OS default app) followed by each app configured in config.yaml's
 // open_with. A number or j/k + Enter runs the choice; Esc closes. It works on a
 // file or a directory (e.g. open the current folder in your IDE).
 func (m *AppModel) openOpenWith() tea.Cmd {

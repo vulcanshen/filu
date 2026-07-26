@@ -473,7 +473,9 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		if it := l.cursorItem(); it.name != "" {
 			cmd = copyToClipboardCmd(filepath.Join(l.dir, it.name), "Copied path to clipboard")
 		}
-	case "o": // open-with: pick an app (Default OS open, or a configured one)
+	case "o": // open with the OS default app (fast path; O opens the picker)
+		cmd = m.openDefault()
+	case "O": // Open with: pick an app (Default OS open, or a configured one)
 		cmd = m.openOpenWith()
 	case "S": // sort: open the column→direction picker
 		cmd = m.openSortColumnPicker()
@@ -704,7 +706,8 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		var itemOps, panelOps []menuItem
 		if it.name != "" {
 			itemOps = append(itemOps,
-				menuItem{label: "Open", key: "o", hint: "open with an app (Default = OS)"},
+				menuItem{label: "Open", key: "o", hint: "open with the OS default app"},
+				menuItem{label: "Open with", key: "O", hint: "pick an app (open_with in config.yaml)"},
 				menuItem{label: "Pick", key: "p", hint: `add to "carries" bucket`},
 				menuItem{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				menuItem{label: "Rename", key: "r", hint: "rename this item"},

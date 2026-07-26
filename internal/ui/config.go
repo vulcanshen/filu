@@ -106,10 +106,11 @@ const configHeader = `# filu configuration — hand-edited, and separate from th
 #   entry matches that name anywhere in the tree; an entry with a slash (e.g.
 #   go/pkg) matches that path. Add or remove freely.
 #
-# open_with: apps for the [o]pen picker (press o on a file or directory). Each
-#   entry has a name and a command; filu runs "<cmd> <path>" when you pick it.
-#   The picker always offers "Default" (the OS default app) first, then these —
-#   handy for opening a folder in your IDE. Example (edit to the tools you have):
+# open_with: apps for the [O]pen-with picker (press O on a file or directory;
+#   plain o just opens with the OS default). Each entry has a name and a command;
+#   filu runs "<cmd> <path>" when you pick it. The picker always offers "Default"
+#   (the OS default app) first, then these — handy for opening a folder in your
+#   IDE. Example (edit to the tools you have):
 #     open_with:
 #       - name: VSCode
 #         cmd: code

@@ -30,6 +30,34 @@ func TestLoadConfigOpenWith(t *testing.T) {
 	}
 }
 
+func TestOpenDefault(t *testing.T) {
+	var opened string
+	oldOpen := openFile
+	openFile = func(p string) error { opened = p; return nil }
+	defer func() { openFile = oldOpen }()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "doc.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m := AppModel{focus: panelList}
+	m.tabs = []listModel{newList(dir)}
+	cursorOn(&m, "doc.txt")
+
+	// o = open with the OS default app, directly — no picker.
+	cmd := m.openDefault()
+	if cmd == nil {
+		t.Fatal("openDefault should return a cmd")
+	}
+	cmd()
+	if want := filepath.Join(dir, "doc.txt"); opened != want {
+		t.Errorf("openDefault opened %q, want %q", opened, want)
+	}
+	if m.openWithMenu.isActive() {
+		t.Error("o (default open) must not open the picker")
+	}
+}
+
 func TestOpenOpenWithMenu(t *testing.T) {
 	orig := openWithApps
 	defer func() { openWithApps = orig }()
