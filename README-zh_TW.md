@@ -112,7 +112,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 
 - **零學習成本** — 所有動作都從 `Space` 選單浮現。進階快捷鍵是為了加速而存在,但你可以完全忽略整張 cheat sheet;`Space` 每次都在情境裡帶你走一樣的選單。上手一句話:*「遇事不決,就按 Space。」*
 - **5 面板工作區** — `[1]` Places + Pinned、`[2]` 檔案清單(主戰場)、`[3]` Preview、`[4]` Carries / Tasks、`[5]` 檔案 Metadata。版面 grid:`[1][2][3] / [1][2][3] / [4][4][5]` — 左欄 list 疊 carry,右欄鏡射成 preview 疊 metadata。`Tab` 輪切五個(或 `1`–`5` 直達)。
-- **Powerline 麵包屑 header** — 當前分頁的完整路徑以 powerline 麵包屑橫在最上方,顏色依目錄深度沿 `blue → crust` 漸層(root 是 blue、你所在的當前目錄是最深的 chip)。過長時把前段縮成字首(`~/Documents/x` → `~/D/x`),再不夠中間縮 `…`。分頁羅馬數字 + folder glyph 領頭。
+- **Powerline 麵包屑 header** — 當前分頁的完整路徑以 powerline 麵包屑橫在最上方,顏色依目錄深度沿 `crust → blue` 漸層(root 是最深的 chip、你所在的當前目錄是 blue)。過長時把前段縮成字首(`~/Documents/x` → `~/D/x`),再不夠中間縮 `…`。分頁羅馬數字 + folder glyph 領頭。
 - **目錄狀態列** — header 下方一列 eza 配色的當前目錄狀態:權限(`r` 黃 / `w` 紅 / `x` 綠)、owner:group、項目數 + 隱藏數、磁碟 free / total。全部在目錄載入時算一次(一個 `stat` + 一個 `statfs`,絕不遞迴掃目錄大小),所以永遠即時。
 - **carry-bucket 複製與搬移** — 延遲的 cp/mv,像 Finder 的 Cmd+C / Cmd+V。`p` 把檔案 pick 進 carry bucket(清單上打綠色 check-circle 標記 — 一種 in-place 多選),接著切到目標目錄,`c` 複製 / `m` 搬移整個 bucket 過去。在 Carries 分頁(`[4]`),`p` 改成 pick 一個要落地的**子集**、而非整個 bucket(用另一個獨立 glyph 標)。複製會保留 bucket(可連續落地到多個目錄);搬移會更新 bucket 內路徑讓它保持有效。
 - **非同步落地 + Tasks 分頁** — 複製/搬移在背景跑;進度串流到 `[4]` 的 Tasks 分頁(running / done / pending / error)。同磁碟搬移是瞬間 `rename`;跨磁碟 / 複製會顯示進度。中斷的任務存進 `state.yaml`,下次啟動可用 `R` 重跑。

@@ -13,16 +13,16 @@ import (
 // capHard triangle between two segments is visible only when their colours
 // differ — the triangle *is* the colour boundary — so a big luminance drop per
 // step keeps every separator legible, even on a deep path where the per-segment
-// step is small. Root = blue (the structural focus colour), current = crust. The
+// step is small. Root = crust, current = blue (the structural focus colour). The
 // interpolation is still continuous by depth (the concept kept from the ZLC
 // scale); only the endpoints widened.
 const (
-	crumbFromR, crumbFromG, crumbFromB = 0x89, 0xb4, 0xfa // blue  #89b4fa (focusColor)
-	crumbToR, crumbToG, crumbToB       = 0x11, 0x11, 0x1b // crust #11111b
-	crumbLightText                     = "#cdd6f4"        // catppuccin text — on the dark end
+	crumbFromR, crumbFromG, crumbFromB = 0x11, 0x11, 0x1b // crust #11111b (root)
+	crumbToR, crumbToG, crumbToB       = 0x89, 0xb4, 0xfa // blue  #89b4fa (focusColor, current)
+	crumbLightText                     = "#cdd6f4"        // catppuccin text — used on the dark end
 )
 
-// crumbRGB interpolates the blue→crust gradient at t∈[0,1] (sRGB component lerp).
+// crumbRGB interpolates the crust→blue gradient at t∈[0,1] (sRGB component lerp).
 func crumbRGB(t float64) (int, int, int) {
 	t = math.Min(1, math.Max(0, t))
 	lerp := func(a, b int) int { return int(math.Round(float64(a) + float64(b-a)*t)) }
@@ -41,11 +41,11 @@ var (
 	crumbLightLum = relLuminance(0xcd, 0xd6, 0xf4) // crumbLightText — light text
 )
 
-// crumbTextAt keeps the segment name legible across the blue→crust span by
+// crumbTextAt keeps the segment name legible across the crust→blue span by
 // picking whichever of dark/light text has the higher WCAG contrast ratio with
-// the segment background — so text flips to light exactly where light actually
-// becomes more readable (~40% along the gradient), not at an arbitrary
-// perceived-luminance cutoff (which flipped far too early, ~21%).
+// the segment background — so text flips to dark exactly where dark actually
+// becomes more readable (~60% along the gradient toward blue), not at an
+// arbitrary perceived-luminance cutoff.
 func crumbTextAt(t float64) lipgloss.Color {
 	bg := relLuminance(crumbRGB(t))
 	if contrastRatio(crumbLightLum, bg) > contrastRatio(crumbDarkLum, bg) {
@@ -83,8 +83,8 @@ func crumbT(i, n int) float64 {
 	return float64(i) / float64(n-1)
 }
 
-// crumbColor is the background colour for path segment i of n: root (i=0) = blue,
-// current (i=n-1) = crust, the middle evenly interpolated.
+// crumbColor is the background colour for path segment i of n: root (i=0) = crust,
+// current (i=n-1) = blue, the middle evenly interpolated.
 func crumbColor(i, n int) lipgloss.Color { return crumbColorAt(crumbT(i, n)) }
 
 // pathSegments splits a directory into breadcrumb segments, folding the home dir
@@ -113,8 +113,8 @@ func pathSegments(dir string) []string {
 }
 
 // headerBar renders the location breadcrumb as a powerline chip chain: a
-// Lavender folder + active-tab-numeral chip, then one chip per path segment
-// coloured along the ZLC gradient (root→current = Lavenphire25→Sapphire).
+// crust folder + active-tab-numeral chip, then one chip per path segment
+// coloured along the ZLC depth gradient (root→current = crust→blue).
 // Unlike a panel title it never dims — the header is always the live "you are
 // here". When the bar overflows the width, front segments shrink to their
 // initial (~/Documents/x → ~/D/x); if that is not enough the middle collapses to
@@ -126,24 +126,25 @@ func (m AppModel) headerBar(w int) string {
 	return padDisp(folderChip+renderCrumb(segs), w)
 }
 
-// folderChip is the leading "you are here" chip: a round-left cap + dark-on-
-// Lavender body carrying the folder glyph and the active tab's Roman numeral.
+// folderChip is the leading "you are here" chip: a round-left cap + a body whose
+// text takes the same WCAG-contrast colour as the crumbs (crust start = dark
+// chip → light text), carrying the folder glyph and the active tab's Roman numeral.
 func (m AppModel) folderChip(label string) string {
-	c := crumbColorAt(0) // blue = the gradient start, so the bar is blue from the first cell
+	c := crumbColorAt(0) // crust = the gradient start (root), so the bar opens dark
 	cap := lipgloss.NewStyle().Foreground(c)
-	body := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(c).Bold(true)
+	body := lipgloss.NewStyle().Foreground(crumbTextAt(0)).Background(c).Bold(true)
 	return cap.Render(capLeft) + body.Render(label)
 }
 
 // renderCrumb draws the path portion of the breadcrumb: a capHard triangle
 // transition into each segment chip (coloured by crumbColor), then a capHard
 // tail in the current segment's colour on the terminal background. The first
-// transition blends from the folder chip's Lavender.
+// transition blends from the folder chip's crust.
 func renderCrumb(segs []string) string {
 	if len(segs) == 0 {
 		return ""
 	}
-	prev := crumbColorAt(0) // folder chip colour (blue = gradient start)
+	prev := crumbColorAt(0) // folder chip colour (crust = gradient start)
 	var b strings.Builder
 	n := len(segs)
 	for i, seg := range segs {
@@ -151,7 +152,7 @@ func renderCrumb(segs []string) string {
 		c := crumbColorAt(t)
 		// §8.2: the cap separates, so no leading space after it — only a trailing
 		// space closes each segment before the next cap. Text colour flips with the
-		// background luminance so the name stays legible across the blue→crust span.
+		// background luminance so the name stays legible across the crust→blue span.
 		b.WriteString(lipgloss.NewStyle().Foreground(prev).Background(c).Render(capHard))
 		b.WriteString(lipgloss.NewStyle().Foreground(crumbTextAt(t)).Background(c).Bold(true).Render(seg + " "))
 		prev = c
