@@ -502,7 +502,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "O": // Open with: pick an app (Default OS open, or a configured one)
 		cmd = m.openOpenWith()
 	case "s": // shell: drop into $SHELL in this tab's directory (exit to return)
-		cmd = m.pty.start(buildShellCmd(), "Shell: "+shortPath(l.dir), l.dir, m.width, m.height)
+		cmd = m.pty.start(buildShellCmd(), "Shell", l.dir, m.width, m.height)
 	// [S]ort has no key binding: filu shows no columns, so a column sort reads
 	// oddly. The sort machinery (sort.go, the sortMenu flow) is kept and still
 	// orders the list (dirs first + any persisted chain) — re-add a key here to
