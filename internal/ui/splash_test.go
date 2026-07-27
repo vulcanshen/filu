@@ -82,33 +82,23 @@ func TestSplashTickDoesNotExceedTotal(t *testing.T) {
 }
 
 func TestSplashBoundaryBeats(t *testing.T) {
-	// background→U beat
-	m := newSplashModel()
-	m.show()
-	m.revealedCount = m.bgCount
-	before := m.revealedCount
-	m, cmd := m.update(splashTickMsg{})
-	if m.revealedCount != before || !m.pausedBg || cmd == nil {
-		t.Errorf("bg→U boundary must hold once (paused=%v, count %d→%d, cmd nil=%v)", m.pausedBg, before, m.revealedCount, cmd == nil)
-	}
-	m, _ = m.update(splashTickMsg{})
-	if m.revealedCount <= before {
-		t.Error("the second tick must advance past the bg→U boundary")
-	}
-
-	// U→letters beat
-	m = newSplashModel()
-	m.show()
-	m.pausedBg = true
-	m.revealedCount = m.uEnd
-	before = m.revealedCount
-	m, cmd = m.update(splashTickMsg{})
-	if m.revealedCount != before || !m.pausedU || cmd == nil {
-		t.Errorf("U→letters boundary must hold once (paused=%v, count %d→%d, cmd nil=%v)", m.pausedU, before, m.revealedCount, cmd == nil)
-	}
-	m, _ = m.update(splashTickMsg{})
-	if m.revealedCount <= before {
-		t.Error("the second tick must advance past the U→letters boundary")
+	// Every stage boundary (bg→F, F→I, I→L, L→U) holds for exactly one tick before
+	// the next stage advances. The U stage is last, so there is no beat after it.
+	for k := 0; k < 4; k++ {
+		m := newSplashModel()
+		m.show()
+		m.beatsDone = k
+		m.revealedCount = m.stageEnds[k]
+		before := m.revealedCount
+		m, cmd := m.update(splashTickMsg{})
+		if m.revealedCount != before || m.beatsDone != k+1 || cmd == nil {
+			t.Errorf("stage-%d boundary must hold once (beatsDone=%d, count %d→%d, cmd nil=%v)",
+				k, m.beatsDone, before, m.revealedCount, cmd == nil)
+		}
+		m, _ = m.update(splashTickMsg{})
+		if m.revealedCount <= before {
+			t.Errorf("stage %d: the second tick must advance past the boundary", k)
+		}
 	}
 }
 
