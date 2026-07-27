@@ -6,6 +6,24 @@ import (
 	"testing"
 )
 
+// FILU_CONFIG redirects config I/O (used by the demo tapes to isolate state);
+// the test-only override still wins over it.
+func TestConfigPathEnvOverride(t *testing.T) {
+	old := configPathOverride
+	configPathOverride = ""
+	defer func() { configPathOverride = old }()
+
+	t.Setenv("FILU_CONFIG", "/tmp/filu-demo/config.yaml")
+	if got, ok := configFilePath(); !ok || got != "/tmp/filu-demo/config.yaml" {
+		t.Errorf("FILU_CONFIG not honoured: got %q ok=%v", got, ok)
+	}
+
+	configPathOverride = "/tmp/override/config.yaml" // test override beats the env
+	if got, _ := configFilePath(); got != "/tmp/override/config.yaml" {
+		t.Errorf("configPathOverride should win over FILU_CONFIG, got %q", got)
+	}
+}
+
 func TestLoadConfig(t *testing.T) {
 	origCap, origIgnore := finderCap, finderIgnoreDirs
 	defer func() {

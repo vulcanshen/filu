@@ -62,6 +62,9 @@ func stateFilePath() (string, bool) {
 	if statePathOverride != "" {
 		return statePathOverride, true
 	}
+	if p := os.Getenv("FILU_STATE"); p != "" { // redirect state I/O (demo recordings / isolated runs)
+		return p, true
+	}
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", false
