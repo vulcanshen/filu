@@ -1,6 +1,6 @@
-// Package ui holds filu's Bubble Tea models. The 5-panel layout (pin, list,
-// preview, carry bucket, metadata) lives in AppModel. See .forge/meta/IDEA.md
-// for the target design.
+// Package ui holds filu's Bubble Tea models. The 4-panel layout (list, preview,
+// Carries, Tasks) lives in AppModel. See .forge/meta/IDEA.md for the target
+// design.
 package ui
 
 import (
@@ -16,10 +16,10 @@ import (
 type panelID int
 
 const (
-	panelList   panelID = iota + 1 // [1] CWD file list (main surface)
-	panelDetail                    // [2] preview (right column, top half)
-	panelCarry                     // [3] carry bucket (bottom-left, 2/3 wide)
-	panelMeta                      // [4] file metadata (bottom-right, 1/3 wide)
+	panelList    panelID = iota + 1 // [1] CWD file list (main surface)
+	panelDetail                     // [2] preview (right column, top, 1/3 wide)
+	panelCarries                    // [3] carry bucket (bottom-left)
+	panelTasks                      // [4] land tasks (bottom-right)
 )
 
 // inputKind selects what the input popup collects.
@@ -52,15 +52,13 @@ type AppModel struct {
 	width         int
 	height        int
 	focus         panelID
-	detailScroll  int         // panel [3] preview scroll offset
-	metaScroll    int         // panel [4] meta scroll offset
-	tabs          []listModel // panel [2]'s directory tabs (1..maxTabs, user-created)
+	detailScroll  int         // panel [2] preview scroll offset
+	tabs          []listModel // panel [1]'s directory tabs (1..maxTabs, user-created)
 	tab           int         // active tab index
 	pendingG      bool        // vim g-prefix chord: a lone g is armed, awaiting the second key
 	preview       previewModel
 	places        placesModel
 	carry         carryModel
-	carryTab      int               // panel [4] active tab: 0 carry / 1 progress / 2 history
 	spaceMenu     spaceMenu         // §A.1 contextual popup (kbu form)
 	sortMenu      spaceMenu         // sort picker (column→direction chain, kbu form)
 	sortStep      sortStep          // which step the sort picker is on
@@ -71,7 +69,7 @@ type AppModel struct {
 	gotoMenu      spaceMenu         // Goto / new-tab picker: {Same?, Pinned, Search} → pinned drill-down
 	gotoStep      gotoStep          // which step the Goto picker is on
 	gotoNewTab    bool              // Goto picker in new-tab mode (open in a new tab vs move the active one)
-	launchDir     string            // the dir filu was started in (panel 1 CWD / quit option 1)
+	launchDir     string            // the dir filu was started in (cd-on-quit option 1)
 	zoom          panelID           // 0 = normal; else the panel expanded full-width
 	confirm       confirmPopup      // yes/no popup (delete / quit)
 	confirmAction confirmKind       // what an accepted confirm commits to
@@ -80,7 +78,7 @@ type AppModel struct {
 	help          helpPopup         // §A.2 global help cheatsheet
 	splash        splashModel       // hidden easter-egg logo (V)
 	toast         toastModel        // transient notification (yank feedback)
-	detailYank    detailYank        // panel [3] yank viewport (cursor + visual selection)
+	detailYank    detailYank        // panel [2] yank viewport (cursor + visual selection)
 	pty           *ptyPopup         // embedded editor; pointer — shared with its read goroutine
 	search        searchModel       // native fuzzy file/dir finder
 	searchCh      chan fileBatchMsg // finder's fd stream → UI
@@ -426,9 +424,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "2":
 			m.setFocus(panelDetail)
 		case "3":
-			m.setFocus(panelCarry)
+			m.setFocus(panelCarries)
 		case "4":
-			m.setFocus(panelMeta)
+			m.setFocus(panelTasks)
 		default:
 			cmd := m.dispatchFocusKey(msg.String())
 			m.syncWatches() // navigation may have moved a tab to a new dir
@@ -568,37 +566,7 @@ func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 	return nil
 }
 
-// handleMetaKey routes keys to panel [4] (file metadata): j/k/u/d/g/G scroll, y
-// yanks the meta lines, z zooms it full-screen.
-func (m *AppModel) handleMetaKey(key string) tea.Cmd {
-	switch key {
-	case "j", "down":
-		m.metaScroll++
-	case "k", "up":
-		m.metaScroll--
-	case "d", "ctrl+d":
-		m.metaScroll += m.metaRows() / 2
-	case "u", "ctrl+u":
-		m.metaScroll -= m.metaRows() / 2
-	case "g":
-		m.metaScroll = 0
-	case "G":
-		m.metaScroll = len(m.metaContent())
-	case "y":
-		return m.openMetaYank()
-	case "z":
-		m.toggleZoom(panelMeta)
-	}
-	m.clampMetaScroll()
-	return nil
-}
-
-// metaContent is the file-metadata lines for the cursor item (panel [4]).
-func (m AppModel) metaContent() []string {
-	return metaLines(m.active().cursorItem(), m.active().dir)
-}
-
-// openDetailYank opens the yank viewport over panel [3]'s preview — the file's
+// openDetailYank opens the yank viewport over panel [2]'s preview — the file's
 // own content, with a display-only line-number gutter for text/binary.
 func (m *AppModel) openDetailYank() tea.Cmd {
 	lines := m.preview.body
@@ -610,61 +578,44 @@ func (m *AppModel) openDetailYank() tea.Cmd {
 	return m.detailYank.open("Yank: Preview", lines, showGutter)
 }
 
-// openMetaYank opens the yank viewport over panel [4]'s metadata lines.
-func (m *AppModel) openMetaYank() tea.Cmd {
-	lines := m.metaContent()
-	if len(lines) == 0 {
-		return nil
-	}
-	m.detailYank.setSize(m.width, m.height)
-	return m.detailYank.open("Yank: Meta", lines, false)
-}
-
-// clampDetailScroll keeps panel [3] (preview) from scrolling past its last page.
+// clampDetailScroll keeps panel [2] (preview) from scrolling past its last page.
 func (m *AppModel) clampDetailScroll() {
 	maxScroll := max(len(m.detailLines())-m.detailRows(), 0)
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
 }
 
-// clampMetaScroll keeps panel [4] (meta) from scrolling past its last page.
-func (m *AppModel) clampMetaScroll() {
-	maxScroll := max(len(m.metaContent())-m.metaRows(), 0)
-	m.metaScroll = max(0, min(m.metaScroll, maxScroll))
+// handleCarriesKey routes keys to the Carries bucket panel [3]: j/k move the
+// cursor, p toggles the item in the land subset, D drops it from the bucket, y
+// yanks its path, z zooms the panel.
+func (m *AppModel) handleCarriesKey(key string) tea.Cmd {
+	switch key {
+	case "j", "down":
+		m.carry.moveCursor(1)
+	case "k", "up":
+		m.carry.moveCursor(-1)
+	case "g":
+		m.carry.cursor = 0
+	case "G":
+		m.carry.moveCursor(len(m.carry.items))
+	case "p": // pick: toggle this item in the land subset
+		m.carry.togglePick()
+	case "D": // delete: drop this item from the bucket (not the file)
+		if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
+			m.carry.removeItem(m.carry.items[m.carry.cursor])
+		}
+	case "y": // yank: copy this item's full path to the clipboard
+		if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
+			return copyToClipboardCmd(m.carry.items[m.carry.cursor], "Copied path to clipboard")
+		}
+	case "z":
+		m.toggleZoom(panelCarries)
+	}
+	return nil
 }
 
-// handleCarryKey routes keys to panel [4] while it is focused (h/l swap tab; on
-// the Carries tab j/k move the cursor and P toggles the pick subset).
-func (m *AppModel) handleCarryKey(key string) tea.Cmd {
-	switch key {
-	case "l", "right", "h", "left":
-		m.carryTab = (m.carryTab + 1) % 2 // Carries <-> Tasks
-	case "z": // zoom panel [4]: full-width, Carries | Tasks
-		m.toggleZoom(panelCarry)
-	}
-	if m.carryTab == 0 { // Carries tab
-		switch key {
-		case "j", "down":
-			m.carry.moveCursor(1)
-		case "k", "up":
-			m.carry.moveCursor(-1)
-		case "g":
-			m.carry.cursor = 0
-		case "G":
-			m.carry.moveCursor(len(m.carry.items))
-		case "p": // pick: toggle this item in the land subset
-			m.carry.togglePick()
-		case "D": // delete: drop this item from the bucket (not the file)
-			if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
-				m.carry.removeItem(m.carry.items[m.carry.cursor])
-			}
-		case "y": // yank: copy this item's full path to the clipboard
-			if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
-				return copyToClipboardCmd(m.carry.items[m.carry.cursor], "Copied path to clipboard")
-			}
-		}
-		return nil
-	}
-	// Tasks tab
+// handleTasksKey routes keys to the Tasks panel [4]: j/k move the cursor, R redoes
+// a task, D drops it from the log, z zooms the panel.
+func (m *AppModel) handleTasksKey(key string) tea.Cmd {
 	switch key {
 	case "j", "down":
 		m.taskCursor++
@@ -687,6 +638,8 @@ func (m *AppModel) handleCarryKey(key string) tea.Cmd {
 			m.clampTaskCursor()
 			saveState(m.snapshotState())
 		}
+	case "z":
+		m.toggleZoom(panelTasks)
 	}
 	return nil
 }
@@ -710,16 +663,10 @@ func (m *AppModel) setFocus(p panelID) {
 	m.focus = p
 }
 
-// zoomVisible reports whether panel p appears in the current zoom layout.
+// zoomVisible reports whether panel p appears in the current zoom layout. Each
+// panel zooms to full-screen on its own, so only the zoomed panel is visible.
 func (m AppModel) zoomVisible(p panelID) bool {
-	switch m.zoom {
-	case 0:
-		return true // normal layout: everything is visible
-	case panelList:
-		return p == panelList || p == panelCarry // [2]-zoom stacks [2] over [4]
-	default:
-		return p == m.zoom // [3]/[4]-zoom show only that panel
-	}
+	return m.zoom == 0 || p == m.zoom
 }
 
 // dispatchFocusKey fires a Space-menu commit as if the letter were pressed on
@@ -730,10 +677,10 @@ func (m *AppModel) dispatchFocusKey(key string) tea.Cmd {
 		return m.handleListKey(key)
 	case panelDetail:
 		return m.handleDetailKey(key)
-	case panelMeta:
-		return m.handleMetaKey(key)
-	case panelCarry:
-		return m.handleCarryKey(key)
+	case panelCarries:
+		return m.handleCarriesKey(key)
+	case panelTasks:
+		return m.handleTasksKey(key)
 	}
 	return nil
 }
@@ -791,31 +738,27 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		return groupedMenu(
 			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview"}},
 			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "Preview"
-	case panelMeta:
-		return groupedMenu(
-			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the metadata"}},
-			[]menuItem{{label: "Zoom", key: "z", hint: "expand the metadata full-screen"}}), "Meta"
-	case panelCarry:
-		panelOps := []menuItem{
-			{label: "Tab", key: "l", hint: "switch Carries / Tasks"},
-			{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
-		}
-		if m.carryTab == 0 && len(m.carry.items) > 0 { // Carries tab, with items
+	case panelCarries:
+		zoom := []menuItem{{label: "Zoom", key: "z", hint: "expand this panel full-screen"}}
+		if len(m.carry.items) > 0 {
 			itemOps := []menuItem{
 				{label: "Pick", key: "p", hint: "toggle this item in the land subset"},
 				{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				{label: "Delete", key: "D", hint: "remove this item from the bucket"},
 			}
-			return groupedMenu(itemOps, panelOps), "Carries"
+			return groupedMenu(itemOps, zoom), "Carries"
 		}
-		if m.carryTab == 1 && len(m.tasks) > 0 { // Tasks tab
+		return groupedMenu(nil, zoom), "Carries"
+	case panelTasks:
+		zoom := []menuItem{{label: "Zoom", key: "z", hint: "expand this panel full-screen"}}
+		if len(m.tasks) > 0 {
 			itemOps := []menuItem{
 				{label: "Redo", key: "R", hint: "run this task again"},
 				{label: "Delete", key: "D", hint: "remove this task from the log"},
 			}
-			return groupedMenu(itemOps, panelOps), "Tasks"
+			return groupedMenu(itemOps, zoom), "Tasks"
 		}
-		return groupedMenu(nil, panelOps), "Bucket"
+		return groupedMenu(nil, zoom), "Tasks"
 	}
 	return nil, ""
 }
@@ -840,7 +783,7 @@ func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
 func (m *AppModel) refreshPreview() {
 	l := m.cur()
 	m.preview = loadPreview(l.cursorItem(), l.dir, m.previewWidth())
-	m.detailScroll, m.metaScroll = 0, 0 // new cursor item — both panels back to the top
+	m.detailScroll = 0 // new cursor item — the preview scrolls back to the top
 }
 
 // previewWidth is panel [3]'s inner content width (1:1:1 columns, minus border),
@@ -925,15 +868,6 @@ func (m AppModel) listRows() int {
 // two borders).
 func (m AppModel) detailRows() int {
 	if r := m.midHeight()*2/3 - 2; r > 0 {
-		return r
-	}
-	return 1
-}
-
-// metaRows: panel [4] meta content rows (right column, bottom 1/3, minus borders).
-func (m AppModel) metaRows() int {
-	mid := m.midHeight()
-	if r := mid - mid*2/3 - 2; r > 0 {
 		return r
 	}
 	return 1

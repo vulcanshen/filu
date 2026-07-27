@@ -143,7 +143,7 @@ func (m *AppModel) applyState(st sessionState) {
 		nl.clampCursor()
 		m.tabs = append(m.tabs, nl)
 	}
-	if st.Focus >= int(panelList) && st.Focus <= int(panelMeta) {
+	if st.Focus >= int(panelList) && st.Focus <= int(panelTasks) {
 		m.focus = panelID(st.Focus)
 	}
 	m.carry.items = st.Carry
