@@ -45,11 +45,6 @@ When in doubt, press `Space`. Power-user hotkeys (`o` open / `O` open-with / `p`
 
 ## Install
 
-> [!NOTE]
-> **Pre-release.** filu has no tagged release yet, so the release-binary channels
-> below (`install.sh`, Homebrew, the release badge) go live only after the first
-> `v*` tag. For now, **[build from source](#build-locally)** or `go install`.
-
 > filu is **macOS / Linux only** (no native Windows build; use WSL).
 
 ### Quick Install (macOS/Linux)

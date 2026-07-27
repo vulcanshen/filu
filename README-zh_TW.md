@@ -45,9 +45,6 @@ filu 是 `u`-family 的成員,是 [Vulcan's TUI Design Principle](https://github
 
 ## 安裝
 
-> [!NOTE]
-> **Pre-release。** filu 還沒有任何 tag 過的 release,所以下面走 release binary 的管道(`install.sh`、Homebrew、release badge)要在第一個 `v*` tag 之後才生效。目前請 **[從原始碼建置](#從原始碼建置)** 或用 `go install`。
-
 > filu **只支援 macOS / Linux**(不出原生 Windows build;請走 WSL)。
 
 ### 快速安裝(macOS/Linux)
