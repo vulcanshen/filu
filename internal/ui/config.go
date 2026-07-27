@@ -58,6 +58,9 @@ func configFilePath() (string, bool) {
 	if configPathOverride != "" {
 		return configPathOverride, true
 	}
+	if p := os.Getenv("FILU_CONFIG"); p != "" { // redirect config I/O (demo recordings / isolated runs)
+		return p, true
+	}
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", false

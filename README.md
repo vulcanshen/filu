@@ -16,21 +16,20 @@ filu is a member of the `u`-family and a filesystem-domain implementation of the
 
 ## Demo
 
-> _Demo GIFs coming soon._
-
-<!--
 ### Getting around filu
 ![basics](docs/demo-basics.gif)
 
-### Carry-bucket copy & move
+### Carry-bucket copy across tabs
 ![carry](docs/demo-carry.gif)
 
-### Streaming finders — name, content, goto
+### Streaming finders — fuzzy name & ripgrep content
 ![finders](docs/demo-finders.gif)
 
-### Preview & metadata side by side
+### Preview, then yank to the clipboard
 ![preview](docs/demo-preview.gif)
--->
+
+### A shell in each tab's directory
+![shell](docs/demo-shell.gif)
 
 ## Five keys to drive filu
 

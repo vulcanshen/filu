@@ -6,6 +6,24 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// FILU_STATE redirects state I/O (used by the demo tapes to isolate state); the
+// test-only override still wins over it.
+func TestStatePathEnvOverride(t *testing.T) {
+	old := statePathOverride
+	statePathOverride = ""
+	defer func() { statePathOverride = old }()
+
+	t.Setenv("FILU_STATE", "/tmp/filu-demo/state.yaml")
+	if got, ok := stateFilePath(); !ok || got != "/tmp/filu-demo/state.yaml" {
+		t.Errorf("FILU_STATE not honoured: got %q ok=%v", got, ok)
+	}
+
+	statePathOverride = "/tmp/override/state.yaml" // test override beats the env
+	if got, _ := stateFilePath(); got != "/tmp/override/state.yaml" {
+		t.Errorf("statePathOverride should win over FILU_STATE, got %q", got)
+	}
+}
+
 func TestSnapshotApplyRoundtrip(t *testing.T) {
 	var m AppModel
 	m.tabs = []listModel{{dir: "/tmp"}, {dir: "/usr", cursor: 2}, {dir: "/etc"}}

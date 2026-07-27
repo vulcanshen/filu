@@ -16,21 +16,20 @@ filu 是 `u`-family 的成員,是與 [kbu](https://github.com/vulcanshen/kbu) �
 
 ## Demo
 
-> _Demo GIF 之後補上。_
-
-<!--
 ### 上手操作
 ![basics](docs/demo-basics.gif)
 
-### carry-bucket 複製與搬移
+### carry-bucket 跨 tab 收集後複製
 ![carry](docs/demo-carry.gif)
 
-### 串流 finder — 檔名、內容、goto
+### 串流 finder — 模糊檔名 & ripgrep 內容
 ![finders](docs/demo-finders.gif)
 
-### 預覽與 metadata 並排
+### 預覽,再 yank 到剪貼簿
 ![preview](docs/demo-preview.gif)
--->
+
+### 每個 tab 各自目錄的 shell
+![shell](docs/demo-shell.gif)
 
 ## 五個鍵驅動 filu
 

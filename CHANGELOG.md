@@ -83,6 +83,10 @@
 - A product icon (`docs/icon.svg`) — a pixel-art mark spelling filu — now shows at
   the top of both READMEs, with a matching GitHub social-preview card
   (`docs/social-preview.png`).
+- Demo GIFs in both READMEs: getting around, carry-bucket across tabs, the
+  streaming finders, preview-then-yank, and a per-tab shell.
+- `FILU_CONFIG` / `FILU_STATE` environment variables override where the config
+  and state files live, for isolated runs (and the demo recordings).
 
 ### Changed
 - The Carries tab's pick mark (an item in the land subset) now uses its own

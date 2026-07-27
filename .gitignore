@@ -5,6 +5,9 @@ CLAUDE.md
 # Claude Code local settings
 .claude/settings.local.json
 
+# local demo tooling — VHS tapes + generated fixture tree (only docs/*.gif ship)
+.local/
+
 # Go
 /filu
 /filu.exe
