@@ -3,6 +3,8 @@ package ui
 import (
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 // TestListTitleShowsNumerals checks the tab bar shows a per-tab Roman numeral
@@ -16,6 +18,26 @@ func TestListTitleShowsNumerals(t *testing.T) {
 	}
 	if strings.Contains(bar, "projects") || strings.Contains(bar, "etc") {
 		t.Errorf("tab bar must not show a dir name, bar=%q", bar)
+	}
+}
+
+// TestZoomTabNumeralPadded guards a padding cell after each zoomed tab's Roman
+// numeral: singleChip renders flush against its round cap, so without the pad a
+// wide numeral glyph (Ⅱ/Ⅲ/Ⅳ) is clipped by the cap. tabBar already pads its
+// labels; the zoom chips must too.
+func TestZoomTabNumeralPadded(t *testing.T) {
+	m := minModel()
+	m.tabs = nil
+	for range 5 {
+		m.tabs = append(m.tabs, listModel{dir: "/tmp"})
+	}
+	m.zoom, m.focus = panelList, panelList
+	top := strings.Split(m.expandedListTabs(120, 8), "\n")[0]
+	plain := ansi.Strip(top)
+	for i := range m.tabs {
+		if !strings.Contains(plain, tabNumeral(i)+" ") {
+			t.Errorf("zoom tab %d numeral %q not padded before the cap: %q", i, tabNumeral(i), plain)
+		}
 	}
 }
 

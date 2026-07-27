@@ -195,3 +195,7 @@
 - Panel borders no longer break on CJK Nerd Fonts (e.g. Maple Mono NF CN) that
   draw file-type icons two cells wide. filu now probes the terminal at startup
   (CPR) to measure the real icon cell width and reserves layout space to match.
+- Zoomed panel [2] (`z`): a tab's Roman numeral is no longer clipped on its right
+  edge by the chip's rounded cap. The zoom chips sat flush against the cap —
+  unlike the normal tab bar, which pads each label — so a wide glyph (Ⅱ/Ⅲ/Ⅳ) lost
+  a sliver; a padding cell now guards it.
