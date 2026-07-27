@@ -1,21 +1,21 @@
 # filu — Implementation
 
-[Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md)
+[**VTP** — Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/vtp.md)
 是一套**與領域無關的通用 TUI 設計原則** —— 目標:
-不看文件、不背 hotkey,靠一套跨 surface 不變的基礎操作就能用完整個 app。它
+不看文件、不背 hotkey,靠一套跨 surface 不變的基礎操作就能用完整個 app。VTP
 **不屬於任何單一 app**:kbu 是它在 K8s domain 的一個實現、**filu 是它在
-filesystem domain 的另一個平行實現**。兩者是 sibling、共用同一套通用原則,不是
+filesystem domain 的另一個平行實現**。兩者是 sibling、共用同一套 VTP,不是
 誰派生自誰。
 
-本文件是 filu 對這套通用原則的**具體落地紀錄**,結構鏡射同為實現的
-`kbu-implementation.md`(平行參照、非上位),逐節對照 filu 的實作 —— 通用
-規範是 **interface**、本文件是 filu 這個 **implementation class**(kbu 是另一
-個 class)。想知道**為什麼**這樣做、看通用規範;想知道 filu **怎麼**做,看這裡。
+本文件是 filu 對 VTP 的**具體落地紀錄**,結構鏡射同為實現的
+`kbu-implementation.md`(平行參照、非上位),逐節對照 filu 的實作 —— VTP
+是 **interface**、本文件是 filu 這個 **implementation class**(kbu 是另一
+個 class)。想知道**為什麼**這樣做、看 VTP;想知道 filu **怎麼**做,看這裡。
 
-> **設計權威順序**:`.forge/meta/IDEA.md`(filu 專屬決定)> **通用原則**
-> ([Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md))。
+> **設計權威順序**:`.forge/meta/IDEA.md`(filu 專屬決定)> **VTP**
+> ([Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/vtp.md))。
 > `kbu-implementation.md` 是**平行實現的參照、不是 filu 的上位權威**。衝突
-> 時以 IDEA.md 為準、通用原則其次。
+> 時以 IDEA.md 為準、VTP 其次。
 >
 > **狀態標記**:本文件描述**當前已落地**的實作。尚未完成者標 `(planned)`,
 > 不宣稱未落地的行為。實作狀態總表見 §9。
@@ -661,5 +661,5 @@ filu 自己長出來的幾個實作案例 —— 隨寬逐階縮字(header/pin �
 header 分工、quit 用 picker、原生串流 finder、兩層 pick 兩個 glyph、依動態 tab
 分欄的 zoom、preview yank visual、header 靠明度差造深度階層(而非 `` 分
 隔)—— 都收在對應章節。凡設計決定以 `.forge/meta/IDEA.md` 為準;凡通用原則以
-[Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md) 為準。本文件隨
+**VTP**([Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/vtp.md))為準。本文件隨
 實作演進更新,不宣稱未落地的行為。

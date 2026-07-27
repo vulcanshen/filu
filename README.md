@@ -12,7 +12,7 @@
 
 > _When in doubt, hit_ **`Space`**.
 
-filu is a member of the `u`-family and a filesystem-domain implementation of [Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md) — the same design system as [kbu](https://github.com/vulcanshen/kbu). See [`docs/filu-implementation.md`](docs/filu-implementation.md).
+filu is a member of the `u`-family and a filesystem-domain implementation of [Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/vtp.md) — the same design system as [kbu](https://github.com/vulcanshen/kbu). See [`docs/filu-implementation.md`](docs/filu-implementation.md).
 
 ## Demo
 
@@ -53,7 +53,7 @@ When in doubt, press `Space`. Power-user hotkeys (`o` open / `O` open-with / `p`
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/install.sh | sh
 ```
 
-Downloads the release binary and prints install hints for `ripgrep` / `fd` if they're missing.
+Downloads the release binary, then fetches any missing `ripgrep` / `fd` into the same directory (from each tool's own GitHub release — no sudo, and named `rg`/`fd`, not Debian's `fdfind`). A platform with no prebuilt binary (e.g. `fd` on Intel macOS) falls back to an install hint.
 
 ### Homebrew (macOS/Linux)
 

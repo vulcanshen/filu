@@ -5,7 +5,7 @@ globs: *
 
 # filu Project Rules
 
-filu 是 kbu `u`-family 的成員,共用 [Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md) 與技術棧。設計權威見 `.forge/meta/IDEA.md`,以及 kbu repo 的 `docs/kbu-implementation.md`(平行實作參照)。
+filu 是 kbu `u`-family 的成員,共用 [Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/vtp.md) 與技術棧。設計權威見 `.forge/meta/IDEA.md`,以及 kbu repo 的 `docs/kbu-implementation.md`(平行實作參照)。
 
 ## Code Quality
 - `gofmt` / `go vet` 乾淨才算完成。

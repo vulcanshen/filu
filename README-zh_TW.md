@@ -12,7 +12,7 @@
 
 > _遇事不決,就按_ **`Space`**。
 
-filu 是 `u`-family 的成員,是 [Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md) 在 filesystem domain 的實現,跟 [kbu](https://github.com/vulcanshen/kbu) 共用同一套設計原則 — 見 [`docs/filu-implementation.md`](docs/filu-implementation.md)。
+filu 是 `u`-family 的成員,是 [Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/vtp.md) 在 filesystem domain 的實現,跟 [kbu](https://github.com/vulcanshen/kbu) 共用同一套設計原則 — 見 [`docs/filu-implementation.md`](docs/filu-implementation.md)。
 
 ## Demo
 
@@ -53,7 +53,7 @@ filu 是 `u`-family 的成員,是 [Vulcan's TUI Design Principle](https://github
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/install.sh | sh
 ```
 
-下載 release binary,若缺 `ripgrep` / `fd` 會印出各發行版的安裝提示。
+下載 release binary,並把缺少的 `ripgrep` / `fd` 一併裝進同一個目錄(從各工具自己的 GitHub release 抓、免 sudo,binary 名就是 `rg`/`fd`,不是 Debian 的 `fdfind`)。該平台沒有預編 binary 時(如 Intel macOS 的 `fd`)才退回印安裝提示。
 
 ### Homebrew(macOS/Linux)
 
