@@ -10,7 +10,7 @@ import (
 
 func minModel() AppModel {
 	m := AppModel{
-		focus: panelList, confirm: newConfirmPopup(), quitMenu: newQuitMenu(),
+		focus: panelList, confirm: newConfirmPopup(), quitMenu: newQuitMenu(), gotoMenu: newGotoMenu(),
 		pty: newPtyPopup(), taskCh: make(chan landMsg, 1), watched: map[string]bool{},
 	}
 	m.tabs = []listModel{{dir: "/tmp"}, {dir: "/tmp"}, {dir: "/tmp"}}

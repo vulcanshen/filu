@@ -59,6 +59,12 @@ func newSortMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("sortmenu", popupLayerColor(1))}
 }
 
+// newGotoMenu is a spaceMenu instance reused as the Goto picker: a root
+// {Pinned, Search} choice, then (Pinned) a drill-down list of pinned dirs.
+func newGotoMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("gotomenu", popupLayerColor(1))}
+}
+
 // newQuitMenu is a third spaceMenu instance reused as the cd-on-quit picker. Its
 // hints are single glyphs (launch icon / tab numeral), right-aligned so they line
 // up in a column on the right edge whatever the path labels' widths.

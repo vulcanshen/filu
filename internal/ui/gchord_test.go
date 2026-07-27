@@ -59,7 +59,7 @@ func TestGgChordJumpsToTop(t *testing.T) {
 }
 
 // TestGoChordOpensGoto covers the `go` chord: a lone g arms, then o opens the
-// goto finder rooted at $HOME in dirs-only, name (not content) mode.
+// Goto picker (a {Pinned, Search} menu, not the finder directly).
 func TestGoChordOpensGoto(t *testing.T) {
 	m := minModel()
 	m.width, m.height = 80, 24
@@ -72,8 +72,8 @@ func TestGoChordOpensGoto(t *testing.T) {
 	if !m.pendingG {
 		t.Fatal("first g should arm the chord")
 	}
-	if m.search.isActive() {
-		t.Fatal("g alone must not open goto")
+	if m.gotoMenu.isActive() {
+		t.Fatal("g alone must not open the goto picker")
 	}
 
 	model, _ = m.Update(o)
@@ -81,14 +81,62 @@ func TestGoChordOpensGoto(t *testing.T) {
 	if m.pendingG {
 		t.Error("`go` should clear the pending state")
 	}
-	if !m.search.isActive() {
-		t.Fatal("`go` should open the goto finder")
+	if !m.gotoMenu.isActive() {
+		t.Fatal("`go` should open the goto picker")
 	}
-	if !m.search.dirsOnly || m.search.byContent {
-		t.Errorf("goto should be dirs-only name mode, dirsOnly=%v byContent=%v", m.search.dirsOnly, m.search.byContent)
+	if m.search.isActive() {
+		t.Error("`go` opens the picker menu, not the finder directly")
+	}
+	if m.gotoStep != gotoStepRoot {
+		t.Errorf("goto picker should start at the root step, got %v", m.gotoStep)
+	}
+}
+
+// TestGotoMenuFlow drives the Goto picker's branches: Search opens the $HOME
+// dirs-only finder; Pinned drills into the pinned list; a number jumps the active
+// tab to that pin; P unpins in place (the Places-sidebar replacement).
+func TestGotoMenuFlow(t *testing.T) {
+	// Search branch → the dirs-only finder rooted at $HOME, no new-tab intent.
+	m := minModel()
+	m.width, m.height = 80, 24
+	m.openGotoMenu()
+	m.advanceGotoFlow("/")
+	if !m.search.isActive() {
+		t.Fatal("Goto → Search should open the finder")
+	}
+	if !m.search.dirsOnly || m.search.byContent || m.search.newTab {
+		t.Errorf("Goto Search: want dirs-only name-mode reveal, dirsOnly=%v byContent=%v newTab=%v",
+			m.search.dirsOnly, m.search.byContent, m.search.newTab)
 	}
 	if home, _ := os.UserHomeDir(); home != "" && m.search.root != home {
-		t.Errorf("goto root = %q, want $HOME %q", m.search.root, home)
+		t.Errorf("Goto Search root = %q, want $HOME %q", m.search.root, home)
+	}
+
+	// Pinned branch → drill, then a number jumps the active tab to that pin.
+	dir := t.TempDir()
+	m2 := minModel()
+	m2.width, m2.height = 80, 24
+	m2.places.pinned = []place{{label: "x", path: dir, icon: iconPin}}
+	m2.openGotoMenu()
+	m2.advanceGotoFlow("p")
+	if m2.gotoStep != gotoStepPinned {
+		t.Fatal("Goto → Pinned should drill into the pinned step")
+	}
+	m2.advanceGotoFlow("1")
+	if m2.cur().dir != dir {
+		t.Errorf("Goto Pinned jump: active tab dir = %q, want %q", m2.cur().dir, dir)
+	}
+
+	// P unpins the highlighted pin in the picker (was panel [1]'s P).
+	m3 := minModel()
+	m3.width, m3.height = 80, 24
+	m3.places.pinned = []place{{label: "x", path: dir, icon: iconPin}}
+	m3.openGotoMenu()
+	m3.advanceGotoFlow("p")
+	m3.gotoMenu.cursor = 0
+	m3.unpinAtGotoCursor()
+	if len(m3.places.pinned) != 0 {
+		t.Errorf("unpinAtGotoCursor should remove the pin, %d left", len(m3.places.pinned))
 	}
 }
 
