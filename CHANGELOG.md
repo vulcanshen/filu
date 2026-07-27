@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-07-27
+
 ### Added
 - A top status bar under the header shows the active tab's directory status:
   eza-coloured permissions (read yellow, write red, execute green), owner:group,
