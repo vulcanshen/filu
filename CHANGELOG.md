@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.0.2] — 2026-07-27
+
+### Changed
+- Homebrew now ships filu as a formula instead of a cask. Homebrew stamps the
+  `com.apple.quarantine` attribute on cask artifacts, which tripped macOS
+  Gatekeeper's "could not verify" prompt on the unsigned binary; formula
+  binaries are never quarantined, so `brew install vulcanshen/tap/filu` now runs
+  clean — matching the rest of the u-family.
+
 ## [0.0.1] — 2026-07-27
 
 Initial published build. Cut to shake down the install paths — `install.sh`,

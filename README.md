@@ -66,7 +66,7 @@ Downloads the release binary and prints install hints for `ripgrep` / `fd` if th
 brew install vulcanshen/tap/filu
 ```
 
-The cask declares `ripgrep` + `fd` as dependencies, so Find and the finder listing work out of the box.
+The formula declares `ripgrep` + `fd` as dependencies, so Find and the finder listing work out of the box.
 
 ### From source
 
