@@ -8,9 +8,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/vulcanshen/filu/internal/ui"
+	"github.com/vulcanshen/filu/internal/version"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		fmt.Println("filu " + version.Display()) // e.g. "filu v0.1.0" (a release) or "filu dev"
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "shell" {
 		fmt.Print(shellWrapper) // `eval "$(filu shell)"` in your rc enables cd-on-quit
 		return
