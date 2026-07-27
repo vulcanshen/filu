@@ -80,9 +80,14 @@ go install github.com/vulcanshen/filu/cmd/filu@latest
 ```bash
 git clone https://github.com/vulcanshen/filu.git
 cd filu
-CGO_ENABLED=0 go build -o filu ./cmd/filu
+CGO_ENABLED=0 go build -o filu ./cmd/filu   # or: make build
 ./filu
 ```
+
+A `Makefile` wraps the common tasks — `make build` (→ `./filu`), `make install`
+(→ `$GOPATH/bin`, putting `filu` on your `PATH`) / `make uninstall`, `make package`
+(a `.tar.gz` for your platform under `dist/`), and `make check` (fmt + vet + test).
+Run `make` to list them.
 
 ### Uninstall
 
