@@ -33,9 +33,19 @@ README.md must accurately reflect:
 
 **Approach: diff comparison against previous commit or tag.**
 
+**Scope: the CHANGELOG records changes to the filu program itself (the binary) only.**
+Install/packaging tooling that ships independently of the versioned binary —
+`install.sh`, `uninstall.sh`, the goreleaser/Homebrew/CI plumbing, and repo docs
+(`README*`, `docs/`, `.claude/`) — does NOT get a CHANGELOG entry, even when the
+change is user-facing. Those are delivered off `main` directly, not through a
+tagged release, so they don't belong in a version's changelog. If a commit only
+touches such tooling/docs, skip the CHANGELOG step entirely.
+
 ### For `git commit`:
 1. Run `git diff --staged` to see what changed
-2. Add a concise entry to the `## [Unreleased]` section
+2. If the change is program-body (binary) behavior, add a concise entry to the
+   `## [Unreleased]` section; if it only touches install tooling / packaging /
+   docs (see Scope above), skip this step
 3. Group entries by type: `Added`, `Changed`, `Fixed`, `Removed`
 4. Keep entries user-facing — describe behavior change, not implementation detail
 5. Skip this step on the very first commit (nothing to diff against)
