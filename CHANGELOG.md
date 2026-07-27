@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.0.1] — 2026-07-27
+
+Initial published build. Cut to shake down the install paths — `install.sh`,
+the Homebrew cask, and `go install` — against a real GitHub release ahead of the
+first blessed `0.1.0`. Carries the full feature set documented under `0.1.0`.
+
 ## [0.1.0] — 2026-07-27
 
 ### Added
