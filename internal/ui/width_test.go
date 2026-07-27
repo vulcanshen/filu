@@ -105,9 +105,9 @@ func TestViewEveryLineIsTerminalWidth(t *testing.T) {
 	for _, cells := range []int{1, 2} {
 		iconCells = cells
 		// exercise the normal grid plus each zoom mode and all four foci.
-		zooms := []panelID{0, panelList, panelDetail, panelMeta, panelCarry}
+		zooms := []panelID{0, panelList, panelDetail, panelCarries, panelTasks}
 		for _, z := range zooms {
-			for _, f := range []panelID{panelList, panelDetail, panelMeta, panelCarry} {
+			for _, f := range []panelID{panelList, panelDetail, panelCarries, panelTasks} {
 				m := newModel()
 				m.zoom, m.focus = z, f
 				for r, line := range strings.Split(m.View(), "\n") {

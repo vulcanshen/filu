@@ -110,10 +110,10 @@ func (m AppModel) middleView(w, midH int) string {
 		return m.zoomListView(w, midH)
 	case panelDetail:
 		return m.zoomDetailView(w, midH)
-	case panelMeta:
-		return m.zoomMetaView(w, midH)
-	case panelCarry:
-		return m.zoomCarryView(w, midH)
+	case panelCarries:
+		return m.zoomCarriesView(w, midH)
+	case panelTasks:
+		return m.zoomTasksView(w, midH)
 	default:
 		return m.normalMiddle(w, midH)
 	}
@@ -121,14 +121,12 @@ func (m AppModel) middleView(w, midH int) string {
 
 // normalMiddle is the default layout:
 //
-//	[1][1][2][2]
-//	[1][1][2][2]
-//	[3][3][3][4]
+//	| [1] list | [2] |    top    [1] list | [2] preview at 2:1
+//	| [1] list | [2] |
+//	| [3] | [4]      |    bottom [3] Carries | [4] Tasks at 1:1
 //
-// The top row is [1] list | [2] preview at 50/50; the bottom row is [3] carry |
-// [4] meta at 2/3 : 1/3. The vertical seam deliberately differs between the two
-// rows (50% on top, 66% on the bottom) — carry, the op centre, takes the wider
-// bottom-left.
+// The vertical seam deliberately differs between the rows (2/3 on top, 1/2 on the
+// bottom) — the list, the main surface, takes the wider top-left.
 func (m AppModel) normalMiddle(w, midH int) string {
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
@@ -137,31 +135,26 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	topH := midH * 2 / 3
 	botH := midH - topH
 
-	// Top row: list | preview, 50/50.
-	listW := w / 2
+	// Top row: list | preview, 2:1.
+	listW := w * 2 / 3
 	previewW := w - listW
 	list := m.panelBox(listFocus, m.listTitle(listW), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.carry.inBucket(), m.places.pinnedSet()))
 	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
 	topRow := joinH(list, preview)
 
-	// Bottom row: carry | meta, 2/3 : 1/3.
-	carryW := w * 2 / 3
-	metaW := w - carryW
-	carry := m.panelBox(m.focus == panelCarry, m.carryTitle(carryW), carryW, botH, m.carryBody(carryW-2, botH-2))
-	meta := m.panelBox(m.focus == panelMeta, m.metaTitle(metaW), metaW, botH, m.metaBody(metaW-2, botH-2))
-	botRow := joinH(carry, meta)
+	// Bottom row: Carries | Tasks, 1:1.
+	carriesW := w / 2
+	tasksW := w - carriesW
+	carries := m.panelBox(m.focus == panelCarries, singleChip("[3] Carries", m.focus == panelCarries), carriesW, botH, m.carry.view(carriesW-2, botH-2, m.focus == panelCarries))
+	tasks := m.panelBox(m.focus == panelTasks, singleChip("[4] Tasks", m.focus == panelTasks), tasksW, botH, m.tasksView(tasksW-2, botH-2, m.focus == panelTasks))
+	botRow := joinH(carries, tasks)
 
 	return joinV(topRow, botRow)
 }
 
-// zoomListView (panel [2] zoom): [2] fully expanded over [4] fully expanded,
-// each as its tabs 1:1:1; [1]/[3] hidden. 2/4 pick which is focused, h/l its tab.
+// zoomListView (panel [1] zoom): the directory tabs expanded 1:1:1 full-screen.
 func (m AppModel) zoomListView(w, midH int) string {
-	topH := midH * 2 / 3
-	// [2]-zoom mixes two panels, so each column's chip carries its panel number.
-	return joinV(
-		m.expandedListTabs(w, topH),
-		m.expandedCarryTabs(w, midH-topH, true))
+	return m.expandedListTabs(w, midH)
 }
 
 // expandedListTabs lays panel [1]'s directory tabs out as equal-width columns;
@@ -181,39 +174,20 @@ func (m AppModel) expandedListTabs(w, h int) string {
 	return joinH(cols...)
 }
 
-// zoomDetailView (panel [3] zoom): the preview full-screen.
+// zoomDetailView (panel [2] zoom): the preview full-screen.
 func (m AppModel) zoomDetailView(w, midH int) string {
 	return m.panelBox(true, singleChip("Preview", true), w, midH,
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, w-2, midH-2))
 }
 
-// zoomMetaView (panel [4] zoom): the file metadata full-screen.
-func (m AppModel) zoomMetaView(w, midH int) string {
-	return m.panelBox(true, singleChip("Meta", true), w, midH,
-		renderLinesFrom(m.metaContent(), m.metaScroll, w-2, midH-2))
+// zoomCarriesView (panel [3] zoom): the carry bucket full-screen.
+func (m AppModel) zoomCarriesView(w, midH int) string {
+	return m.panelBox(true, singleChip("Carries", true), w, midH, m.carry.view(w-2, midH-2, true))
 }
 
-// zoomCarryView (panel [4] zoom): [4] full-screen, its three tabs 1:1:1.
-// Single-panel zoom, so no panel-number prefix.
-func (m AppModel) zoomCarryView(w, midH int) string {
-	return m.expandedCarryTabs(w, midH, false)
-}
-
-// expandedCarryTabs lays panel [4]'s 2 tabs out as equal-width columns; the
-// active tab (m.carryTab) is the focused column when [4] holds focus. numbered
-// prefixes each chip with "[4]" (used in [2]-zoom, where panels are mixed).
-func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
-	wd := splitN(w, 2)
-	foc := func(i int) bool { return m.focus == panelCarry && m.carryTab == i }
-	label := func(s string) string {
-		if numbered {
-			return "[3] " + s
-		}
-		return s
-	}
-	carries := m.panelBox(foc(0), singleChip(label("Carries"), foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
-	tasks := m.panelBox(foc(1), singleChip(label("Tasks"), foc(1)), wd[1], h, m.tasksView(wd[1]-2, h-2, foc(1)))
-	return joinH(carries, tasks)
+// zoomTasksView (panel [4] zoom): the land tasks full-screen.
+func (m AppModel) zoomTasksView(w, midH int) string {
+	return m.panelBox(true, singleChip("Tasks", true), w, midH, m.tasksView(w-2, midH-2, true))
 }
 
 // listTitle renders panel [2]'s tab bar: one Roman-numeral chip per directory tab
@@ -244,26 +218,6 @@ func tabNumeral(idx int) string {
 	return ""
 }
 
-// carryTitle renders panel [4]'s tab bar. Like panel [2] it prefers the full
-// starship tab bar and only falls back to the compact carousel when the panel is
-// too narrow to fit it — see carouselChip for that narrow-panel tab strategy.
-func (m AppModel) carryTitle(w int) string {
-	focused := m.focus == panelCarry
-	labels := []string{"Carries", "Tasks"}
-	if tb := tabBar("[3]", labels, m.carryTab, focused); lipgloss.Width(tb) <= w-2 {
-		return tb
-	}
-	return carouselChip("[3]", labels, m.carryTab, focused)
-}
-
-// carryBody renders panel [4]'s active tab.
-func (m AppModel) carryBody(w, rows int) string {
-	if m.carryTab == 1 { // Tasks (running + log)
-		return m.tasksView(w, rows, m.focus == panelCarry)
-	}
-	return m.carry.view(w, rows, m.focus == panelCarry) // Carries
-}
-
 // detailTitle renders panel [2]'s title chip (Preview only).
 func (m AppModel) detailTitle(w int) string {
 	return singleChip("[2] Preview", m.focus == panelDetail)
@@ -272,21 +226,11 @@ func (m AppModel) detailTitle(w int) string {
 // detailLines is panel [2]'s full preview content.
 func (m AppModel) detailLines() []string { return m.preview.contentLines() }
 
-// detailBody renders panel [2]'s preview from the scroll offset. Panels [2]/[4]
-// are reference views (read while another panel has focus), so they keep their
-// colour even when unfocused rather than dimming.
+// detailBody renders panel [2]'s preview from the scroll offset. The preview is a
+// reference view (read while another panel has focus), so it keeps its colour even
+// when unfocused rather than dimming.
 func (m AppModel) detailBody(w, rows int) string {
 	return renderLinesFrom(m.detailLines(), m.detailScroll, w, rows)
-}
-
-// metaTitle renders panel [4]'s title chip.
-func (m AppModel) metaTitle(w int) string {
-	return singleChip("[4] Meta", m.focus == panelMeta)
-}
-
-// metaBody renders panel [4]'s file metadata from the scroll offset.
-func (m AppModel) metaBody(w, rows int) string {
-	return renderLinesFrom(m.metaContent(), m.metaScroll, w, rows)
 }
 
 // panelBox draws a bordered panel with the title embedded in the top border
@@ -376,7 +320,7 @@ func colorOwner(s string) string {
 
 func (m AppModel) footerBar(w int) string {
 	return lipgloss.NewStyle().Foreground(dimColor).
-		Render(padDisp(" space menu   ? help   tab/1-5 panels   q quit", w))
+		Render(padDisp(" space menu   ? help   tab/1-4 panels   q quit", w))
 }
 
 // shortPath folds the home dir to ~ (keeps normal / separators).

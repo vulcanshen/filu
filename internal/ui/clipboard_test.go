@@ -47,11 +47,11 @@ func TestYankPanel2ReturnsCopy(t *testing.T) {
 }
 
 func TestYankCarriesReturnsCopy(t *testing.T) {
-	m := AppModel{focus: panelCarry, watched: map[string]bool{}}
+	m := AppModel{focus: panelCarries, watched: map[string]bool{}}
 	m.carry.items = []string{"/a/b.txt"}
-	m.carryTab, m.carry.cursor = 0, 0
+	m.carry.cursor = 0
 
-	cmd := m.handleCarryKey("y")
+	cmd := m.handleCarriesKey("y")
 	if cmd == nil {
 		t.Fatal("y in Carries should return a copy cmd")
 	}
