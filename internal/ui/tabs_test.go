@@ -70,8 +70,9 @@ func TestTabGotoNewTabIntent(t *testing.T) {
 		t.Errorf("tab 0 must stay at %q, got %q", d1, m.tabs[0].dir)
 	}
 
-	// A plain Goto (go) opens with no intent — a reveal, not a new tab.
+	// A plain Goto (go → Search) opens the finder with no intent — a reveal.
 	m.handleListKey("go")
+	m.advanceGotoFlow("/")
 	if m.search.newTab {
 		t.Error("plain Goto must not carry the new-tab intent")
 	}

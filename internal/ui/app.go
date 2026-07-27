@@ -69,6 +69,8 @@ type AppModel struct {
 	quitMenu      spaceMenu         // cd-on-quit picker (launch dir + distinct tab dirs)
 	openWithMenu  spaceMenu         // [o]pen picker (Default + config.yaml open_with apps)
 	openWithPath  string            // path the open-with picker acts on (captured when it opens)
+	gotoMenu      spaceMenu         // Goto picker: {Pinned, Search}, then a pinned-dir drill-down
+	gotoStep      gotoStep          // which step the Goto picker is on
 	launchDir     string            // the dir filu was started in (panel 1 CWD / quit option 1)
 	zoom          panelID           // 0 = normal; else the panel expanded full-width
 	confirm       confirmPopup      // yes/no popup (delete / quit)
@@ -107,7 +109,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
@@ -220,6 +222,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.sortMenu.setSize(msg.Width)
 		m.quitMenu.setSize(msg.Width)
 		m.openWithMenu.setSize(msg.Width)
+		m.gotoMenu.setSize(msg.Width)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
@@ -233,7 +236,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)
@@ -337,6 +340,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.sortMenu, key, cmd = m.sortMenu.update(msg)
 			if key != "" { // stays open, swapping to the next step / looping back
 				cmd = tea.Batch(cmd, m.advanceSortFlow(key))
+			}
+			return m, cmd
+		}
+		if m.gotoMenu.isActive() { // Goto picker: Pinned drill-down or Search finder
+			if !m.gotoMenu.isInteractive() {
+				return m, nil
+			}
+			if m.gotoStep == gotoStepPinned && msg.String() == "P" { // unpin the highlighted pin, stay open
+				return m, m.unpinAtGotoCursor()
+			}
+			var key string
+			var cmd tea.Cmd
+			m.gotoMenu, key, cmd = m.gotoMenu.update(msg)
+			if key != "" { // stays open on a drill, closes on a terminal jump/search
+				cmd = tea.Batch(cmd, m.advanceGotoFlow(key))
 			}
 			return m, cmd
 		}
@@ -523,8 +541,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.openSearch()
 	case "f": // Find: by-content finder (rg) with preview, reveal the pick here
 		cmd = m.openFind()
-	case "go": // Goto: fuzzy-jump this tab to any directory under $HOME (chord `go`)
-		cmd = m.openGoto()
+	case "go": // Goto: pick a pinned dir, or search under $HOME (chord `go`)
+		cmd = m.openGotoMenu()
 	case "b": // Breadcrumb: jump this tab up to any ancestor directory
 		cmd = m.breadcrumb.open(m.cur().dir)
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
@@ -764,7 +782,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		panelOps = append(panelOps,
 			menuItem{label: "Search", key: "/", hint: "find a file by name in this tree"},
 			menuItem{label: "Find", key: "f", hint: "find a file by content (grep) + preview"},
-			menuItem{label: "Goto", key: "go", hint: "jump this tab to any directory under home"},
+			menuItem{label: "Goto", key: "go", hint: "jump to a pinned dir, or search under home"},
 			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
 		if len(m.tabs) < maxTabs {
 			panelOps = append(panelOps,
