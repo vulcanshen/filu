@@ -27,6 +27,7 @@ type fileItem struct {
 	size   int64     // for size sort
 	mtime  time.Time // modified time (Modified column + mtime sort)
 	perm   string    // mode string drwxr-xr-x (Permissions column + perm sort)
+	owner  string    // "user:group" (Owner column + owner sort)
 }
 
 // listModel is panel [2]: the CWD file list. Hidden files are dropped by
@@ -116,10 +117,13 @@ func readEntries(dir string, showHidden bool) ([]fileItem, int, error) {
 			isDir:  e.IsDir(),
 			isLink: e.Type()&os.ModeSymlink != 0,
 		}
-		if info, err := e.Info(); err == nil { // size/mtime/perm for the columns + sort, exec bit for colour
+		if info, err := e.Info(); err == nil { // size/mtime/perm/owner for the columns + sort, exec bit for colour
 			it.size = info.Size()
 			it.mtime = info.ModTime()
 			it.perm = info.Mode().String()
+			if meta, ok := osStat(info); ok {
+				it.owner = userName(meta.uid) + ":" + groupName(meta.gid)
+			}
 			if !it.isDir && !it.isLink {
 				it.isExec = info.Mode()&0o111 != 0
 			}
@@ -229,6 +233,7 @@ func (m *listModel) ensureVisible(rows int) {
 const (
 	colMtimeW  = 16 // "2006-01-02 15:04"
 	colPermW   = 11 // a padded mode string, and room for the "Perms" header + arrow
+	colOwnerW  = 16 // "user:group", truncated when longer
 	colNameMin = 12 // keep at least this much name before dropping a column
 )
 
@@ -237,24 +242,29 @@ const (
 func markCellW() int { return dispWidth(pickGlyph) + dispWidth(iconPin) }
 
 // listCols is which optional columns fit at a given inner width. They drop in the
-// order perms → mtime → mark as the panel narrows; the name column always stays.
+// order owner → perms → mtime → mark as the panel narrows; the name always stays.
 type listCols struct {
-	mark, mtime, perm bool
-	nameW             int
+	mark, mtime, perm, owner bool
+	nameW                    int
 }
 
 func computeListCols(w int) listCols {
 	mk := markCellW()
-	permPrefix := mk + 1 + colMtimeW + 1 + colPermW + 1 // width before the name, all columns on
-	mtimePrefix := mk + 1 + colMtimeW + 1
-	markPrefix := mk + 1
+	// width before the name for each level of columns shown (each column has a
+	// trailing space).
+	all := mk + 1 + colMtimeW + 1 + colPermW + 1 + colOwnerW + 1
+	noOwner := mk + 1 + colMtimeW + 1 + colPermW + 1
+	noPerm := mk + 1 + colMtimeW + 1
+	noMtime := mk + 1
 	switch {
-	case w >= permPrefix+colNameMin:
-		return listCols{mark: true, mtime: true, perm: true, nameW: w - permPrefix}
-	case w >= mtimePrefix+colNameMin:
-		return listCols{mark: true, mtime: true, nameW: w - mtimePrefix}
-	case w >= markPrefix+colNameMin:
-		return listCols{mark: true, nameW: w - markPrefix}
+	case w >= all+colNameMin:
+		return listCols{mark: true, mtime: true, perm: true, owner: true, nameW: w - all}
+	case w >= noOwner+colNameMin:
+		return listCols{mark: true, mtime: true, perm: true, nameW: w - noOwner}
+	case w >= noPerm+colNameMin:
+		return listCols{mark: true, mtime: true, nameW: w - noPerm}
+	case w >= noMtime+colNameMin:
+		return listCols{mark: true, nameW: w - noMtime}
 	default:
 		return listCols{nameW: w}
 	}
@@ -329,13 +339,16 @@ func listHeaderRow(cols listCols, w int) string {
 	if cols.perm {
 		b.WriteString(padDisp(sortColHeader("Perms", sortPerm), colPermW) + " ")
 	}
+	if cols.owner {
+		b.WriteString(padDisp(sortColHeader("Owner", sortOwner), colOwnerW) + " ")
+	}
 	b.WriteString(sortColHeader("Name", sortName))
 	return truncate(b.String(), w)
 }
 
-// renderListRow renders one file row: mark | modified | perms | icon name, with
-// whichever columns fit (cols). The cursor row is drawn plain on a full-width
-// highlight bar; other rows colour each column (dim mtime, eza perms, type-
+// renderListRow renders one file row: mark | modified | perms | owner | icon name,
+// with whichever columns fit (cols). The cursor row is drawn plain on a full-width
+// highlight bar; other rows colour each column (dim mtime, eza perms/owner, type-
 // coloured name), receding to dim when the panel is unfocused.
 func renderListRow(it fileItem, cols listCols, w int, cursor, focused, carried, pinned bool) string {
 	name := truncate(fileIcon(it)+" "+safeName(it.name), cols.nameW)
@@ -349,6 +362,9 @@ func renderListRow(it fileItem, cols listCols, w int, cursor, focused, carried, 
 		}
 		if cols.perm {
 			b.WriteString(padDisp(clipMode(it.perm), colPermW) + " ")
+		}
+		if cols.owner {
+			b.WriteString(padDisp(truncate(it.owner, colOwnerW), colOwnerW) + " ")
 		}
 		b.WriteString(name)
 		cursorBg := handColor // focused: current hand (subtext1)
@@ -366,6 +382,9 @@ func renderListRow(it fileItem, cols listCols, w int, cursor, focused, carried, 
 	}
 	if cols.perm {
 		b.WriteString(padDisp(colorPerm(clipMode(it.perm)), colPermW) + " ")
+	}
+	if cols.owner {
+		b.WriteString(padDisp(colorOwner(truncate(it.owner, colOwnerW)), colOwnerW) + " ")
 	}
 	if focused {
 		b.WriteString(lipgloss.NewStyle().Foreground(fileColor(it)).Render(name)) // eza type colour

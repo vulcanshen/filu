@@ -35,9 +35,9 @@ func TestListViewTicksCarried(t *testing.T) {
 	}
 }
 
-// TestListColumns checks the multi-column rows: the wide layout shows the
+// TestListColumns checks the multi-column rows: the wide layout shows the Owner /
 // Modified / Perms / Name headers, a mode string and the pin glyph; the columns
-// drop in the order perms → mtime as the panel narrows, leaving Name last.
+// drop in the order owner → perms → mtime as the panel narrows, leaving Name last.
 func TestListColumns(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
@@ -49,9 +49,9 @@ func TestListColumns(t *testing.T) {
 	m := newList(dir)
 	pinned := map[string]bool{filepath.Join(dir, "sub"): true}
 
-	// Wide: all columns + header labels + a mode string, and the pin glyph shows.
-	wide := m.view(60, 8, true, nil, pinned)
-	for _, want := range []string{"Modified", "Perms", "Name", "drwxr-xr-x"} {
+	// Wide: every column + header labels + a mode string, and the pin glyph shows.
+	wide := m.view(76, 8, true, nil, pinned)
+	for _, want := range []string{"Owner", "Modified", "Perms", "Name", "drwxr-xr-x"} {
 		if !strings.Contains(ansi.Strip(wide), want) {
 			t.Errorf("wide view missing %q:\n%s", want, ansi.Strip(wide))
 		}
@@ -60,7 +60,16 @@ func TestListColumns(t *testing.T) {
 		t.Error("pinned dir should show the pin glyph")
 	}
 
-	// Narrow: perms drop first (no mode string), Modified survives.
+	// Owner drops first, before perms.
+	noOwner := ansi.Strip(m.view(56, 8, true, nil, nil))
+	if strings.Contains(noOwner, "Owner") {
+		t.Errorf("Owner should drop before perms:\n%s", noOwner)
+	}
+	if !strings.Contains(noOwner, "Perms") {
+		t.Errorf("Perms should survive when only Owner drops:\n%s", noOwner)
+	}
+
+	// Narrower: perms drop too (no mode string), Modified survives.
 	narrow := ansi.Strip(m.view(40, 8, true, nil, nil))
 	if strings.Contains(narrow, "drwx") {
 		t.Errorf("perms should drop at w=40:\n%s", narrow)
