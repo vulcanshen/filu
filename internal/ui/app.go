@@ -721,7 +721,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
 		if len(m.tabs) < maxTabs {
 			panelOps = append(panelOps,
-				menuItem{label: "New tab", key: "t", hint: "a tab here, at a pin, or a search"})
+				menuItem{label: "Tab", key: "t", hint: "create a new tab"})
 		}
 		if len(m.tabs) > 1 {
 			panelOps = append(panelOps,

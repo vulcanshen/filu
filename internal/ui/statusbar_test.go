@@ -31,16 +31,17 @@ func TestReadEntriesHiddenCount(t *testing.T) {
 func TestStatusBarRender(t *testing.T) {
 	m := minModel()
 	m.width, m.height = 100, 30
-	m.tabs = []listModel{newList(t.TempDir())}
-	m.tab = 0
+	m.launchDir = "/opt/filu-launch"
 
-	// The bar is parked: its height is reserved but its content is blank for now
-	// (per-item perms/mtime moved into the list columns).
 	bar := m.statusBar(m.width)
 	if got := dispWidth(bar); got != m.width {
 		t.Errorf("statusBar width = %d, want %d", got, m.width)
 	}
-	if plain := strings.TrimSpace(ansi.Strip(bar)); plain != "" {
-		t.Errorf("parked statusBar should be blank, got %q", plain)
+	// The bar shows the launch dir, marked with the launch glyph.
+	if plain := ansi.Strip(bar); !strings.Contains(plain, "filu-launch") {
+		t.Errorf("statusBar should show the launch dir, got %q", plain)
+	}
+	if !strings.Contains(bar, iconCWD) {
+		t.Error("statusBar should show the launch glyph")
 	}
 }
