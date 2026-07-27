@@ -16,11 +16,10 @@ import (
 type panelID int
 
 const (
-	panelPin    panelID = iota + 1 // [1] system places + pinned
-	panelList                      // [2] CWD file list (main surface)
-	panelDetail                    // [3] preview (right column, top 2/3)
-	panelCarry                     // [4] carry bucket
-	panelMeta                      // [5] file metadata (right column, bottom 1/3)
+	panelList   panelID = iota + 1 // [1] CWD file list (main surface)
+	panelDetail                    // [2] preview (right column, top half)
+	panelCarry                     // [3] carry bucket (bottom-left, 2/3 wide)
+	panelMeta                      // [4] file metadata (bottom-right, 1/3 wide)
 )
 
 // inputKind selects what the input popup collects.
@@ -54,7 +53,7 @@ type AppModel struct {
 	height        int
 	focus         panelID
 	detailScroll  int         // panel [3] preview scroll offset
-	metaScroll    int         // panel [5] meta scroll offset
+	metaScroll    int         // panel [4] meta scroll offset
 	tabs          []listModel // panel [2]'s directory tabs (1..maxTabs, user-created)
 	tab           int         // active tab index
 	pendingG      bool        // vim g-prefix chord: a lone g is armed, awaiting the second key
@@ -109,7 +108,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
@@ -418,18 +417,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spaceMenu.setItems(items, title)
 			return m, m.spaceMenu.open()
 		case "tab":
-			m.setFocus(m.focus%5 + 1) // 1→2→3→4→5→1
+			m.setFocus(m.focus%4 + 1) // 1→2→3→4→1
 		case "shift+tab":
-			m.setFocus((m.focus+3)%5 + 1) // 1→5→4→3→2→1
+			m.setFocus((m.focus+2)%4 + 1) // 1→4→3→2→1
 		case "1":
-			m.setFocus(panelPin)
-		case "2":
 			m.setFocus(panelList)
-		case "3":
+		case "2":
 			m.setFocus(panelDetail)
-		case "4":
+		case "3":
 			m.setFocus(panelCarry)
-		case "5":
+		case "4":
 			m.setFocus(panelMeta)
 		default:
 			cmd := m.dispatchFocusKey(msg.String())
@@ -578,7 +575,7 @@ func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 	return nil
 }
 
-// handleMetaKey routes keys to panel [5] (file metadata): j/k/u/d/g/G scroll, y
+// handleMetaKey routes keys to panel [4] (file metadata): j/k/u/d/g/G scroll, y
 // yanks the meta lines, z zooms it full-screen.
 func (m *AppModel) handleMetaKey(key string) tea.Cmd {
 	switch key {
@@ -603,7 +600,7 @@ func (m *AppModel) handleMetaKey(key string) tea.Cmd {
 	return nil
 }
 
-// metaContent is the file-metadata lines for the cursor item (panel [5]).
+// metaContent is the file-metadata lines for the cursor item (panel [4]).
 func (m AppModel) metaContent() []string {
 	return metaLines(m.active().cursorItem(), m.active().dir)
 }
@@ -620,7 +617,7 @@ func (m *AppModel) openDetailYank() tea.Cmd {
 	return m.detailYank.open("Yank: Preview", lines, showGutter)
 }
 
-// openMetaYank opens the yank viewport over panel [5]'s metadata lines.
+// openMetaYank opens the yank viewport over panel [4]'s metadata lines.
 func (m *AppModel) openMetaYank() tea.Cmd {
 	lines := m.metaContent()
 	if len(lines) == 0 {
@@ -636,7 +633,7 @@ func (m *AppModel) clampDetailScroll() {
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
 }
 
-// clampMetaScroll keeps panel [5] (meta) from scrolling past its last page.
+// clampMetaScroll keeps panel [4] (meta) from scrolling past its last page.
 func (m *AppModel) clampMetaScroll() {
 	maxScroll := max(len(m.metaContent())-m.metaRows(), 0)
 	m.metaScroll = max(0, min(m.metaScroll, maxScroll))
@@ -738,8 +735,6 @@ func (m *AppModel) dispatchFocusKey(key string) tea.Cmd {
 	switch m.focus {
 	case panelList:
 		return m.handleListKey(key)
-	case panelPin:
-		return m.handlePinKey(key)
 	case panelDetail:
 		return m.handleDetailKey(key)
 	case panelMeta:
@@ -772,7 +767,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
 		}
 		if it.isDir {
-			itemOps = append(itemOps, menuItem{label: "Pin", key: "P", hint: "pin dir into the sidebar"})
+			itemOps = append(itemOps, menuItem{label: "Pin", key: "P", hint: "pin dir (reach it via Goto → Pinned)"})
 		}
 		if len(m.carry.items) > 0 {
 			panelOps = append(panelOps,
@@ -799,12 +794,6 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
 			menuItem{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"})
 		return groupedMenu(itemOps, panelOps), title
-	case panelPin:
-		items := []menuItem{{label: "Jump", key: "enter", hint: "go to this place"}}
-		if m.places.currentIsPinned() {
-			items = append(items, menuItem{label: "UnPin", key: "P", hint: "remove from Pinned"})
-		}
-		return items, "Places"
 	case panelDetail:
 		return groupedMenu(
 			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview"}},
@@ -900,31 +889,6 @@ func (m *AppModel) performInput() {
 	m.refreshPreview()
 }
 
-// handlePinKey routes navigation keys to panel [1] while it is focused.
-func (m *AppModel) handlePinKey(key string) tea.Cmd {
-	switch key {
-	case "j", "down":
-		m.places.move(1)
-		m.syncPlaceToList()
-	case "k", "up":
-		m.places.move(-1)
-		m.syncPlaceToList()
-	case "enter":
-		if p, ok := m.places.current(); ok {
-			m.navigateTo(p.path)
-		}
-	case "P": // unpin the cursor place (panel-aware P; only on a Pinned entry)
-		if m.places.currentIsPinned() {
-			if p, ok := m.places.current(); ok {
-				m.places.unpin(p.path)
-				m.places.move(0) // reclamp the cursor after the list shrank
-				m.syncPlaceToList()
-			}
-		}
-	}
-	return nil
-}
-
 // navigateActive points the active tab at dir; focus stays put.
 func (m *AppModel) navigateActive(dir string) {
 	l := m.cur()
@@ -939,13 +903,6 @@ func (m *AppModel) navigateActive(dir string) {
 func (m *AppModel) navigateTo(dir string) {
 	m.navigateActive(dir)
 	m.focus = panelList
-}
-
-// syncPlaceToList live-updates panel [2] to the highlighted place (focus stays).
-func (m *AppModel) syncPlaceToList() {
-	if p, ok := m.places.current(); ok {
-		m.navigateActive(p.path)
-	}
 }
 
 // midHeight is the panel region's height: total minus the header, status bar,
@@ -980,7 +937,7 @@ func (m AppModel) detailRows() int {
 	return 1
 }
 
-// metaRows: panel [5] meta content rows (right column, bottom 1/3, minus borders).
+// metaRows: panel [4] meta content rows (right column, bottom 1/3, minus borders).
 func (m AppModel) metaRows() int {
 	mid := m.midHeight()
 	if r := mid - mid*2/3 - 2; r > 0 {

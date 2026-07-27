@@ -90,7 +90,7 @@ func TestViewEveryLineIsTerminalWidth(t *testing.T) {
 
 	newModel := func() AppModel {
 		m := AppModel{
-			focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(),
+			focus: panelList, spaceMenu: newSpaceMenu(),
 			confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(),
 			taskCh: make(chan landMsg, 8),
 		}
@@ -107,7 +107,7 @@ func TestViewEveryLineIsTerminalWidth(t *testing.T) {
 		// exercise the normal grid plus each zoom mode and all four foci.
 		zooms := []panelID{0, panelList, panelDetail, panelMeta, panelCarry}
 		for _, z := range zooms {
-			for _, f := range []panelID{panelPin, panelList, panelDetail, panelMeta, panelCarry} {
+			for _, f := range []panelID{panelList, panelDetail, panelMeta, panelCarry} {
 				m := newModel()
 				m.zoom, m.focus = z, f
 				for r, line := range strings.Split(m.View(), "\n") {

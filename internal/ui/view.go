@@ -122,16 +122,15 @@ func (m AppModel) middleView(w, midH int) string {
 
 // normalMiddle is the default layout:
 //
-//	[1][2][3]
-//	[1][2][3]
-//	[4][4][5]
+//	[1][1][2][2]
+//	[1][1][2][2]
+//	[3][3][3][4]
 //
-// [1] places + [2] list share the top 2/3, [4] carry spans their two columns
-// along the bottom 1/3; the right column mirrors that split — [3] preview on top,
-// [5] metadata below.
+// The top row is [1] list | [2] preview at 50/50; the bottom row is [3] carry |
+// [4] meta at 2/3 : 1/3. The vertical seam deliberately differs between the two
+// rows (50% on top, 66% on the bottom) — carry, the op centre, takes the wider
+// bottom-left.
 func (m AppModel) normalMiddle(w, midH int) string {
-	leftW, midW := w/3, w/3
-	rightW := w - leftW - midW
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
 		return m.panelBox(listFocus, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, listFocus, m.carry.inBucket()))
@@ -139,19 +138,21 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	topH := midH * 2 / 3
 	botH := midH - topH
 
-	pin := m.panelBox(m.focus == panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, topH, m.places.view(leftW-2, topH-2, m.focus == panelPin))
-	list := m.panelBox(listFocus, m.listTitle(midW), midW, topH, m.active().view(midW-2, topH-2, listFocus, m.carry.inBucket()))
-	top := joinH(pin, list)
+	// Top row: list | preview, 50/50.
+	listW := w / 2
+	previewW := w - listW
+	list := m.panelBox(listFocus, m.listTitle(listW), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.carry.inBucket()))
+	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
+	topRow := joinH(list, preview)
 
-	carryW := leftW + midW
+	// Bottom row: carry | meta, 2/3 : 1/3.
+	carryW := w * 2 / 3
+	metaW := w - carryW
 	carry := m.panelBox(m.focus == panelCarry, m.carryTitle(carryW), carryW, botH, m.carryBody(carryW-2, botH-2))
+	meta := m.panelBox(m.focus == panelMeta, m.metaTitle(metaW), metaW, botH, m.metaBody(metaW-2, botH-2))
+	botRow := joinH(carry, meta)
 
-	leftRegion := joinV(top, carry)
-
-	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(rightW), rightW, topH, m.detailBody(rightW-2, topH-2))
-	meta := m.panelBox(m.focus == panelMeta, m.metaTitle(rightW), rightW, botH, m.metaBody(rightW-2, botH-2))
-	rightRegion := joinV(preview, meta)
-	return joinH(leftRegion, rightRegion)
+	return joinV(topRow, botRow)
 }
 
 // zoomListView (panel [2] zoom): [2] fully expanded over [4] fully expanded,
@@ -175,7 +176,7 @@ func (m AppModel) expandedListTabs(w, h int) string {
 		focused := m.focus == panelList && m.tab == i
 		// trailing space: singleChip sits flush against its round cap, so a wide
 		// Roman-numeral glyph (Ⅱ/Ⅲ/Ⅳ) gets clipped by it — pad a cell as tabBar does.
-		cols[i] = m.panelBox(focused, singleChip("[2] "+tabNumeral(i)+" ", focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried))
+		cols[i] = m.panelBox(focused, singleChip("[1] "+tabNumeral(i)+" ", focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried))
 	}
 	return joinH(cols...)
 }
@@ -186,7 +187,7 @@ func (m AppModel) zoomDetailView(w, midH int) string {
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, w-2, midH-2))
 }
 
-// zoomMetaView (panel [5] zoom): the file metadata full-screen.
+// zoomMetaView (panel [4] zoom): the file metadata full-screen.
 func (m AppModel) zoomMetaView(w, midH int) string {
 	return m.panelBox(true, singleChip("Meta", true), w, midH,
 		renderLinesFrom(m.metaContent(), m.metaScroll, w-2, midH-2))
@@ -206,7 +207,7 @@ func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
 	foc := func(i int) bool { return m.focus == panelCarry && m.carryTab == i }
 	label := func(s string) string {
 		if numbered {
-			return "[4] " + s
+			return "[3] " + s
 		}
 		return s
 	}
@@ -224,7 +225,7 @@ func (m AppModel) listTitle(w int) string {
 	for i := range m.tabs {
 		labels[i] = tabNumeral(i)
 	}
-	return tabBar("[2]", labels, m.tab, focused)
+	return tabBar("[1]", labels, m.tab, focused)
 }
 
 // tabNumerals mark a tab's position: the Roman numerals Ⅰ … Ⅴ (Unicode ROMAN
@@ -249,10 +250,10 @@ func tabNumeral(idx int) string {
 func (m AppModel) carryTitle(w int) string {
 	focused := m.focus == panelCarry
 	labels := []string{"Carries", "Tasks"}
-	if tb := tabBar("[4]", labels, m.carryTab, focused); lipgloss.Width(tb) <= w-2 {
+	if tb := tabBar("[3]", labels, m.carryTab, focused); lipgloss.Width(tb) <= w-2 {
 		return tb
 	}
-	return carouselChip("[4]", labels, m.carryTab, focused)
+	return carouselChip("[3]", labels, m.carryTab, focused)
 }
 
 // carryBody renders panel [4]'s active tab.
@@ -263,27 +264,27 @@ func (m AppModel) carryBody(w, rows int) string {
 	return m.carry.view(w, rows, m.focus == panelCarry) // Carries
 }
 
-// detailTitle renders panel [3]'s title chip (Preview only).
+// detailTitle renders panel [2]'s title chip (Preview only).
 func (m AppModel) detailTitle(w int) string {
-	return singleChip("[3] Preview", m.focus == panelDetail)
+	return singleChip("[2] Preview", m.focus == panelDetail)
 }
 
-// detailLines is panel [3]'s full preview content.
+// detailLines is panel [2]'s full preview content.
 func (m AppModel) detailLines() []string { return m.preview.contentLines() }
 
-// detailBody renders panel [3]'s preview from the scroll offset. Panels [3]/[5]
+// detailBody renders panel [2]'s preview from the scroll offset. Panels [2]/[4]
 // are reference views (read while another panel has focus), so they keep their
 // colour even when unfocused rather than dimming.
 func (m AppModel) detailBody(w, rows int) string {
 	return renderLinesFrom(m.detailLines(), m.detailScroll, w, rows)
 }
 
-// metaTitle renders panel [5]'s title chip.
+// metaTitle renders panel [4]'s title chip.
 func (m AppModel) metaTitle(w int) string {
-	return singleChip("[5] Meta", m.focus == panelMeta)
+	return singleChip("[4] Meta", m.focus == panelMeta)
 }
 
-// metaBody renders panel [5]'s file metadata from the scroll offset.
+// metaBody renders panel [4]'s file metadata from the scroll offset.
 func (m AppModel) metaBody(w, rows int) string {
 	return renderLinesFrom(m.metaContent(), m.metaScroll, w, rows)
 }

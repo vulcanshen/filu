@@ -1,9 +1,7 @@
 package ui
 
 import (
-	"os"
 	"strconv"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -45,9 +43,10 @@ func (m *AppModel) setGotoPinnedItems() {
 		}, "Pinned")
 		return
 	}
+	budget := maxInnerWidth(m.width) - 8 // room for the "[N] " prefix + box chrome
 	items := make([]menuItem, 0, len(m.places.pinned))
 	for i, p := range m.places.pinned {
-		items = append(items, menuItem{label: collapseHome(p.path), key: strconv.Itoa(i + 1)})
+		items = append(items, menuItem{label: fitPath(p.path, budget), key: strconv.Itoa(i + 1)})
 	}
 	m.gotoMenu.setItems(items, "Pinned · P unpin")
 }
@@ -80,26 +79,12 @@ func (m *AppModel) advanceGotoFlow(key string) tea.Cmd {
 }
 
 // unpinAtGotoCursor removes the highlighted pinned dir while the Pinned list is
-// open, then rebuilds the list in place. With the Places sidebar going away, this
-// picker is the new home for unpin (was panel [1]'s P).
+// open, then rebuilds the list in place. With the Places sidebar removed, this
+// picker is the home for unpin (was panel [1]'s P).
 func (m *AppModel) unpinAtGotoCursor() tea.Cmd {
 	if idx := m.gotoMenu.cursor; idx >= 0 && idx < len(m.places.pinned) {
 		m.places.unpin(m.places.pinned[idx].path)
 	}
 	m.setGotoPinnedItems()
 	return nil
-}
-
-// collapseHome shortens a path for display by replacing the home dir with ~. The
-// separator guard keeps /home/bob from swallowing /home/bobby.
-func collapseHome(path string) string {
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		if path == home {
-			return "~"
-		}
-		if strings.HasPrefix(path, home+string(os.PathSeparator)) {
-			return "~" + path[len(home):]
-		}
-	}
-	return path
 }

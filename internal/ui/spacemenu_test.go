@@ -147,30 +147,30 @@ func TestToggleZoom(t *testing.T) {
 }
 
 func TestZoomFocusSwitch(t *testing.T) {
-	// [2]-zoom stacks [2] over [4], so 2/4 switch focus without leaving zoom.
+	// [1]-zoom stacks [1] over [3], so 1/3 switch focus without leaving zoom.
 	m := AppModel{focus: panelList, zoom: panelList}
 	if !m.zoomVisible(panelList) || !m.zoomVisible(panelCarry) {
-		t.Error("[2]-zoom should show [2] and [4]")
+		t.Error("[1]-zoom should show [1] list and [3] carry")
 	}
-	if m.zoomVisible(panelPin) || m.zoomVisible(panelDetail) {
-		t.Error("[2]-zoom should hide [1] and [3]")
+	if m.zoomVisible(panelMeta) || m.zoomVisible(panelDetail) {
+		t.Error("[1]-zoom should hide [2] preview and [4] meta")
 	}
 	m.setFocus(panelCarry)
 	if m.zoom != panelList || m.focus != panelCarry {
-		t.Errorf("4 in [2]-zoom: zoom=%v focus=%v, want zoom kept + focus [4]", m.zoom, m.focus)
+		t.Errorf("carry [3] in [1]-zoom: zoom=%v focus=%v, want zoom kept + focus [3]", m.zoom, m.focus)
 	}
 	m.setFocus(panelDetail)
 	if m.zoom != 0 || m.focus != panelDetail {
-		t.Errorf("3 in [2]-zoom: zoom=%v focus=%v, want zoom cleared + focus [3]", m.zoom, m.focus)
+		t.Errorf("preview [2] in [1]-zoom: zoom=%v focus=%v, want zoom cleared + focus [2]", m.zoom, m.focus)
 	}
 
-	// [4]-zoom shows only [4]; switching away exits.
+	// [3]-zoom (carry) shows only [3]; switching away exits.
 	m4 := AppModel{focus: panelCarry, zoom: panelCarry}
 	if m4.zoomVisible(panelList) {
-		t.Error("[4]-zoom should hide [2]")
+		t.Error("[3]-zoom should hide [1] list")
 	}
 	m4.setFocus(panelList)
 	if m4.zoom != 0 {
-		t.Error("switching away from [4]-zoom should exit zoom")
+		t.Error("switching away from [3]-zoom should exit zoom")
 	}
 }

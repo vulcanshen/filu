@@ -166,7 +166,7 @@ func renderCrumb(segs []string) string {
 // initial abbreviation (never the current / last segment), then a middle …
 // collapse keeping the root + as many tail segments as fit, then the current
 // segment alone. The fits predicate lets each caller measure in its own units —
-// the header measures rendered powerline width, panel [1] plain path width.
+// the header measures rendered powerline width, the Goto picker plain path width.
 func fitPathSegments(segs []string, fits func([]string) bool) []string {
 	if fits(segs) {
 		return segs
@@ -213,8 +213,8 @@ func joinSegs(segs []string) string {
 
 // fitPath shortens a directory into a plain (home-folded) path string of at most
 // w display cells, using the same progressive scheme as the header breadcrumb
-// (full → front initials → middle …). Used by panel [1] so pinned dirs and the
-// header shorten the same way.
+// (full → front initials → middle …). Used by the Goto picker's Pinned list so
+// pinned dirs and the header shorten the same way.
 func fitPath(dir string, w int) string {
 	return joinSegs(fitPathSegments(pathSegments(dir), func(s []string) bool {
 		return dispWidth(joinSegs(s)) <= w
