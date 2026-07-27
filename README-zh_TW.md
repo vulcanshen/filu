@@ -78,9 +78,14 @@ go install github.com/vulcanshen/filu/cmd/filu@latest
 ```bash
 git clone https://github.com/vulcanshen/filu.git
 cd filu
-CGO_ENABLED=0 go build -o filu ./cmd/filu
+CGO_ENABLED=0 go build -o filu ./cmd/filu   # 或:make build
 ./filu
 ```
+
+`Makefile` 收攏了常用工作 —— `make build`(→ `./filu`)、`make install`
+(→ `$GOPATH/bin`,把 `filu` 放上 `PATH`)/ `make uninstall`、`make package`
+(打包當前平台的 `.tar.gz` 到 `dist/`)、`make check`(fmt + vet + test)。
+跑 `make` 列出全部。
 
 ### 移除
 

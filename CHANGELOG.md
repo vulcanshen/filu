@@ -75,6 +75,11 @@
 - Live refresh: the list tabs now watch their directories (fsnotify) and reload
   automatically when files are added or removed externally, keeping the cursor
   on its entry. Bursts are debounced into a single reload.
+- A `Makefile` for local development: `build` (static `./filu`), `install` /
+  `uninstall` (into `$GOPATH/bin`), `run`, `package` (a `.tar.gz` for the current
+  platform under `dist/`), `test` / `vet` / `fmt` / `fmt-check` / `check`, and
+  `clean`. Cross-platform release binaries still come from goreleaser; the
+  Makefile only builds for the local machine.
 
 ### Changed
 - The Carries tab's pick mark (an item in the land subset) now uses its own
