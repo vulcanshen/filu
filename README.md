@@ -12,7 +12,7 @@
 
 > _When in doubt, hit_ **`Space`**.
 
-filu is a member of the `u`-family and a filesystem-domain implementation of the same **ZLC** (Zero Learning Curve) design system as [kbu](https://github.com/vulcanshen/kbu) — see [`docs/zlc-filu-implementation.md`](docs/zlc-filu-implementation.md).
+filu is a member of the `u`-family and a filesystem-domain implementation of [Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md) — the same design system as [kbu](https://github.com/vulcanshen/kbu). See [`docs/filu-implementation.md`](docs/filu-implementation.md).
 
 ## Demo
 
