@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-07-27
+
+### Added
+- `filu version` prints the version (`filu v0.1.1` for a release build, `filu dev`
+  for a local build) — a subcommand like `filu shell`, so you can check the
+  installed version without opening the TUI.
+
 ## [0.1.0] — 2026-07-27
 
 ### Added
