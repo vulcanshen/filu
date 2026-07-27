@@ -166,7 +166,9 @@ func (m AppModel) expandedListTabs(w, h int) string {
 	for i := range m.tabs {
 		cw := widths[i]
 		focused := m.focus == panelList && m.tab == i
-		cols[i] = m.panelBox(focused, singleChip("[2] "+tabNumeral(i), focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried))
+		// trailing space: singleChip sits flush against its round cap, so a wide
+		// Roman-numeral glyph (Ⅱ/Ⅲ/Ⅳ) gets clipped by it — pad a cell as tabBar does.
+		cols[i] = m.panelBox(focused, singleChip("[2] "+tabNumeral(i)+" ", focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried))
 	}
 	return joinH(cols...)
 }
