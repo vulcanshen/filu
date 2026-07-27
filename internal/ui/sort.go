@@ -18,6 +18,7 @@ const (
 	sortMtime
 	sortExt // kept for value stability — no longer offered
 	sortPerm
+	sortOwner
 )
 
 // sortColDef pairs a column with its display title and picker hotkey.
@@ -34,6 +35,7 @@ var sortCols = []sortColDef{
 	{sortName, "Name", "n"},
 	{sortMtime, "Modified", "m"},
 	{sortPerm, "Permissions", "p"},
+	{sortOwner, "Owner", "o"},
 }
 
 // sortRule is one tier of the sort: a column and its direction.
@@ -135,6 +137,8 @@ func compareCol(a, b fileItem, c sortCol) int {
 		return strings.Compare(fileExt(a.name), fileExt(b.name))
 	case sortPerm:
 		return strings.Compare(a.perm, b.perm)
+	case sortOwner:
+		return strings.Compare(a.owner, b.owner)
 	default: // sortName
 		return strings.Compare(strings.ToLower(a.name), strings.ToLower(b.name))
 	}
