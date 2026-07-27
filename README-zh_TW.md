@@ -12,7 +12,7 @@
 
 > _遇事不決,就按_ **`Space`**。
 
-filu 是 `u`-family 的成員,是與 [kbu](https://github.com/vulcanshen/kbu) 同一套 **ZLC**(Zero Learning Curve)設計系統在 filesystem domain 的實現 — 見 [`docs/zlc-filu-implementation.md`](docs/zlc-filu-implementation.md)。
+filu 是 `u`-family 的成員,是 [Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md) 在 filesystem domain 的實現,跟 [kbu](https://github.com/vulcanshen/kbu) 共用同一套設計原則 — 見 [`docs/filu-implementation.md`](docs/filu-implementation.md)。
 
 ## Demo
 

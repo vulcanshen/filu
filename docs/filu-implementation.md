@@ -1,21 +1,20 @@
-# filu — ZLC Implementation
+# filu — Implementation
 
-ZLC(Zero Learning Curve)是一套**與領域無關的通用 TUI 設計系統** —— 目標:
+[Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md)
+是一套**與領域無關的通用 TUI 設計原則** —— 目標:
 不看文件、不背 hotkey,靠一套跨 surface 不變的基礎操作就能用完整個 app。它
 **不屬於任何單一 app**:kbu 是它在 K8s domain 的一個實現、**filu 是它在
 filesystem domain 的另一個平行實現**。兩者是 sibling、共用同一套通用原則,不是
-誰派生自誰。(通用原則文件目前**暫置於 kbu repo**
-`docs/zlc-tui-design-principle.md`、尚未獨立成自己的家,但內容本身
-domain-independent、不是 kbu 專屬。)
+誰派生自誰。
 
 本文件是 filu 對這套通用原則的**具體落地紀錄**,結構鏡射同為實現的
-`kbu-zlc-implementation.md`(平行參照、非上位),逐節對照 filu 的實作 —— 通用
+`kbu-implementation.md`(平行參照、非上位),逐節對照 filu 的實作 —— 通用
 規範是 **interface**、本文件是 filu 這個 **implementation class**(kbu 是另一
 個 class)。想知道**為什麼**這樣做、看通用規範;想知道 filu **怎麼**做,看這裡。
 
-> **設計權威順序**:`.forge/meta/IDEA.md`(filu 專屬決定)> **通用 ZLC 原則**
-> (`zlc-tui-design-principle.md`,domain-independent、暫置 kbu repo)。
-> `kbu-zlc-implementation.md` 是**平行實現的參照、不是 filu 的上位權威**。衝突
+> **設計權威順序**:`.forge/meta/IDEA.md`(filu 專屬決定)> **通用原則**
+> ([Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md))。
+> `kbu-implementation.md` 是**平行實現的參照、不是 filu 的上位權威**。衝突
 > 時以 IDEA.md 為準、通用原則其次。
 >
 > **狀態標記**:本文件描述**當前已落地**的實作。尚未完成者標 `(planned)`,
@@ -28,19 +27,19 @@ tab 與 header 連動、quit 用 picker 而非 confirm、原生 finder、carry /
 
 ---
 
-## §A. ZLC implementation in filu
+## §A. Implementation in filu
 
-通用 §A.0(ZLC score)+ §A.1(contextual track)+ §A.2(non-contextual
+通用 §A.0(score)+ §A.1(contextual track)+ §A.2(non-contextual
 track)在 filu 的具體實現。
 
-### §A.0 filu ZLC score 對照
+### §A.0 filu score 對照
 
 | 軸 / 結果 | filu 值 | 計算 |
 |---|---|---|
 | **X. 揭露程度** | ~1.0 | Space menu 列出當前 focus 的 contextual 動作 100%、`?` help popup 列出全域動作 100%。以 user 學習單位計:`e` edit 對所有文字檔通用算 1 個 action、`Enter` open 對所有型別通用算 1 個 |
 | **Y. core-key role 數量** | 5 | `Tab`(focus 切換)/ `Enter`(確認·進入·開檔)/ `Esc`(取消·回上層)/ `Space`(contextual 入口)/ `?`(non-contextual 入口)。`Ctrl+C`(硬退)與 `q`(cd-on-quit picker)不另計 role —— 見 §A.0.Y |
 | `min(1, 5/Y)` 係數 | 1.0 | Y = 5、無 penalty |
-| **ZLC score** | `~1.0 × 1.0` = **~100%** | 不靠事先學就能用 |
+| **Score** | `~1.0 × 1.0` = **~100%** | 不靠事先學就能用 |
 
 filu 的定位不是「再做一個 yazi」,而是「**第一次開就能不看文件開到底**」的
 檔案管理器 —— letter hotkey 是加速捷徑、不是必經之路,光靠 `Space` + `?`
@@ -96,7 +95,7 @@ item-region / panel-region、cursor-first,見 §6.6):
 | **[5] Meta** | Yank `y` | Zoom `z` |
 
 **完整性 audit**:新增一條 contextual 動作,必須同步在對應 focus 的 Space
-menu 加 entry,不能只綁 letter hotkey,否則是 ZLC 破洞。反例警覺:`Copy`/`Move`
+menu 加 entry,不能只綁 letter hotkey,否則是原則破洞。反例警覺:`Copy`/`Move`
 只在 bucket 有內容時才出現在 menu —— 這是 cursor-state gating,不是隱藏。
 
 ### §A.2 Non-contextual track in filu — `?` help popup
@@ -654,13 +653,13 @@ header 下一列是 status bar(`view.go statusBar`),顯示 **active tab 目錄�
 
 ## 結語
 
-filu 是通用 ZLC 系統在 filesystem domain 的一個實現(kbu 是 K8s domain 的另一
-個)—— 兩者平行、共用同一套通用原則,不是誰派生自誰。filu 落地的 ZLC 骨架:
+filu 是通用設計原則在 filesystem domain 的一個實現(kbu 是 K8s domain 的另一
+個)—— 兩者平行、共用同一套通用原則,不是誰派生自誰。filu 落地的原則骨架:
 core-key 5 個不變、
 Space + `?` 雙軌揭露、popup 四類 taxonomy、明度 z-axis、carry-bucket 延遲決策。
 filu 自己長出來的幾個實作案例 —— 隨寬逐階縮字(header/pin 共用)、動態 tab 與
 header 分工、quit 用 picker、原生串流 finder、兩層 pick 兩個 glyph、依動態 tab
 分欄的 zoom、preview yank visual、header 靠明度差造深度階層(而非 `` 分
 隔)—— 都收在對應章節。凡設計決定以 `.forge/meta/IDEA.md` 為準;凡通用原則以
-`zlc-tui-design-principle.md`(通用、暫置 kbu repo、非 kbu 專屬)為準。本文件隨
+[Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design-principle.md) 為準。本文件隨
 實作演進更新,不宣稱未落地的行為。
