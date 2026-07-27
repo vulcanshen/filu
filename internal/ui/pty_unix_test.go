@@ -134,6 +134,19 @@ func TestPtyStartsInDir(t *testing.T) {
 	}
 }
 
+// TestPtyStartStopNoPanic hammers the start→stop race: stop() can nil the shared
+// handles before the readLoop goroutine reads them, and cmd.Wait on a nil *Cmd
+// panics (which crashes the whole test binary from a goroutine). The nil-guard in
+// readLoop must keep this quiet over many rounds.
+func TestPtyStartStopNoPanic(t *testing.T) {
+	for range 50 {
+		p := newPtyPopup()
+		p.start(exec.Command("true"), "x", t.TempDir(), 80, 24)
+		p.stop()
+	}
+	time.Sleep(150 * time.Millisecond) // let any lingering readLoop goroutines finish
+}
+
 func TestPtyLifecycle(t *testing.T) {
 	p := newPtyPopup()
 	p.start(exec.Command("true"), "test", "/tmp", 80, 24) // exits immediately
