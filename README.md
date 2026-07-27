@@ -1,6 +1,6 @@
 # filu
 
-<!-- <p align="center"><img src="docs/icon.svg" width="128" alt="filu icon" /></p> -->
+<p align="center"><img src="docs/icon.svg" width="128" alt="filu icon" /></p>
 
 [![GitHub Release](https://img.shields.io/github/v/release/vulcanshen/filu)](https://github.com/vulcanshen/filu/releases)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/vulcanshen/filu)](https://go.dev/)

@@ -76,6 +76,7 @@ type AppModel struct {
 	pendingDelete string            // path awaiting delete confirmation
 	inputPopup    inputPopup        // text prompt (rename / add)
 	help          helpPopup         // §A.2 global help cheatsheet
+	splash        splashModel       // hidden easter-egg logo (V)
 	toast         toastModel        // transient notification (yank feedback)
 	detailYank    detailYank        // panel [3] yank viewport (cursor + visual selection)
 	pty           *ptyPopup         // embedded editor; pointer — shared with its read goroutine
@@ -106,7 +107,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
@@ -233,7 +234,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case AnimTickMsg:
 		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+	case splashTickMsg, splashIdentityMsg, splashHintMsg:
+		var cmd tea.Cmd
+		m.splash, cmd = m.splash.update(msg)
+		return m, cmd
 	case tea.KeyMsg:
+		if m.splash.isActive() { // hidden easter-egg logo owns the keyboard until dismissed
+			var cmd tea.Cmd
+			m.splash, cmd = m.splash.update(msg)
+			return m, cmd
+		}
 		if m.pty.isActive() { // the embedded editor owns every keystroke
 			return m, m.pty.update(msg)
 		}
@@ -380,6 +390,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.openQuitMenu()
 		case "?": // §A.2 global help cheatsheet
 			return m, m.help.open()
+		case "V": // hidden easter-egg: the u-family logo
+			return m, m.splash.show()
 		case " ": // Space opens the contextual menu for the focused panel
 			items, title := m.buildSpaceMenu()
 			if len(items) == 0 {
