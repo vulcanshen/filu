@@ -64,7 +64,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/install.sh | s
 brew install vulcanshen/tap/filu
 ```
 
-cask 宣告了 `ripgrep` + `fd` 依賴,所以 Find 與 finder 列檔開箱即用。
+formula 宣告了 `ripgrep` + `fd` 依賴,所以 Find 與 finder 列檔開箱即用。
 
 ### 從 go install
 

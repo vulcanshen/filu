@@ -28,7 +28,11 @@ checksum:
 changelog:
   disable: true
 
-homebrew_casks:
+# A formula, not a cask: filu is a CLI/TUI, so it belongs in a formula like the
+# rest of the u-family (kbu). Homebrew stamps com.apple.quarantine on cask
+# artifacts by default, which trips macOS Gatekeeper on an unsigned binary;
+# formula binaries are never quarantined, so `brew install` runs clean.
+brews:
   - repository:
       owner: vulcanshen
       name: homebrew-tap
@@ -38,5 +42,5 @@ homebrew_casks:
     # Search (/) uses ripgrep for the content filter and fd for the file list;
     # declaring them as deps means `brew install filu` pulls them in too.
     dependencies:
-      - formula: ripgrep
-      - formula: fd
+      - name: ripgrep
+      - name: fd
