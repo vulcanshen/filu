@@ -9,10 +9,9 @@ import (
 
 // sessionState is what filu restores on the next launch (IDEA.md: "where you
 // were is where you restart") — the tabs the user created beyond the CWD tab
-// (dirs + cursors), focus, detail tab, carry bucket, pinned places, and the sort
-// chain. Tab [0] always reopens at the CWD and is the active tab on launch, and
-// panel [1] always lands on the CWD — so the first tab's state, the active-tab
-// index, and the places cursor are deliberately NOT persisted.
+// (dirs + cursors), focus, carry bucket, pinned dirs, and the sort chain. Tab [0]
+// always reopens at the CWD and is the active tab on launch, so the first tab's
+// state and the active-tab index are deliberately NOT persisted.
 type sessionState struct {
 	Tabs   []tabState      `yaml:"tabs"` // the tabs created beyond the CWD tab [0]
 	Focus  int             `yaml:"focus"`
@@ -144,16 +143,14 @@ func (m *AppModel) applyState(st sessionState) {
 		nl.clampCursor()
 		m.tabs = append(m.tabs, nl)
 	}
-	if st.Focus >= int(panelPin) && st.Focus <= int(panelMeta) {
+	if st.Focus >= int(panelList) && st.Focus <= int(panelMeta) {
 		m.focus = panelID(st.Focus)
 	}
 	m.carry.items = st.Carry
 	for _, p := range st.Pinned {
 		m.places.pinned = append(m.places.pinned, place{label: filepath.Base(p), path: p, icon: iconPin})
 	}
-	m.places.cursor = len(m.places.pinned) // panel [1] always lands on the CWD (first system place)
-	m.places.move(0)                       // clamp to the restored place count
-	for _, pt := range st.Tasks {          // "undone" tasks were interrupted → pending
+	for _, pt := range st.Tasks { // "undone" tasks were interrupted → pending
 		status := taskPending
 		switch pt.Status {
 		case "done":
