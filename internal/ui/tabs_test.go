@@ -41,93 +41,97 @@ func TestZoomTabNumeralPadded(t *testing.T) {
 	}
 }
 
-// TestTabGotoNewTabIntent: T opens the Goto finder with the new-tab intent, and
-// confirming a directory opens it as a new active tab (tab 0 stays put); a plain
-// Goto (go) carries no intent, so it reveals in place instead.
-func TestTabGotoNewTabIntent(t *testing.T) {
+// TestTabMenuNewTab: the new-tab menu's Search arms the Goto finder with the
+// new-tab intent, and confirming a directory opens it as a new active tab (tab 0
+// stays put). A plain Goto (move the active tab) carries no intent.
+func TestTabMenuNewTab(t *testing.T) {
 	d1, d2 := t.TempDir(), t.TempDir()
 	m := minModel()
 	m.width, m.height = 80, 24
 	m.search, m.toast = newSearch(), newToast()
 	m.tabs = []listModel{newList(d1)}
 
-	// T arms the Goto finder with the new-tab intent (the returned fd-stream cmd
-	// is not executed here).
-	if cmd := m.handleListKey("T"); cmd == nil {
-		t.Fatal("T under the cap should open the Goto finder")
+	// New tab → Search arms the Goto finder with the new-tab intent.
+	m.openTabMenu()
+	if !m.gotoNewTab {
+		t.Fatal("openTabMenu should set new-tab mode")
 	}
-	if !m.search.newTab {
-		t.Error("T must open Goto with the new-tab intent")
+	m.advanceGotoFlow("/")
+	if !m.search.isActive() || !m.search.newTab {
+		t.Fatal("New tab → Search should open the finder with the new-tab intent")
 	}
 
 	// Confirming a directory appends it as a new active tab; tab 0 stays put.
 	model, _ := m.Update(searchConfirmMsg{path: d2, newTab: true})
 	m = model.(AppModel)
 	if len(m.tabs) != 2 || m.tab != 1 || m.tabs[1].dir != d2 {
-		t.Fatalf("goto-new-tab: len=%d tab=%d dir=%q, want 2/1/%q", len(m.tabs), m.tab, m.tabs[1].dir, d2)
+		t.Fatalf("new-tab search: len=%d tab=%d dir=%q, want 2/1/%q", len(m.tabs), m.tab, m.tabs[1].dir, d2)
 	}
 	if m.tabs[0].dir != d1 {
 		t.Errorf("tab 0 must stay at %q, got %q", d1, m.tabs[0].dir)
 	}
 
-	// A plain Goto (go → Search) opens the finder with no intent — a reveal.
-	m.handleListKey("go")
-	m.advanceGotoFlow("/")
-	if m.search.newTab {
+	// A plain Goto (Search) moves the active tab — no new-tab intent.
+	m2 := minModel()
+	m2.width, m2.height = 80, 24
+	m2.search = newSearch()
+	m2.tabs = []listModel{newList(d1)}
+	m2.openGotoMenu()
+	m2.advanceGotoFlow("/")
+	if m2.search.newTab {
 		t.Error("plain Goto must not carry the new-tab intent")
 	}
 }
 
-// TestTabLimitToast: at maxTabs, both t and T are blocked with a toast — no tab
-// is added and T does not open the Goto finder.
+// TestTabLimitToast: at maxTabs, t is blocked with a toast — the new-tab menu
+// does not open and no tab is added.
 func TestTabLimitToast(t *testing.T) {
 	m := minModel()
 	m.search, m.toast = newSearch(), newToast()
 	m.tabs = []listModel{newList(t.TempDir())}
 	for len(m.tabs) < maxTabs {
-		m.handleListKey("t")
+		m.addTab(m.cur().dir) // fill directly — t now opens a menu, not a tab
 	}
 	if len(m.tabs) != maxTabs {
 		t.Fatalf("setup: want %d tabs, got %d", maxTabs, len(m.tabs))
 	}
 
-	if cmd := m.handleListKey("t"); cmd == nil { // t at the cap → toast, no new tab
+	if cmd := m.handleListKey("t"); cmd == nil { // t at the cap → toast
 		t.Error("t at the cap should return a toast cmd")
+	}
+	if m.gotoMenu.isActive() {
+		t.Error("t at the cap must not open the new-tab menu")
 	}
 	if len(m.tabs) != maxTabs {
 		t.Errorf("t at the cap must not add a tab, got %d", len(m.tabs))
 	}
-
-	if cmd := m.handleListKey("T"); cmd == nil { // T at the cap → toast, no Goto
-		t.Error("T at the cap should return a toast cmd")
-	}
-	if m.search.newTab {
-		t.Error("T at the cap must not open Goto")
-	}
-	if len(m.tabs) != maxTabs {
-		t.Errorf("T at the cap must not add a tab, got %d", len(m.tabs))
-	}
 }
 
-// TestNewAndCloseTab covers panel [2]'s dynamic tabs: `t` opens a tab in the
-// current tab's directory and makes it active, the count caps at maxTabs, `w`
-// closes the active tab and clamps the cursor, and the last tab can't be closed.
+// TestNewAndCloseTab covers panel [1]'s dynamic tabs: `t` opens the new-tab menu,
+// whose Same opens a tab in the current dir and makes it active; the count caps at
+// maxTabs; `w` closes the active tab and clamps the cursor; the last tab can't be
+// closed.
 func TestNewAndCloseTab(t *testing.T) {
 	d1 := t.TempDir()
-	m := AppModel{focus: panelList}
+	m := AppModel{focus: panelList, gotoMenu: newGotoMenu()}
 	m.tabs = []listModel{newList(d1)}
 
-	m.handleListKey("t") // new tab duplicates the current tab's dir, made active
+	m.handleListKey("t") // opens the new-tab picker
+	if !m.gotoMenu.isActive() || !m.gotoNewTab {
+		t.Fatal("t should open the new-tab picker")
+	}
+	m.advanceGotoFlow("s") // Same → a tab in the current dir, made active
 	if len(m.tabs) != 2 || m.tab != 1 {
-		t.Fatalf("new tab: len=%d tab=%d, want 2/1", len(m.tabs), m.tab)
+		t.Fatalf("Same: len=%d tab=%d, want 2/1", len(m.tabs), m.tab)
 	}
 	if m.tabs[1].dir != d1 {
-		t.Errorf("new tab dir = %q, want current tab's %q", m.tabs[1].dir, d1)
+		t.Errorf("Same tab dir = %q, want current tab's %q", m.tabs[1].dir, d1)
 	}
 
-	for i := len(m.tabs); i <= maxTabs; i++ { // fill to the cap, then one more that must no-op
-		m.handleListKey("t")
+	for len(m.tabs) < maxTabs { // fill to the cap directly
+		m.addTab(m.cur().dir)
 	}
+	m.handleListKey("t") // at the cap → toast, no tab added
 	if len(m.tabs) != maxTabs {
 		t.Errorf("tab count should cap at %d, got %d", maxTabs, len(m.tabs))
 	}

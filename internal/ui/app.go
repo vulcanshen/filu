@@ -68,8 +68,9 @@ type AppModel struct {
 	quitMenu      spaceMenu         // cd-on-quit picker (launch dir + distinct tab dirs)
 	openWithMenu  spaceMenu         // [o]pen picker (Default + config.yaml open_with apps)
 	openWithPath  string            // path the open-with picker acts on (captured when it opens)
-	gotoMenu      spaceMenu         // Goto picker: {Pinned, Search}, then a pinned-dir drill-down
+	gotoMenu      spaceMenu         // Goto / new-tab picker: {Same?, Pinned, Search} → pinned drill-down
 	gotoStep      gotoStep          // which step the Goto picker is on
+	gotoNewTab    bool              // Goto picker in new-tab mode (open in a new tab vs move the active one)
 	launchDir     string            // the dir filu was started in (panel 1 CWD / quit option 1)
 	zoom          panelID           // 0 = normal; else the panel expanded full-width
 	confirm       confirmPopup      // yes/no popup (delete / quit)
@@ -474,15 +475,9 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		m.tab = (m.tab + 1) % len(m.tabs)
 	case "h", "left":
 		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
-	case "t": // new tab in the current tab's directory, made active (up to maxTabs)
+	case "t": // new tab: open the Same / Pinned / Search picker (up to maxTabs)
 		if len(m.tabs) < maxTabs {
-			m.addTab(m.cur().dir)
-		} else {
-			cmd = m.toast.show(tabLimitToast())
-		}
-	case "T": // new tab at a directory chosen via Goto (up to maxTabs)
-		if len(m.tabs) < maxTabs {
-			cmd = m.openGotoNewTab()
+			cmd = m.openTabMenu()
 		} else {
 			cmd = m.toast.show(tabLimitToast())
 		}
@@ -779,8 +774,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
 		if len(m.tabs) < maxTabs {
 			panelOps = append(panelOps,
-				menuItem{label: "Tab", key: "t", hint: "open a new tab in this directory"},
-				menuItem{label: "Tab @ goto", key: "T", hint: "open a new tab at a directory you pick"})
+				menuItem{label: "New tab", key: "t", hint: "a tab here, at a pin, or a search"})
 		}
 		if len(m.tabs) > 1 {
 			panelOps = append(panelOps,
