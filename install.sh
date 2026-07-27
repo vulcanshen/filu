@@ -66,16 +66,77 @@ case ":$PATH:" in
     ;;
 esac
 
-# Search (/) relies on external tools — warn (don't auto-install: package names
-# vary across distros). brew installs handle these as formula dependencies.
-missing=""
-command -v rg >/dev/null 2>&1 || missing="$missing ripgrep"
-command -v fd >/dev/null 2>&1 || missing="$missing fd"
-if [ -n "$missing" ]; then
+# ── Search tools (ripgrep + fd) ──────────────────────────────────────────────
+# filu's finders use ripgrep (Find `f`, content search — required) and fd
+# (Search `/` + Goto `go` listing — optional; filu falls back to a built-in Go
+# walk when it is absent). A brew install pulls these in as formula dependencies;
+# a raw install.sh has no package manager to lean on, so — for whatever is
+# missing — we fetch the same kind of static binary we ship for filu itself: no
+# sudo, and the binaries land named `rg`/`fd` (not Debian's `fdfind`, which filu
+# would not find). Downloads go into INSTALL_DIR; existing installs are left be.
+
+# Rust target triple shared by ripgrep and fd release assets.
+case "$ARCH" in
+  amd64) RUST_ARCH="x86_64" ;;
+  arm64) RUST_ARCH="aarch64" ;;
+esac
+case "$OS" in
+  darwin) RUST_OS="apple-darwin" ;;
+  linux)  RUST_OS="unknown-linux-musl" ;;  # musl = static, distro-agnostic
+esac
+TARGET="${RUST_ARCH}-${RUST_OS}"
+
+# install_tool <label> <repo> <asset-prefix> <binary> — drop the latest release
+# binary into INSTALL_DIR. A missing asset for this platform (e.g. fd ships no
+# Intel-macOS build) is a soft skip, never a hard failure.
+install_tool() {
+  label="$1"; repo="$2"; prefix="$3"; bin="$4"
+  tag=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null \
+        | grep -oE '"tag_name":[[:space:]]*"[^"]+"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
+  if [ -z "$tag" ]; then
+    echo "  ! could not resolve latest $label — skipping"
+    return 0
+  fi
+  asset="${prefix}-${tag}-${TARGET}.tar.gz"
+  url="https://github.com/$repo/releases/download/$tag/$asset"
+  td=$(mktemp -d)
+  if ! curl -fsSL "$url" -o "$td/$asset" 2>/dev/null; then
+    echo "  ! no $TARGET build for $label $tag — skipping"
+    rm -rf "$td"; return 0
+  fi
+  if ! tar xzf "$td/$asset" -C "$td" 2>/dev/null; then
+    echo "  ! could not extract $label — skipping"
+    rm -rf "$td"; return 0
+  fi
+  binpath=$(find "$td" -type f -name "$bin" 2>/dev/null | head -1)
+  if [ -z "$binpath" ]; then
+    echo "  ! $bin not found in $label archive — skipping"
+    rm -rf "$td"; return 0
+  fi
+  cp "$binpath" "$INSTALL_DIR/$bin"
+  chmod +x "$INSTALL_DIR/$bin"
+  rm -rf "$td"
+  echo "  + $label $tag -> $INSTALL_DIR/$bin"
+}
+
+need_rg=false; command -v rg >/dev/null 2>&1 || need_rg=true
+need_fd=false; command -v fd >/dev/null 2>&1 || need_fd=true
+if [ "$need_rg" = true ] || [ "$need_fd" = true ]; then
   echo ""
-  echo "NOTE: filu's Search (/) uses ripgrep (content filter, required) and fd"
-  echo "(file listing, optional — falls back to a slower built-in walk)."
-  echo "Not found:$missing. Install with your package manager, e.g.:"
+  echo "Installing search tools into $INSTALL_DIR..."
+  if [ "$need_rg" = true ]; then install_tool ripgrep BurntSushi/ripgrep ripgrep rg; fi
+  if [ "$need_fd" = true ]; then install_tool fd sharkdp/fd fd fd; fi
+fi
+
+# Anything still absent (not on PATH and not freshly dropped into INSTALL_DIR) —
+# point the user at their package manager. filu still runs; only Find needs rg.
+still=""
+if ! command -v rg >/dev/null 2>&1 && [ ! -x "$INSTALL_DIR/rg" ]; then still="$still ripgrep"; fi
+if ! command -v fd >/dev/null 2>&1 && [ ! -x "$INSTALL_DIR/fd" ]; then still="$still fd"; fi
+if [ -n "$still" ]; then
+  echo ""
+  echo "NOTE: still missing:$still — filu runs, but Find (f) needs ripgrep"
+  echo "(fd only speeds up listing; it falls back to a built-in walk). Install via:"
   echo "  macOS:          brew install ripgrep fd"
   echo "  Debian/Ubuntu:  sudo apt install ripgrep fd-find     # fd binary is 'fdfind'"
   echo "  Fedora:         sudo dnf install ripgrep fd-find"

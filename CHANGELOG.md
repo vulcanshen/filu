@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+- `install.sh` now installs missing `ripgrep` / `fd` automatically instead of
+  only printing hints: it downloads each tool's static binary from its own
+  GitHub release into the same directory as filu. No sudo, and the binaries are
+  named `rg`/`fd` (not Debian's `fdfind`, which filu wouldn't find). Only
+  what's missing is fetched; a platform with no prebuilt binary (e.g. `fd` on
+  Intel macOS) falls back to an install hint. Homebrew is unaffected — the
+  formula already declares both as dependencies.
+
 ## [0.1.1] — 2026-07-27
 
 ### Added
