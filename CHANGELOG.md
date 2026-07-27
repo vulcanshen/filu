@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+- The cd-on-quit picker (`q`) now tags each row with a single right-aligned glyph
+  — the launch icon for the launch directory, the tab's Roman numeral (Ⅰ..Ⅴ) for
+  a tab — instead of a `LaunchDir` / `tab Ⅱ` text label. The old labels drifted
+  out of alignment when the directory paths differed in width; a single trailing
+  glyph lines up cleanly in a column on the right whatever the paths.
+
 ## [0.0.2] — 2026-07-27
 
 ### Changed

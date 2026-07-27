@@ -41,9 +41,12 @@ func (m AppModel) quitTargets() []quitTarget {
 		seen[dir] = true
 		out = append(out, quitTarget{dir, hint})
 	}
-	add(m.launchDir, iconCWD+" LaunchDir") // panel [1]'s CWD entry, same glyph + label
+	// Hints are a single glyph + a trailing space: the launch glyph for panel
+	// [1]'s CWD, the tab numeral (Ⅰ..Ⅴ) for each tab. One cell of content keeps
+	// the right column trivially aligned regardless of Nerd-Font glyph width.
+	add(m.launchDir, iconCWD+" ")
 	for i, t := range m.tabs {
-		add(t.dir, "tab "+tabNumeral(i))
+		add(t.dir, tabNumeral(i)+" ")
 	}
 	return out
 }

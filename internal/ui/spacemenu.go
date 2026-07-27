@@ -42,6 +42,11 @@ type spaceMenu struct {
 	cursor  int
 	title   string
 	screenW int
+	// hintRight right-aligns each row's hint to the box's right edge instead of
+	// left-aligning it to a shared column. Suits a single trailing glyph (the quit
+	// picker's launch icon / tab numeral), not an action description whose
+	// left-aligned column reads better — so it is off for the normal Space menu.
+	hintRight bool
 }
 
 func newSpaceMenu() spaceMenu {
@@ -54,9 +59,11 @@ func newSortMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("sortmenu", popupLayerColor(1))}
 }
 
-// newQuitMenu is a third spaceMenu instance reused as the cd-on-quit picker.
+// newQuitMenu is a third spaceMenu instance reused as the cd-on-quit picker. Its
+// hints are single glyphs (launch icon / tab numeral), right-aligned so they line
+// up in a column on the right edge whatever the path labels' widths.
 func newQuitMenu() spaceMenu {
-	return spaceMenu{anim: newPopupAnimator("quitmenu", popupLayerColor(1))}
+	return spaceMenu{anim: newPopupAnimator("quitmenu", popupLayerColor(1)), hintRight: true}
 }
 
 // newOpenWithMenu is a fourth spaceMenu instance reused as the [o]pen picker
@@ -197,9 +204,20 @@ func (m spaceMenu) renderFull() string {
 	const maxHintW = 44 // a longer hint wraps onto continuation lines, not widens the box
 	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
 	for _, it := range m.items {
+		if it.separator {
+			continue
+		}
 		labelW := lipgloss.Width(bracketHotkey(it.label, it.key))
-		gap := max(2, 16-labelW)
-		if w := 1 + 2 + labelW + gap + min(lipgloss.Width(it.hint), maxHintW) + 1; w > innerW {
+		var w int
+		switch {
+		case it.header: // full-width label, no hint column
+			w = 1 + 2 + labelW + 1
+		case m.hintRight: // label + ≥2 gap + hint, hint flush to the right edge
+			w = 1 + 2 + labelW + 2 + lipgloss.Width(it.hint) + 1
+		default: // label padded to a 16-wide column, then the (wrappable) hint
+			w = 1 + 2 + labelW + max(2, 16-labelW) + min(lipgloss.Width(it.hint), maxHintW) + 1
+		}
+		if w > innerW {
 			innerW = w
 		}
 	}
@@ -221,6 +239,21 @@ func (m spaceMenu) renderFull() string {
 			continue
 		}
 		labelDisplay := bracketHotkey(it.label, it.key)
+
+		if m.hintRight {
+			// Single trailing glyph right-aligned to the inner edge (the quit
+			// picker). Front-pad so the glyph ends flush at innerW-1 whatever the
+			// label's width, so the glyphs line up in a column on the right.
+			lead := " " + gutter + labelDisplay
+			line := lead + strings.Repeat(" ", max(2, innerW-1-lipgloss.Width(lead)-lipgloss.Width(it.hint)))
+			if i == m.cursor {
+				rows = append(rows, cursorStyle.Render(line+it.hint))
+			} else {
+				rows = append(rows, line+hintStyle.Render(it.hint))
+			}
+			continue
+		}
+
 		gap := strings.Repeat(" ", max(2, 16-lipgloss.Width(labelDisplay)))
 		hintCol := 1 + len(gutter) + lipgloss.Width(labelDisplay) + lipgloss.Width(gap)
 		hintW := max(innerW-1-hintCol, 8)

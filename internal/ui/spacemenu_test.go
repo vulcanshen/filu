@@ -53,6 +53,28 @@ func TestSpaceMenuRender(t *testing.T) {
 	}
 }
 
+func TestQuitMenuSingleGlyphAlign(t *testing.T) {
+	// The quit picker (hintRight) uses single-glyph hints (launch icon / tab
+	// numeral), right-aligned. Rows with very different path widths must still
+	// render to the same width, so the glyphs sit in one clean column on the right.
+	m := newQuitMenu()
+	m.setSize(120)
+	m.setItems([]menuItem{
+		{label: "~/Documents/sideproj/filu", key: "1", hint: iconCWD + " "},
+		{label: "~/Downloads", key: "2", hint: tabNumeral(1) + " "},
+		{label: "~/Documents/sideproj", key: "3", hint: tabNumeral(2) + " "},
+	}, "Quit — cd to…")
+	lines := strings.Split(ansi.Strip(m.renderFull()), "\n")
+
+	want := ansi.StringWidth(lines[0])
+	for i, ln := range lines {
+		if got := ansi.StringWidth(ln); got != want {
+			t.Errorf("row %d width = %d, want %d (box not rectangular — hints won't line up)\n%s",
+				i, got, want, strings.Join(lines, "\n"))
+		}
+	}
+}
+
 func TestBuildSpaceMenuList(t *testing.T) {
 	m := AppModel{focus: panelList}
 	m.tabs = []listModel{{dir: "/tmp", items: []fileItem{{name: "foo.txt"}}}}
