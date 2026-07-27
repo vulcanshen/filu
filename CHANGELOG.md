@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+- `uninstall.sh`'s "remove filu state?" prompt now reads from the terminal
+  (`/dev/tty`) instead of stdin, so the confirmation works under the documented
+  `curl ... | sh` pipe (where stdin is the script itself). With no controlling
+  terminal, it keeps the state rather than acting on a misread.
+
 ### Changed
 - `install.sh` now installs missing `ripgrep` / `fd` automatically instead of
   only printing hints: it downloads each tool's static binary from its own

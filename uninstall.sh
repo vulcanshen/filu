@@ -31,16 +31,24 @@ else
 fi
 if [ -d "$CONFIG_DIR" ]; then
   printf "Remove filu state in %s? [y/N]: " "$CONFIG_DIR"
-  read -r answer
-  case "$answer" in
-    y|Y|yes|YES)
-      rm -rf "$CONFIG_DIR"
-      echo "removed $CONFIG_DIR"
-      ;;
-    *)
-      echo "kept $CONFIG_DIR"
-      ;;
-  esac
+  # Read the answer from the terminal, not stdin: under `curl ... | sh` stdin is
+  # the script itself, so a plain `read` consumes script text (or hits EOF)
+  # instead of the keypress. No controlling terminal (cron, nohup) -> keep the
+  # state, the safe default, rather than deleting on a misread.
+  if read -r answer < /dev/tty 2>/dev/null; then
+    case "$answer" in
+      y|Y|yes|YES)
+        rm -rf "$CONFIG_DIR"
+        echo "removed $CONFIG_DIR"
+        ;;
+      *)
+        echo "kept $CONFIG_DIR"
+        ;;
+    esac
+  else
+    echo ""
+    echo "kept $CONFIG_DIR (no terminal to confirm on)"
+  fi
 fi
 
 echo ""
