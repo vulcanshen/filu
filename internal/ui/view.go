@@ -2,7 +2,6 @@ package ui
 
 import (
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -133,7 +132,7 @@ func (m AppModel) middleView(w, midH int) string {
 func (m AppModel) normalMiddle(w, midH int) string {
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
-		return m.panelBox(listFocus, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, listFocus, m.carry.inBucket()))
+		return m.panelBox(listFocus, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, listFocus, m.carry.inBucket(), m.places.pinnedSet()))
 	}
 	topH := midH * 2 / 3
 	botH := midH - topH
@@ -141,7 +140,7 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	// Top row: list | preview, 50/50.
 	listW := w / 2
 	previewW := w - listW
-	list := m.panelBox(listFocus, m.listTitle(listW), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.carry.inBucket()))
+	list := m.panelBox(listFocus, m.listTitle(listW), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.carry.inBucket(), m.places.pinnedSet()))
 	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
 	topRow := joinH(list, preview)
 
@@ -165,18 +164,19 @@ func (m AppModel) zoomListView(w, midH int) string {
 		m.expandedCarryTabs(w, midH-topH, true))
 }
 
-// expandedListTabs lays panel [2]'s 3 directory tabs out as equal-width columns;
-// the active tab is the focused column when [2] holds focus.
+// expandedListTabs lays panel [1]'s directory tabs out as equal-width columns;
+// the active tab is the focused column when [1] holds focus.
 func (m AppModel) expandedListTabs(w, h int) string {
 	widths := splitN(w, len(m.tabs))
 	cols := make([]string, len(m.tabs))
 	carried := m.carry.inBucket()
+	pinned := m.places.pinnedSet()
 	for i := range m.tabs {
 		cw := widths[i]
 		focused := m.focus == panelList && m.tab == i
 		// trailing space: singleChip sits flush against its round cap, so a wide
 		// Roman-numeral glyph (Ⅱ/Ⅲ/Ⅳ) gets clipped by it — pad a cell as tabBar does.
-		cols[i] = m.panelBox(focused, singleChip("[1] "+tabNumeral(i)+" ", focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried))
+		cols[i] = m.panelBox(focused, singleChip("[1] "+tabNumeral(i)+" ", focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried, pinned))
 	}
 	return joinH(cols...)
 }
@@ -318,47 +318,21 @@ func (m AppModel) panelBox(focused bool, title string, w, h int, body string) st
 	return b.String()
 }
 
-// statusBar is the top status row under the header: the active tab's directory
-// status — permissions, owner:group and item/hidden counts on the left, free /
-// total disk on the right. Every field is precomputed on reload (loadDirStat) or
-// read live from the loaded list, so the bar costs nothing to redraw per frame.
-// Data reads in subtext1; the unit words recede in the dim grey.
-// eza-style status-bar accents (catppuccin-mocha), matching eza's long-format
-// colouring: read=yellow, write=red, execute=green, sizes=green, owner=yellow.
+// eza-style permission accents (catppuccin-mocha), matching eza's long-format
+// colouring: read=yellow, write=red, execute=green. Used by the list's per-row
+// Permissions column (colorPerm).
 const (
 	ezaYellow = "#f9e2af" // read bit / owner
 	ezaRed    = "#f38ba8" // write bit
 	ezaGreen  = "#a6e3a1" // execute bit / sizes
 )
 
+// statusBar is the top status row under the header. Its content is parked: the
+// permissions / mtime it used to show now live in the list columns, so the row is
+// intentionally blank for now — its height is kept for future content, and
+// loadDirStat still caches the dir's perm/owner/disk ready to fill it.
 func (m AppModel) statusBar(w int) string {
-	l := m.active()
-	dim := lipgloss.NewStyle().Foreground(dimColor)  // unit words, recessive
-	num := lipgloss.NewStyle().Foreground(handColor) // counts, subtext1
-	green := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaGreen))
-
-	var segs []string
-	if l.perm != "" {
-		segs = append(segs, colorPerm(l.perm))
-	}
-	if l.owner != "" {
-		segs = append(segs, colorOwner(l.owner))
-	}
-	count := num.Render(strconv.Itoa(len(l.items))) + dim.Render(" items")
-	if l.hidden > 0 {
-		count += dim.Render(" · ") + num.Render(strconv.Itoa(l.hidden)) + dim.Render(" hidden")
-	}
-	segs = append(segs, count)
-	left := " " + strings.Join(segs, "  ")
-
-	right := ""
-	if l.disk != "" {
-		right = green.Render(l.disk) + dim.Render(" free ") // eza colours sizes green
-	}
-	if dispWidth(right) > w-1 { // absurdly narrow terminal — drop the disk slot
-		right = ""
-	}
-	return padDisp(left, w-dispWidth(right)) + right
+	return padDisp("", w)
 }
 
 // colorPerm paints a mode string (drwxr-xr-x) eza-style: the type char blue,
@@ -388,7 +362,8 @@ func colorPerm(perm string) string {
 }
 
 // colorOwner paints "owner:group": owner in eza's user yellow, the group in
-// subtext, the ':' dim.
+// subtext, the ':' dim. Parked with loadDirStat for the status bar's future
+// content (see statusBar) — unused while the bar is blank.
 func colorOwner(s string) string {
 	owner := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaYellow))
 	group := lipgloss.NewStyle().Foreground(handColor)

@@ -46,6 +46,19 @@ func (m *placesModel) togglePin(path string) {
 	m.pinned = append(m.pinned, place{label: filepath.Base(path), path: path, icon: iconPin})
 }
 
+// pinnedSet is the set of pinned directory paths, for the list's pin mark glyph
+// (symmetry with carry.inBucket). nil when nothing is pinned.
+func (m placesModel) pinnedSet() map[string]bool {
+	if len(m.pinned) == 0 {
+		return nil
+	}
+	s := make(map[string]bool, len(m.pinned))
+	for _, p := range m.pinned {
+		s[p.path] = true
+	}
+	return s
+}
+
 // trashDir is the system trash location. TODO: move behind the platform
 // interface (unix-first: macOS ~/.Trash, Linux XDG).
 func trashDir() string {
