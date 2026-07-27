@@ -271,12 +271,14 @@ const (
 	ezaGreen  = "#a6e3a1" // execute bit / sizes
 )
 
-// statusBar is the top status row under the header. Its content is parked: the
-// permissions / mtime it used to show now live in the list columns, so the row is
-// intentionally blank for now — its height is kept for future content, and
-// loadDirStat still caches the dir's perm/owner/disk ready to fill it.
+// statusBar is the top status row under the header: the directory filu was
+// launched from, marked with the launch glyph — a fixed reference (where a
+// cd-on-quit "LaunchDir" returns to), rendered recessively.
 func (m AppModel) statusBar(w int) string {
-	return padDisp("", w)
+	icon := lipgloss.NewStyle().Foreground(handColor).Render(iconCWD)
+	avail := max(1, w-dispWidth(iconCWD)-3) // leading space + icon + gap
+	path := lipgloss.NewStyle().Foreground(dimColor).Render(fitPath(m.launchDir, avail))
+	return padDisp(" "+icon+" "+path, w)
 }
 
 // colorPerm paints a mode string (drwxr-xr-x) eza-style: the type char blue,

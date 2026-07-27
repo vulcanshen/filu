@@ -40,11 +40,6 @@ type listModel struct {
 	cursor     int
 	offset     int
 	showHidden bool
-	// cached directory-own metadata for the top status bar, recomputed on reload
-	// (never per frame). See loadDirStat.
-	perm  string // dir mode string, e.g. drwxr-xr-x
-	owner string // "owner:group"
-	disk  string // "<free> / <total>" of the filesystem
 }
 
 func newList(dir string) listModel {
@@ -55,27 +50,7 @@ func newList(dir string) listModel {
 
 func (m *listModel) reload() {
 	m.items, m.hidden, m.err = readEntries(m.dir, m.showHidden)
-	m.loadDirStat()
 	m.clampCursor()
-}
-
-// loadDirStat caches the directory's own cheap metadata for the top status bar:
-// perm + owner:group (one stat) and free/total disk (one statfs). Called from
-// reload, so it refreshes on every cd / external change but never per frame; the
-// item and hidden counts come live from the loaded list, costing nothing.
-func (m *listModel) loadDirStat() {
-	m.perm, m.owner, m.disk = "", "", ""
-	fi, err := os.Stat(m.dir)
-	if err != nil {
-		return
-	}
-	m.perm = fi.Mode().String()
-	if meta, ok := osStat(fi); ok {
-		m.owner = userName(meta.uid) + ":" + groupName(meta.gid)
-	}
-	if free, total, ok := diskUsage(m.dir); ok {
-		m.disk = humanSize(free) + " / " + humanSize(total)
-	}
 }
 
 // reloadPreserving re-reads the directory but keeps the cursor on the same named
