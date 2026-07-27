@@ -16,16 +16,17 @@ type splashIdentityMsg struct{} // fires the name + tagline together
 type splashHintMsg struct{}
 
 // splashModel renders the filu logo as a hidden easter egg (the `V` key), a
-// sibling of kbu's splash: the mark is revealed in staged passes, then the
-// caption fades in. The u-family logo spells "fiL" in gold inside a navy "U".
+// sibling of kbu's splash: the mark is revealed one letter at a time — F, I, L,
+// then the U frame — and the caption fades in. The u-family logo spells "fiL" in
+// gold inside a navy "U".
 type splashModel struct {
 	active          bool
-	pixelOrder      []int // reveal order: full background sheet (top-down), U frame (bottom-up), then the letters (shuffled)
+	pixelOrder      []int    // reveal order across all stages: bg sheet, then F, I, L, then U
+	orderColor      []string // colour for pixelOrder[i] (parallel), set by the stage that paints it
+	stageEnds       []int    // cumulative pixel count at each stage's end; last == len(pixelOrder)
+	stageStep       []int    // pixels revealed per tick within each stage
+	beatsDone       int      // inter-stage holds already taken (stages always reveal in order)
 	revealedCount   int
-	bgCount         int  // end of stage 1 — indices [0:bgCount] are the background sheet (every cell)
-	uEnd            int  // end of stage 2 — indices [bgCount:uEnd] are U-frame pixels
-	pausedBg        bool // beat consumed at the background→U boundary
-	pausedU         bool // beat consumed at the U→letters boundary
 	identityVisible bool // "filu" line
 	versionVisible  bool // the version line
 	taglineVisible  bool // the tagline line
@@ -36,29 +37,41 @@ func newSplashModel() splashModel { return splashModel{} }
 
 func (m splashModel) isActive() bool { return m.active }
 
-// show activates the splash and returns the first animation tick. Reveal phases:
-// (1) background — a dark sheet, row-major top-to-bottom sweep; (2) beat;
-// (3) U frame (navy), bottom-to-top so it rises from the base, over the sheet;
-// (4) beat; (5) the letters (gold), shuffled, painted over the sheet; then a
-// hold reveals the name + tagline together, and a final hold the Esc hint.
+// show activates the splash and returns the first animation tick. Reveal stages,
+// each held apart by a beat: (1) background — a dark sheet, row-major top-to-bottom
+// sweep; (2) F; (3) I; (4) L — the gold letters, one at a time, each shuffled in;
+// (5) the U frame (navy), bottom-to-top so it rises from the base around them.
+// Then a hold reveals the name + version + tagline, and a final hold the Esc hint.
 func (m *splashModel) show() tea.Cmd {
 	m.active = true
 	m.revealedCount = 0
-	m.pausedBg = false
-	m.pausedU = false
+	m.beatsDone = 0
 	m.identityVisible = false
 	m.versionVisible = false
 	m.taglineVisible = false
 	m.hintVisible = false
 
 	rows, cols := len(logoPixels), len(logoPixels[0])
-	// Background pass covers EVERY cell so the sheet fills solid; the U and letter
-	// passes come later and paint over it (overwrite, not gaps).
-	bg := make([]int, 0, rows*cols)
+	// Background pass covers EVERY cell so the sheet fills solid; the letter and
+	// frame passes come later and paint over it (overwrite, not gaps).
+	var bg []int
 	for r := 0; r < rows; r++ {
 		for c := 0; c < cols; c++ {
 			bg = append(bg, r*cols+c)
 		}
+	}
+	// letter returns one gold letter's pixels, shuffled so it scatters in.
+	letter := func(b byte) []int {
+		var px []int
+		for r := 0; r < rows; r++ {
+			for c := 0; c < cols; c++ {
+				if logoPixels[r][c] == b {
+					px = append(px, r*cols+c)
+				}
+			}
+		}
+		rand.Shuffle(len(px), func(i, j int) { px[i], px[j] = px[j], px[i] })
+		return px
 	}
 	// U frame collected bottom-to-top so it rises from the base.
 	var frame []int
@@ -69,19 +82,23 @@ func (m *splashModel) show() tea.Cmd {
 			}
 		}
 	}
-	// Gold letters (F / I / L), shuffled.
-	var letters []int
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			if b := logoPixels[r][c]; b == 'F' || b == 'I' || b == 'L' {
-				letters = append(letters, r*cols+c)
-			}
+
+	// Assemble the stages in reveal order — bg, F, I, L, U — recording each stage's
+	// colour (parallel to pixelOrder), cumulative end, and per-tick reveal step.
+	m.pixelOrder, m.orderColor, m.stageEnds, m.stageStep = nil, nil, nil, nil
+	addStage := func(px []int, color string, step int) {
+		m.pixelOrder = append(m.pixelOrder, px...)
+		for range px {
+			m.orderColor = append(m.orderColor, color)
 		}
+		m.stageEnds = append(m.stageEnds, len(m.pixelOrder))
+		m.stageStep = append(m.stageStep, step)
 	}
-	rand.Shuffle(len(letters), func(i, j int) { letters[i], letters[j] = letters[j], letters[i] })
-	m.pixelOrder = append(append(bg, frame...), letters...)
-	m.bgCount = len(bg)
-	m.uEnd = len(bg) + len(frame)
+	addStage(bg, logoBg, cols) // one full row per tick
+	addStage(letter('F'), logoGold, 2)
+	addStage(letter('I'), logoGold, 2)
+	addStage(letter('L'), logoGold, 2)
+	addStage(frame, logoNavy, 3) // rises bottom-to-top
 
 	return tea.Tick(10*time.Millisecond, func(time.Time) tea.Msg { return splashTickMsg{} })
 }
@@ -130,21 +147,13 @@ func (m splashModel) render(width, height int) string {
 		return ""
 	}
 
-	// Colour each cell by the reveal pass that last touched it: the background
-	// pass paints every cell; the U and letter passes come later in pixelOrder, so
-	// they overwrite where they land (no gaps left).
+	// Colour each revealed cell by the stage that painted it (orderColor is parallel
+	// to pixelOrder). The background pass covers every cell; the letter and frame
+	// passes come later in pixelOrder, so they overwrite where they land (no gaps).
 	cols := len(logoPixels[0])
 	cellColor := make([]string, len(logoPixels)*cols)
 	for i := 0; i < m.revealedCount; i++ {
-		idx := m.pixelOrder[i]
-		switch {
-		case i < m.bgCount:
-			cellColor[idx] = logoBg
-		case i < m.uEnd:
-			cellColor[idx] = logoNavy
-		default:
-			cellColor[idx] = logoGold
-		}
+		cellColor[m.pixelOrder[i]] = m.orderColor[i]
 	}
 
 	// A pixel is the nf-fa-square glyph in the cell's colour plus a space (two cells
@@ -203,35 +212,23 @@ func (m splashModel) update(msg tea.Msg) (splashModel, tea.Cmd) {
 		// Any key dismisses the easter egg.
 		m = splashModel{}
 	case splashTickMsg:
-		// Beat at the background→U boundary — a brief hold before the frame rises.
-		if m.bgCount > 0 && m.revealedCount == m.bgCount && !m.pausedBg {
-			m.pausedBg = true
-			return m, tea.Tick(250*time.Millisecond, func(time.Time) tea.Msg { return splashTickMsg{} })
-		}
-		// Beat at the U→letters boundary — a brief hold before the letters shuffle in.
-		if m.uEnd > m.bgCount && m.revealedCount == m.uEnd && !m.pausedU {
-			m.pausedU = true
+		// Hold once at each stage boundary (bg→F→I→L→U) before the next begins.
+		// Stages reveal in order, so beatsDone is also the next boundary to check.
+		if m.beatsDone < len(m.stageEnds)-1 && m.revealedCount == m.stageEnds[m.beatsDone] {
+			m.beatsDone++
 			return m, tea.Tick(250*time.Millisecond, func(time.Time) tea.Msg { return splashTickMsg{} })
 		}
 		if m.revealedCount < len(m.pixelOrder) {
-			// Stage 1 (background sheet): one full row per tick — fast top-to-bottom fill.
-			// Stage 2 (U frame): 3 px/tick, bottom-to-top. Stage 3 (letters): 2 px/tick.
-			step := 2
-			switch {
-			case m.revealedCount < m.bgCount:
-				step = len(logoPixels[0])
-			case m.revealedCount < m.uEnd:
-				step = 3
+			// Advance by the current stage's step, clamped to that stage's end so the
+			// boundary beats fire cleanly (bg fills a full row per tick, the letters
+			// 2 px/tick, the frame rises 3 px/tick).
+			stage := 0
+			for stage < len(m.stageEnds)-1 && m.revealedCount >= m.stageEnds[stage] {
+				stage++
 			}
-			newCount := m.revealedCount + step
-			// Clamp to each boundary so the beats fire cleanly.
-			if m.revealedCount < m.bgCount && newCount > m.bgCount {
-				newCount = m.bgCount
-			} else if m.revealedCount < m.uEnd && newCount > m.uEnd {
-				newCount = m.uEnd
-			}
-			if newCount > len(m.pixelOrder) {
-				newCount = len(m.pixelOrder)
+			newCount := m.revealedCount + m.stageStep[stage]
+			if newCount > m.stageEnds[stage] {
+				newCount = m.stageEnds[stage]
 			}
 			m.revealedCount = newCount
 			return m, tea.Tick(10*time.Millisecond, func(time.Time) tea.Msg { return splashTickMsg{} })
