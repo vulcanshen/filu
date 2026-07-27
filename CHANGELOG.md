@@ -2,28 +2,6 @@
 
 ## [Unreleased]
 
-### Changed
-- The cd-on-quit picker (`q`) now tags each row with a single right-aligned glyph
-  — the launch icon for the launch directory, the tab's Roman numeral (Ⅰ..Ⅴ) for
-  a tab — instead of a `LaunchDir` / `tab Ⅱ` text label. The old labels drifted
-  out of alignment when the directory paths differed in width; a single trailing
-  glyph lines up cleanly in a column on the right whatever the paths.
-
-## [0.0.2] — 2026-07-27
-
-### Changed
-- Homebrew now ships filu as a formula instead of a cask. Homebrew stamps the
-  `com.apple.quarantine` attribute on cask artifacts, which tripped macOS
-  Gatekeeper's "could not verify" prompt on the unsigned binary; formula
-  binaries are never quarantined, so `brew install vulcanshen/tap/filu` now runs
-  clean — matching the rest of the u-family.
-
-## [0.0.1] — 2026-07-27
-
-Initial published build. Cut to shake down the install paths — `install.sh`,
-the Homebrew cask, and `go install` — against a real GitHub release ahead of the
-first blessed `0.1.0`. Carries the full feature set documented under `0.1.0`.
-
 ## [0.1.0] — 2026-07-27
 
 ### Added
@@ -56,7 +34,7 @@ first blessed `0.1.0`. Carries the full feature set documented under `0.1.0`.
   matches are case-sensitive; the extension match is lower-cased.
 - Release tooling: a goreleaser config (linux/darwin, no Windows), an
   `install.sh` / `uninstall.sh`, and a tag-triggered GitHub Actions workflow. The
-  Homebrew cask declares `ripgrep` + `fd` as dependencies, so
+  Homebrew formula declares `ripgrep` + `fd` as dependencies, so
   `brew install vulcanshen/tap/filu` pulls in Search's tools; `install.sh` prints
   install hints for them when they're missing.
 - Search (`/`, panel [2]): a native file finder (snacks/Telescope form, not the
@@ -75,7 +53,8 @@ first blessed `0.1.0`. Carries the full feature set documented under `0.1.0`.
   selection, or the whole content when nothing is selected (OSC 52 + toast).
 - cd-on-quit: `q` now opens a picker to leave the shell in panel [1]'s launch
   directory or any list tab's current directory (pick by number, or j/k +
-  Enter; Esc stays). With the shell wrapper installed (`eval "$(filu shell)"`),
+  Enter; Esc stays), each row tagged on the right with the launch icon or its
+  tab numeral (Ⅰ..Ⅴ). With the shell wrapper installed (`eval "$(filu shell)"`),
   the shell cd's there on exit; `Ctrl+C` still hard-quits without cd-ing.
 - Yank (`y`) in panel [2] or the Carries tab copies the item's full path to the
   system clipboard via OSC 52 (works over SSH and tmux), with a toast
@@ -237,3 +216,18 @@ first blessed `0.1.0`. Carries the full feature set documented under `0.1.0`.
   a sliver; a padding cell now guards it.
 - Hardened the embedded terminal's shutdown: its reader goroutine and `stop()` no
   longer race over the shared PTY handles when a shell or editor session exits.
+
+## [0.0.2] — 2026-07-27
+
+### Changed
+- Homebrew now ships filu as a formula instead of a cask. Homebrew stamps the
+  `com.apple.quarantine` attribute on cask artifacts, which tripped macOS
+  Gatekeeper's "could not verify" prompt on the unsigned binary; formula
+  binaries are never quarantined, so `brew install vulcanshen/tap/filu` now runs
+  clean — matching the rest of the u-family.
+
+## [0.0.1] — 2026-07-27
+
+Initial published build. Cut to shake down the install paths — `install.sh`,
+the Homebrew cask, and `go install` — against a real GitHub release ahead of the
+first blessed `0.1.0`. Carries the full feature set documented under `0.1.0`.
