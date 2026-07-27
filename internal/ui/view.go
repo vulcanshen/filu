@@ -44,6 +44,10 @@ func (m AppModel) View() string {
 		return "terminal too small"
 	}
 
+	if m.splash.isActive() { // hidden easter-egg logo takes over the whole screen
+		return m.splash.render(w, h)
+	}
+
 	out := joinV(m.headerBar(w), m.statusBar(w), m.middleView(w, midH), m.footerBar(w))
 	// Compose-don't-Replace: overlay popups onto the canvas (last = on top).
 	if m.spaceMenu.isActive() {

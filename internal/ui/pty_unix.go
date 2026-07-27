@@ -86,10 +86,13 @@ func (p *ptyPopup) tick() tea.Cmd {
 }
 
 // readLoop copies the PTY output into the terminal emulator until the pipe
-// closes, then reaps the subprocess. Local pointer copies stay valid even if
-// stop() clears the fields concurrently.
+// closes, then reaps the subprocess. The initial field read is taken under the
+// mutex so it can't race stop() clearing them; the local copies then stay valid
+// for the rest of the loop even if stop() nils the fields concurrently.
 func (p *ptyPopup) readLoop() {
+	p.mu.Lock()
 	ptmx, cmd, done := p.ptmx, p.cmd, p.done
+	p.mu.Unlock()
 	buf := make([]byte, 4096)
 	for {
 		n, err := ptmx.Read(buf)
@@ -123,9 +126,9 @@ func (p *ptyPopup) stop() {
 	p.active = false
 	p.mu.Lock()
 	p.term = nil
-	p.mu.Unlock()
-	p.cmd = nil
+	p.cmd = nil // nil under the lock — readLoop reads these fields guarded too
 	p.ptmx = nil
+	p.mu.Unlock()
 }
 
 // handleTick advances the open/close animation and runs the deferred hard

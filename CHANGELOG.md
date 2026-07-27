@@ -80,6 +80,9 @@
   platform under `dist/`), `test` / `vet` / `fmt` / `fmt-check` / `check`, and
   `clean`. Cross-platform release binaries still come from goreleaser; the
   Makefile only builds for the local machine.
+- A product icon (`docs/icon.svg`) — a pixel-art mark spelling filu — now shows at
+  the top of both READMEs, with a matching GitHub social-preview card
+  (`docs/social-preview.png`).
 
 ### Changed
 - The Carries tab's pick mark (an item in the land subset) now uses its own
@@ -204,3 +207,5 @@
   edge by the chip's rounded cap. The zoom chips sat flush against the cap —
   unlike the normal tab bar, which pads each label — so a wide glyph (Ⅱ/Ⅲ/Ⅳ) lost
   a sliver; a padding cell now guards it.
+- Hardened the embedded terminal's shutdown: its reader goroutine and `stop()` no
+  longer race over the shared PTY handles when a shell or editor session exits.

@@ -8,7 +8,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w
+      - -s -w -X github.com/vulcanshen/filu/internal/version.Version={{.Version}}
     goos:
       # unix-first — no windows target (GOOS=windows fails to compile by design)
       - linux
