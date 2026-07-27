@@ -29,24 +29,18 @@ func TestReadEntriesHiddenCount(t *testing.T) {
 }
 
 func TestStatusBarRender(t *testing.T) {
-	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "a.go"))
-	mustWrite(t, filepath.Join(dir, ".hidden"))
-
 	m := minModel()
 	m.width, m.height = 100, 30
-	m.tabs = []listModel{newList(dir)}
+	m.tabs = []listModel{newList(t.TempDir())}
 	m.tab = 0
 
+	// The bar is parked: its height is reserved but its content is blank for now
+	// (per-item perms/mtime moved into the list columns).
 	bar := m.statusBar(m.width)
 	if got := dispWidth(bar); got != m.width {
 		t.Errorf("statusBar width = %d, want %d", got, m.width)
 	}
-	plain := ansi.Strip(bar)
-	// The dir stat (perm) plus the live item / hidden counts must all show.
-	for _, want := range []string{"drwx", "1 items", "1 hidden", "free"} {
-		if !strings.Contains(plain, want) {
-			t.Errorf("statusBar missing %q:\n%s", want, plain)
-		}
+	if plain := strings.TrimSpace(ansi.Strip(bar)); plain != "" {
+		t.Errorf("parked statusBar should be blank, got %q", plain)
 	}
 }

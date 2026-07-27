@@ -14,9 +14,10 @@ type sortCol int
 
 const (
 	sortName sortCol = iota
-	sortSize
+	sortSize         // kept for value stability (persisted col ints) — no longer offered
 	sortMtime
-	sortExt
+	sortExt // kept for value stability — no longer offered
+	sortPerm
 )
 
 // sortColDef pairs a column with its display title and picker hotkey.
@@ -26,11 +27,13 @@ type sortColDef struct {
 	key   string
 }
 
+// sortCols is the offered picker list — only the columns the list actually shows
+// (Name / Modified / Permissions). Size and Extension remain in the enum but are
+// not sortable now that they are not displayed.
 var sortCols = []sortColDef{
 	{sortName, "Name", "n"},
-	{sortSize, "Size", "s"},
 	{sortMtime, "Modified", "m"},
-	{sortExt, "Extension", "e"},
+	{sortPerm, "Permissions", "p"},
 }
 
 // sortRule is one tier of the sort: a column and its direction.
@@ -130,6 +133,8 @@ func compareCol(a, b fileItem, c sortCol) int {
 		}
 	case sortExt:
 		return strings.Compare(fileExt(a.name), fileExt(b.name))
+	case sortPerm:
+		return strings.Compare(a.perm, b.perm)
 	default: // sortName
 		return strings.Compare(strings.ToLower(a.name), strings.ToLower(b.name))
 	}
@@ -166,23 +171,6 @@ func sortBadgeText(c sortCol) string {
 		return "(" + strconv.Itoa(i+1) + ") " + dir
 	}
 	return dir
-}
-
-// sortHeaderSuffix is the compact indicator appended to the panel [2] "Files"
-// header, e.g. "  size⏷ name⏶" (Nerd Font arrows; empty when unsorted).
-func sortHeaderSuffix() string {
-	if len(sortChain) == 0 {
-		return ""
-	}
-	parts := make([]string, 0, len(sortChain))
-	for _, r := range sortChain {
-		arrow := sortAscGlyph
-		if !r.asc {
-			arrow = sortDescGlyph
-		}
-		parts = append(parts, strings.ToLower(sortColTitle(r.col))+arrow)
-	}
-	return "  " + strings.Join(parts, " ")
 }
 
 // --- sort picker flow (kbu: column → direction → loop, Esc to close) ---

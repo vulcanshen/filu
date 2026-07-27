@@ -85,13 +85,13 @@ func TestSortPickerFlow(t *testing.T) {
 		t.Fatal("picker should open on the column step")
 	}
 
-	m.advanceSortFlow("s") // pick Size → direction step
-	if m.sortStep != sortStepDirection || m.sortFlowCol != sortSize {
+	m.advanceSortFlow("m") // pick Modified → direction step
+	if m.sortStep != sortStepDirection || m.sortFlowCol != sortMtime {
 		t.Fatalf("after column pick: step=%v col=%v", m.sortStep, m.sortFlowCol)
 	}
-	m.advanceSortFlow("d") // Descending → chain=[size desc], loop to column
-	if len(sortChain) != 1 || sortChain[0].col != sortSize || sortChain[0].asc {
-		t.Fatalf("chain after size desc: %+v", sortChain)
+	m.advanceSortFlow("d") // Descending → chain=[mtime desc], loop to column
+	if len(sortChain) != 1 || sortChain[0].col != sortMtime || sortChain[0].asc {
+		t.Fatalf("chain after mtime desc: %+v", sortChain)
 	}
 	if m.sortStep != sortStepColumn {
 		t.Error("should loop back to the column step")
@@ -103,10 +103,10 @@ func TestSortPickerFlow(t *testing.T) {
 		t.Fatalf("chain after adding name asc: %+v", sortChain)
 	}
 
-	m.advanceSortFlow("s") // unset Size
+	m.advanceSortFlow("m") // unset Modified
 	m.advanceSortFlow("u")
 	if len(sortChain) != 1 || sortChain[0].col != sortName {
-		t.Fatalf("chain after unset size: %+v", sortChain)
+		t.Fatalf("chain after unset modified: %+v", sortChain)
 	}
 
 	m.advanceSortFlow("r") // Reset

@@ -530,10 +530,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.openOpenWith()
 	case "s": // shell: drop into $SHELL in this tab's directory (exit to return)
 		cmd = m.pty.start(buildShellCmd(), "Shell", l.dir, m.width, m.height)
-	// [S]ort has no key binding: filu shows no columns, so a column sort reads
-	// oddly. The sort machinery (sort.go, the sortMenu flow) is kept and still
-	// orders the list (dirs first + any persisted chain) — re-add a key here to
-	// re-expose the picker.
+	case "S": // Sort: pick a column → direction; the column-header row shows the active sort
+		cmd = m.openSortColumnPicker()
 	case "/": // Search: by-name finder over the subtree, reveal the pick here
 		cmd = m.openSearch()
 	case "f": // Find: by-content finder (rg) with preview, reveal the pick here
@@ -790,6 +788,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		panelOps = append(panelOps,
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
+			menuItem{label: "Sort", key: "S", hint: "order by a column (name / modified / perms)"},
 			menuItem{label: "Shell", key: "s", hint: "drop into $SHELL here (exit to return)"},
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
 			menuItem{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"})
