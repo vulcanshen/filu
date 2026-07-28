@@ -20,10 +20,13 @@ filu 是 `u`-family 的成員,是 [Vulcan's TUI Design Principle](https://github
 ![basics](docs/demo-basics.gif)
 
 ### Marks — 跨 tab 收集後複製 / 搬移
-![marks](docs/demo-carry.gif)
+![marks](docs/demo-marks.gif)
 
 ### 串流 finder — 模糊檔名 & ripgrep 內容
 ![finders](docs/demo-finders.gif)
+
+### Favorites — 存目錄,再用 Goto 跳回
+![favorites](docs/demo-favorites.gif)
 
 ### 預覽,再 yank 到剪貼簿
 ![preview](docs/demo-preview.gif)

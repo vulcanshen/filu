@@ -20,10 +20,13 @@ filu is a member of the `u`-family and a filesystem-domain implementation of [Vu
 ![basics](docs/demo-basics.gif)
 
 ### Marks — copy / move across tabs
-![marks](docs/demo-carry.gif)
+![marks](docs/demo-marks.gif)
 
 ### Streaming finders — fuzzy name & ripgrep content
 ![finders](docs/demo-finders.gif)
+
+### Favorites — save directories, jump back via Goto
+![favorites](docs/demo-favorites.gif)
 
 ### Preview, then yank to the clipboard
 ![preview](docs/demo-preview.gif)
