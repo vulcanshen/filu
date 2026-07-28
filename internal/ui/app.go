@@ -36,6 +36,7 @@ type confirmKind int
 const (
 	confirmNone confirmKind = iota
 	confirmDelete
+	confirmShell
 )
 
 // sortStep tracks where the sort picker is in its column→direction flow.
@@ -307,12 +308,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.confirm, ok, cmd = m.confirm.update(msg)
 			if ok {
-				if m.confirmAction == confirmDelete {
+				switch m.confirmAction {
+				case confirmDelete:
 					_ = moveToTrash(m.pendingDelete)
 					m.pendingDelete = ""
 					m.cur().reload()
 					m.cur().ensureVisible(m.listRows())
 					m.refreshPreview()
+				case confirmShell:
+					cmd = tea.Batch(cmd, m.pty.start(buildShellCmd(), "Shell", m.cur().dir, m.width, m.height))
 				}
 				m.confirmAction = confirmNone
 			}
@@ -535,8 +539,9 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.openDefault()
 	case "O": // Open with: pick an app (Default OS open, or a configured one)
 		cmd = m.openOpenWith()
-	case "s": // shell: drop into $SHELL in this tab's directory (exit to return)
-		cmd = m.pty.start(buildShellCmd(), "Shell", l.dir, m.width, m.height)
+	case "s": // shell: confirm the directory first, then drop into $SHELL there
+		m.confirmAction = confirmShell
+		cmd = m.confirm.open("Open a shell in " + shortPath(l.dir) + "?")
 	case "S": // Sort: pick a column → direction; the column-header row shows the active sort
 		cmd = m.openSortColumnPicker()
 	case "/": // Search: choose filename (fd) or content (rg), then reveal the pick here
