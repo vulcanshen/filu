@@ -96,8 +96,8 @@ func TestBuildSpaceMenuList(t *testing.T) {
 			t.Errorf("panel [2] menu missing hotkey %q", k)
 		}
 	}
-	if keys["P"] {
-		t.Error("Pin should be hidden for a non-dir cursor item")
+	if keys["f"] {
+		t.Error("Favorite should be hidden for a non-dir cursor item")
 	}
 	if !headers["item operation"] || !headers["panel operation"] {
 		t.Errorf("panel [2] menu should label both regions: %v", headers)

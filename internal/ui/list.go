@@ -262,10 +262,10 @@ func clipMode(perm string) string {
 	return perm
 }
 
-// markCell renders the two status slots — carry (green tick) then pin (lavender)
-// — each a blank of the same width when not set, so toggling never shifts the
-// columns. coloured=false leaves the glyphs plain so a highlighted cursor row can
-// recolour them with the bar.
+// markCell renders the two status slots — mark (green tick) then favorite
+// (lavender star) — each a blank of the same width when not set, so toggling never
+// shifts the columns. coloured=false leaves the glyphs plain so a highlighted
+// cursor row can recolour them with the bar.
 func markCell(carried, pinned, coloured bool) string {
 	carrySlot := strings.Repeat(" ", dispWidth(pickGlyph))
 	if carried {

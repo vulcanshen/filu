@@ -66,7 +66,7 @@ type AppModel struct {
 	quitMenu      spaceMenu         // cd-on-quit picker (launch dir + distinct tab dirs)
 	openWithMenu  spaceMenu         // [o]pen picker (Default + config.yaml open_with apps)
 	openWithPath  string            // path the open-with picker acts on (captured when it opens)
-	gotoMenu      spaceMenu         // Goto / new-tab picker: {Same?, Pinned, Search} → pinned drill-down
+	gotoMenu      spaceMenu         // Goto / new-tab picker: {Same?, Favorites, Search} → favorites drill-down
 	gotoStep      gotoStep          // which step the Goto picker is on
 	searchMenu    spaceMenu         // Search chooser: {filename, content} → opens the finder in that mode
 	gotoNewTab    bool              // Goto picker in new-tab mode (open in a new tab vs move the active one)
@@ -342,11 +342,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.gotoMenu.isActive() { // Goto picker: Pinned drill-down or Search finder
+		if m.gotoMenu.isActive() { // Goto picker: Favorites drill-down or Search finder
 			if !m.gotoMenu.isInteractive() {
 				return m, nil
 			}
-			if m.gotoStep == gotoStepPinned && msg.String() == "P" { // unpin the highlighted pin, stay open
+			if m.gotoStep == gotoStepPinned && msg.String() == "f" { // unfavorite the highlighted dir, stay open
 				return m, m.unpinAtGotoCursor()
 			}
 			var key string
@@ -489,7 +489,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		m.tab = (m.tab + 1) % len(m.tabs)
 	case "h", "left":
 		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
-	case "t": // new tab: open the Same / Pinned / Search picker (up to maxTabs)
+	case "t": // new tab: open the Same / Favorites / Search picker (up to maxTabs)
 		if len(m.tabs) < maxTabs {
 			cmd = m.openTabMenu()
 		} else {
@@ -510,7 +510,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.startLand(l.dir, false)
 	case "m": // move: land carried items here as move (async)
 		cmd = m.startLand(l.dir, true)
-	case "P": // pin: toggle the cursor dir into [1] Pinned
+	case "f": // favorite: toggle the cursor dir into Favorites (reach it via Goto)
 		if it := l.cursorItem(); it.isDir {
 			m.places.togglePin(filepath.Join(l.dir, it.name))
 		}
@@ -721,7 +721,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
 		}
 		if it.isDir {
-			itemOps = append(itemOps, menuItem{label: "Pin", key: "P", hint: "pin dir (reach it via Goto → Pinned)"})
+			itemOps = append(itemOps, menuItem{label: "Favorite", key: "f", hint: "favorite this dir (reach it via Goto → Favorites)"})
 		}
 		if len(m.carry.items) > 0 {
 			panelOps = append(panelOps,
