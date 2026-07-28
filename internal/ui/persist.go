@@ -3,22 +3,29 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 )
 
 // sessionState is what filu restores on the next launch (IDEA.md: "where you
 // were is where you restart") — the tabs the user created beyond the CWD tab
-// (dirs + cursors), focus, marks bucket, pinned dirs, and the sort chain. Tab [0]
-// always reopens at the CWD and is the active tab on launch, so the first tab's
-// state and the active-tab index are deliberately NOT persisted.
+// (dirs + cursors), focus, marks bucket, pinned dirs, and the per-directory sort
+// chains. Tab [0] always reopens at the CWD and is the active tab on launch, so
+// the first tab's state and the active-tab index are deliberately NOT persisted.
 type sessionState struct {
 	Tabs   []tabState      `yaml:"tabs"` // the tabs created beyond the CWD tab [0]
 	Focus  int             `yaml:"focus"`
 	Marks  []string        `yaml:"carry,omitempty"` // yaml tag kept as "carry" so old state.yaml still loads
 	Pinned []string        `yaml:"pinned,omitempty"`
 	Tasks  []persistedTask `yaml:"tasks,omitempty"`
-	Sort   []sortRuleYAML  `yaml:"sort,omitempty"`
+	Sorts  []dirSortYAML   `yaml:"sorts,omitempty"` // per-directory sort chains
+}
+
+// dirSortYAML is one directory's persisted sort chain, keyed by its exact path.
+type dirSortYAML struct {
+	Path  string         `yaml:"path"`
+	Rules []sortRuleYAML `yaml:"rules"`
 }
 
 // sortRuleYAML is one persisted sort tier.
@@ -122,17 +129,37 @@ func (m AppModel) snapshotState() sessionState {
 			Status: taskStatusString(t.status),
 		})
 	}
-	for _, r := range sortChain {
-		st.Sort = append(st.Sort, sortRuleYAML{Col: int(r.col), Asc: r.asc})
+	paths := make([]string, 0, len(sortByDir))
+	for p := range sortByDir {
+		paths = append(paths, p)
+	}
+	sort.Strings(paths) // deterministic output → stable state.yaml diffs
+	for _, p := range paths {
+		ds := dirSortYAML{Path: p}
+		for _, r := range sortByDir[p] {
+			ds.Rules = append(ds.Rules, sortRuleYAML{Col: int(r.col), Asc: r.asc})
+		}
+		st.Sorts = append(st.Sorts, ds)
 	}
 	return st
 }
 
 // applyState restores a saved session onto a freshly-built model.
 func (m *AppModel) applyState(st sessionState) {
-	sortChain = nil // restore the sort before tabs reload so they sort correctly
-	for _, r := range st.Sort {
-		sortChain = append(sortChain, sortRule{col: sortCol(r.Col), asc: r.Asc})
+	// restore the per-directory sorts before any tab reloads, so they sort right.
+	sortByDir = map[string][]sortRule{}
+	for _, ds := range st.Sorts {
+		var rules []sortRule
+		for _, r := range ds.Rules {
+			rules = append(rules, sortRule{col: sortCol(r.Col), asc: r.Asc})
+		}
+		if len(rules) > 0 {
+			sortByDir[cleanDir(ds.Path)] = rules
+		}
+	}
+	// tab [0] (the CWD) was built in New() before the sorts loaded — re-sort it now.
+	if len(m.tabs) > 0 {
+		m.tabs[0].reloadPreserving()
 	}
 	for _, ts := range st.Tabs { // restore the tabs the user created beyond the CWD tab
 		if ts.Dir == "" || len(m.tabs) >= maxTabs {

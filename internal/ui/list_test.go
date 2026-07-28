@@ -57,13 +57,13 @@ func TestListSizeColumn(t *testing.T) {
 	if got := fmtSize(fileItem{size: 4096}); got != "4.0K" {
 		t.Errorf("fmtSize(4096) = %q, want 4.0K", got)
 	}
-	if got := fmtSize(fileItem{isDir: true, size: 4096}); got != "" {
-		t.Errorf("a directory's size must be blank, got %q", got)
+	if got := fmtSize(fileItem{isDir: true, size: 4096}); got != "-" {
+		t.Errorf("a directory's size should be a dash placeholder, got %q", got)
 	}
 
-	// colorSize: blank for a dir, and warmer buckets differ across magnitudes.
-	if colorSize(fileItem{isDir: true, size: 1 << 30}) != "" {
-		t.Error("colorSize of a directory should be blank")
+	// colorSize: a dash for a dir, and warmer buckets differ across magnitudes.
+	if got := ansi.Strip(colorSize(fileItem{isDir: true, size: 1 << 30})); got != "-" {
+		t.Errorf("colorSize of a directory should be a dash, got %q", got)
 	}
 	small := colorSize(fileItem{size: 500})   // < 1 MiB → green
 	big := colorSize(fileItem{size: 5 << 30}) // > 1 GiB → peach

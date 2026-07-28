@@ -105,7 +105,7 @@ func readEntries(dir string, showHidden bool) ([]fileItem, int, error) {
 		}
 		items = append(items, it)
 	}
-	sortItems(items) // directories first, then the active sort chain
+	sortItems(items, sortRulesFor(dir)) // directories first, then this dir's sort chain
 	return items, hidden, nil
 }
 
@@ -208,8 +208,8 @@ func (m *listModel) ensureVisible(rows int) {
 const (
 	colMtimeW  = 16 // "2006-01-02 15:04"
 	colPermW   = 11 // a padded mode string, and room for the "Perms" header + arrow
-	colOwnerW  = 16 // "user:group", truncated when longer
-	colSizeW   = 7  // compact size (e.g. 1023K), and room for the "Size" header + arrow
+	colOwnerW  = 13 // "user:group" (e.g. vulcan:staff), truncated when longer
+	colSizeW   = 6  // compact size (e.g. 1023K), and room for the "Size" header + arrow
 	colNameMin = 12 // keep at least this much name before dropping a column
 )
 
@@ -248,11 +248,11 @@ func computeListCols(w int) listCols {
 	}
 }
 
-// fmtSize is a file's compact size for the Size column; a directory is blank
-// (filu never recurses to size a directory).
+// fmtSize is a file's compact size for the Size column; a directory shows a dash
+// placeholder (filu never recurses to size a directory).
 func fmtSize(it fileItem) string {
 	if it.isDir {
-		return ""
+		return "-"
 	}
 	return compactSize(it.size)
 }
@@ -297,15 +297,15 @@ func markCell(carried, pinned, coloured bool) string {
 }
 
 // sortColHeader renders one column-header label: dim when the column is not in
-// the sort chain, else brightened + bold with an asc/desc arrow — so the header
-// row doubles as the sort indicator.
-func sortColHeader(label string, col sortCol) string {
-	i := sortChainIndex(col)
+// the dir's sort chain, else brightened + bold with an asc/desc arrow — so the
+// header row doubles as the sort indicator.
+func sortColHeader(label string, col sortCol, rules []sortRule) string {
+	i := sortRuleIndex(rules, col)
 	if i < 0 {
 		return lipgloss.NewStyle().Foreground(dimColor).Render(label)
 	}
 	arrow := sortAscGlyph
-	if !sortChain[i].asc {
+	if !rules[i].asc {
 		arrow = sortDescGlyph
 	}
 	return lipgloss.NewStyle().Foreground(handColor).Bold(true).Render(label) + " " +
@@ -313,26 +313,26 @@ func sortColHeader(label string, col sortCol) string {
 }
 
 // listHeaderRow is the column-header line above the file rows: the sortable
-// column labels (Modified / Perms / Name) aligned to the row columns. The mark
-// column carries no label.
-func listHeaderRow(cols listCols, w int) string {
+// column labels aligned to the row columns, each reflecting rules (the dir's sort
+// chain). The mark column carries no label.
+func listHeaderRow(cols listCols, w int, rules []sortRule) string {
 	var b strings.Builder
 	if cols.mark {
 		b.WriteString(strings.Repeat(" ", markCellW()+1))
 	}
 	if cols.mtime {
-		b.WriteString(padDisp(sortColHeader("Modified", sortMtime), colMtimeW) + " ")
+		b.WriteString(padDisp(sortColHeader("Modified", sortMtime, rules), colMtimeW) + " ")
 	}
 	if cols.owner {
-		b.WriteString(padDisp(sortColHeader("Owner", sortOwner), colOwnerW) + " ")
+		b.WriteString(padDisp(sortColHeader("Owner", sortOwner, rules), colOwnerW) + " ")
 	}
 	if cols.perm {
-		b.WriteString(padDisp(sortColHeader("Perms", sortPerm), colPermW) + " ")
+		b.WriteString(padDisp(sortColHeader("Perms", sortPerm, rules), colPermW) + " ")
 	}
 	if cols.size {
-		b.WriteString(padDispRight(sortColHeader("Size", sortSize), colSizeW) + " ")
+		b.WriteString(padDispRight(sortColHeader("Size", sortSize, rules), colSizeW) + " ")
 	}
-	b.WriteString(sortColHeader("Name", sortName))
+	b.WriteString(sortColHeader("Name", sortName, rules))
 	return truncate(b.String(), w)
 }
 
@@ -396,7 +396,7 @@ func renderListRow(it fileItem, cols listCols, w int, cursor, focused, carried, 
 // bucket and the Pinned list, driving the two mark glyphs.
 func (m listModel) view(w, rows int, focused bool, carried, pinned map[string]bool) string {
 	cols := computeListCols(w)
-	header := listHeaderRow(cols, w)
+	header := listHeaderRow(cols, w, sortRulesFor(m.dir))
 	rows-- // reserve the column-header row
 	if len(m.items) == 0 {
 		msg := "(empty)"

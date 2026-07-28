@@ -360,10 +360,11 @@ func colorPerm(perm string) string {
 
 // colorSize paints a file's size eza color-scale style — warmer as it grows:
 // green under 1 MiB, yellow under 1 GiB, peach under 1 TiB, red beyond. A
-// directory has no size (filu never recurses to compute one), so it is blank.
+// directory has no size (filu never recurses to compute one), so it shows a dim
+// dash placeholder instead.
 func colorSize(it fileItem) string {
 	if it.isDir {
-		return ""
+		return lipgloss.NewStyle().Foreground(dimColor).Render("-")
 	}
 	c := lipgloss.Color(ezaGreen)
 	switch {
