@@ -10,12 +10,12 @@ import (
 
 // sessionState is what filu restores on the next launch (IDEA.md: "where you
 // were is where you restart") — the tabs the user created beyond the CWD tab
-// (dirs + cursors), focus, marks bucket, pinned dirs, and the per-directory sort
-// chains. Tab [0] always reopens at the CWD and is the active tab on launch, so
-// the first tab's state and the active-tab index are deliberately NOT persisted.
+// (dirs + cursors), marks bucket, pinned dirs, and the per-directory sort chains.
+// Tab [0] always reopens at the CWD and is the active tab on launch; the first
+// tab's state, the active-tab index, and the focused panel are deliberately NOT
+// persisted (launch always focuses the list).
 type sessionState struct {
-	Tabs   []tabState      `yaml:"tabs"` // the tabs created beyond the CWD tab [0]
-	Focus  int             `yaml:"focus"`
+	Tabs   []tabState      `yaml:"tabs"`            // the tabs created beyond the CWD tab [0]
 	Marks  []string        `yaml:"carry,omitempty"` // yaml tag kept as "carry" so old state.yaml still loads
 	Pinned []string        `yaml:"pinned,omitempty"`
 	Tasks  []persistedTask `yaml:"tasks,omitempty"`
@@ -114,7 +114,6 @@ func saveState(st sessionState) {
 // snapshotState captures the current model for persistence.
 func (m AppModel) snapshotState() sessionState {
 	st := sessionState{
-		Focus: int(m.focus),
 		Marks: m.marks.items,
 	}
 	for i := 1; i < len(m.tabs); i++ { // tab [0] always reopens at CWD — skip it
@@ -170,9 +169,7 @@ func (m *AppModel) applyState(st sessionState) {
 		nl.clampCursor()
 		m.tabs = append(m.tabs, nl)
 	}
-	if st.Focus >= int(panelList) && st.Focus <= int(panelTasks) {
-		m.focus = panelID(st.Focus)
-	}
+	// focus is not restored — launch always focuses the list (set in New()).
 	m.marks.items = st.Marks
 	for _, p := range st.Pinned {
 		m.places.pinned = append(m.places.pinned, place{label: filepath.Base(p), path: p, icon: iconPin})
