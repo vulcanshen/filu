@@ -224,6 +224,27 @@ func TestSearchChooserBecomesInteractive(t *testing.T) {
 	}
 }
 
+// TestShellConfirmsFirst: `s` opens a confirm (naming the target dir) rather than
+// launching the shell directly; the PTY only starts once the confirm is accepted.
+func TestShellConfirmsFirst(t *testing.T) {
+	dir := t.TempDir()
+	m := minModel()
+	m.width, m.height = 80, 24
+	m.tabs = []listModel{newList(dir)}
+	m.tab = 0
+
+	m.handleListKey("s")
+	if !m.confirm.isActive() {
+		t.Fatal("s should open a confirm, not the shell directly")
+	}
+	if m.confirmAction != confirmShell {
+		t.Errorf("confirmAction = %v, want confirmShell", m.confirmAction)
+	}
+	if m.pty.isRendered() {
+		t.Error("the shell must not start until the confirm is accepted")
+	}
+}
+
 // TestBracketHotkeyChord checks the Space-menu label renders a chord key inside
 // the label ("[go]to"), still handles single letters ("[S]ort"), and leaves a
 // multi-char key that isn't in the label plain ("Jump").
