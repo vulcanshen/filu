@@ -213,9 +213,9 @@ const (
 	colNameMin = 12 // keep at least this much name before dropping a column
 )
 
-// markCellW is the combined width of the two mark slots (mark + favorite), fixed
-// so toggling a mark or a favorite never shifts the columns that follow.
-func markCellW() int { return dispWidth(markGlyph) + dispWidth(iconPin) }
+// markCellW is the width of the single mark slot. The three state glyphs share the
+// same nf-md width, but max() keeps the column stable even if one differs.
+func markCellW() int { return max(dispWidth(markGlyph), dispWidth(iconPin), dispWidth(markFavGlyph)) }
 
 // listCols is which optional columns fit at a given inner width. They drop in the
 // order owner → size → mtime → perms → mark as the panel narrows; the name always
@@ -274,26 +274,28 @@ func clipMode(perm string) string {
 	return perm
 }
 
-// markCell renders the two status slots — mark (green tick) then favorite
-// (lavender star) — each a blank of the same width when not set, so toggling never
-// shifts the columns. coloured=false leaves the glyphs plain so a highlighted
-// cursor row can recolour them with the bar.
+// markCell renders the single status glyph: mark (blue), favorite (yellow star),
+// or — when both — one combined glyph (green), so the states never sit side by
+// side (a lone glyph always has blank room, so the terminal never squeezes it).
+// Blank when neither is set. coloured=false leaves the glyph plain so a
+// highlighted cursor row can recolour it with the bar.
 func markCell(carried, pinned, coloured bool) string {
-	carrySlot := strings.Repeat(" ", dispWidth(markGlyph))
-	if carried {
-		carrySlot = markGlyph
-		if coloured {
-			carrySlot = lipgloss.NewStyle().Foreground(lipgloss.Color("#a6e3a1")).Render(markGlyph)
-		}
+	var glyph string
+	var colour lipgloss.Color
+	switch {
+	case carried && pinned:
+		glyph, colour = markFavGlyph, lipgloss.Color("#a6e3a1") // both → green
+	case carried:
+		glyph, colour = markGlyph, lipgloss.Color("#89b4fa") // mark → blue
+	case pinned:
+		glyph, colour = iconPin, lipgloss.Color("#f9e2af") // favorite → yellow
+	default:
+		return strings.Repeat(" ", markCellW())
 	}
-	pinSlot := strings.Repeat(" ", dispWidth(iconPin))
-	if pinned {
-		pinSlot = iconPin
-		if coloured {
-			pinSlot = lipgloss.NewStyle().Foreground(userColor).Render(iconPin)
-		}
+	if coloured {
+		glyph = lipgloss.NewStyle().Foreground(colour).Render(glyph)
 	}
-	return carrySlot + pinSlot
+	return padDisp(glyph, markCellW())
 }
 
 // sortColHeader renders one column-header label: dim when the column is not in
@@ -392,8 +394,8 @@ func renderListRow(it fileItem, cols listCols, w int, cursor, focused, carried, 
 }
 
 // view renders the file list: a column-header row, then one renderListRow per
-// visible entry. carried / pinned are the sets of full paths in the carries
-// bucket and the Pinned list, driving the two mark glyphs.
+// visible entry. carried / pinned are the sets of full paths in the marks bucket
+// and the favorites, driving the single mark-column glyph.
 func (m listModel) view(w, rows int, focused bool, carried, pinned map[string]bool) string {
 	cols := computeListCols(w)
 	header := listHeaderRow(cols, w, sortRulesFor(m.dir))

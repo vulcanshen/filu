@@ -9,7 +9,7 @@ import (
 // Nerd Font icons (rune values so no PUA glyph sits in source).
 var (
 	iconCWD = string(rune(0xf14de)) // launch dir (cd-on-quit picker)
-	iconPin = string(rune(0xf005))  // favorite dir — nf-fa-star (row mark slot 2)
+	iconPin = string(rune(0xf04ce)) // favorite dir — nf-md-star (matches markGlyph's MDI family)
 )
 
 type place struct {

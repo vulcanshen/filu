@@ -124,7 +124,8 @@ func centeredNote(w, rows int, text string) string {
 // the bucket mark so the two "picked" states never read as the same thing
 // (§B: one element, one semantic).
 var (
-	markGlyph     = string(rune(0xf0b14)) // marked — list mark-column slot 1 (nf-md U+F0B14)
+	markGlyph     = string(rune(0xf0b14)) // marked (list mark column, nf-md U+F0B14)
+	markFavGlyph  = string(rune(0xf0a74)) // marked AND favorited — the combined single-cell glyph
 	markPickGlyph = string(rune(0xf05d))  // nf-fa-check_circle — "in land subset" (Marks panel)
 )
 
