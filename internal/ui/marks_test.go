@@ -23,20 +23,20 @@ func TestMarkMoveRekey(t *testing.T) {
 	m.cur().cursor = 0
 
 	m.handleListKey("m") // mark
-	if !m.carry.inBucket()[target] {
+	if !m.marks.inBucket()[target] {
 		t.Fatal("m should mark the cursor item into the bucket")
 	}
 	m.handleListKey("m") // toggle off
-	if len(m.carry.items) != 0 {
-		t.Errorf("second m should unmark; %d in bucket", len(m.carry.items))
+	if len(m.marks.items) != 0 {
+		t.Errorf("second m should unmark; %d in bucket", len(m.marks.items))
 	}
 	m.handleListKey("p") // old pick key: no longer marks
-	if len(m.carry.items) != 0 {
-		t.Errorf("old p should not mark; %d in bucket", len(m.carry.items))
+	if len(m.marks.items) != 0 {
+		t.Errorf("old p should not mark; %d in bucket", len(m.marks.items))
 	}
 
 	// Space-menu bindings: Mark=m, and (with a marked item) Copy=c, Move here=v.
-	m.carry.items = []string{target}
+	m.marks.items = []string{target}
 	items, _ := m.buildSpaceMenu()
 	byLabel := map[string]string{}
 	for _, it := range items {
@@ -50,7 +50,7 @@ func TestMarkMoveRekey(t *testing.T) {
 }
 
 func TestCarryPick(t *testing.T) {
-	m := carryModel{items: []string{"/a", "/b", "/c"}}
+	m := marksModel{items: []string{"/a", "/b", "/c"}}
 	if len(m.landSet()) != 3 {
 		t.Errorf("no pick → land everything (3), got %d", len(m.landSet()))
 	}
@@ -69,7 +69,7 @@ func TestCarryPick(t *testing.T) {
 }
 
 func TestLandItemsPickedOnly(t *testing.T) {
-	m := carryModel{items: []string{"/a", "/b", "/c"}}
+	m := marksModel{items: []string{"/a", "/b", "/c"}}
 	m.cursor = 0
 	m.togglePick() // pick /a only
 	if got := m.landItems(); len(got) != 1 || got[0] != "/a" {
@@ -77,24 +77,24 @@ func TestLandItemsPickedOnly(t *testing.T) {
 	}
 }
 
-func TestCarryViewShowsFullPath(t *testing.T) {
-	m := carryModel{items: []string{"/tmp/projects/demo/notes.txt"}}
+func TestMarksViewShowsFullPath(t *testing.T) {
+	m := marksModel{items: []string{"/tmp/projects/demo/notes.txt"}}
 	out := ansi.Strip(m.view(60, 4, false))
 	if !strings.Contains(out, "projects/demo/notes.txt") {
-		t.Errorf("carry view should show the full path, got %q", out)
+		t.Errorf("marks view should show the full path, got %q", out)
 	}
 }
 
-// TestCarryPickGlyphIsDistinct: a picked Carries item uses carryPickGlyph, never
-// panel [2]'s bucket pickGlyph — the two "picked" states must not read the same.
-func TestCarryPickGlyphIsDistinct(t *testing.T) {
-	m := carryModel{items: []string{"/a"}, picked: map[string]bool{"/a": true}}
+// TestMarkPickGlyphIsDistinct: a picked Marks item uses markPickGlyph, never the
+// list's mark markGlyph — the two "picked" states must not read the same.
+func TestMarkPickGlyphIsDistinct(t *testing.T) {
+	m := marksModel{items: []string{"/a"}, picked: map[string]bool{"/a": true}}
 	out := ansi.Strip(m.view(60, 4, false))
-	if !strings.Contains(out, carryPickGlyph) {
-		t.Errorf("picked carry item should show carryPickGlyph, got %q", out)
+	if !strings.Contains(out, markPickGlyph) {
+		t.Errorf("picked marks item should show markPickGlyph, got %q", out)
 	}
-	if strings.Contains(out, pickGlyph) {
-		t.Errorf("panel [4] pick must not reuse panel [2]'s bucket glyph, got %q", out)
+	if strings.Contains(out, markGlyph) {
+		t.Errorf("the Marks pick must not reuse the list's mark glyph, got %q", out)
 	}
 }
 
@@ -102,7 +102,7 @@ func TestHandleLandMsgFinish(t *testing.T) {
 	var m AppModel
 	m.tabs = []listModel{{}} // one tab so refreshPreview's cur() is valid
 	m.tasks = []landTask{{id: 1, action: "cp", dest: "dst", total: 2}}
-	m.carry.items = []string{"/a", "/b"}
+	m.marks.items = []string{"/a", "/b"}
 
 	m.handleLandMsg(landMsg{taskID: 1, done: 1, total: 2}) // progress
 	if m.tasks[0].done != 1 {
@@ -112,8 +112,8 @@ func TestHandleLandMsgFinish(t *testing.T) {
 	if len(m.tasks) != 1 || m.tasks[0].status != taskDone {
 		t.Errorf("finished task should stay as done, got %+v", m.tasks)
 	}
-	if len(m.carry.items) != 1 || m.carry.items[0] != "/b" {
-		t.Errorf("moved /a should leave the bucket, got %v", m.carry.items)
+	if len(m.marks.items) != 1 || m.marks.items[0] != "/b" {
+		t.Errorf("moved /a should leave the bucket, got %v", m.marks.items)
 	}
 }
 

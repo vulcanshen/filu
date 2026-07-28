@@ -48,7 +48,7 @@ func (m *placesModel) togglePin(path string) {
 }
 
 // pinnedSet is the set of pinned directory paths, for the list's pin mark glyph
-// (symmetry with carry.inBucket). nil when nothing is pinned.
+// (symmetry with marks.inBucket). nil when nothing is pinned.
 func (m placesModel) pinnedSet() map[string]bool {
 	if len(m.pinned) == 0 {
 		return nil

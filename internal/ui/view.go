@@ -113,8 +113,8 @@ func (m AppModel) middleView(w, midH int) string {
 		return m.zoomListView(w, midH)
 	case panelDetail:
 		return m.zoomDetailView(w, midH)
-	case panelCarries:
-		return m.zoomCarriesView(w, midH)
+	case panelMarks:
+		return m.zoomMarksView(w, midH)
 	case panelTasks:
 		return m.zoomTasksView(w, midH)
 	default:
@@ -133,7 +133,7 @@ func (m AppModel) middleView(w, midH int) string {
 func (m AppModel) normalMiddle(w, midH int) string {
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
-		return m.panelBoxHint(listFocus, m.listTitle(w), listNavHint(listFocus), w, midH, m.active().view(w-2, midH-2, listFocus, m.carry.inBucket(), m.places.pinnedSet()))
+		return m.panelBoxHint(listFocus, m.listTitle(w), listNavHint(listFocus), w, midH, m.active().view(w-2, midH-2, listFocus, m.marks.inBucket(), m.places.pinnedSet()))
 	}
 	topH := midH * 2 / 3
 	botH := midH - topH
@@ -141,16 +141,16 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	// Top row: list | preview, 2:1.
 	listW := w * 2 / 3
 	previewW := w - listW
-	list := m.panelBoxHint(listFocus, m.listTitle(listW), listNavHint(listFocus), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.carry.inBucket(), m.places.pinnedSet()))
+	list := m.panelBoxHint(listFocus, m.listTitle(listW), listNavHint(listFocus), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.marks.inBucket(), m.places.pinnedSet()))
 	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
 	topRow := joinH(list, preview)
 
 	// Bottom row: Marks | Tasks, 1:1.
-	carriesW := w / 2
-	tasksW := w - carriesW
-	carries := m.panelBoxHint(m.focus == panelCarries, singleChip("[3] Marks", m.focus == panelCarries), marksHint(), carriesW, botH, m.carry.view(carriesW-2, botH-2, m.focus == panelCarries))
+	marksW := w / 2
+	tasksW := w - marksW
+	marksPanel := m.panelBoxHint(m.focus == panelMarks, singleChip("[3] Marks", m.focus == panelMarks), marksHint(), marksW, botH, m.marks.view(marksW-2, botH-2, m.focus == panelMarks))
 	tasks := m.panelBox(m.focus == panelTasks, singleChip("[4] Tasks", m.focus == panelTasks), tasksW, botH, m.tasksView(tasksW-2, botH-2, m.focus == panelTasks))
-	botRow := joinH(carries, tasks)
+	botRow := joinH(marksPanel, tasks)
 
 	return joinV(topRow, botRow)
 }
@@ -165,7 +165,7 @@ func (m AppModel) zoomListView(w, midH int) string {
 func (m AppModel) expandedListTabs(w, h int) string {
 	widths := splitN(w, len(m.tabs))
 	cols := make([]string, len(m.tabs))
-	carried := m.carry.inBucket()
+	carried := m.marks.inBucket()
 	pinned := m.places.pinnedSet()
 	for i := range m.tabs {
 		cw := widths[i]
@@ -183,9 +183,9 @@ func (m AppModel) zoomDetailView(w, midH int) string {
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, w-2, midH-2))
 }
 
-// zoomCarriesView (panel [3] zoom): the marks bucket full-screen.
-func (m AppModel) zoomCarriesView(w, midH int) string {
-	return m.panelBoxHint(true, singleChip("Marks", true), marksHint(), w, midH, m.carry.view(w-2, midH-2, true))
+// zoomMarksView (panel [3] zoom): the marks bucket full-screen.
+func (m AppModel) zoomMarksView(w, midH int) string {
+	return m.panelBoxHint(true, singleChip("Marks", true), marksHint(), w, midH, m.marks.view(w-2, midH-2, true))
 }
 
 // zoomTasksView (panel [4] zoom): the land tasks full-screen.

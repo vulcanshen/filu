@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// TestListViewTicksCarried checks that a file sitting in the carries bucket gets
+// TestListViewTicksCarried checks that a file sitting in the marks bucket gets
 // the pick glyph in panel [2], and that nothing is ticked when the bucket set is
 // empty — this is the multi-select cue.
 func TestListViewTicksCarried(t *testing.T) {
@@ -21,17 +21,17 @@ func TestListViewTicksCarried(t *testing.T) {
 	}
 	m := newList(dir) // cursor defaults to the first item (a.txt)
 
-	if out := m.view(40, 10, false, nil, nil); strings.Contains(out, pickGlyph) {
+	if out := m.view(40, 10, false, nil, nil); strings.Contains(out, markGlyph) {
 		t.Error("no carried files → view must not show a tick")
 	}
 
 	carried := map[string]bool{filepath.Join(dir, "b.txt"): true}
 	out := m.view(40, 10, false, carried, nil)
-	if !strings.Contains(out, pickGlyph) {
+	if !strings.Contains(out, markGlyph) {
 		t.Error("b.txt is carried → view should tick it")
 	}
-	if strings.Count(out, pickGlyph) != 1 {
-		t.Errorf("exactly one file carried → want 1 tick, got %d", strings.Count(out, pickGlyph))
+	if strings.Count(out, markGlyph) != 1 {
+		t.Errorf("exactly one file carried → want 1 tick, got %d", strings.Count(out, markGlyph))
 	}
 }
 

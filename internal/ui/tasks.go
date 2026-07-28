@@ -99,9 +99,9 @@ func (m AppModel) anyRunning() bool {
 	return false
 }
 
-// startLand kicks off a land of the carry bucket's subset.
+// startLand kicks off a land of the marks bucket's subset.
 func (m *AppModel) startLand(destDir string, move bool) tea.Cmd {
-	return m.startLandItems(m.carry.landItems(), destDir, move)
+	return m.startLandItems(m.marks.landItems(), destDir, move)
 }
 
 // redoTask re-runs a task's copy/move (Redo). Sources gone (e.g. an old move)
@@ -168,7 +168,7 @@ func (m *AppModel) handleLandMsg(msg landMsg) {
 		}
 		destPath := m.tasks[i].destPath
 		for _, src := range msg.moved {
-			m.carry.removeItem(src)
+			m.marks.removeItem(src)
 		}
 		for j := range m.tabs { // surface the landed files
 			if m.tabs[j].dir == destPath {
