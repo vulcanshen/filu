@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-07-28
+
 ### Changed
 - **Redesigned to a 3-panel layout** — the file list `[1]`, Preview `[2]`, and a
   tabbed **Marks | Tasks** panel `[3]`. The list and preview share the top row at
