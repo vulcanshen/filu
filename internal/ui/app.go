@@ -235,7 +235,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)

@@ -199,6 +199,31 @@ func TestSearchChooserFlow(t *testing.T) {
 	}
 }
 
+// TestSearchChooserBecomesInteractive is the regression for the `/` hang: the
+// chooser's open animation must be driven by AnimTickMsg (its tick has to be in
+// the dispatch batch), else it never becomes interactive and swallows every key.
+// Unlike TestSearchChooserFlow this does NOT force anim.state — it drives real
+// ticks, the only way to catch missing tick wiring.
+func TestSearchChooserBecomesInteractive(t *testing.T) {
+	m := minModel()
+	m.width, m.height = 100, 30
+	m.searchMenu = newSearchMenu()
+
+	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	m = model.(AppModel)
+	if !m.searchMenu.isActive() {
+		t.Fatal("/ should open the Search chooser")
+	}
+	tick := AnimTickMsg{Target: "searchmenu"}
+	for i := 0; i < 20 && !m.searchMenu.isInteractive(); i++ {
+		model, _ = m.Update(tick)
+		m = model.(AppModel)
+	}
+	if !m.searchMenu.isInteractive() {
+		t.Fatal("searchMenu never became interactive — AnimTickMsg not dispatched to it (the `/` hang)")
+	}
+}
+
 // TestBracketHotkeyChord checks the Space-menu label renders a chord key inside
 // the label ("[go]to"), still handles single letters ("[S]ort"), and leaves a
 // multi-char key that isn't in the label plain ("Jump").
