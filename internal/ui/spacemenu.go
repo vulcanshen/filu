@@ -65,6 +65,12 @@ func newGotoMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("gotomenu", popupLayerColor(1))}
 }
 
+// newSearchMenu is a spaceMenu instance reused as the Search chooser: a flat
+// {filename, content} pick that then opens the finder in that mode.
+func newSearchMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("searchmenu", popupLayerColor(1))}
+}
+
 // newQuitMenu is a third spaceMenu instance reused as the cd-on-quit picker. Its
 // hints are single glyphs (launch icon / tab numeral), right-aligned so they line
 // up in a column on the right edge whatever the path labels' widths.

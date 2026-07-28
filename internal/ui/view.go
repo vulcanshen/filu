@@ -58,6 +58,9 @@ func (m AppModel) View() string {
 	if m.gotoMenu.isActive() {
 		out = overlay.Composite(m.gotoMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.searchMenu.isActive() {
+		out = overlay.Composite(m.searchMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.quitMenu.isActive() {
 		out = overlay.Composite(m.quitMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}

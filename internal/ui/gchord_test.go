@@ -140,6 +140,65 @@ func TestGotoMenuFlow(t *testing.T) {
 	}
 }
 
+// TestSearchChooserFlow: `/` opens the {filename, content} chooser (not the
+// finder directly); filename opens the by-name finder, content the by-content
+// finder. The old top-level `f`=Find binding is gone (freed for Favorite).
+func TestSearchChooserFlow(t *testing.T) {
+	dir := t.TempDir()
+	mustWrite(t, filepath.Join(dir, "a.go"))
+
+	newM := func() AppModel {
+		m := minModel()
+		m.width, m.height = 100, 30
+		m.tabs = []listModel{newList(dir)}
+		m.tab = 0
+		m.searchMenu = newSearchMenu()
+		return m
+	}
+	slash := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")}
+	press := func(m AppModel, r string) AppModel {
+		model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(r)})
+		return model.(AppModel)
+	}
+
+	// `/` opens the chooser (not the finder); two items keyed f / c.
+	m := newM()
+	model, _ := m.Update(slash)
+	m = model.(AppModel)
+	if !m.searchMenu.isActive() {
+		t.Fatal("/ should open the Search chooser")
+	}
+	if m.search.isActive() {
+		t.Error("/ opens the chooser, not the finder directly")
+	}
+	if len(m.searchMenu.items) != 2 || m.searchMenu.items[0].key != "f" || m.searchMenu.items[1].key != "c" {
+		t.Fatalf("chooser should offer filename(f)/content(c), got %+v", m.searchMenu.items)
+	}
+
+	// filename → by-name finder.
+	m.searchMenu.anim.state = popupOpen // interactive so the commit lands
+	m = press(m, "f")
+	if !m.search.isActive() || m.search.byContent {
+		t.Errorf("filename should open the by-name finder, active=%v byContent=%v", m.search.isActive(), m.search.byContent)
+	}
+
+	// content → by-content finder.
+	m2 := newM()
+	model, _ = m2.Update(slash)
+	m2 = model.(AppModel)
+	m2.searchMenu.anim.state = popupOpen
+	m2 = press(m2, "c")
+	if !m2.search.isActive() || !m2.search.byContent {
+		t.Errorf("content should open the by-content finder, active=%v byContent=%v", m2.search.isActive(), m2.search.byContent)
+	}
+
+	// the old top-level f=Find binding is gone.
+	m3 := press(newM(), "f")
+	if m3.search.isActive() || m3.searchMenu.isActive() {
+		t.Error("top-level f should no longer open Find (freed for Favorite)")
+	}
+}
+
 // TestBracketHotkeyChord checks the Space-menu label renders a chord key inside
 // the label ("[go]to"), still handles single letters ("[S]ort"), and leaves a
 // multi-char key that isn't in the label plain ("Jump").
