@@ -6,8 +6,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// gotoStep tracks where the Goto picker is: the root {Pinned, Search} choice, or
-// the drilled-in Pinned list. Mirrors the sort picker's column→direction chain.
+// gotoStep tracks where the Goto picker is: the root {Favorites, Search} choice,
+// or the drilled-in Favorites list. Mirrors the sort picker's column→direction
+// chain. (gotoStepPinned keeps its legacy name; "pinned" == the favorites set.)
 type gotoStep int
 
 const (
@@ -30,7 +31,7 @@ func (m *AppModel) openNavMenu(newTab bool, title string) tea.Cmd {
 	return m.gotoMenu.open()
 }
 
-// setGotoRootItems builds the root choice: Pinned (a drill-down list) or Search
+// setGotoRootItems builds the root choice: Favorites (a drill-down list) or Search
 // (the $HOME finder). In new-tab mode a leading Same opens a tab in the current
 // directory.
 func (m *AppModel) setGotoRootItems(title string) {
@@ -39,19 +40,20 @@ func (m *AppModel) setGotoRootItems(title string) {
 		items = append(items, menuItem{label: "Same", key: "s", hint: "open a tab in this directory"})
 	}
 	items = append(items,
-		menuItem{label: "Pinned", key: "p", hint: "a pinned directory"},
+		menuItem{label: "Favorites", key: "f", hint: "a favorited directory"},
 		menuItem{label: "Search", key: "/", hint: "search any directory under home"})
 	m.gotoMenu.setItems(items, title)
 }
 
-// setGotoPinnedItems (re)populates the drilled-in Pinned list: one row per pinned
-// dir (Enter or its number opens that dir — jump or new tab, per the mode; P
-// unpins), or a hint line when nothing is pinned. The menu stays open on the swap.
+// setGotoPinnedItems (re)populates the drilled-in Favorites list: one row per
+// favorited dir (Enter or its number opens that dir — jump or new tab, per the
+// mode; f unfavorites), or a hint line when nothing is favorited. The menu stays
+// open on the swap.
 func (m *AppModel) setGotoPinnedItems() {
 	if len(m.places.pinned) == 0 {
 		m.gotoMenu.setItems([]menuItem{
-			{header: true, label: "Nothing pinned — press P on a directory to pin it"},
-		}, "Pinned")
+			{header: true, label: "Nothing favorited — press f on a directory to favorite it"},
+		}, "Favorites")
 		return
 	}
 	budget := maxInnerWidth(m.width) - 8 // room for the "[N] " prefix + box chrome
@@ -59,13 +61,13 @@ func (m *AppModel) setGotoPinnedItems() {
 	for i, p := range m.places.pinned {
 		items = append(items, menuItem{label: fitPath(p.path, budget), key: strconv.Itoa(i + 1)})
 	}
-	m.gotoMenu.setItems(items, "Pinned · P unpin")
+	m.gotoMenu.setItems(items, "Favorites · f unfavorite")
 }
 
 // advanceGotoFlow handles a committed picker key. At root: Same opens a new tab
-// here (new-tab mode), Search opens the finder, Pinned drills in. At the pinned
-// step a number picks that dir — jumping the active tab or opening a new one per
-// the mode. It closes the menu on a terminal action, stays open on a drill.
+// here (new-tab mode), Search opens the finder, Favorites drills in. At the
+// favorites step a number picks that dir — jumping the active tab or opening a new
+// one per the mode. It closes the menu on a terminal action, stays open on a drill.
 func (m *AppModel) advanceGotoFlow(key string) tea.Cmd {
 	switch m.gotoStep {
 	case gotoStepRoot:
@@ -81,7 +83,7 @@ func (m *AppModel) advanceGotoFlow(key string) tea.Cmd {
 				return tea.Batch(m.gotoMenu.close(), m.openGotoNewTab())
 			}
 			return tea.Batch(m.gotoMenu.close(), m.openGoto())
-		case "p": // Pinned → drill into the list
+		case "f": // Favorites → drill into the list
 			m.gotoStep = gotoStepPinned
 			m.setGotoPinnedItems()
 		}
@@ -103,9 +105,9 @@ func (m *AppModel) advanceGotoFlow(key string) tea.Cmd {
 	return nil
 }
 
-// unpinAtGotoCursor removes the highlighted pinned dir while the Pinned list is
-// open, then rebuilds the list in place. With the Places sidebar removed, this
-// picker is the home for unpin (was panel [1]'s P).
+// unpinAtGotoCursor removes the highlighted favorited dir while the Favorites
+// list is open, then rebuilds the list in place. With the Places sidebar removed,
+// this picker is the home for unfavorite (was panel [1]'s P).
 func (m *AppModel) unpinAtGotoCursor() tea.Cmd {
 	if idx := m.gotoMenu.cursor; idx >= 0 && idx < len(m.places.pinned) {
 		m.places.unpin(m.places.pinned[idx].path)

@@ -9,7 +9,7 @@ import (
 // Nerd Font icons (rune values so no PUA glyph sits in source).
 var (
 	iconCWD = string(rune(0xf14de)) // launch dir (cd-on-quit picker)
-	iconPin = string(rune(0xf450))  // pinned dir
+	iconPin = string(rune(0xf005))  // favorite dir — nf-fa-star (row mark slot 2)
 )
 
 type place struct {
@@ -18,9 +18,10 @@ type place struct {
 	icon  string
 }
 
-// placesModel holds the user's pinned directories. Pins are created from the
-// list ([P]in) and reached through the Goto / new-tab pickers' Pinned drill-down
-// — there is no longer a Places sidebar panel. Persisted in state.yaml.
+// placesModel holds the user's favorited directories (the field keeps its legacy
+// "pinned" name). Favorites are created from the list ([f]avorite) and reached
+// through the Goto / new-tab pickers' Favorites drill-down — there is no longer a
+// Places sidebar panel. Persisted in state.yaml.
 type placesModel struct {
 	pinned []place
 }

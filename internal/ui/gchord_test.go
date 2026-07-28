@@ -59,7 +59,7 @@ func TestGgChordJumpsToTop(t *testing.T) {
 }
 
 // TestGoChordOpensGoto covers the `go` chord: a lone g arms, then o opens the
-// Goto picker (a {Pinned, Search} menu, not the finder directly).
+// Goto picker (a {Favorites, Search} menu, not the finder directly).
 func TestGoChordOpensGoto(t *testing.T) {
 	m := minModel()
 	m.width, m.height = 80, 24
@@ -93,8 +93,8 @@ func TestGoChordOpensGoto(t *testing.T) {
 }
 
 // TestGotoMenuFlow drives the Goto picker's branches: Search opens the $HOME
-// dirs-only finder; Pinned drills into the pinned list; a number jumps the active
-// tab to that pin; P unpins in place (the Places-sidebar replacement).
+// dirs-only finder; Favorites drills into the list; a number jumps the active tab
+// to that dir; f unfavorites in place (the Places-sidebar replacement).
 func TestGotoMenuFlow(t *testing.T) {
 	// Search branch → the dirs-only finder rooted at $HOME, no new-tab intent.
 	m := minModel()
@@ -112,27 +112,27 @@ func TestGotoMenuFlow(t *testing.T) {
 		t.Errorf("Goto Search root = %q, want $HOME %q", m.search.root, home)
 	}
 
-	// Pinned branch → drill, then a number jumps the active tab to that pin.
+	// Favorites branch → drill, then a number jumps the active tab to that dir.
 	dir := t.TempDir()
 	m2 := minModel()
 	m2.width, m2.height = 80, 24
 	m2.places.pinned = []place{{label: "x", path: dir, icon: iconPin}}
 	m2.openGotoMenu()
-	m2.advanceGotoFlow("p")
+	m2.advanceGotoFlow("f")
 	if m2.gotoStep != gotoStepPinned {
-		t.Fatal("Goto → Pinned should drill into the pinned step")
+		t.Fatal("Goto → Favorites should drill into the favorites step")
 	}
 	m2.advanceGotoFlow("1")
 	if m2.cur().dir != dir {
-		t.Errorf("Goto Pinned jump: active tab dir = %q, want %q", m2.cur().dir, dir)
+		t.Errorf("Goto Favorites jump: active tab dir = %q, want %q", m2.cur().dir, dir)
 	}
 
-	// P unpins the highlighted pin in the picker (was panel [1]'s P).
+	// f unfavorites the highlighted dir in the picker (was panel [1]'s P).
 	m3 := minModel()
 	m3.width, m3.height = 80, 24
 	m3.places.pinned = []place{{label: "x", path: dir, icon: iconPin}}
 	m3.openGotoMenu()
-	m3.advanceGotoFlow("p")
+	m3.advanceGotoFlow("f")
 	m3.gotoMenu.cursor = 0
 	m3.unpinAtGotoCursor()
 	if len(m3.places.pinned) != 0 {
