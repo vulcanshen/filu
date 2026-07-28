@@ -130,7 +130,7 @@ func (m AppModel) middleView(w, midH int) string {
 func (m AppModel) normalMiddle(w, midH int) string {
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
-		return m.panelBox(listFocus, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, listFocus, m.carry.inBucket(), m.places.pinnedSet()))
+		return m.panelBoxHint(listFocus, m.listTitle(w), listNavHint(listFocus), w, midH, m.active().view(w-2, midH-2, listFocus, m.carry.inBucket(), m.places.pinnedSet()))
 	}
 	topH := midH * 2 / 3
 	botH := midH - topH
@@ -138,7 +138,7 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	// Top row: list | preview, 2:1.
 	listW := w * 2 / 3
 	previewW := w - listW
-	list := m.panelBox(listFocus, m.listTitle(listW), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.carry.inBucket(), m.places.pinnedSet()))
+	list := m.panelBoxHint(listFocus, m.listTitle(listW), listNavHint(listFocus), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.carry.inBucket(), m.places.pinnedSet()))
 	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
 	topRow := joinH(list, preview)
 
@@ -236,6 +236,13 @@ func (m AppModel) detailBody(w, rows int) string {
 // panelBox draws a bordered panel with the title embedded in the top border
 // (kbu style). Focused = double border + blue, else rounded + dim.
 func (m AppModel) panelBox(focused bool, title string, w, h int, body string) string {
+	return m.panelBoxHint(focused, title, "", w, h, body)
+}
+
+// panelBoxHint is panelBox with a key legend embedded in the bottom border
+// (kbu popup form: title on top, hint on the bottom). hint is pre-styled chrome;
+// "" leaves the bottom edge plain.
+func (m AppModel) panelBoxHint(focused bool, title, hint string, w, h int, body string) string {
 	color := borderDim
 	tl, tr, bl, br, hz, vt := "╭", "╮", "╰", "╯", "─", "│"
 	if focused {
@@ -258,8 +265,41 @@ func (m AppModel) panelBox(focused bool, title string, w, h int, body string) st
 		}
 		b.WriteString(bs.Render(vt) + padDisp(line, inner) + bs.Render(vt) + "\n")
 	}
-	b.WriteString(bs.Render(bl + strings.Repeat(hz, inner) + br))
+	if hint == "" {
+		b.WriteString(bs.Render(bl + strings.Repeat(hz, inner) + br))
+	} else {
+		if dispWidth(hint) > inner {
+			hint = truncate(hint, inner)
+		}
+		botFill := max(inner-dispWidth(hint), 0)
+		b.WriteString(bs.Render(bl) + hint + bs.Render(strings.Repeat(hz, botFill)+br))
+	}
 	return b.String()
+}
+
+// keyLegend renders a "key desc   key desc …" hint line — each key in the chrome
+// blue, each description dim — wrapped with a space on both sides. Shared by the
+// list panel's bottom-border hint and the footer.
+func keyLegend(pairs [][2]string) string {
+	keyStyle := lipgloss.NewStyle().Foreground(focusColor)
+	descStyle := lipgloss.NewStyle().Foreground(dimColor)
+	parts := make([]string, len(pairs))
+	for i, p := range pairs {
+		parts[i] = keyStyle.Render(p[0]) + " " + descStyle.Render(p[1])
+	}
+	return " " + strings.Join(parts, "   ") + " "
+}
+
+// listNavHint is the key legend shown in the focused list panel's bottom border:
+// the core open-model navigation keys (Enter enters a dir, Esc goes up, j/k move,
+// d/u half-page). "" when the list is unfocused so an idle panel keeps a clean edge.
+func listNavHint(focused bool) string {
+	if !focused {
+		return ""
+	}
+	return keyLegend([][2]string{
+		{"enter", "into"}, {"esc", "back"}, {"j/k", "move"}, {"d/u", "page"},
+	})
 }
 
 // eza-style permission accents (catppuccin-mocha), matching eza's long-format
@@ -321,8 +361,9 @@ func colorOwner(s string) string {
 }
 
 func (m AppModel) footerBar(w int) string {
-	return lipgloss.NewStyle().Foreground(dimColor).
-		Render(padDisp(" space menu   ? help   tab/1-4 panels   q quit", w))
+	return padDisp(keyLegend([][2]string{
+		{"space", "menu"}, {"?", "help"}, {"tab/1-4", "panels"}, {"q", "quit"},
+	}), w)
 }
 
 // shortPath folds the home dir to ~ (keeps normal / separators).
