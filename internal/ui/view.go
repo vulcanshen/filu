@@ -2,7 +2,6 @@ package ui
 
 import (
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -56,6 +55,12 @@ func (m AppModel) View() string {
 	if m.sortMenu.isActive() {
 		out = overlay.Composite(m.sortMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.gotoMenu.isActive() {
+		out = overlay.Composite(m.gotoMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.searchMenu.isActive() {
+		out = overlay.Composite(m.searchMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.quitMenu.isActive() {
 		out = overlay.Composite(m.quitMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -108,10 +113,8 @@ func (m AppModel) middleView(w, midH int) string {
 		return m.zoomListView(w, midH)
 	case panelDetail:
 		return m.zoomDetailView(w, midH)
-	case panelMeta:
-		return m.zoomMetaView(w, midH)
-	case panelCarry:
-		return m.zoomCarryView(w, midH)
+	case panelMarks:
+		return m.zoomMarksView(w, midH)
 	default:
 		return m.normalMiddle(w, midH)
 	}
@@ -119,97 +122,82 @@ func (m AppModel) middleView(w, midH int) string {
 
 // normalMiddle is the default layout:
 //
-//	[1][2][3]
-//	[1][2][3]
-//	[4][4][5]
+//	| [1] list | [2] |    top    [1] list | [2] preview at 2:1
+//	| [1] list | [2] |
+//	| [3] [3] [3]    |    bottom [3] Marks | Tasks tabs, full width
 //
-// [1] places + [2] list share the top 2/3, [4] carry spans their two columns
-// along the bottom 1/3; the right column mirrors that split — [3] preview on top,
-// [5] metadata below.
+// The top row is 2:1 (the info-rich list earns the width); the bottom is one
+// full-width tabbed panel.
 func (m AppModel) normalMiddle(w, midH int) string {
-	leftW, midW := w/3, w/3
-	rightW := w - leftW - midW
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
-		return m.panelBox(listFocus, m.listTitle(w), w, midH, m.active().view(w-2, midH-2, listFocus, m.carry.inBucket()))
+		return m.panelBoxHint(listFocus, m.listTitle(w), listNavHint(listFocus), w, midH, m.active().view(w-2, midH-2, listFocus, m.marks.inBucket(), m.places.pinnedSet()))
 	}
 	topH := midH * 2 / 3
 	botH := midH - topH
 
-	pin := m.panelBox(m.focus == panelPin, singleChip("[1] filu", m.focus == panelPin), leftW, topH, m.places.view(leftW-2, topH-2, m.focus == panelPin))
-	list := m.panelBox(listFocus, m.listTitle(midW), midW, topH, m.active().view(midW-2, topH-2, listFocus, m.carry.inBucket()))
-	top := joinH(pin, list)
+	// Top row: list | preview, 2:1.
+	listW := w * 2 / 3
+	previewW := w - listW
+	list := m.panelBoxHint(listFocus, m.listTitle(listW), listNavHint(listFocus), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.marks.inBucket(), m.places.pinnedSet()))
+	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
+	topRow := joinH(list, preview)
 
-	carryW := leftW + midW
-	carry := m.panelBox(m.focus == panelCarry, m.carryTitle(carryW), carryW, botH, m.carryBody(carryW-2, botH-2))
+	// Bottom row: [3] Marks | Tasks, one full-width tabbed panel.
+	panel3Focus := m.focus == panelMarks
+	body, hint := m.marksBody(w-2, botH-2, panel3Focus)
+	botRow := m.panelBoxHint(panel3Focus, m.marksTitle(), hint, w, botH, body)
 
-	leftRegion := joinV(top, carry)
-
-	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(rightW), rightW, topH, m.detailBody(rightW-2, topH-2))
-	meta := m.panelBox(m.focus == panelMeta, m.metaTitle(rightW), rightW, botH, m.metaBody(rightW-2, botH-2))
-	rightRegion := joinV(preview, meta)
-	return joinH(leftRegion, rightRegion)
+	return joinV(topRow, botRow)
 }
 
-// zoomListView (panel [2] zoom): [2] fully expanded over [4] fully expanded,
-// each as its tabs 1:1:1; [1]/[3] hidden. 2/4 pick which is focused, h/l its tab.
+// marksTitle renders panel [3]'s Marks | Tasks tab bar (full width, so it always
+// fits — no carousel fallback).
+func (m AppModel) marksTitle() string {
+	return tabBar("[3]", []string{"Marks", "Tasks"}, m.marksTab, m.focus == panelMarks)
+}
+
+// marksBody renders panel [3]'s active tab — the Marks bucket (with the marks
+// workflow hint) or the Tasks land log.
+func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
+	if m.marksTab == 1 {
+		return m.tasksView(w, rows, focused), ""
+	}
+	return m.marks.view(w, rows, focused), marksHint()
+}
+
+// zoomListView (panel [1] zoom): the directory tabs expanded 1:1:1 full-screen.
 func (m AppModel) zoomListView(w, midH int) string {
-	topH := midH * 2 / 3
-	// [2]-zoom mixes two panels, so each column's chip carries its panel number.
-	return joinV(
-		m.expandedListTabs(w, topH),
-		m.expandedCarryTabs(w, midH-topH, true))
+	return m.expandedListTabs(w, midH)
 }
 
-// expandedListTabs lays panel [2]'s 3 directory tabs out as equal-width columns;
-// the active tab is the focused column when [2] holds focus.
+// expandedListTabs lays panel [1]'s directory tabs out as equal-width columns;
+// the active tab is the focused column when [1] holds focus.
 func (m AppModel) expandedListTabs(w, h int) string {
 	widths := splitN(w, len(m.tabs))
 	cols := make([]string, len(m.tabs))
-	carried := m.carry.inBucket()
+	carried := m.marks.inBucket()
+	pinned := m.places.pinnedSet()
 	for i := range m.tabs {
 		cw := widths[i]
 		focused := m.focus == panelList && m.tab == i
 		// trailing space: singleChip sits flush against its round cap, so a wide
 		// Roman-numeral glyph (Ⅱ/Ⅲ/Ⅳ) gets clipped by it — pad a cell as tabBar does.
-		cols[i] = m.panelBox(focused, singleChip("[2] "+tabNumeral(i)+" ", focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried))
+		cols[i] = m.panelBox(focused, singleChip("[1] "+tabNumeral(i)+" ", focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried, pinned))
 	}
 	return joinH(cols...)
 }
 
-// zoomDetailView (panel [3] zoom): the preview full-screen.
+// zoomDetailView (panel [2] zoom): the preview full-screen.
 func (m AppModel) zoomDetailView(w, midH int) string {
 	return m.panelBox(true, singleChip("Preview", true), w, midH,
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, w-2, midH-2))
 }
 
-// zoomMetaView (panel [5] zoom): the file metadata full-screen.
-func (m AppModel) zoomMetaView(w, midH int) string {
-	return m.panelBox(true, singleChip("Meta", true), w, midH,
-		renderLinesFrom(m.metaContent(), m.metaScroll, w-2, midH-2))
-}
-
-// zoomCarryView (panel [4] zoom): [4] full-screen, its three tabs 1:1:1.
-// Single-panel zoom, so no panel-number prefix.
-func (m AppModel) zoomCarryView(w, midH int) string {
-	return m.expandedCarryTabs(w, midH, false)
-}
-
-// expandedCarryTabs lays panel [4]'s 2 tabs out as equal-width columns; the
-// active tab (m.carryTab) is the focused column when [4] holds focus. numbered
-// prefixes each chip with "[4]" (used in [2]-zoom, where panels are mixed).
-func (m AppModel) expandedCarryTabs(w, h int, numbered bool) string {
-	wd := splitN(w, 2)
-	foc := func(i int) bool { return m.focus == panelCarry && m.carryTab == i }
-	label := func(s string) string {
-		if numbered {
-			return "[4] " + s
-		}
-		return s
-	}
-	carries := m.panelBox(foc(0), singleChip(label("Carries"), foc(0)), wd[0], h, m.carry.view(wd[0]-2, h-2, foc(0)))
-	tasks := m.panelBox(foc(1), singleChip(label("Tasks"), foc(1)), wd[1], h, m.tasksView(wd[1]-2, h-2, foc(1)))
-	return joinH(carries, tasks)
+// zoomMarksView (panel [3] zoom): the Marks | Tasks panel full-screen.
+func (m AppModel) zoomMarksView(w, midH int) string {
+	body, hint := m.marksBody(w-2, midH-2, true)
+	return m.panelBoxHint(true, m.marksTitle(), hint, w, midH, body)
 }
 
 // listTitle renders panel [2]'s tab bar: one Roman-numeral chip per directory tab
@@ -221,7 +209,7 @@ func (m AppModel) listTitle(w int) string {
 	for i := range m.tabs {
 		labels[i] = tabNumeral(i)
 	}
-	return tabBar("[2]", labels, m.tab, focused)
+	return tabBar("[1]", labels, m.tab, focused)
 }
 
 // tabNumerals mark a tab's position: the Roman numerals Ⅰ … Ⅴ (Unicode ROMAN
@@ -240,54 +228,31 @@ func tabNumeral(idx int) string {
 	return ""
 }
 
-// carryTitle renders panel [4]'s tab bar. Like panel [2] it prefers the full
-// starship tab bar and only falls back to the compact carousel when the panel is
-// too narrow to fit it — see carouselChip for that narrow-panel tab strategy.
-func (m AppModel) carryTitle(w int) string {
-	focused := m.focus == panelCarry
-	labels := []string{"Carries", "Tasks"}
-	if tb := tabBar("[4]", labels, m.carryTab, focused); lipgloss.Width(tb) <= w-2 {
-		return tb
-	}
-	return carouselChip("[4]", labels, m.carryTab, focused)
-}
-
-// carryBody renders panel [4]'s active tab.
-func (m AppModel) carryBody(w, rows int) string {
-	if m.carryTab == 1 { // Tasks (running + log)
-		return m.tasksView(w, rows, m.focus == panelCarry)
-	}
-	return m.carry.view(w, rows, m.focus == panelCarry) // Carries
-}
-
-// detailTitle renders panel [3]'s title chip (Preview only).
+// detailTitle renders panel [2]'s title chip (Preview only).
 func (m AppModel) detailTitle(w int) string {
-	return singleChip("[3] Preview", m.focus == panelDetail)
+	return singleChip("[2] Preview", m.focus == panelDetail)
 }
 
-// detailLines is panel [3]'s full preview content.
+// detailLines is panel [2]'s full preview content.
 func (m AppModel) detailLines() []string { return m.preview.contentLines() }
 
-// detailBody renders panel [3]'s preview from the scroll offset. Panels [3]/[5]
-// are reference views (read while another panel has focus), so they keep their
-// colour even when unfocused rather than dimming.
+// detailBody renders panel [2]'s preview from the scroll offset. The preview is a
+// reference view (read while another panel has focus), so it keeps its colour even
+// when unfocused rather than dimming.
 func (m AppModel) detailBody(w, rows int) string {
 	return renderLinesFrom(m.detailLines(), m.detailScroll, w, rows)
-}
-
-// metaTitle renders panel [5]'s title chip.
-func (m AppModel) metaTitle(w int) string {
-	return singleChip("[5] Meta", m.focus == panelMeta)
-}
-
-// metaBody renders panel [5]'s file metadata from the scroll offset.
-func (m AppModel) metaBody(w, rows int) string {
-	return renderLinesFrom(m.metaContent(), m.metaScroll, w, rows)
 }
 
 // panelBox draws a bordered panel with the title embedded in the top border
 // (kbu style). Focused = double border + blue, else rounded + dim.
 func (m AppModel) panelBox(focused bool, title string, w, h int, body string) string {
+	return m.panelBoxHint(focused, title, "", w, h, body)
+}
+
+// panelBoxHint is panelBox with a key legend embedded in the bottom border
+// (kbu popup form: title on top, hint on the bottom). hint is pre-styled chrome;
+// "" leaves the bottom edge plain.
+func (m AppModel) panelBoxHint(focused bool, title, hint string, w, h int, body string) string {
 	color := borderDim
 	tl, tr, bl, br, hz, vt := "╭", "╮", "╰", "╯", "─", "│"
 	if focused {
@@ -310,51 +275,68 @@ func (m AppModel) panelBox(focused bool, title string, w, h int, body string) st
 		}
 		b.WriteString(bs.Render(vt) + padDisp(line, inner) + bs.Render(vt) + "\n")
 	}
-	b.WriteString(bs.Render(bl + strings.Repeat(hz, inner) + br))
+	if hint == "" {
+		b.WriteString(bs.Render(bl + strings.Repeat(hz, inner) + br))
+	} else {
+		if dispWidth(hint) > inner {
+			hint = truncate(hint, inner)
+		}
+		botFill := max(inner-dispWidth(hint), 0)
+		b.WriteString(bs.Render(bl) + hint + bs.Render(strings.Repeat(hz, botFill)+br))
+	}
 	return b.String()
 }
 
-// statusBar is the top status row under the header: the active tab's directory
-// status — permissions, owner:group and item/hidden counts on the left, free /
-// total disk on the right. Every field is precomputed on reload (loadDirStat) or
-// read live from the loaded list, so the bar costs nothing to redraw per frame.
-// Data reads in subtext1; the unit words recede in the dim grey.
-// eza-style status-bar accents (catppuccin-mocha), matching eza's long-format
-// colouring: read=yellow, write=red, execute=green, sizes=green, owner=yellow.
+// keyLegend renders a "key desc   key desc …" hint line — each key in the chrome
+// blue, each description dim — wrapped with a space on both sides. Shared by the
+// list panel's bottom-border hint and the footer.
+func keyLegend(pairs [][2]string) string {
+	keyStyle := lipgloss.NewStyle().Foreground(focusColor)
+	descStyle := lipgloss.NewStyle().Foreground(dimColor)
+	parts := make([]string, len(pairs))
+	for i, p := range pairs {
+		parts[i] = keyStyle.Render(p[0]) + " " + descStyle.Render(p[1])
+	}
+	return " " + strings.Join(parts, "   ") + " "
+}
+
+// listNavHint is the key legend shown in the focused list panel's bottom border:
+// the core open-model navigation keys (Enter enters a dir, Esc goes up, j/k move,
+// d/u half-page). "" when the list is unfocused so an idle panel keeps a clean edge.
+func listNavHint(focused bool) string {
+	if !focused {
+		return ""
+	}
+	return keyLegend([][2]string{
+		{"enter", "into"}, {"esc", "back"}, {"j/k", "move"}, {"d/u", "page"},
+	})
+}
+
+// marksHint is the always-shown key legend on the Marks panel's bottom border: the
+// marks workflow — mark a file, then copy/move the set here. These keys fire on the
+// LIST panel; the legend lives on Marks as a reference so it is visible while you
+// mark from the list.
+func marksHint() string {
+	return keyLegend([][2]string{{"m", "mark"}, {"c", "copy"}, {"v", "move"}})
+}
+
+// eza-style permission accents (catppuccin-mocha), matching eza's long-format
+// colouring: read=yellow, write=red, execute=green. Used by the list's per-row
+// Permissions column (colorPerm).
 const (
 	ezaYellow = "#f9e2af" // read bit / owner
 	ezaRed    = "#f38ba8" // write bit
 	ezaGreen  = "#a6e3a1" // execute bit / sizes
 )
 
+// statusBar is the top status row under the header: the directory filu was
+// launched from, marked with the launch glyph — a fixed reference (where a
+// cd-on-quit "LaunchDir" returns to), rendered recessively.
 func (m AppModel) statusBar(w int) string {
-	l := m.active()
-	dim := lipgloss.NewStyle().Foreground(dimColor)  // unit words, recessive
-	num := lipgloss.NewStyle().Foreground(handColor) // counts, subtext1
-	green := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaGreen))
-
-	var segs []string
-	if l.perm != "" {
-		segs = append(segs, colorPerm(l.perm))
-	}
-	if l.owner != "" {
-		segs = append(segs, colorOwner(l.owner))
-	}
-	count := num.Render(strconv.Itoa(len(l.items))) + dim.Render(" items")
-	if l.hidden > 0 {
-		count += dim.Render(" · ") + num.Render(strconv.Itoa(l.hidden)) + dim.Render(" hidden")
-	}
-	segs = append(segs, count)
-	left := " " + strings.Join(segs, "  ")
-
-	right := ""
-	if l.disk != "" {
-		right = green.Render(l.disk) + dim.Render(" free ") // eza colours sizes green
-	}
-	if dispWidth(right) > w-1 { // absurdly narrow terminal — drop the disk slot
-		right = ""
-	}
-	return padDisp(left, w-dispWidth(right)) + right
+	icon := lipgloss.NewStyle().Foreground(userColor).Render(iconCWD) // lavender: the launch/return anchor
+	avail := max(1, w-dispWidth(iconCWD)-3)                           // icon + gap + trailing margin
+	path := lipgloss.NewStyle().Foreground(dimColor).Render(fitPath(m.launchDir, avail))
+	return padDispRight(icon+" "+path+" ", w) // right-aligned, one-cell right margin
 }
 
 // colorPerm paints a mode string (drwxr-xr-x) eza-style: the type char blue,
@@ -383,8 +365,29 @@ func colorPerm(perm string) string {
 	return b.String()
 }
 
+// colorSize paints a file's size eza color-scale style — warmer as it grows:
+// green under 1 MiB, yellow under 1 GiB, peach under 1 TiB, red beyond. A
+// directory has no size (filu never recurses to compute one), so it shows a dim
+// dash placeholder instead.
+func colorSize(it fileItem) string {
+	if it.isDir {
+		return lipgloss.NewStyle().Foreground(dimColor).Render("-")
+	}
+	c := lipgloss.Color(ezaGreen)
+	switch {
+	case it.size >= 1<<40:
+		c = lipgloss.Color(ezaRed)
+	case it.size >= 1<<30:
+		c = lipgloss.Color("#fab387") // catppuccin peach
+	case it.size >= 1<<20:
+		c = lipgloss.Color(ezaYellow)
+	}
+	return lipgloss.NewStyle().Foreground(c).Render(compactSize(it.size))
+}
+
 // colorOwner paints "owner:group": owner in eza's user yellow, the group in
-// subtext, the ':' dim.
+// subtext, the ':' dim. Parked with loadDirStat for the status bar's future
+// content (see statusBar) — unused while the bar is blank.
 func colorOwner(s string) string {
 	owner := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaYellow))
 	group := lipgloss.NewStyle().Foreground(handColor)
@@ -396,8 +399,9 @@ func colorOwner(s string) string {
 }
 
 func (m AppModel) footerBar(w int) string {
-	return lipgloss.NewStyle().Foreground(dimColor).
-		Render(padDisp(" space menu   ? help   tab/1-5 panels   q quit", w))
+	return padDisp(keyLegend([][2]string{
+		{"space", "menu"}, {"?", "help"}, {"tab/1-3", "panels"}, {"q", "quit"},
+	}), w)
 }
 
 // shortPath folds the home dir to ~ (keeps normal / separators).

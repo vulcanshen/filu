@@ -90,12 +90,12 @@ func TestViewEveryLineIsTerminalWidth(t *testing.T) {
 
 	newModel := func() AppModel {
 		m := AppModel{
-			focus: panelList, places: newPlaces(), spaceMenu: newSpaceMenu(),
+			focus: panelList, spaceMenu: newSpaceMenu(),
 			confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(),
 			taskCh: make(chan landMsg, 8),
 		}
 		m.tabs = []listModel{newList(dir)}
-		m.carry.items = []string{filepath.Join(dir, "file.go")}
+		m.marks.items = []string{filepath.Join(dir, "file.go")}
 		m.tasks = []landTask{{id: 1, action: "cp", dest: "d", total: 1, status: taskDone}}
 		m.refreshPreview()
 		m.width, m.height = 120, 30
@@ -104,16 +104,18 @@ func TestViewEveryLineIsTerminalWidth(t *testing.T) {
 
 	for _, cells := range []int{1, 2} {
 		iconCells = cells
-		// exercise the normal grid plus each zoom mode and all four foci.
-		zooms := []panelID{0, panelList, panelDetail, panelMeta, panelCarry}
+		// exercise the normal grid plus each zoom mode, all three foci, both panel-3 tabs.
+		zooms := []panelID{0, panelList, panelDetail, panelMarks}
 		for _, z := range zooms {
-			for _, f := range []panelID{panelPin, panelList, panelDetail, panelMeta, panelCarry} {
-				m := newModel()
-				m.zoom, m.focus = z, f
-				for r, line := range strings.Split(m.View(), "\n") {
-					if got := dispWidth(line); got != m.width {
-						t.Errorf("iconCells=%d zoom=%d focus=%d: row %d dispWidth=%d, want %d\n  %q",
-							cells, z, f, r, got, m.width, line)
+			for _, f := range []panelID{panelList, panelDetail, panelMarks} {
+				for _, mt := range []int{0, 1} { // panel [3]: Marks / Tasks tab
+					m := newModel()
+					m.zoom, m.focus, m.marksTab = z, f, mt
+					for r, line := range strings.Split(m.View(), "\n") {
+						if got := dispWidth(line); got != m.width {
+							t.Errorf("iconCells=%d zoom=%d focus=%d tab=%d: row %d dispWidth=%d, want %d\n  %q",
+								cells, z, f, mt, r, got, m.width, line)
+						}
 					}
 				}
 			}

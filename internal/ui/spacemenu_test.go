@@ -91,13 +91,13 @@ func TestBuildSpaceMenuList(t *testing.T) {
 		}
 		keys[it.key] = true
 	}
-	for _, k := range []string{"p", "r", "a", "D", ".", "z"} {
+	for _, k := range []string{"m", "r", "a", "D", ".", "z"} {
 		if !keys[k] {
 			t.Errorf("panel [2] menu missing hotkey %q", k)
 		}
 	}
-	if keys["P"] {
-		t.Error("Pin should be hidden for a non-dir cursor item")
+	if keys["f"] {
+		t.Error("Favorite should be hidden for a non-dir cursor item")
 	}
 	if !headers["item operation"] || !headers["panel operation"] {
 		t.Errorf("panel [2] menu should label both regions: %v", headers)
@@ -140,37 +140,34 @@ func TestToggleZoom(t *testing.T) {
 		t.Errorf("zoom = %v, want 0 after toggle off", m.zoom)
 	}
 	m.toggleZoom(panelDetail)
-	m.toggleZoom(panelCarry) // different panel switches target
-	if m.zoom != panelCarry {
-		t.Errorf("zoom = %v, want panelCarry", m.zoom)
+	m.toggleZoom(panelMarks) // different panel switches target
+	if m.zoom != panelMarks {
+		t.Errorf("zoom = %v, want panelMarks", m.zoom)
 	}
 }
 
 func TestZoomFocusSwitch(t *testing.T) {
-	// [2]-zoom stacks [2] over [4], so 2/4 switch focus without leaving zoom.
+	// Each panel zooms to full-screen on its own: only the zoomed panel is visible,
+	// and switching focus to any other panel exits zoom.
 	m := AppModel{focus: panelList, zoom: panelList}
-	if !m.zoomVisible(panelList) || !m.zoomVisible(panelCarry) {
-		t.Error("[2]-zoom should show [2] and [4]")
+	if !m.zoomVisible(panelList) {
+		t.Error("[1]-zoom should show [1] list")
 	}
-	if m.zoomVisible(panelPin) || m.zoomVisible(panelDetail) {
-		t.Error("[2]-zoom should hide [1] and [3]")
+	if m.zoomVisible(panelDetail) || m.zoomVisible(panelMarks) {
+		t.Error("[1]-zoom should hide every other panel")
 	}
-	m.setFocus(panelCarry)
-	if m.zoom != panelList || m.focus != panelCarry {
-		t.Errorf("4 in [2]-zoom: zoom=%v focus=%v, want zoom kept + focus [4]", m.zoom, m.focus)
-	}
-	m.setFocus(panelDetail)
-	if m.zoom != 0 || m.focus != panelDetail {
-		t.Errorf("3 in [2]-zoom: zoom=%v focus=%v, want zoom cleared + focus [3]", m.zoom, m.focus)
+	m.setFocus(panelMarks) // switching away exits zoom
+	if m.zoom != 0 || m.focus != panelMarks {
+		t.Errorf("switch to [3] in [1]-zoom: zoom=%v focus=%v, want zoom cleared + focus [3]", m.zoom, m.focus)
 	}
 
-	// [4]-zoom shows only [4]; switching away exits.
-	m4 := AppModel{focus: panelCarry, zoom: panelCarry}
-	if m4.zoomVisible(panelList) {
-		t.Error("[4]-zoom should hide [2]")
+	// [3]-zoom (Marks | Tasks) shows only [3]; switching away exits.
+	m3 := AppModel{focus: panelMarks, zoom: panelMarks}
+	if m3.zoomVisible(panelDetail) {
+		t.Error("[3]-zoom should hide [2] preview")
 	}
-	m4.setFocus(panelList)
-	if m4.zoom != 0 {
-		t.Error("switching away from [4]-zoom should exit zoom")
+	m3.setFocus(panelList)
+	if m3.zoom != 0 {
+		t.Error("switching away from [3]-zoom should exit zoom")
 	}
 }

@@ -85,6 +85,16 @@ func padDisp(s string, w int) string {
 	return s
 }
 
+// padDispRight clips then right-aligns s to display width w (left-padding with
+// spaces) — for the numeric Size column.
+func padDispRight(s string, w int) string {
+	s = dispClip(s, w)
+	if d := w - dispWidth(s); d > 0 {
+		return strings.Repeat(" ", d) + s
+	}
+	return s
+}
+
 // truncate clips s to display width w, appending "…" when it had to cut. Icons
 // are all near the line start, so keeping them costs iconCount*(iconCells-1)
 // extra display cells the "…"-budget must reserve; the loop tightens the rare

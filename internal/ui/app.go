@@ -1,5 +1,5 @@
-// Package ui holds filu's Bubble Tea models. The 5-panel layout (pin, list,
-// preview, carry bucket, metadata) lives in AppModel. See .forge/meta/IDEA.md
+// Package ui holds filu's Bubble Tea models. The 3-panel layout (list, preview,
+// and a tabbed Marks | Tasks panel) lives in AppModel. See .forge/meta/IDEA.md
 // for the target design.
 package ui
 
@@ -16,11 +16,9 @@ import (
 type panelID int
 
 const (
-	panelPin    panelID = iota + 1 // [1] system places + pinned
-	panelList                      // [2] CWD file list (main surface)
-	panelDetail                    // [3] preview (right column, top 2/3)
-	panelCarry                     // [4] carry bucket
-	panelMeta                      // [5] file metadata (right column, bottom 1/3)
+	panelList   panelID = iota + 1 // [1] CWD file list (main surface)
+	panelDetail                    // [2] preview (right column, top, 1/3 wide)
+	panelMarks                     // [3] Marks | Tasks (tabbed, full-width bottom)
 )
 
 // inputKind selects what the input popup collects.
@@ -38,6 +36,7 @@ type confirmKind int
 const (
 	confirmNone confirmKind = iota
 	confirmDelete
+	confirmShell
 )
 
 // sortStep tracks where the sort picker is in its column→direction flow.
@@ -53,15 +52,14 @@ type AppModel struct {
 	width         int
 	height        int
 	focus         panelID
-	detailScroll  int         // panel [3] preview scroll offset
-	metaScroll    int         // panel [5] meta scroll offset
-	tabs          []listModel // panel [2]'s directory tabs (1..maxTabs, user-created)
+	detailScroll  int         // panel [2] preview scroll offset
+	tabs          []listModel // panel [1]'s directory tabs (1..maxTabs, user-created)
 	tab           int         // active tab index
 	pendingG      bool        // vim g-prefix chord: a lone g is armed, awaiting the second key
 	preview       previewModel
 	places        placesModel
-	carry         carryModel
-	carryTab      int               // panel [4] active tab: 0 carry / 1 progress / 2 history
+	marks         marksModel
+	marksTab      int               // panel [3] active tab: 0 Marks / 1 Tasks
 	spaceMenu     spaceMenu         // §A.1 contextual popup (kbu form)
 	sortMenu      spaceMenu         // sort picker (column→direction chain, kbu form)
 	sortStep      sortStep          // which step the sort picker is on
@@ -69,7 +67,11 @@ type AppModel struct {
 	quitMenu      spaceMenu         // cd-on-quit picker (launch dir + distinct tab dirs)
 	openWithMenu  spaceMenu         // [o]pen picker (Default + config.yaml open_with apps)
 	openWithPath  string            // path the open-with picker acts on (captured when it opens)
-	launchDir     string            // the dir filu was started in (panel 1 CWD / quit option 1)
+	gotoMenu      spaceMenu         // Goto / new-tab picker: {Same?, Favorites, Search} → favorites drill-down
+	gotoStep      gotoStep          // which step the Goto picker is on
+	searchMenu    spaceMenu         // Search chooser: {filename, content} → opens the finder in that mode
+	gotoNewTab    bool              // Goto picker in new-tab mode (open in a new tab vs move the active one)
+	launchDir     string            // the dir filu was started in (cd-on-quit option 1)
 	zoom          panelID           // 0 = normal; else the panel expanded full-width
 	confirm       confirmPopup      // yes/no popup (delete / quit)
 	confirmAction confirmKind       // what an accepted confirm commits to
@@ -78,7 +80,7 @@ type AppModel struct {
 	help          helpPopup         // §A.2 global help cheatsheet
 	splash        splashModel       // hidden easter-egg logo (V)
 	toast         toastModel        // transient notification (yank feedback)
-	detailYank    detailYank        // panel [3] yank viewport (cursor + visual selection)
+	detailYank    detailYank        // panel [2] yank viewport (cursor + visual selection)
 	pty           *ptyPopup         // embedded editor; pointer — shared with its read goroutine
 	search        searchModel       // native fuzzy file/dir finder
 	searchCh      chan fileBatchMsg // finder's fd stream → UI
@@ -107,7 +109,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, places: newPlaces(), spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
@@ -220,6 +222,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.sortMenu.setSize(msg.Width)
 		m.quitMenu.setSize(msg.Width)
 		m.openWithMenu.setSize(msg.Width)
+		m.gotoMenu.setSize(msg.Width)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
@@ -233,7 +236,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)
@@ -305,12 +308,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.confirm, ok, cmd = m.confirm.update(msg)
 			if ok {
-				if m.confirmAction == confirmDelete {
+				switch m.confirmAction {
+				case confirmDelete:
 					_ = moveToTrash(m.pendingDelete)
 					m.pendingDelete = ""
 					m.cur().reload()
 					m.cur().ensureVisible(m.listRows())
 					m.refreshPreview()
+				case confirmShell:
+					cmd = tea.Batch(cmd, m.pty.start(buildShellCmd(), "Shell", m.cur().dir, m.width, m.height))
 				}
 				m.confirmAction = confirmNone
 			}
@@ -337,6 +343,36 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.sortMenu, key, cmd = m.sortMenu.update(msg)
 			if key != "" { // stays open, swapping to the next step / looping back
 				cmd = tea.Batch(cmd, m.advanceSortFlow(key))
+			}
+			return m, cmd
+		}
+		if m.gotoMenu.isActive() { // Goto picker: Favorites drill-down or Search finder
+			if !m.gotoMenu.isInteractive() {
+				return m, nil
+			}
+			if m.gotoStep == gotoStepPinned && msg.String() == "f" { // unfavorite the highlighted dir, stay open
+				return m, m.unpinAtGotoCursor()
+			}
+			var key string
+			var cmd tea.Cmd
+			m.gotoMenu, key, cmd = m.gotoMenu.update(msg)
+			if key != "" { // stays open on a drill, closes on a terminal jump/search
+				cmd = tea.Batch(cmd, m.advanceGotoFlow(key))
+			}
+			return m, cmd
+		}
+		if m.searchMenu.isActive() { // Search chooser: filename vs content, then open the finder
+			if !m.searchMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.searchMenu, key, cmd = m.searchMenu.update(msg)
+			switch key {
+			case "f": // filename → the by-name (fd) finder
+				return m, tea.Batch(m.searchMenu.close(), m.openSearch())
+			case "c": // content → the by-content (rg) finder
+				return m, tea.Batch(m.searchMenu.close(), m.openFind())
 			}
 			return m, cmd
 		}
@@ -400,19 +436,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spaceMenu.setItems(items, title)
 			return m, m.spaceMenu.open()
 		case "tab":
-			m.setFocus(m.focus%5 + 1) // 1→2→3→4→5→1
+			m.setFocus(m.focus%3 + 1) // 1→2→3→1
 		case "shift+tab":
-			m.setFocus((m.focus+3)%5 + 1) // 1→5→4→3→2→1
+			m.setFocus((m.focus+1)%3 + 1) // 1→3→2→1
 		case "1":
-			m.setFocus(panelPin)
-		case "2":
 			m.setFocus(panelList)
-		case "3":
+		case "2":
 			m.setFocus(panelDetail)
-		case "4":
-			m.setFocus(panelCarry)
-		case "5":
-			m.setFocus(panelMeta)
+		case "3":
+			m.setFocus(panelMarks)
 		default:
 			cmd := m.dispatchFocusKey(msg.String())
 			m.syncWatches() // navigation may have moved a tab to a new dir
@@ -459,15 +491,9 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		m.tab = (m.tab + 1) % len(m.tabs)
 	case "h", "left":
 		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
-	case "t": // new tab in the current tab's directory, made active (up to maxTabs)
+	case "t": // new tab: open the Same / Favorites / Search picker (up to maxTabs)
 		if len(m.tabs) < maxTabs {
-			m.addTab(m.cur().dir)
-		} else {
-			cmd = m.toast.show(tabLimitToast())
-		}
-	case "T": // new tab at a directory chosen via Goto (up to maxTabs)
-		if len(m.tabs) < maxTabs {
-			cmd = m.openGotoNewTab()
+			cmd = m.openTabMenu()
 		} else {
 			cmd = m.toast.show(tabLimitToast())
 		}
@@ -478,15 +504,15 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 				m.tab = len(m.tabs) - 1
 			}
 		}
-	case "p": // pick: toggle cursor item into the carries bucket
+	case "m": // mark: toggle cursor item into the marks bucket
 		if it := l.cursorItem(); it.name != "" {
-			m.carry.toggle(filepath.Join(l.dir, it.name))
+			m.marks.toggle(filepath.Join(l.dir, it.name))
 		}
-	case "c": // copy: land carried items here as copy (async)
+	case "c": // copy: land marked items here as copy (async)
 		cmd = m.startLand(l.dir, false)
-	case "m": // move: land carried items here as move (async)
+	case "v": // move: land marked items here as move (async)
 		cmd = m.startLand(l.dir, true)
-	case "P": // pin: toggle the cursor dir into [1] Pinned
+	case "f": // favorite: toggle the cursor dir into Favorites (reach it via Goto)
 		if it := l.cursorItem(); it.isDir {
 			m.places.togglePin(filepath.Join(l.dir, it.name))
 		}
@@ -513,18 +539,15 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.openDefault()
 	case "O": // Open with: pick an app (Default OS open, or a configured one)
 		cmd = m.openOpenWith()
-	case "s": // shell: drop into $SHELL in this tab's directory (exit to return)
-		cmd = m.pty.start(buildShellCmd(), "Shell", l.dir, m.width, m.height)
-	// [S]ort has no key binding: filu shows no columns, so a column sort reads
-	// oddly. The sort machinery (sort.go, the sortMenu flow) is kept and still
-	// orders the list (dirs first + any persisted chain) — re-add a key here to
-	// re-expose the picker.
-	case "/": // Search: by-name finder over the subtree, reveal the pick here
-		cmd = m.openSearch()
-	case "f": // Find: by-content finder (rg) with preview, reveal the pick here
-		cmd = m.openFind()
-	case "go": // Goto: fuzzy-jump this tab to any directory under $HOME (chord `go`)
-		cmd = m.openGoto()
+	case "s": // shell: confirm the directory first, then drop into $SHELL there
+		m.confirmAction = confirmShell
+		cmd = m.confirm.open("Open a shell in " + shortPath(l.dir) + "?")
+	case "S": // Sort: pick a column → direction; the column-header row shows the active sort
+		cmd = m.openSortColumnPicker()
+	case "/": // Search: choose filename (fd) or content (rg), then reveal the pick here
+		cmd = m.openSearchMenu()
+	case "go": // Goto: pick a pinned dir, or search under $HOME (chord `go`)
+		cmd = m.openGotoMenu()
 	case "b": // Breadcrumb: jump this tab up to any ancestor directory
 		cmd = m.breadcrumb.open(m.cur().dir)
 	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
@@ -560,37 +583,7 @@ func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 	return nil
 }
 
-// handleMetaKey routes keys to panel [5] (file metadata): j/k/u/d/g/G scroll, y
-// yanks the meta lines, z zooms it full-screen.
-func (m *AppModel) handleMetaKey(key string) tea.Cmd {
-	switch key {
-	case "j", "down":
-		m.metaScroll++
-	case "k", "up":
-		m.metaScroll--
-	case "d", "ctrl+d":
-		m.metaScroll += m.metaRows() / 2
-	case "u", "ctrl+u":
-		m.metaScroll -= m.metaRows() / 2
-	case "g":
-		m.metaScroll = 0
-	case "G":
-		m.metaScroll = len(m.metaContent())
-	case "y":
-		return m.openMetaYank()
-	case "z":
-		m.toggleZoom(panelMeta)
-	}
-	m.clampMetaScroll()
-	return nil
-}
-
-// metaContent is the file-metadata lines for the cursor item (panel [5]).
-func (m AppModel) metaContent() []string {
-	return metaLines(m.active().cursorItem(), m.active().dir)
-}
-
-// openDetailYank opens the yank viewport over panel [3]'s preview — the file's
+// openDetailYank opens the yank viewport over panel [2]'s preview — the file's
 // own content, with a display-only line-number gutter for text/binary.
 func (m *AppModel) openDetailYank() tea.Cmd {
 	lines := m.preview.body
@@ -602,61 +595,54 @@ func (m *AppModel) openDetailYank() tea.Cmd {
 	return m.detailYank.open("Yank: Preview", lines, showGutter)
 }
 
-// openMetaYank opens the yank viewport over panel [5]'s metadata lines.
-func (m *AppModel) openMetaYank() tea.Cmd {
-	lines := m.metaContent()
-	if len(lines) == 0 {
-		return nil
-	}
-	m.detailYank.setSize(m.width, m.height)
-	return m.detailYank.open("Yank: Meta", lines, false)
-}
-
-// clampDetailScroll keeps panel [3] (preview) from scrolling past its last page.
+// clampDetailScroll keeps panel [2] (preview) from scrolling past its last page.
 func (m *AppModel) clampDetailScroll() {
 	maxScroll := max(len(m.detailLines())-m.detailRows(), 0)
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
 }
 
-// clampMetaScroll keeps panel [5] (meta) from scrolling past its last page.
-func (m *AppModel) clampMetaScroll() {
-	maxScroll := max(len(m.metaContent())-m.metaRows(), 0)
-	m.metaScroll = max(0, min(m.metaScroll, maxScroll))
-}
-
-// handleCarryKey routes keys to panel [4] while it is focused (h/l swap tab; on
-// the Carries tab j/k move the cursor and P toggles the pick subset).
-func (m *AppModel) handleCarryKey(key string) tea.Cmd {
+// handleMarksKey routes keys to panel [3] (Marks | Tasks): h/l swap the tab, z
+// zooms; then the active tab handles the rest — the Marks bucket, or the Tasks
+// land log.
+func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 	switch key {
 	case "l", "right", "h", "left":
-		m.carryTab = (m.carryTab + 1) % 2 // Carries <-> Tasks
-	case "z": // zoom panel [4]: full-width, Carries | Tasks
-		m.toggleZoom(panelCarry)
-	}
-	if m.carryTab == 0 { // Carries tab
-		switch key {
-		case "j", "down":
-			m.carry.moveCursor(1)
-		case "k", "up":
-			m.carry.moveCursor(-1)
-		case "g":
-			m.carry.cursor = 0
-		case "G":
-			m.carry.moveCursor(len(m.carry.items))
-		case "p": // pick: toggle this item in the land subset
-			m.carry.togglePick()
-		case "D": // delete: drop this item from the bucket (not the file)
-			if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
-				m.carry.removeItem(m.carry.items[m.carry.cursor])
-			}
-		case "y": // yank: copy this item's full path to the clipboard
-			if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
-				return copyToClipboardCmd(m.carry.items[m.carry.cursor], "Copied path to clipboard")
-			}
-		}
+		m.marksTab = (m.marksTab + 1) % 2 // Marks <-> Tasks
+		return nil
+	case "z":
+		m.toggleZoom(panelMarks)
 		return nil
 	}
-	// Tasks tab
+	if m.marksTab == 1 { // Tasks tab
+		return m.handleTasksKey(key)
+	}
+	// Marks tab
+	switch key {
+	case "j", "down":
+		m.marks.moveCursor(1)
+	case "k", "up":
+		m.marks.moveCursor(-1)
+	case "g":
+		m.marks.cursor = 0
+	case "G":
+		m.marks.moveCursor(len(m.marks.items))
+	case "p": // pick: toggle this item in the land subset
+		m.marks.togglePick()
+	case "m": // unmark: drop this item from the bucket (not the file)
+		if m.marks.cursor >= 0 && m.marks.cursor < len(m.marks.items) {
+			m.marks.removeItem(m.marks.items[m.marks.cursor])
+		}
+	case "y": // yank: copy this item's full path to the clipboard
+		if m.marks.cursor >= 0 && m.marks.cursor < len(m.marks.items) {
+			return copyToClipboardCmd(m.marks.items[m.marks.cursor], "Copied path to clipboard")
+		}
+	}
+	return nil
+}
+
+// handleTasksKey routes keys to panel [3]'s Tasks tab: j/k move the cursor, D
+// drops a task from the log.
+func (m *AppModel) handleTasksKey(key string) tea.Cmd {
 	switch key {
 	case "j", "down":
 		m.taskCursor++
@@ -669,10 +655,6 @@ func (m *AppModel) handleCarryKey(key string) tea.Cmd {
 	case "G":
 		m.taskCursor = len(m.tasks) - 1
 		m.clampTaskCursor()
-	case "R": // redo: run this task again
-		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
-			return m.redoTask(m.tasks[m.taskCursor])
-		}
 	case "D": // delete: drop this task from the log
 		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
 			m.tasks = append(m.tasks[:m.taskCursor], m.tasks[m.taskCursor+1:]...)
@@ -702,16 +684,10 @@ func (m *AppModel) setFocus(p panelID) {
 	m.focus = p
 }
 
-// zoomVisible reports whether panel p appears in the current zoom layout.
+// zoomVisible reports whether panel p appears in the current zoom layout. Each
+// panel zooms to full-screen on its own, so only the zoomed panel is visible.
 func (m AppModel) zoomVisible(p panelID) bool {
-	switch m.zoom {
-	case 0:
-		return true // normal layout: everything is visible
-	case panelList:
-		return p == panelList || p == panelCarry // [2]-zoom stacks [2] over [4]
-	default:
-		return p == m.zoom // [3]/[4]-zoom show only that panel
-	}
+	return m.zoom == 0 || p == m.zoom
 }
 
 // dispatchFocusKey fires a Space-menu commit as if the letter were pressed on
@@ -720,14 +696,10 @@ func (m *AppModel) dispatchFocusKey(key string) tea.Cmd {
 	switch m.focus {
 	case panelList:
 		return m.handleListKey(key)
-	case panelPin:
-		return m.handlePinKey(key)
 	case panelDetail:
 		return m.handleDetailKey(key)
-	case panelMeta:
-		return m.handleMetaKey(key)
-	case panelCarry:
-		return m.handleCarryKey(key)
+	case panelMarks:
+		return m.handleMarksKey(key)
 	}
 	return nil
 }
@@ -748,28 +720,26 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			itemOps = append(itemOps,
 				menuItem{label: "Open", key: "o", hint: "open with the OS default app"},
 				menuItem{label: "Open with", key: "O", hint: "pick an app (open_with in config.yaml)"},
-				menuItem{label: "Pick", key: "p", hint: `add to "carries" bucket`},
+				menuItem{label: "Mark", key: "m", hint: "add to the marks bucket"},
 				menuItem{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				menuItem{label: "Rename", key: "r", hint: "rename this item"},
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
 		}
 		if it.isDir {
-			itemOps = append(itemOps, menuItem{label: "Pin", key: "P", hint: "pin dir into the sidebar"})
+			itemOps = append(itemOps, menuItem{label: "Favorite", key: "f", hint: "favorite this dir (reach it via Goto → Favorites)"})
 		}
-		if len(m.carry.items) > 0 {
+		if len(m.marks.items) > 0 {
 			panelOps = append(panelOps,
-				menuItem{label: "Copy", key: "c", hint: "land carried items as copy"},
-				menuItem{label: "Move here", key: "m", hint: "land carried items as move"})
+				menuItem{label: "Copy", key: "c", hint: "land marked items as copy"},
+				menuItem{label: "Move here", key: "v", hint: "land marked items as move"})
 		}
 		panelOps = append(panelOps,
-			menuItem{label: "Search", key: "/", hint: "find a file by name in this tree"},
-			menuItem{label: "Find", key: "f", hint: "find a file by content (grep) + preview"},
-			menuItem{label: "Goto", key: "go", hint: "jump this tab to any directory under home"},
+			menuItem{label: "Search", key: "/", hint: "find a file by name or content in this tree"},
+			menuItem{label: "Goto", key: "go", hint: "jump to a pinned dir, or search under home"},
 			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
 		if len(m.tabs) < maxTabs {
 			panelOps = append(panelOps,
-				menuItem{label: "Tab", key: "t", hint: "open a new tab in this directory"},
-				menuItem{label: "Tab @ goto", key: "T", hint: "open a new tab at a directory you pick"})
+				menuItem{label: "Tab", key: "t", hint: "create a new tab"})
 		}
 		if len(m.tabs) > 1 {
 			panelOps = append(panelOps,
@@ -777,45 +747,35 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		panelOps = append(panelOps,
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
+			menuItem{label: "Sort", key: "S", hint: "order by a column (name / modified / perms / owner / size)"},
 			menuItem{label: "Shell", key: "s", hint: "drop into $SHELL here (exit to return)"},
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
 			menuItem{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"})
 		return groupedMenu(itemOps, panelOps), title
-	case panelPin:
-		items := []menuItem{{label: "Jump", key: "enter", hint: "go to this place"}}
-		if m.places.currentIsPinned() {
-			items = append(items, menuItem{label: "UnPin", key: "P", hint: "remove from Pinned"})
-		}
-		return items, "Places"
 	case panelDetail:
 		return groupedMenu(
 			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview"}},
 			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "Preview"
-	case panelMeta:
-		return groupedMenu(
-			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the metadata"}},
-			[]menuItem{{label: "Zoom", key: "z", hint: "expand the metadata full-screen"}}), "Meta"
-	case panelCarry:
-		panelOps := []menuItem{
-			{label: "Tab", key: "l", hint: "switch Carries / Tasks"},
-			{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"},
-		}
-		if m.carryTab == 0 && len(m.carry.items) > 0 { // Carries tab, with items
-			itemOps := []menuItem{
-				{label: "Pick", key: "p", hint: "toggle this item in the land subset"},
-				{label: "Yank", key: "y", hint: "copy full path to clipboard"},
-				{label: "Delete", key: "D", hint: "remove this item from the bucket"},
-			}
-			return groupedMenu(itemOps, panelOps), "Carries"
-		}
-		if m.carryTab == 1 && len(m.tasks) > 0 { // Tasks tab
-			itemOps := []menuItem{
-				{label: "Redo", key: "R", hint: "run this task again"},
-				{label: "Delete", key: "D", hint: "remove this task from the log"},
+	case panelMarks:
+		zoom := menuItem{label: "Zoom", key: "z", hint: "expand this panel full-screen"}
+		if m.marksTab == 1 { // Tasks tab
+			panelOps := []menuItem{{label: "Marks tab", key: "l", hint: "switch tab (h/l)"}, zoom}
+			var itemOps []menuItem
+			if len(m.tasks) > 0 {
+				itemOps = []menuItem{{label: "Delete", key: "D", hint: "remove this task from the log"}}
 			}
 			return groupedMenu(itemOps, panelOps), "Tasks"
 		}
-		return groupedMenu(nil, panelOps), "Bucket"
+		panelOps := []menuItem{{label: "Tasks tab", key: "l", hint: "switch tab (h/l)"}, zoom}
+		var itemOps []menuItem
+		if len(m.marks.items) > 0 {
+			itemOps = []menuItem{
+				{label: "Pick", key: "p", hint: "toggle this item in the land subset"},
+				{label: "Yank", key: "y", hint: "copy full path to clipboard"},
+				{label: "Unmark", key: "m", hint: "remove this item from the marks bucket"},
+			}
+		}
+		return groupedMenu(itemOps, panelOps), "Marks"
 	}
 	return nil, ""
 }
@@ -840,7 +800,7 @@ func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
 func (m *AppModel) refreshPreview() {
 	l := m.cur()
 	m.preview = loadPreview(l.cursorItem(), l.dir, m.previewWidth())
-	m.detailScroll, m.metaScroll = 0, 0 // new cursor item — both panels back to the top
+	m.detailScroll = 0 // new cursor item — the preview scrolls back to the top
 }
 
 // previewWidth is panel [3]'s inner content width (1:1:1 columns, minus border),
@@ -882,31 +842,6 @@ func (m *AppModel) performInput() {
 	m.refreshPreview()
 }
 
-// handlePinKey routes navigation keys to panel [1] while it is focused.
-func (m *AppModel) handlePinKey(key string) tea.Cmd {
-	switch key {
-	case "j", "down":
-		m.places.move(1)
-		m.syncPlaceToList()
-	case "k", "up":
-		m.places.move(-1)
-		m.syncPlaceToList()
-	case "enter":
-		if p, ok := m.places.current(); ok {
-			m.navigateTo(p.path)
-		}
-	case "P": // unpin the cursor place (panel-aware P; only on a Pinned entry)
-		if m.places.currentIsPinned() {
-			if p, ok := m.places.current(); ok {
-				m.places.unpin(p.path)
-				m.places.move(0) // reclamp the cursor after the list shrank
-				m.syncPlaceToList()
-			}
-		}
-	}
-	return nil
-}
-
 // navigateActive points the active tab at dir; focus stays put.
 func (m *AppModel) navigateActive(dir string) {
 	l := m.cur()
@@ -921,13 +856,6 @@ func (m *AppModel) navigateActive(dir string) {
 func (m *AppModel) navigateTo(dir string) {
 	m.navigateActive(dir)
 	m.focus = panelList
-}
-
-// syncPlaceToList live-updates panel [2] to the highlighted place (focus stays).
-func (m *AppModel) syncPlaceToList() {
-	if p, ok := m.places.current(); ok {
-		m.navigateActive(p.path)
-	}
 }
 
 // midHeight is the panel region's height: total minus the header, status bar,
@@ -957,15 +885,6 @@ func (m AppModel) listRows() int {
 // two borders).
 func (m AppModel) detailRows() int {
 	if r := m.midHeight()*2/3 - 2; r > 0 {
-		return r
-	}
-	return 1
-}
-
-// metaRows: panel [5] meta content rows (right column, bottom 1/3, minus borders).
-func (m AppModel) metaRows() int {
-	mid := m.midHeight()
-	if r := mid - mid*2/3 - 2; r > 0 {
 		return r
 	}
 	return 1

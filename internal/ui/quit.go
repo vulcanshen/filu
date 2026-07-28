@@ -28,7 +28,7 @@ type quitTarget struct {
 }
 
 // quitTargets is the cd-on-quit menu's distinct destinations: the launch dir
-// (panel [1]'s CWD) then each tab's dir, with duplicates dropped so a directory
+// (the launch dir) then each tab's dir, with duplicates dropped so a directory
 // that is open in several places is offered once. Order is launch-first, then
 // tab order; the hint names the first source that introduced each dir.
 func (m AppModel) quitTargets() []quitTarget {

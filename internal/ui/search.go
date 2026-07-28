@@ -116,12 +116,26 @@ func newSearch() searchModel {
 	return searchModel{anim: newPopupAnimator("search", popupLayerColor(1))}
 }
 
-// openSearch opens the by-name finder (`/`) over the active tab's directory.
+// openSearchMenu opens the Search chooser (`/`): a flat {filename, content} pick
+// that then opens the finder in that mode over the active tab's subtree. Folding
+// the old top-level Find (`f`) in here frees `f` for Favorite.
+func (m *AppModel) openSearchMenu() tea.Cmd {
+	m.searchMenu.setItems([]menuItem{
+		{label: "filename", key: "f", hint: "fuzzy match on file names (fd)"},
+		{label: "content", key: "c", hint: "grep inside files (rg), with preview"},
+	}, "Search…")
+	m.searchMenu.setSize(m.width)
+	return m.searchMenu.open()
+}
+
+// openSearch opens the by-name finder over the active tab's directory (the
+// Search chooser's `filename` pick).
 func (m *AppModel) openSearch() tea.Cmd {
 	return m.search.open(m.cur().dir, m.width, m.height, false, false, m.searchCh)
 }
 
-// openFind opens the by-content finder (`f`) over the active tab's directory.
+// openFind opens the by-content finder over the active tab's directory (the
+// Search chooser's `content` pick).
 func (m *AppModel) openFind() tea.Cmd {
 	return m.search.open(m.cur().dir, m.width, m.height, true, false, m.searchCh)
 }
