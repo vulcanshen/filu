@@ -599,8 +599,8 @@ func (m *AppModel) clampDetailScroll() {
 }
 
 // handleMarksKey routes keys to the Marks bucket panel [3]: j/k move the
-// cursor, p toggles the item in the land subset, D drops it from the bucket, y
-// yanks its path, z zooms the panel.
+// cursor, p toggles the item in the land subset, m unmarks it (drops it from the
+// bucket), y yanks its path, z zooms the panel.
 func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 	switch key {
 	case "j", "down":
@@ -613,7 +613,7 @@ func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 		m.marks.moveCursor(len(m.marks.items))
 	case "p": // pick: toggle this item in the land subset
 		m.marks.togglePick()
-	case "D": // delete: drop this item from the bucket (not the file)
+	case "m": // unmark: drop this item from the bucket (not the file)
 		if m.marks.cursor >= 0 && m.marks.cursor < len(m.marks.items) {
 			m.marks.removeItem(m.marks.items[m.marks.cursor])
 		}
@@ -757,7 +757,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			itemOps := []menuItem{
 				{label: "Pick", key: "p", hint: "toggle this item in the land subset"},
 				{label: "Yank", key: "y", hint: "copy full path to clipboard"},
-				{label: "Delete", key: "D", hint: "remove this item from the bucket"},
+				{label: "Unmark", key: "m", hint: "remove this item from the marks bucket"},
 			}
 			return groupedMenu(itemOps, zoom), "Marks"
 		}
