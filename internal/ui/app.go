@@ -1,6 +1,6 @@
-// Package ui holds filu's Bubble Tea models. The 4-panel layout (list, preview,
-// Marks, Tasks) lives in AppModel. See .forge/meta/IDEA.md for the target
-// design.
+// Package ui holds filu's Bubble Tea models. The 3-panel layout (list, preview,
+// and a tabbed Marks | Tasks panel) lives in AppModel. See .forge/meta/IDEA.md
+// for the target design.
 package ui
 
 import (
@@ -18,8 +18,7 @@ type panelID int
 const (
 	panelList   panelID = iota + 1 // [1] CWD file list (main surface)
 	panelDetail                    // [2] preview (right column, top, 1/3 wide)
-	panelMarks                     // [3] Marks bucket (bottom-left)
-	panelTasks                     // [4] land tasks (bottom-right)
+	panelMarks                     // [3] Marks | Tasks (tabbed, full-width bottom)
 )
 
 // inputKind selects what the input popup collects.
@@ -59,6 +58,7 @@ type AppModel struct {
 	preview       previewModel
 	places        placesModel
 	marks         marksModel
+	marksTab      int               // panel [3] active tab: 0 Marks / 1 Tasks
 	spaceMenu     spaceMenu         // §A.1 contextual popup (kbu form)
 	sortMenu      spaceMenu         // sort picker (column→direction chain, kbu form)
 	sortStep      sortStep          // which step the sort picker is on
@@ -432,17 +432,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spaceMenu.setItems(items, title)
 			return m, m.spaceMenu.open()
 		case "tab":
-			m.setFocus(m.focus%4 + 1) // 1→2→3→4→1
+			m.setFocus(m.focus%3 + 1) // 1→2→3→1
 		case "shift+tab":
-			m.setFocus((m.focus+2)%4 + 1) // 1→4→3→2→1
+			m.setFocus((m.focus+1)%3 + 1) // 1→3→2→1
 		case "1":
 			m.setFocus(panelList)
 		case "2":
 			m.setFocus(panelDetail)
 		case "3":
 			m.setFocus(panelMarks)
-		case "4":
-			m.setFocus(panelTasks)
 		default:
 			cmd := m.dispatchFocusKey(msg.String())
 			m.syncWatches() // navigation may have moved a tab to a new dir
@@ -598,10 +596,22 @@ func (m *AppModel) clampDetailScroll() {
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
 }
 
-// handleMarksKey routes keys to the Marks bucket panel [3]: j/k move the
-// cursor, p toggles the item in the land subset, m unmarks it (drops it from the
-// bucket), y yanks its path, z zooms the panel.
+// handleMarksKey routes keys to panel [3] (Marks | Tasks): h/l swap the tab, z
+// zooms; then the active tab handles the rest — the Marks bucket, or the Tasks
+// land log.
 func (m *AppModel) handleMarksKey(key string) tea.Cmd {
+	switch key {
+	case "l", "right", "h", "left":
+		m.marksTab = (m.marksTab + 1) % 2 // Marks <-> Tasks
+		return nil
+	case "z":
+		m.toggleZoom(panelMarks)
+		return nil
+	}
+	if m.marksTab == 1 { // Tasks tab
+		return m.handleTasksKey(key)
+	}
+	// Marks tab
 	switch key {
 	case "j", "down":
 		m.marks.moveCursor(1)
@@ -621,14 +631,12 @@ func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 		if m.marks.cursor >= 0 && m.marks.cursor < len(m.marks.items) {
 			return copyToClipboardCmd(m.marks.items[m.marks.cursor], "Copied path to clipboard")
 		}
-	case "z":
-		m.toggleZoom(panelMarks)
 	}
 	return nil
 }
 
-// handleTasksKey routes keys to the Tasks panel [4]: j/k move the cursor, R redoes
-// a task, D drops it from the log, z zooms the panel.
+// handleTasksKey routes keys to panel [3]'s Tasks tab: j/k move the cursor, D
+// drops a task from the log.
 func (m *AppModel) handleTasksKey(key string) tea.Cmd {
 	switch key {
 	case "j", "down":
@@ -642,18 +650,12 @@ func (m *AppModel) handleTasksKey(key string) tea.Cmd {
 	case "G":
 		m.taskCursor = len(m.tasks) - 1
 		m.clampTaskCursor()
-	case "R": // redo: run this task again
-		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
-			return m.redoTask(m.tasks[m.taskCursor])
-		}
 	case "D": // delete: drop this task from the log
 		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
 			m.tasks = append(m.tasks[:m.taskCursor], m.tasks[m.taskCursor+1:]...)
 			m.clampTaskCursor()
 			saveState(m.snapshotState())
 		}
-	case "z":
-		m.toggleZoom(panelTasks)
 	}
 	return nil
 }
@@ -693,8 +695,6 @@ func (m *AppModel) dispatchFocusKey(key string) tea.Cmd {
 		return m.handleDetailKey(key)
 	case panelMarks:
 		return m.handleMarksKey(key)
-	case panelTasks:
-		return m.handleTasksKey(key)
 	}
 	return nil
 }
@@ -752,26 +752,25 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview"}},
 			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "Preview"
 	case panelMarks:
-		zoom := []menuItem{{label: "Zoom", key: "z", hint: "expand this panel full-screen"}}
+		zoom := menuItem{label: "Zoom", key: "z", hint: "expand this panel full-screen"}
+		if m.marksTab == 1 { // Tasks tab
+			panelOps := []menuItem{{label: "Marks tab", key: "l", hint: "switch tab (h/l)"}, zoom}
+			var itemOps []menuItem
+			if len(m.tasks) > 0 {
+				itemOps = []menuItem{{label: "Delete", key: "D", hint: "remove this task from the log"}}
+			}
+			return groupedMenu(itemOps, panelOps), "Tasks"
+		}
+		panelOps := []menuItem{{label: "Tasks tab", key: "l", hint: "switch tab (h/l)"}, zoom}
+		var itemOps []menuItem
 		if len(m.marks.items) > 0 {
-			itemOps := []menuItem{
+			itemOps = []menuItem{
 				{label: "Pick", key: "p", hint: "toggle this item in the land subset"},
 				{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				{label: "Unmark", key: "m", hint: "remove this item from the marks bucket"},
 			}
-			return groupedMenu(itemOps, zoom), "Marks"
 		}
-		return groupedMenu(nil, zoom), "Marks"
-	case panelTasks:
-		zoom := []menuItem{{label: "Zoom", key: "z", hint: "expand this panel full-screen"}}
-		if len(m.tasks) > 0 {
-			itemOps := []menuItem{
-				{label: "Redo", key: "R", hint: "run this task again"},
-				{label: "Delete", key: "D", hint: "remove this task from the log"},
-			}
-			return groupedMenu(itemOps, zoom), "Tasks"
-		}
-		return groupedMenu(nil, zoom), "Tasks"
+		return groupedMenu(itemOps, panelOps), "Marks"
 	}
 	return nil, ""
 }

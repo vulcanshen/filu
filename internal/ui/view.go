@@ -115,8 +115,6 @@ func (m AppModel) middleView(w, midH int) string {
 		return m.zoomDetailView(w, midH)
 	case panelMarks:
 		return m.zoomMarksView(w, midH)
-	case panelTasks:
-		return m.zoomTasksView(w, midH)
 	default:
 		return m.normalMiddle(w, midH)
 	}
@@ -126,10 +124,10 @@ func (m AppModel) middleView(w, midH int) string {
 //
 //	| [1] list | [2] |    top    [1] list | [2] preview at 2:1
 //	| [1] list | [2] |
-//	| [3] | [4]      |    bottom [3] Marks | [4] Tasks at 1:1
+//	| [3] [3] [3]    |    bottom [3] Marks | Tasks tabs, full width
 //
-// The vertical seam deliberately differs between the rows (2/3 on top, 1/2 on the
-// bottom) — the list, the main surface, takes the wider top-left.
+// The top row is 2:1 (the info-rich list earns the width); the bottom is one
+// full-width tabbed panel.
 func (m AppModel) normalMiddle(w, midH int) string {
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
@@ -145,14 +143,27 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
 	topRow := joinH(list, preview)
 
-	// Bottom row: Marks | Tasks, 1:1.
-	marksW := w / 2
-	tasksW := w - marksW
-	marksPanel := m.panelBoxHint(m.focus == panelMarks, singleChip("[3] Marks", m.focus == panelMarks), marksHint(), marksW, botH, m.marks.view(marksW-2, botH-2, m.focus == panelMarks))
-	tasks := m.panelBox(m.focus == panelTasks, singleChip("[4] Tasks", m.focus == panelTasks), tasksW, botH, m.tasksView(tasksW-2, botH-2, m.focus == panelTasks))
-	botRow := joinH(marksPanel, tasks)
+	// Bottom row: [3] Marks | Tasks, one full-width tabbed panel.
+	panel3Focus := m.focus == panelMarks
+	body, hint := m.marksBody(w-2, botH-2, panel3Focus)
+	botRow := m.panelBoxHint(panel3Focus, m.marksTitle(), hint, w, botH, body)
 
 	return joinV(topRow, botRow)
+}
+
+// marksTitle renders panel [3]'s Marks | Tasks tab bar (full width, so it always
+// fits — no carousel fallback).
+func (m AppModel) marksTitle() string {
+	return tabBar("[3]", []string{"Marks", "Tasks"}, m.marksTab, m.focus == panelMarks)
+}
+
+// marksBody renders panel [3]'s active tab — the Marks bucket (with the marks
+// workflow hint) or the Tasks land log.
+func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
+	if m.marksTab == 1 {
+		return m.tasksView(w, rows, focused), ""
+	}
+	return m.marks.view(w, rows, focused), marksHint()
 }
 
 // zoomListView (panel [1] zoom): the directory tabs expanded 1:1:1 full-screen.
@@ -183,14 +194,10 @@ func (m AppModel) zoomDetailView(w, midH int) string {
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, w-2, midH-2))
 }
 
-// zoomMarksView (panel [3] zoom): the marks bucket full-screen.
+// zoomMarksView (panel [3] zoom): the Marks | Tasks panel full-screen.
 func (m AppModel) zoomMarksView(w, midH int) string {
-	return m.panelBoxHint(true, singleChip("Marks", true), marksHint(), w, midH, m.marks.view(w-2, midH-2, true))
-}
-
-// zoomTasksView (panel [4] zoom): the land tasks full-screen.
-func (m AppModel) zoomTasksView(w, midH int) string {
-	return m.panelBox(true, singleChip("Tasks", true), w, midH, m.tasksView(w-2, midH-2, true))
+	body, hint := m.marksBody(w-2, midH-2, true)
+	return m.panelBoxHint(true, m.marksTitle(), hint, w, midH, body)
 }
 
 // listTitle renders panel [2]'s tab bar: one Roman-numeral chip per directory tab
@@ -393,7 +400,7 @@ func colorOwner(s string) string {
 
 func (m AppModel) footerBar(w int) string {
 	return padDisp(keyLegend([][2]string{
-		{"space", "menu"}, {"?", "help"}, {"tab/1-4", "panels"}, {"q", "quit"},
+		{"space", "menu"}, {"?", "help"}, {"tab/1-3", "panels"}, {"q", "quit"},
 	}), w)
 }
 
