@@ -35,6 +35,32 @@ func TestListViewTicksCarried(t *testing.T) {
 	}
 }
 
+// TestMarkCellStates: the single mark cell shows one glyph per state (mark /
+// favorite / both), blank when neither, and every state is the same width.
+func TestMarkCellStates(t *testing.T) {
+	cases := []struct {
+		carried, pinned bool
+		want            string
+	}{
+		{false, false, ""},         // blank
+		{true, false, markGlyph},   // marked
+		{false, true, iconPin},     // favorited
+		{true, true, markFavGlyph}, // both → the combined glyph
+	}
+	for _, c := range cases {
+		if got := strings.TrimRight(ansi.Strip(markCell(c.carried, c.pinned, false)), " "); got != c.want {
+			t.Errorf("markCell(carried=%v,pinned=%v) = %q, want %q", c.carried, c.pinned, got, c.want)
+		}
+	}
+	// all four states occupy the same display width, so nothing shifts on toggle.
+	w := dispWidth(markCell(false, false, true))
+	for _, c := range cases[1:] {
+		if got := dispWidth(markCell(c.carried, c.pinned, true)); got != w {
+			t.Errorf("mark cell width for (%v,%v) = %d, want %d", c.carried, c.pinned, got, w)
+		}
+	}
+}
+
 // TestListSizeColumn: a file shows its compact size, a directory is blank (filu
 // never recurses to size a directory), and the size colour tracks magnitude.
 func TestListSizeColumn(t *testing.T) {
