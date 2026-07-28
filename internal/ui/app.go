@@ -68,6 +68,7 @@ type AppModel struct {
 	openWithPath  string            // path the open-with picker acts on (captured when it opens)
 	gotoMenu      spaceMenu         // Goto / new-tab picker: {Same?, Pinned, Search} → pinned drill-down
 	gotoStep      gotoStep          // which step the Goto picker is on
+	searchMenu    spaceMenu         // Search chooser: {filename, content} → opens the finder in that mode
 	gotoNewTab    bool              // Goto picker in new-tab mode (open in a new tab vs move the active one)
 	launchDir     string            // the dir filu was started in (cd-on-quit option 1)
 	zoom          panelID           // 0 = normal; else the panel expanded full-width
@@ -107,7 +108,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
@@ -356,6 +357,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
+		if m.searchMenu.isActive() { // Search chooser: filename vs content, then open the finder
+			if !m.searchMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.searchMenu, key, cmd = m.searchMenu.update(msg)
+			switch key {
+			case "f": // filename → the by-name (fd) finder
+				return m, tea.Batch(m.searchMenu.close(), m.openSearch())
+			case "c": // content → the by-content (rg) finder
+				return m, tea.Batch(m.searchMenu.close(), m.openFind())
+			}
+			return m, cmd
+		}
 		if m.quitMenu.isActive() { // cd-on-quit picker; a commit cds and quits
 			if !m.quitMenu.isInteractive() {
 				return m, nil
@@ -525,10 +541,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.pty.start(buildShellCmd(), "Shell", l.dir, m.width, m.height)
 	case "S": // Sort: pick a column → direction; the column-header row shows the active sort
 		cmd = m.openSortColumnPicker()
-	case "/": // Search: by-name finder over the subtree, reveal the pick here
-		cmd = m.openSearch()
-	case "f": // Find: by-content finder (rg) with preview, reveal the pick here
-		cmd = m.openFind()
+	case "/": // Search: choose filename (fd) or content (rg), then reveal the pick here
+		cmd = m.openSearchMenu()
 	case "go": // Goto: pick a pinned dir, or search under $HOME (chord `go`)
 		cmd = m.openGotoMenu()
 	case "b": // Breadcrumb: jump this tab up to any ancestor directory
@@ -715,8 +729,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				menuItem{label: "Move here", key: "m", hint: "land carried items as move"})
 		}
 		panelOps = append(panelOps,
-			menuItem{label: "Search", key: "/", hint: "find a file by name in this tree"},
-			menuItem{label: "Find", key: "f", hint: "find a file by content (grep) + preview"},
+			menuItem{label: "Search", key: "/", hint: "find a file by name or content in this tree"},
 			menuItem{label: "Goto", key: "go", hint: "jump to a pinned dir, or search under home"},
 			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
 		if len(m.tabs) < maxTabs {
