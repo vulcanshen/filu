@@ -18,7 +18,7 @@ type panelID int
 const (
 	panelList    panelID = iota + 1 // [1] CWD file list (main surface)
 	panelDetail                     // [2] preview (right column, top, 1/3 wide)
-	panelCarries                    // [3] carry bucket (bottom-left)
+	panelCarries                    // [3] Marks bucket (bottom-left)
 	panelTasks                      // [4] land tasks (bottom-right)
 )
 
@@ -502,13 +502,13 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 				m.tab = len(m.tabs) - 1
 			}
 		}
-	case "p": // pick: toggle cursor item into the carries bucket
+	case "m": // mark: toggle cursor item into the marks bucket
 		if it := l.cursorItem(); it.name != "" {
 			m.carry.toggle(filepath.Join(l.dir, it.name))
 		}
-	case "c": // copy: land carried items here as copy (async)
+	case "c": // copy: land marked items here as copy (async)
 		cmd = m.startLand(l.dir, false)
-	case "m": // move: land carried items here as move (async)
+	case "v": // move: land marked items here as move (async)
 		cmd = m.startLand(l.dir, true)
 	case "f": // favorite: toggle the cursor dir into Favorites (reach it via Goto)
 		if it := l.cursorItem(); it.isDir {
@@ -715,7 +715,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			itemOps = append(itemOps,
 				menuItem{label: "Open", key: "o", hint: "open with the OS default app"},
 				menuItem{label: "Open with", key: "O", hint: "pick an app (open_with in config.yaml)"},
-				menuItem{label: "Pick", key: "p", hint: `add to "carries" bucket`},
+				menuItem{label: "Mark", key: "m", hint: "add to the marks bucket"},
 				menuItem{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				menuItem{label: "Rename", key: "r", hint: "rename this item"},
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
@@ -725,8 +725,8 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		if len(m.carry.items) > 0 {
 			panelOps = append(panelOps,
-				menuItem{label: "Copy", key: "c", hint: "land carried items as copy"},
-				menuItem{label: "Move here", key: "m", hint: "land carried items as move"})
+				menuItem{label: "Copy", key: "c", hint: "land marked items as copy"},
+				menuItem{label: "Move here", key: "v", hint: "land marked items as move"})
 		}
 		panelOps = append(panelOps,
 			menuItem{label: "Search", key: "/", hint: "find a file by name or content in this tree"},
@@ -759,9 +759,9 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				{label: "Yank", key: "y", hint: "copy full path to clipboard"},
 				{label: "Delete", key: "D", hint: "remove this item from the bucket"},
 			}
-			return groupedMenu(itemOps, zoom), "Carries"
+			return groupedMenu(itemOps, zoom), "Marks"
 		}
-		return groupedMenu(nil, zoom), "Carries"
+		return groupedMenu(nil, zoom), "Marks"
 	case panelTasks:
 		zoom := []menuItem{{label: "Zoom", key: "z", hint: "expand this panel full-screen"}}
 		if len(m.tasks) > 0 {

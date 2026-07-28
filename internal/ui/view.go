@@ -126,7 +126,7 @@ func (m AppModel) middleView(w, midH int) string {
 //
 //	| [1] list | [2] |    top    [1] list | [2] preview at 2:1
 //	| [1] list | [2] |
-//	| [3] | [4]      |    bottom [3] Carries | [4] Tasks at 1:1
+//	| [3] | [4]      |    bottom [3] Marks | [4] Tasks at 1:1
 //
 // The vertical seam deliberately differs between the rows (2/3 on top, 1/2 on the
 // bottom) — the list, the main surface, takes the wider top-left.
@@ -145,10 +145,10 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
 	topRow := joinH(list, preview)
 
-	// Bottom row: Carries | Tasks, 1:1.
+	// Bottom row: Marks | Tasks, 1:1.
 	carriesW := w / 2
 	tasksW := w - carriesW
-	carries := m.panelBox(m.focus == panelCarries, singleChip("[3] Carries", m.focus == panelCarries), carriesW, botH, m.carry.view(carriesW-2, botH-2, m.focus == panelCarries))
+	carries := m.panelBoxHint(m.focus == panelCarries, singleChip("[3] Marks", m.focus == panelCarries), marksHint(), carriesW, botH, m.carry.view(carriesW-2, botH-2, m.focus == panelCarries))
 	tasks := m.panelBox(m.focus == panelTasks, singleChip("[4] Tasks", m.focus == panelTasks), tasksW, botH, m.tasksView(tasksW-2, botH-2, m.focus == panelTasks))
 	botRow := joinH(carries, tasks)
 
@@ -183,9 +183,9 @@ func (m AppModel) zoomDetailView(w, midH int) string {
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, w-2, midH-2))
 }
 
-// zoomCarriesView (panel [3] zoom): the carry bucket full-screen.
+// zoomCarriesView (panel [3] zoom): the marks bucket full-screen.
 func (m AppModel) zoomCarriesView(w, midH int) string {
-	return m.panelBox(true, singleChip("Carries", true), w, midH, m.carry.view(w-2, midH-2, true))
+	return m.panelBoxHint(true, singleChip("Marks", true), marksHint(), w, midH, m.carry.view(w-2, midH-2, true))
 }
 
 // zoomTasksView (panel [4] zoom): the land tasks full-screen.
@@ -303,6 +303,14 @@ func listNavHint(focused bool) string {
 	return keyLegend([][2]string{
 		{"enter", "into"}, {"esc", "back"}, {"j/k", "move"}, {"d/u", "page"},
 	})
+}
+
+// marksHint is the always-shown key legend on the Marks panel's bottom border: the
+// marks workflow — mark a file, then copy/move the set here. These keys fire on the
+// LIST panel; the legend lives on Marks as a reference so it is visible while you
+// mark from the list.
+func marksHint() string {
+	return keyLegend([][2]string{{"m", "mark"}, {"c", "copy"}, {"v", "move"}})
 }
 
 // eza-style permission accents (catppuccin-mocha), matching eza's long-format

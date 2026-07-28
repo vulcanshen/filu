@@ -9,6 +9,46 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
+// TestMarkMoveRekey: `m` marks the cursor item into the bucket (was `p`); the old
+// `p` no longer marks. The list Space menu binds Mark=m, Copy=c, Move here=v.
+func TestMarkMoveRekey(t *testing.T) {
+	dir := t.TempDir()
+	mustWrite(t, filepath.Join(dir, "f.txt"))
+	target := filepath.Join(dir, "f.txt")
+
+	m := minModel()
+	m.width, m.height = 100, 30
+	m.tabs = []listModel{newList(dir)}
+	m.tab = 0
+	m.cur().cursor = 0
+
+	m.handleListKey("m") // mark
+	if !m.carry.inBucket()[target] {
+		t.Fatal("m should mark the cursor item into the bucket")
+	}
+	m.handleListKey("m") // toggle off
+	if len(m.carry.items) != 0 {
+		t.Errorf("second m should unmark; %d in bucket", len(m.carry.items))
+	}
+	m.handleListKey("p") // old pick key: no longer marks
+	if len(m.carry.items) != 0 {
+		t.Errorf("old p should not mark; %d in bucket", len(m.carry.items))
+	}
+
+	// Space-menu bindings: Mark=m, and (with a marked item) Copy=c, Move here=v.
+	m.carry.items = []string{target}
+	items, _ := m.buildSpaceMenu()
+	byLabel := map[string]string{}
+	for _, it := range items {
+		byLabel[it.label] = it.key
+	}
+	for label, want := range map[string]string{"Mark": "m", "Copy": "c", "Move here": "v"} {
+		if byLabel[label] != want {
+			t.Errorf("menu %q key = %q, want %q", label, byLabel[label], want)
+		}
+	}
+}
+
 func TestCarryPick(t *testing.T) {
 	m := carryModel{items: []string{"/a", "/b", "/c"}}
 	if len(m.landSet()) != 3 {
