@@ -10,11 +10,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// carryModel is panel [4]'s bucket: files picked up with Carry, dropped with
-// Land (which decides copy vs move). Completed lands live in AppModel.tasks.
+// carryModel is panel [3]'s Marks bucket (the type keeps its legacy name): files
+// marked in the list, landed here with Copy/Move. Completed lands live in
+// AppModel.tasks.
 type carryModel struct {
 	items  []string        // full source paths
-	cursor int             // cursor over items (carries tab)
+	cursor int             // cursor over items (Marks panel)
 	picked map[string]bool // land subset; empty = land everything
 }
 

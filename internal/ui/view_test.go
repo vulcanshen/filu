@@ -20,6 +20,16 @@ func TestListNavHintFocusGated(t *testing.T) {
 	}
 }
 
+// TestMarksHint: the Marks panel legend names the marks-workflow keys.
+func TestMarksHint(t *testing.T) {
+	plain := ansi.Strip(marksHint())
+	for _, want := range []string{"m mark", "c copy", "v move"} {
+		if !strings.Contains(plain, want) {
+			t.Errorf("marks hint missing %q, got %q", want, plain)
+		}
+	}
+}
+
 // TestPanelBoxHintBottomBorder: the hint lands in the bottom border, the box
 // still measures exactly its width on every line, and "" keeps the edge clean.
 func TestPanelBoxHintBottomBorder(t *testing.T) {
