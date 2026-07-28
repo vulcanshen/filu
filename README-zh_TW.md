@@ -8,7 +8,7 @@
 
 **語言**: [English](README.md) · 繁體中文
 
-**單一視窗的終端機檔案管理器** — `Tab` / `Space` / `Enter` / `Esc` 驅動一切。不用背快捷鍵、不用設定、零學習成本。carry-bucket 延遲複製/搬移、串流檔案 finder、即時預覽、cd-on-quit 全都內建。
+**終端機檔案管理器** — `Tab` / `Space` / `Enter` / `Esc` 驅動一切。不用背快捷鍵、不用設定、零學習成本。資訊豐富的檔案清單、marks 收集後複製/搬移、串流檔案 finder、即時預覽、cd-on-quit 全都內建。
 
 > _遇事不決,就按_ **`Space`**。
 
@@ -19,8 +19,8 @@ filu 是 `u`-family 的成員,是 [Vulcan's TUI Design Principle](https://github
 ### 上手操作
 ![basics](docs/demo-basics.gif)
 
-### carry-bucket 跨 tab 收集後複製
-![carry](docs/demo-carry.gif)
+### Marks — 跨 tab 收集後複製 / 搬移
+![marks](docs/demo-carry.gif)
 
 ### 串流 finder — 模糊檔名 & ripgrep 內容
 ![finders](docs/demo-finders.gif)
@@ -28,20 +28,20 @@ filu 是 `u`-family 的成員,是 [Vulcan's TUI Design Principle](https://github
 ### 預覽,再 yank 到剪貼簿
 ![preview](docs/demo-preview.gif)
 
-### 每個 tab 各自目錄的 shell
+### 當前 tab 目錄的 shell
 ![shell](docs/demo-shell.gif)
 
 ## 五個鍵驅動 filu
 
 | 鍵 | 行為 |
 |---|---|
-| **`Tab`** | 切換面板 focus(或 `1`–`5` 直達) |
+| **`Tab`** | 切換面板 focus(或 `1`–`3` 直達) |
 | **`Enter`** | 進入目錄 / 確認一個選擇 |
 | **`Space`** | *這裡我能做什麼?* — 在任何面板跳出情境選單 |
 | **`Esc`** | 退出 — 回上層目錄 / 關閉任何浮層 |
 | **`?`** | 全域說明 — 所有 app 層級動作一次列出 |
 
-遇事不決就按 `Space`。進階快捷鍵(`o` open / `O` open-with / `p` pick / `y` yank / `c` copy / `m` move / `r` rename / `a` add / `s` shell / `D` delete / `P` pin / `/` search / `f` find / `go` goto / `b` breadcrumb / `z` zoom / …)是為了加速而存在 — 每一個也都能從 `Space` 選單走到,所以除非你想背,否則什麼都不必記。
+遇事不決就按 `Space`。進階快捷鍵(`o` open / `O` open-with / `m` mark / `c` copy / `v` move / `f` favorite / `y` yank / `r` rename / `a` add / `s` shell / `D` delete / `S` sort / `/` search / `go` goto / `b` breadcrumb / `z` zoom / …)是為了加速而存在 — 每一個也都能從 `Space` 選單走到,所以除非你想背,否則什麼都不必記。
 
 ## 安裝
 
@@ -61,7 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/install.sh | s
 brew install vulcanshen/tap/filu
 ```
 
-formula 宣告了 `ripgrep` + `fd` 依賴,所以 Find 與 finder 列檔開箱即用。
+formula 宣告了 `ripgrep` + `fd` 依賴,所以內容搜尋與 finder 列檔開箱即用。
 
 ### 從 go install
 
@@ -95,7 +95,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh |
 filu
 ```
 
-開在你當前的目錄。`Enter` 進目錄,`Space` 開情境選單,`Esc` 退回,`Tab` 切換面板。
+開在你當前的目錄、focus 在檔案清單。`Enter` 進目錄,`Space` 開情境選單,`Esc` 退回,`Tab` 切換面板。
 
 想讓 filu 在離開時把你的 shell 切到某個目錄(`q` picker),在 `~/.zshrc` / `~/.bashrc` 加一行,並用 **`filu`**(不是 `./filu`)啟動:
 
@@ -103,7 +103,7 @@ filu
 eval "$(filu shell)"
 ```
 
-filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的 `cd_on_quit`,Search / Find / Goto finder 則取法 [LazyVim](https://github.com/LazyVim/LazyVim) 的 search。以 Go 與 [Bubble Tea](https://github.com/charmbracelet/bubbletea) 打造。
+filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的 `cd_on_quit`,finder 則取法 [LazyVim](https://github.com/LazyVim/LazyVim) 的 search。以 Go 與 [Bubble Tea](https://github.com/charmbracelet/bubbletea) 打造。
 
 ---
 
@@ -112,31 +112,31 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 ## 功能
 
 - **零學習成本** — 所有動作都從 `Space` 選單浮現。進階快捷鍵是為了加速而存在,但你可以完全忽略整張 cheat sheet;`Space` 每次都在情境裡帶你走一樣的選單。上手一句話:*「遇事不決,就按 Space。」*
-- **5 面板工作區** — `[1]` Places + Pinned、`[2]` 檔案清單(主戰場)、`[3]` Preview、`[4]` Carries / Tasks、`[5]` 檔案 Metadata。版面 grid:`[1][2][3] / [1][2][3] / [4][4][5]` — 左欄 list 疊 carry,右欄鏡射成 preview 疊 metadata。`Tab` 輪切五個(或 `1`–`5` 直達)。
-- **Powerline 麵包屑 header** — 當前分頁的完整路徑以 powerline 麵包屑橫在最上方,顏色依目錄深度沿 `crust → blue` 漸層(root 是最深的 chip、你所在的當前目錄是 blue)。過長時把前段縮成字首(`~/Documents/x` → `~/D/x`),再不夠中間縮 `…`。分頁羅馬數字 + folder glyph 領頭。
-- **目錄狀態列** — header 下方一列 eza 配色的當前目錄狀態:權限(`r` 黃 / `w` 紅 / `x` 綠)、owner:group、項目數 + 隱藏數、磁碟 free / total。全部在目錄載入時算一次(一個 `stat` + 一個 `statfs`,絕不遞迴掃目錄大小),所以永遠即時。
-- **carry-bucket 複製與搬移** — 延遲的 cp/mv,像 Finder 的 Cmd+C / Cmd+V。`p` 把檔案 pick 進 carry bucket(清單上打綠色 check-circle 標記 — 一種 in-place 多選),接著切到目標目錄,`c` 複製 / `m` 搬移整個 bucket 過去。在 Carries 分頁(`[4]`),`p` 改成 pick 一個要落地的**子集**、而非整個 bucket(用另一個獨立 glyph 標)。複製會保留 bucket(可連續落地到多個目錄);搬移會更新 bucket 內路徑讓它保持有效。
-- **非同步落地 + Tasks 分頁** — 複製/搬移在背景跑;進度串流到 `[4]` 的 Tasks 分頁(running / done / pending / error)。同磁碟搬移是瞬間 `rename`;跨磁碟 / 複製會顯示進度。中斷的任務存進 `state.yaml`,下次啟動可用 `R` 重跑。
-- **原生串流 finder** — filu 自畫的分割 picker(清單 + 預覽),不是 fzf binary。四種模式,全都有右側預覽、全都串流列檔(`fd` 走訪序、首批近乎立即、載入中可濾):
-  - **`/` Search** — 對當前分頁子樹的**檔名**做 fuzzy 比對。
-  - **`f` Find** — 用 `ripgrep` 對**內容**過濾;預覽自動 scroll 到命中行並反白。
-  - **`go` Goto** — 對 `$HOME` 底下的**目錄路徑** fuzzy(只列目錄);`Enter` 把當前分頁傳送過去。
+- **3 面板工作區** — `[1]` 檔案清單(主戰場)、`[2]` Preview、`[3]` 一個 tabbed 的 **Marks | Tasks** 面板。上排 list 與 preview 以 2:1 共用(資訊豐富的 list 值得更寬);tabbed 面板在下方橫跨滿寬。`Tab` 輪切三個(或 `1`–`3` 直達);`h`/`l` 切某面板自己的分頁。
+- **資訊豐富的檔案清單** — 每一列是一組欄位:狀態 glyph、`Modified`、`Owner`(user:group)、`Perms`(eza 配色 `r` 黃 / `w` 紅 / `x` 綠)、`Size`(eza color-scale,越大越暖;目錄顯示 `-`,絕不遞迴加總)、以及 icon + 檔名。欄位標題兼排序指示,面板變窄時欄位漸進收合(owner → size → modified → perms),檔名永遠最後才收。
+- **每目錄各自排序** — `S` 挑欄位(Name / Modified / Owner / Perms / Size)與方向,可疊多層 chain。每個目錄記住自己的排序 —— 幫 `~/Downloads` 設一種它就固定在那,與其他目錄互不影響 —— 存進 `state.yaml`。
+- **Powerline 麵包屑 header** — 當前分頁的完整路徑以 powerline 麵包屑橫在最上方,顏色依目錄深度沿 `crust → blue` 漸層(root 是最深的 chip、你所在的當前目錄是 blue)。過長時把前段縮成字首(`~/Documents/x` → `~/D/x`),再不夠中間縮 `…`。
+- **Marks 複製與搬移** — 延遲的 cp/mv,像 Finder 的 Cmd+C / Cmd+V。`m` 把檔案 mark 進 marks bucket(清單上打 glyph 標記 — 一種 in-place 多選),接著切到目標目錄,`c` 複製 / `v` 搬移整個 bucket 過去。在 Marks 分頁,`p` 改成 pick 一個要落地的**子集**、`m` 則把某項 unmark。複製會保留 bucket(可連續落地到多個目錄);搬移會更新 bucket 內路徑讓它保持有效。
+- **非同步落地 + 可讀 Tasks 分頁** — 複製/搬移在背景跑;進度串流到 `[3]` 的 Tasks 分頁,是帶時間戳的人話 log(`2026-07-28 14:32:07  Copied report.pdf → proj` / `… Move 5 items → proj (2/5 failed)`)。同磁碟搬移是瞬間 `rename`;跨磁碟 / 複製會顯示進度。`D` 從 log 移除一列。中斷的任務存進 `state.yaml`、還原成 pending。
+- **原生串流 finder** — filu 自畫的分割 picker(清單 + 預覽),不是 fzf binary。每種模式都串流列檔(`fd` 走訪序、首批近乎立即、載入中可濾):
+  - **`/` Search** — 開一個 chooser:**filename**(對當前分頁子樹的檔名做 fuzzy)或 **content**(用 `ripgrep` 對內容過濾;預覽自動 scroll 到命中行並反白)。
+  - **`go` Goto** — 選一個 **Favorite** 目錄,或對 `$HOME` 底下的目錄路徑做 fuzzy **Search**;`Enter` 把當前分頁傳送過去。
   - **`b` Breadcrumb** — 當前分頁祖先目錄的 popup;`Enter` 把分頁跳上任一層。
   - 在結果清單裡,`Esc` 離開、`q` 回到輸入列。掃描上限(`finder_cap`)與要跳過的工具目錄(`ignore_dirs`)可在 `config.yaml` 調。
+- **Favorites** — `f` 把游標目錄加最愛(清單上打星標);任何時候透過 **Goto → Favorites** 跳回你的最愛,在那裡按 `f` 取消最愛。瀏覽器書籤語意 —— 一個你會跳回去的存放點。
 - **開啟 / 用 app 開啟** — `o` 用 OS 預設 app 開當前檔案或目錄。`O`(shift-o)改跳 picker:**Default** 加上你在 `config.yaml` 的 `open_with` 列的 app(VSCode、IntelliJ IDEA…),各自跑 `<cmd> <path>` —— 拿來用 IDE 開當前資料夾很方便。在 filu,開檔靠 `o` / `O`(不是 `Enter`);`Enter` 只導覽。
-- **開個 shell** — `s` 在當前 tab 的目錄開你的 `$SHELL`,跑在內嵌終端裡;下幾個指令、`exit` 就回來(目錄會 reload 以防檔案有變)。它是**modal 子 shell** —— 靠 `exit` 離開、不能切走,所以多 tab 各自的簡單操作完全不用離開 filu。
+- **開個 shell** — `s` 先確認目標目錄,再在當前 tab 的目錄開你的 `$SHELL`,跑在內嵌終端裡;下幾個指令、`exit` 就回來(目錄會 reload 以防檔案有變)。它是 **modal 子 shell** —— 靠 `exit` 離開、不能切走。
 - **依型別預覽** — 讀 magic bytes 判定:目錄 → 內層 tree、壓縮包(zip / tar / tar.gz…)→ 內容清單、圖片 → base64 `data:` URI、SVG → 語法高亮的 XML、文字 → 語法高亮 + 行號(Chroma / catppuccin-mocha)、二進位 → hex + ASCII、PDF → 抽出的文字 + 頁數。
-- **檔案 metadata 面板** — `[5]` 顯示游標檔的 `stat` 等級 metadata(Name / Path / Type / Size / Owner / Group / Links / Inode / Perm / Octal / Modified / Accessed / Changed / Created)。
-- **Yank 含 visual 選取** — 在 `[3]` Preview 或 `[5]` Meta 按 `y` 開一個帶 vim 式游標的 viewport;`v` 進字元級 visual 選取,`y` 複製選取內容(沒選取則複製全部),走 OSC 52(可穿 tmux / SSH)。在檔案列或 Carries 項按 `y` 複製它的完整路徑。
+- **Yank 含 visual 選取** — 在 `[2]` Preview 按 `y` 開一個帶 vim 式游標的 viewport;`v` 進字元級 visual 選取,`y` 複製選取內容(沒選取則複製全部),走 OSC 52(可穿 tmux / SSH)。在檔案列或 Marks 項按 `y` 複製它的完整路徑。
 - **刪到系統垃圾桶** — `D`(帶確認對話框)把檔案移到 OS 垃圾桶(macOS Trash / Linux XDG)。還原走你的檔案管理器垃圾桶介面。
-- **動態目錄分頁** — `[2]` 預設開一個分頁;`t` 在當前目錄開新分頁、`T` 走 Goto 選一個目錄開新分頁(合計最多五個)、`w` 關掉 active;到上限會 toast 提示、不再默默沒反應。分頁用羅馬數字(`Ⅰ` … `Ⅴ`)標 — 路徑在 header,分頁列只標位置與哪個 active。
+- **動態目錄分頁** — `[1]` 預設開一個分頁;`t` 走 `{Same, Favorites, Search}` picker 開新分頁(合計最多五個)、`w` 關掉 active;到上限會 toast 提示、不再默默沒反應。分頁用羅馬數字(`Ⅰ` … `Ⅴ`)標 — 路徑在 header,分頁列只標位置與哪個 active。
+- **啟動目錄狀態列** — header 下方一列靠右對齊,顯示 filu 啟動時所在的目錄(以薰衣草色 glyph 標記) —— cd-on-quit picker 會返回的那個固定參照。
 - **eza icon + 配色** — 檔案型別 glyph 取自 eza 完整 icon 表(~760 個);顏色來自烘進 binary 的 `vivid generate catppuccin-mocha` `LS_COLORS` palette,依 eza 的優先序解析(目錄 → symlink → executable → 最長 suffix → 副檔名)。執行時不需要 `LS_COLORS` — 每個安裝都是同一套配色,與你終端的 `eza` / `ls` 一致。
 - **即時刷新** — 清單分頁監看自己的目錄(fsnotify),外部增刪檔案時自動 reload、保留游標;連續事件會 debounce。
-- **session 持久化** — 多開的分頁(dir + cursor)、focus、carry bucket、pinned、tasks、sort 都存進 `state.yaml`;第一個分頁永遠開在啟動目錄。
+- **session 持久化** — 多開的分頁(dir + cursor)、marks bucket、favorites、tasks、每目錄排序都存進 `state.yaml`;第一個分頁永遠開在啟動目錄,而且每次啟動都 focus 在清單。
 - **cd-on-quit** — `q` 開一個 picker,離開時把 shell 留在啟動目錄或任一分頁的目錄(需裝 shell wrapper;見 [cd-on-quit](#cd-on-quit))。
 - **vim 式導覽** — `j`/`k`、`u`/`d` half-page、`gg`/`G`、`h`/`l` 切當前面板的分頁。
-- **Pinned places** — `[1]` 有系統 Places(LaunchDir / Home / Root)加一個 Pinned 區;對目錄按 `P` 釘選,釘選的路徑用和 header 同一套漸進方式縮字。
-- **面板 zoom** — `z` 把 focus 的面板展開佔滿全螢幕;有分頁的面板把分頁攤成等寬並排欄(依實際分頁數)。再按 `z` 還原 grid。
+- **面板 zoom** — `z` 把 focus 的面板展開佔滿全螢幕;再按 `z` 還原 grid。
 - **CJK Nerd Font 寬度** — 啟動時用 CPR 偵測 icon 實際格寬,讓面板框在把 file-type icon 畫成 2 格的 CJK Nerd Font(如 Maple Mono NF CN)下不會破。
 - **unix-first、靜態 binary** — 只支援 macOS + Linux(不出原生 Windows build — `GOOS=windows` 刻意編譯失敗);`CGO_ENABLED=0` 做靜態 binary。
 
@@ -146,25 +146,25 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 
 | 鍵 | 行為 |
 |---|---|
-| **`Tab`** | **面板** — focus 移到下個面板(或 `1`–`5` 直達) |
+| **`Tab`** | **面板** — focus 移到下個面板(或 `1`–`3` 直達) |
 | **`Enter`** | **進入** — 進目錄 / 確認浮層選擇 |
 | **`Space`** | **選單** — 在當前 focus 開情境選單。也關閉任何開著的浮層 |
 | **`Esc`** | **返回** — 回上層目錄 / 關閉任何浮層 |
 | **`?`** | **說明** — 全域(非情境)動作清單 |
 
-只要有情境選單,`Space` 就夠了 — 不必背個別動作鍵。`h`/`l` 切當前面板的分頁(`[2]` 目錄分頁、`[4]` Carries / Tasks)。
+只要有情境選單,`Space` 就夠了 — 不必背個別動作鍵。`h`/`l` 切當前面板的分頁(`[1]` 目錄分頁、`[3]` Marks / Tasks)。
 
 ### 加速鍵 — 游標 + 觸發
 
 ```
- 游標      j k        u d        gg G        h l(切本面板分頁)
- 面板 2    o open     O open-with  p pick    y yank    c copy   m move
-           r rename   a add        s shell   D delete  P pin    . hidden  z zoom
- finder    / search   f find     go goto     b breadcrumb
- 分頁      t 開分頁   T goto 開新分頁  w 關分頁
+ 游標      j k        u d         gg G        h l(切本面板分頁)
+ 清單      o open     O open-with  m mark     c copy    v move    f favorite
+           y yank     r rename     a add      s shell   D delete  S sort   . hidden   z zoom
+ finder    / search   go goto      b breadcrumb
+ 分頁      t 開分頁   w 關分頁
 ```
 
-`gg`(跳頂)是 vim g-prefix chord — 單 `g` 待命等第二鍵;`go`(開 Goto finder)用同一個前綴。`G` 跳底。
+`gg`(跳頂)是 vim g-prefix chord — 單 `g` 待命等第二鍵;`go`(開 Goto picker)用同一個前綴。`G` 跳底。
 
 ### 全域
 
@@ -179,12 +179,10 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 
 | Focus | 選單項目 |
 |---|---|
-| **`[1]` Places** | Jump(`Enter`)、UnPin(`P`,pinned 列) |
-| **`[2]` List** | Open `o`、Open with `O`、Pick `p`、Yank `y`、Rename `r`、Delete `D`、Pin `P` · Copy `c`、Move `m`、Search `/`、Find `f`、Goto `go`、Breadcrumb `b`、Tab `t`、Tab @ goto `T`、Close tab `w`、Add `a`、Shell `s`、Hidden `.`、Zoom `z` |
-| **`[3]` Preview** | Yank `y`、Zoom `z` |
-| **`[4]` Carries** | Pick `p`、Yank `y`、Delete `D` · Tab `l`、Zoom `z` |
-| **`[4]` Tasks** | Redo `R`、Delete `D` · Tab `l`、Zoom `z` |
-| **`[5]` Meta** | Yank `y`、Zoom `z` |
+| **`[1]` List** | Open `o`、Open with `O`、Mark `m`、Yank `y`、Rename `r`、Delete `D`、Favorite `f` · Copy `c`、Move `v`、Search `/`、Goto `go`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Shell `s`、Hidden `.`、Zoom `z` |
+| **`[2]` Preview** | Yank `y`、Zoom `z` |
+| **`[3]` Marks** | Pick `p`、Yank `y`、Unmark `m` · Tasks tab `l`、Zoom `z` |
+| **`[3]` Tasks** | Delete `D` · Marks tab `l`、Zoom `z` |
 
 ## cd-on-quit
 
@@ -244,7 +242,7 @@ open_with:
 ## 系統需求
 
 - **Nerd Font** — filu 用 Nerd Font glyph(型別 icon、powerline chip)當視覺語彙;它是設計的一部分、不是 optional。在把 icon 畫成 2 格的 CJK Nerd Font(如 Maple Mono NF CN)上,filu 啟動時用 CPR 偵測實際格寬並據以排版,框線不會歪。
-- **ripgrep** — `f` Find(內容搜尋)必需。
+- **ripgrep** — `/` Search 的 content 模式必需。
 - **fd** — 給 finder 列檔用;缺了退回純 Go walk。
 - **macOS 或 Linux** — 不出原生 Windows build(`GOOS=windows` 刻意編譯失敗);請走 WSL。
 - **Go 1.26+** — 從原始碼建置需要(`CGO_ENABLED=0` 做靜態 binary)。
