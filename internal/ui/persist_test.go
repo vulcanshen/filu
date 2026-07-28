@@ -28,7 +28,7 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	var m AppModel
 	m.tabs = []listModel{{dir: "/tmp"}, {dir: "/usr", cursor: 2}, {dir: "/etc"}}
 	m.tab = 1
-	m.focus = panelTasks // a non-default focus — must NOT survive the round-trip
+	m.focus = panelMarks // a non-default focus — must NOT survive the round-trip
 	m.marks.items = []string{"/a", "/b"}
 	m.places = placesModel{pinned: []place{{path: "/home/me/proj", icon: iconPin, label: "proj"}}}
 

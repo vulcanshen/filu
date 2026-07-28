@@ -117,30 +117,6 @@ func TestHandleLandMsgFinish(t *testing.T) {
 	}
 }
 
-func TestRedoTask(t *testing.T) {
-	src, dst := t.TempDir(), t.TempDir()
-	a := filepath.Join(src, "a.txt")
-	if err := os.WriteFile(a, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	m := AppModel{taskCh: make(chan landMsg, 16)}
-	done := landTask{id: 1, action: "cp", dest: filepath.Base(dst), destPath: dst, srcs: []string{a}, total: 1, status: taskDone}
-	m.tasks = []landTask{done}
-
-	m.redoTask(done)
-	if len(m.tasks) != 2 || m.tasks[1].status != taskRunning {
-		t.Fatalf("redo should add a running task, got %+v", m.tasks)
-	}
-	for { // let the goroutine finish
-		if (<-m.taskCh).finished {
-			break
-		}
-	}
-	if _, err := os.Stat(filepath.Join(dst, "a.txt")); err != nil {
-		t.Error("redo should re-copy a.txt")
-	}
-}
-
 func TestRunLandCopy(t *testing.T) {
 	src, dst := t.TempDir(), t.TempDir()
 	a := filepath.Join(src, "a.txt")

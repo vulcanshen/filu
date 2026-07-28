@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -42,13 +43,15 @@ type tabState struct {
 // persistedTask is a land task on disk. Status "undone" means it was running
 // when the app exited — on the next launch it restores as taskPending.
 type persistedTask struct {
-	ID     int      `yaml:"id"`
-	Action string   `yaml:"action"`
-	Dest   string   `yaml:"dest"`
-	Path   string   `yaml:"path"`
-	Srcs   []string `yaml:"srcs,omitempty"`
-	Total  int      `yaml:"total"`
-	Status string   `yaml:"status"` // "done" / "undone" / "error"
+	ID     int       `yaml:"id"`
+	Action string    `yaml:"action"`
+	Dest   string    `yaml:"dest"`
+	Path   string    `yaml:"path"`
+	Srcs   []string  `yaml:"srcs,omitempty"`
+	Total  int       `yaml:"total"`
+	Failed int       `yaml:"failed,omitempty"`
+	At     time.Time `yaml:"at,omitempty"`
+	Status string    `yaml:"status"` // "done" / "undone" / "error"
 }
 
 func taskStatusString(s taskStatus) string {
@@ -125,7 +128,7 @@ func (m AppModel) snapshotState() sessionState {
 	for _, t := range m.tasks {
 		st.Tasks = append(st.Tasks, persistedTask{
 			ID: t.id, Action: t.action, Dest: t.dest, Path: t.destPath, Srcs: t.srcs, Total: t.total,
-			Status: taskStatusString(t.status),
+			Failed: t.failed, At: t.at, Status: taskStatusString(t.status),
 		})
 	}
 	paths := make([]string, 0, len(sortByDir))
@@ -184,7 +187,7 @@ func (m *AppModel) applyState(st sessionState) {
 		}
 		m.tasks = append(m.tasks, landTask{
 			id: pt.ID, action: pt.Action, dest: pt.Dest, destPath: pt.Path, srcs: pt.Srcs,
-			total: pt.Total, done: pt.Total, status: status,
+			total: pt.Total, done: pt.Total, failed: pt.Failed, at: pt.At, status: status,
 		})
 		if pt.ID > m.nextTaskID {
 			m.nextTaskID = pt.ID
