@@ -28,7 +28,7 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	var m AppModel
 	m.tabs = []listModel{{dir: "/tmp"}, {dir: "/usr", cursor: 2}, {dir: "/etc"}}
 	m.tab = 1
-	m.focus = panelTasks // the [4] panel — verifies the restore range extends to it
+	m.focus = panelTasks // a non-default focus — must NOT survive the round-trip
 	m.marks.items = []string{"/a", "/b"}
 	m.places = placesModel{pinned: []place{{path: "/home/me/proj", icon: iconPin, label: "proj"}}}
 
@@ -41,12 +41,12 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := AppModel{}                     // like New(): pins restored onto an empty places
+	got := AppModel{focus: panelList}     // like New(): starts focused on the list
 	got.tabs = []listModel{{dir: "/cwd"}} // like New(): one CWD tab, extras restored onto it
 	got.applyState(st)
 
-	if got.focus != panelTasks {
-		t.Errorf("focus not restored: %d", got.focus)
+	if got.focus != panelList {
+		t.Errorf("focus must not be restored — launch always focuses the list, got %d", got.focus)
 	}
 	if got.tab != 0 {
 		t.Errorf("tab [0] should always be active on launch, got tab=%d", got.tab)
