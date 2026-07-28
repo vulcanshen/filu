@@ -3,23 +3,30 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"sort"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 // sessionState is what filu restores on the next launch (IDEA.md: "where you
 // were is where you restart") — the tabs the user created beyond the CWD tab
-// (dirs + cursors), focus, detail tab, carry bucket, pinned places, and the sort
-// chain. Tab [0] always reopens at the CWD and is the active tab on launch, and
-// panel [1] always lands on the CWD — so the first tab's state, the active-tab
-// index, and the places cursor are deliberately NOT persisted.
+// (dirs + cursors), marks bucket, pinned dirs, and the per-directory sort chains.
+// Tab [0] always reopens at the CWD and is the active tab on launch; the first
+// tab's state, the active-tab index, and the focused panel are deliberately NOT
+// persisted (launch always focuses the list).
 type sessionState struct {
-	Tabs   []tabState      `yaml:"tabs"` // the tabs created beyond the CWD tab [0]
-	Focus  int             `yaml:"focus"`
-	Carry  []string        `yaml:"carry,omitempty"`
+	Tabs   []tabState      `yaml:"tabs"`            // the tabs created beyond the CWD tab [0]
+	Marks  []string        `yaml:"carry,omitempty"` // yaml tag kept as "carry" so old state.yaml still loads
 	Pinned []string        `yaml:"pinned,omitempty"`
 	Tasks  []persistedTask `yaml:"tasks,omitempty"`
-	Sort   []sortRuleYAML  `yaml:"sort,omitempty"`
+	Sorts  []dirSortYAML   `yaml:"sorts,omitempty"` // per-directory sort chains
+}
+
+// dirSortYAML is one directory's persisted sort chain, keyed by its exact path.
+type dirSortYAML struct {
+	Path  string         `yaml:"path"`
+	Rules []sortRuleYAML `yaml:"rules"`
 }
 
 // sortRuleYAML is one persisted sort tier.
@@ -36,13 +43,15 @@ type tabState struct {
 // persistedTask is a land task on disk. Status "undone" means it was running
 // when the app exited — on the next launch it restores as taskPending.
 type persistedTask struct {
-	ID     int      `yaml:"id"`
-	Action string   `yaml:"action"`
-	Dest   string   `yaml:"dest"`
-	Path   string   `yaml:"path"`
-	Srcs   []string `yaml:"srcs,omitempty"`
-	Total  int      `yaml:"total"`
-	Status string   `yaml:"status"` // "done" / "undone" / "error"
+	ID     int       `yaml:"id"`
+	Action string    `yaml:"action"`
+	Dest   string    `yaml:"dest"`
+	Path   string    `yaml:"path"`
+	Srcs   []string  `yaml:"srcs,omitempty"`
+	Total  int       `yaml:"total"`
+	Failed int       `yaml:"failed,omitempty"`
+	At     time.Time `yaml:"at,omitempty"`
+	Status string    `yaml:"status"` // "done" / "undone" / "error"
 }
 
 func taskStatusString(s taskStatus) string {
@@ -108,8 +117,7 @@ func saveState(st sessionState) {
 // snapshotState captures the current model for persistence.
 func (m AppModel) snapshotState() sessionState {
 	st := sessionState{
-		Focus: int(m.focus),
-		Carry: m.carry.items,
+		Marks: m.marks.items,
 	}
 	for i := 1; i < len(m.tabs); i++ { // tab [0] always reopens at CWD — skip it
 		st.Tabs = append(st.Tabs, tabState{Dir: m.tabs[i].dir, Cursor: m.tabs[i].cursor})
@@ -120,20 +128,40 @@ func (m AppModel) snapshotState() sessionState {
 	for _, t := range m.tasks {
 		st.Tasks = append(st.Tasks, persistedTask{
 			ID: t.id, Action: t.action, Dest: t.dest, Path: t.destPath, Srcs: t.srcs, Total: t.total,
-			Status: taskStatusString(t.status),
+			Failed: t.failed, At: t.at, Status: taskStatusString(t.status),
 		})
 	}
-	for _, r := range sortChain {
-		st.Sort = append(st.Sort, sortRuleYAML{Col: int(r.col), Asc: r.asc})
+	paths := make([]string, 0, len(sortByDir))
+	for p := range sortByDir {
+		paths = append(paths, p)
+	}
+	sort.Strings(paths) // deterministic output → stable state.yaml diffs
+	for _, p := range paths {
+		ds := dirSortYAML{Path: p}
+		for _, r := range sortByDir[p] {
+			ds.Rules = append(ds.Rules, sortRuleYAML{Col: int(r.col), Asc: r.asc})
+		}
+		st.Sorts = append(st.Sorts, ds)
 	}
 	return st
 }
 
 // applyState restores a saved session onto a freshly-built model.
 func (m *AppModel) applyState(st sessionState) {
-	sortChain = nil // restore the sort before tabs reload so they sort correctly
-	for _, r := range st.Sort {
-		sortChain = append(sortChain, sortRule{col: sortCol(r.Col), asc: r.Asc})
+	// restore the per-directory sorts before any tab reloads, so they sort right.
+	sortByDir = map[string][]sortRule{}
+	for _, ds := range st.Sorts {
+		var rules []sortRule
+		for _, r := range ds.Rules {
+			rules = append(rules, sortRule{col: sortCol(r.Col), asc: r.Asc})
+		}
+		if len(rules) > 0 {
+			sortByDir[cleanDir(ds.Path)] = rules
+		}
+	}
+	// tab [0] (the CWD) was built in New() before the sorts loaded — re-sort it now.
+	if len(m.tabs) > 0 {
+		m.tabs[0].reloadPreserving()
 	}
 	for _, ts := range st.Tabs { // restore the tabs the user created beyond the CWD tab
 		if ts.Dir == "" || len(m.tabs) >= maxTabs {
@@ -144,16 +172,12 @@ func (m *AppModel) applyState(st sessionState) {
 		nl.clampCursor()
 		m.tabs = append(m.tabs, nl)
 	}
-	if st.Focus >= int(panelPin) && st.Focus <= int(panelMeta) {
-		m.focus = panelID(st.Focus)
-	}
-	m.carry.items = st.Carry
+	// focus is not restored — launch always focuses the list (set in New()).
+	m.marks.items = st.Marks
 	for _, p := range st.Pinned {
 		m.places.pinned = append(m.places.pinned, place{label: filepath.Base(p), path: p, icon: iconPin})
 	}
-	m.places.cursor = len(m.places.pinned) // panel [1] always lands on the CWD (first system place)
-	m.places.move(0)                       // clamp to the restored place count
-	for _, pt := range st.Tasks {          // "undone" tasks were interrupted → pending
+	for _, pt := range st.Tasks { // "undone" tasks were interrupted → pending
 		status := taskPending
 		switch pt.Status {
 		case "done":
@@ -163,7 +187,7 @@ func (m *AppModel) applyState(st sessionState) {
 		}
 		m.tasks = append(m.tasks, landTask{
 			id: pt.ID, action: pt.Action, dest: pt.Dest, destPath: pt.Path, srcs: pt.Srcs,
-			total: pt.Total, done: pt.Total, status: status,
+			total: pt.Total, done: pt.Total, failed: pt.Failed, at: pt.At, status: status,
 		})
 		if pt.ID > m.nextTaskID {
 			m.nextTaskID = pt.ID

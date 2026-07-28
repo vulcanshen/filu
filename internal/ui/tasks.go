@@ -29,9 +29,11 @@ type landTask struct {
 	action   string   // "cp" / "mv"
 	dest     string   // destination basename (display)
 	destPath string   // destination dir (reload matching tabs on finish)
-	srcs     []string // source paths (for Redo)
+	srcs     []string // source paths
 	total    int
 	done     int
+	failed   int       // failures on finish (for the error line)
+	at       time.Time // when the task was created (shown as the log timestamp)
 	status   taskStatus
 }
 
@@ -99,15 +101,9 @@ func (m AppModel) anyRunning() bool {
 	return false
 }
 
-// startLand kicks off a land of the carry bucket's subset.
+// startLand kicks off a land of the marks bucket's subset.
 func (m *AppModel) startLand(destDir string, move bool) tea.Cmd {
-	return m.startLandItems(m.carry.landItems(), destDir, move)
-}
-
-// redoTask re-runs a task's copy/move (Redo). Sources gone (e.g. an old move)
-// simply error again.
-func (m *AppModel) redoTask(t landTask) tea.Cmd {
-	return m.startLandItems(t.srcs, t.destPath, t.action == "mv")
+	return m.startLandItems(m.marks.landItems(), destDir, move)
 }
 
 // startLandItems adds a running task (persisted immediately as "undone" so an
@@ -124,7 +120,7 @@ func (m *AppModel) startLandItems(items []string, destDir string, move bool) tea
 	m.tasks = append(m.tasks, landTask{
 		id: m.nextTaskID, action: action,
 		dest: filepath.Base(destDir), destPath: destDir, srcs: items,
-		total: len(items), status: taskRunning,
+		total: len(items), at: time.Now(), status: taskRunning,
 	})
 	m.capTasks()
 	go runLand(m.nextTaskID, items, destDir, move, m.taskCh)
@@ -161,6 +157,7 @@ func (m *AppModel) handleLandMsg(msg landMsg) {
 		if !msg.finished {
 			return
 		}
+		m.tasks[i].failed = msg.failed
 		if msg.failed > 0 {
 			m.tasks[i].status = taskError
 		} else {
@@ -168,7 +165,7 @@ func (m *AppModel) handleLandMsg(msg landMsg) {
 		}
 		destPath := m.tasks[i].destPath
 		for _, src := range msg.moved {
-			m.carry.removeItem(src)
+			m.marks.removeItem(src)
 		}
 		for j := range m.tabs { // surface the landed files
 			if m.tabs[j].dir == destPath {
@@ -212,27 +209,46 @@ func (m AppModel) tasksView(w, rows int, focused bool) string {
 	return b.String()
 }
 
+// taskTime formats a task's timestamp for the log as YYYY-MM-DD HH:MM:SS (19
+// wide, so the icon column stays aligned). Zero = blank.
+func taskTime(at time.Time) string {
+	if at.IsZero() {
+		return strings.Repeat(" ", 19)
+	}
+	return at.Format("2006-01-02 15:04:05")
+}
+
+// taskLine renders one Tasks-tab row in plain language: a timestamp, an icon, the
+// action, what it acted on (a filename, or "N items"), and the destination — no
+// internal id.
 func (m AppModel) taskLine(t landTask) string {
 	green := lipgloss.NewStyle().Foreground(lipgloss.Color("#a6e3a1"))
 	peach := lipgloss.NewStyle().Foreground(lipgloss.Color("#fab387"))
 	red := lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8"))
 	blue := lipgloss.NewStyle().Foreground(focusColor)
-	head := fmt.Sprintf("%s #%d", t.action, t.id)
+	dim := lipgloss.NewStyle().Foreground(dimColor)
+
+	subject := fmt.Sprintf("%d items", t.total)
+	if len(t.srcs) == 1 {
+		subject = safeName(filepath.Base(t.srcs[0]))
+	}
+	verb, verbing, verbed := "Copy", "Copying", "Copied"
+	if t.action == "mv" {
+		verb, verbing, verbed = "Move", "Moving", "Moved"
+	}
+	to := " → " + t.dest
+	stamp := " " + dim.Render(taskTime(t.at)) + " " // leading timestamp column
 
 	switch t.status {
 	case taskRunning:
-		pct := 0
-		if t.total > 0 {
-			pct = t.done * 100 / t.total
-		}
 		spin := spinnerFrames[m.spinnerFrame%len(spinnerFrames)]
-		return " " + blue.Render(spin) + " " + fmt.Sprintf("%s  %d/%d  %d%%", head, t.done, t.total, pct)
+		return stamp + blue.Render(spin) + " " + verbing + " " + subject + to + "  " + dim.Render(fmt.Sprintf("%d/%d", t.done, t.total))
 	case taskDone:
-		return " " + green.Render(string(rune(0xf00c))) + " " + fmt.Sprintf("%s → %s (%d)", head, t.dest, t.total)
+		return stamp + green.Render(string(rune(0xf00c))) + " " + verbed + " " + subject + to // tick
 	case taskPending:
-		return " " + peach.Render(string(rune(0xf017))) + " " + head + "  interrupted" // clock
+		return stamp + peach.Render(string(rune(0xf017))) + " " + verb + " " + subject + to + "  " + dim.Render("· interrupted") // clock
 	case taskError:
-		return " " + red.Render(string(rune(0xf00d))) + " " + head + "  failed" // cross
+		return stamp + red.Render(string(rune(0xf00d))) + " " + verb + " " + subject + to + "  " + red.Render(fmt.Sprintf("· %d/%d failed", t.failed, t.total)) // cross
 	}
-	return " " + head
+	return stamp + verb + " " + subject + to
 }

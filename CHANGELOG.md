@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+### Changed
+- **Redesigned to a 3-panel layout** — the file list `[1]`, Preview `[2]`, and a
+  tabbed **Marks | Tasks** panel `[3]`. The list and preview share the top row at
+  2:1; the tabbed panel spans the full width below. Focus is `Tab` / `1`–`3`. The
+  old Places sidebar and the standalone metadata panel are gone.
+- **The file list is now multi-column** — a status glyph, Modified, Owner
+  (user:group), Perms, Size, then the name. The header row doubles as the sort
+  indicator, and columns drop gracefully as the panel narrows.
+- **Marks replace the carry bucket** — `m` marks a file (was `p`), `c` copies and
+  `v` moves the bucket to the current directory (move was `m`). In the Marks tab,
+  `m` unmarks an item.
+- **Favorites replace pins** — `f` favorites a directory (was `P`); reach them
+  through Goto → Favorites, where `f` unfavorites.
+- **`/` Search opens a filename / content chooser** — filename is the old fuzzy
+  search, content is ripgrep (the standalone `f` Find is folded in here).
+- **Sort is per-directory** — `S` builds a sort for the current directory only, and
+  each directory remembers its own; persisted across sessions.
+- **The Tasks log is readable and timestamped** — `2026-07-28 14:32:07  Copied
+  report.pdf → proj` instead of `cp #3 → x`, with the failure count surfaced.
+- **`[s]hell` confirms the target directory** before dropping into `$SHELL`.
+- The status bar now shows the launch directory (right-aligned); a new tab (`t`)
+  opens a `{Same, Favorites, Search}` picker; the focused panel is no longer
+  restored on launch — filu always opens on the list.
+
+### Added
+- A Size column (eza colour-scale by magnitude; directories show `-`) and an Owner
+  column, both sortable.
+- A key-hint legend along the focused list panel's bottom border.
+
+### Removed
+- The Places sidebar and system Places (Home / LaunchDir / Root), the metadata
+  panel, and task Redo.
+
 ## [0.1.1] — 2026-07-27
 
 ### Added

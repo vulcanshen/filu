@@ -10,15 +10,16 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// carryModel is panel [4]'s bucket: files picked up with Carry, dropped with
-// Land (which decides copy vs move). Completed lands live in AppModel.tasks.
-type carryModel struct {
+// marksModel is panel [3]'s Marks bucket (the type keeps its legacy name): files
+// marked in the list, landed here with Copy/Move. Completed lands live in
+// AppModel.tasks.
+type marksModel struct {
 	items  []string        // full source paths
-	cursor int             // cursor over items (carries tab)
+	cursor int             // cursor over items (Marks panel)
 	picked map[string]bool // land subset; empty = land everything
 }
 
-func (m *carryModel) toggle(path string) {
+func (m *marksModel) toggle(path string) {
 	for i, p := range m.items {
 		if p == path {
 			delete(m.picked, p)
@@ -30,7 +31,7 @@ func (m *carryModel) toggle(path string) {
 	m.items = append(m.items, path)
 }
 
-func (m *carryModel) clampCursor() {
+func (m *marksModel) clampCursor() {
 	if m.cursor > len(m.items)-1 {
 		m.cursor = len(m.items) - 1
 	}
@@ -39,13 +40,13 @@ func (m *carryModel) clampCursor() {
 	}
 }
 
-func (m *carryModel) moveCursor(delta int) {
+func (m *marksModel) moveCursor(delta int) {
 	m.cursor += delta
 	m.clampCursor()
 }
 
 // togglePick flips the cursor item in/out of the land subset.
-func (m *carryModel) togglePick() {
+func (m *marksModel) togglePick() {
 	if m.cursor < 0 || m.cursor >= len(m.items) {
 		return
 	}
@@ -60,10 +61,10 @@ func (m *carryModel) togglePick() {
 	m.picked[p] = true
 }
 
-// inBucket is the set of paths currently in the bucket. Panel [2] marks these
-// with a tick, so a Pick shows up the same way it does in the Carries tab —
+// inBucket is the set of paths currently in the bucket. The list marks these
+// with a tick, so a Mark shows up the same way it does in the Marks panel —
 // which doubles as multi-select.
-func (m carryModel) inBucket() map[string]bool {
+func (m marksModel) inBucket() map[string]bool {
 	s := make(map[string]bool, len(m.items))
 	for _, p := range m.items {
 		s[p] = true
@@ -73,7 +74,7 @@ func (m carryModel) inBucket() map[string]bool {
 
 // landSet is the set of paths a Land acts on: the picked subset, or everything
 // when nothing is picked.
-func (m carryModel) landSet() map[string]bool {
+func (m marksModel) landSet() map[string]bool {
 	if len(m.picked) > 0 {
 		return m.picked
 	}
@@ -85,7 +86,7 @@ func (m carryModel) landSet() map[string]bool {
 }
 
 // landItems is landSet in item order — the paths a Land goroutine processes.
-func (m carryModel) landItems() []string {
+func (m marksModel) landItems() []string {
 	set := m.landSet()
 	var out []string
 	for _, p := range m.items {
@@ -97,7 +98,7 @@ func (m carryModel) landItems() []string {
 }
 
 // removeItem drops path from the bucket (used when a move lands it elsewhere).
-func (m *carryModel) removeItem(path string) {
+func (m *marksModel) removeItem(path string) {
 	for i, p := range m.items {
 		if p == path {
 			delete(m.picked, p)
@@ -118,16 +119,17 @@ func centeredNote(w, rows int, text string) string {
 	return lipgloss.Place(w, rows, lipgloss.Center, lipgloss.Center, msg)
 }
 
-// pickGlyph marks a panel [2] file that sits in the carries bucket. carryPickGlyph
-// marks a panel [4] Carries item that is picked into the land subset — a distinct
-// glyph from the bucket mark so the two "picked" states never read as the same
-// thing (§B: one element, one semantic).
+// markGlyph marks a list file that sits in the marks bucket. markPickGlyph marks
+// a Marks-panel item that is picked into the land subset — a distinct glyph from
+// the bucket mark so the two "picked" states never read as the same thing
+// (§B: one element, one semantic).
 var (
-	pickGlyph      = string(rune(0xf0bf3)) // nf-md-checkbox_marked_circle — "in bucket" (panel [2])
-	carryPickGlyph = string(rune(0xf05d))  // nf-fa-check_circle — "in land subset" (panel [4])
+	markGlyph     = string(rune(0xf0b14)) // marked (list mark column, nf-md U+F0B14)
+	markFavGlyph  = string(rune(0xf0a74)) // marked AND favorited — the combined single-cell glyph
+	markPickGlyph = string(rune(0xf05d))  // nf-fa-check_circle — "in land subset" (Marks panel)
 )
 
-func (m carryModel) view(w, rows int, focused bool) string {
+func (m marksModel) view(w, rows int, focused bool) string {
 	if len(m.items) == 0 {
 		return centeredNote(w, rows, "(empty)")
 	}
@@ -146,7 +148,7 @@ func (m carryModel) view(w, rows int, focused bool) string {
 		picked := m.picked[p]
 		markW := 1
 		if picked {
-			markW = dispWidth(carryPickGlyph)
+			markW = dispWidth(markPickGlyph)
 		}
 		// Fixed prefix cells: " <mark> <icon> " — reserve them, then fit the full
 		// path (home-folded) into the rest, trimmed from the left so the filename
@@ -156,13 +158,13 @@ func (m carryModel) view(w, rows int, focused bool) string {
 		if focused && i == m.cursor {
 			mark := " "
 			if picked {
-				mark = carryPickGlyph
+				mark = markPickGlyph
 			}
 			b.WriteString(cur.Render(padDisp(" "+mark+" "+iconFile+" "+path, w)))
 		} else {
 			mark := " "
 			if picked {
-				mark = check.Render(carryPickGlyph)
+				mark = check.Render(markPickGlyph)
 			}
 			b.WriteString(truncate(" "+mark+" "+us.Render(iconFile+" "+path), w))
 		}

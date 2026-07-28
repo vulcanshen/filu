@@ -28,9 +28,9 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 	var m AppModel
 	m.tabs = []listModel{{dir: "/tmp"}, {dir: "/usr", cursor: 2}, {dir: "/etc"}}
 	m.tab = 1
-	m.focus = panelMeta // the new [5] panel — verifies the restore range extends to it
-	m.carry.items = []string{"/a", "/b"}
-	m.places = placesModel{pinned: []place{{path: "/home/me/proj", icon: iconPin, label: "proj"}}, cursor: 2}
+	m.focus = panelMarks // a non-default focus — must NOT survive the round-trip
+	m.marks.items = []string{"/a", "/b"}
+	m.places = placesModel{pinned: []place{{path: "/home/me/proj", icon: iconPin, label: "proj"}}}
 
 	data, err := yaml.Marshal(m.snapshotState())
 	if err != nil {
@@ -41,24 +41,24 @@ func TestSnapshotApplyRoundtrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := AppModel{places: newPlaces()}  // like New(): system places already present
+	got := AppModel{focus: panelList}     // like New(): starts focused on the list
 	got.tabs = []listModel{{dir: "/cwd"}} // like New(): one CWD tab, extras restored onto it
 	got.applyState(st)
 
-	if got.focus != panelMeta {
-		t.Errorf("focus not restored: %d", got.focus)
+	if got.focus != panelList {
+		t.Errorf("focus must not be restored — launch always focuses the list, got %d", got.focus)
 	}
 	if got.tab != 0 {
 		t.Errorf("tab [0] should always be active on launch, got tab=%d", got.tab)
 	}
-	if len(got.carry.items) != 2 {
-		t.Errorf("carry not restored: %v", got.carry.items)
+	if len(got.marks.items) != 2 {
+		t.Errorf("carry not restored: %v", got.marks.items)
 	}
 	if got.tabs[1].dir != "/usr" || got.tabs[1].cursor != 2 {
 		t.Errorf("tab[1] not restored: dir=%q cursor=%d", got.tabs[1].dir, got.tabs[1].cursor)
 	}
-	if p, ok := got.places.current(); !ok || p.label != "LaunchDir" {
-		t.Errorf("panel [1] should land on LaunchDir, got %+v ok=%v", p, ok)
+	if len(got.places.pinned) != 1 || got.places.pinned[0].path != "/home/me/proj" {
+		t.Errorf("pinned dir not restored: %+v", got.places.pinned)
 	}
 }
 

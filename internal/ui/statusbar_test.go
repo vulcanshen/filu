@@ -29,24 +29,19 @@ func TestReadEntriesHiddenCount(t *testing.T) {
 }
 
 func TestStatusBarRender(t *testing.T) {
-	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "a.go"))
-	mustWrite(t, filepath.Join(dir, ".hidden"))
-
 	m := minModel()
 	m.width, m.height = 100, 30
-	m.tabs = []listModel{newList(dir)}
-	m.tab = 0
+	m.launchDir = "/opt/filu-launch"
 
 	bar := m.statusBar(m.width)
 	if got := dispWidth(bar); got != m.width {
 		t.Errorf("statusBar width = %d, want %d", got, m.width)
 	}
-	plain := ansi.Strip(bar)
-	// The dir stat (perm) plus the live item / hidden counts must all show.
-	for _, want := range []string{"drwx", "1 items", "1 hidden", "free"} {
-		if !strings.Contains(plain, want) {
-			t.Errorf("statusBar missing %q:\n%s", want, plain)
-		}
+	// The bar shows the launch dir, marked with the launch glyph.
+	if plain := ansi.Strip(bar); !strings.Contains(plain, "filu-launch") {
+		t.Errorf("statusBar should show the launch dir, got %q", plain)
+	}
+	if !strings.Contains(bar, iconCWD) {
+		t.Error("statusBar should show the launch glyph")
 	}
 }

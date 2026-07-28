@@ -2,17 +2,14 @@ package ui
 
 import (
 	"fmt"
-	"os"
 	"os/user"
-	"path/filepath"
 	"strconv"
 	"time"
-
-	"github.com/charmbracelet/lipgloss"
 )
 
-// osMeta holds the unix stat fields the Meta tab shows; osStat fills it per OS
-// (osstat_{darwin,linux}.go).
+// osMeta holds the unix stat fields osStat fills per OS (osstat_{darwin,linux}.go).
+// The owner (uid/gid) feeds the list's owner column; the rest are kept for the
+// platform stat contract.
 type osMeta struct {
 	uid, gid uint32
 	nlink    uint64
@@ -20,76 +17,6 @@ type osMeta struct {
 	atime    time.Time
 	ctime    time.Time
 	btime    time.Time // zero when unavailable (Linux)
-}
-
-// metaLines is panel [3]'s Meta tab: rich metadata for the cursor item.
-func metaLines(it fileItem, parent string) []string {
-	if it.name == "" {
-		return []string{"(no selection)"}
-	}
-	full := filepath.Join(parent, it.name)
-	fi, err := os.Lstat(full)
-	if err != nil {
-		return []string{"(unreadable)"}
-	}
-
-	kind := "file"
-	switch {
-	case fi.IsDir():
-		kind = "dir"
-	case fi.Mode()&os.ModeSymlink != 0:
-		kind = "symlink"
-		if tgt, e := os.Readlink(full); e == nil {
-			kind = "symlink → " + tgt
-		}
-	}
-
-	var rows []string
-	key := lipgloss.NewStyle().Foreground(focusColor) // blue
-	add := func(name, value string) {
-		if value == "" {
-			return
-		}
-		rows = append(rows, key.Render(fmt.Sprintf("%-9s", name))+value)
-	}
-
-	add("Name", safeName(it.name))
-	add("Path", safeName(shortPath(parent)))
-	add("Type", kind)
-	if fi.IsDir() {
-		if entries, e := os.ReadDir(full); e == nil {
-			add("Items", strconv.Itoa(len(entries)))
-		}
-	} else {
-		add("Size", fmt.Sprintf("%s (%d bytes)", humanSize(fi.Size()), fi.Size()))
-	}
-
-	meta, hasMeta := osStat(fi)
-	if hasMeta {
-		add("Owner", userName(meta.uid))
-		add("Group", groupName(meta.gid))
-		add("Links", strconv.FormatUint(meta.nlink, 10))
-		add("Inode", strconv.FormatUint(meta.inode, 10))
-	}
-
-	add("Perm", fi.Mode().String())
-	add("Octal", fmt.Sprintf("%#o", fi.Mode().Perm()))
-
-	const tf = "2006-01-02 15:04:05"
-	add("Modified", fi.ModTime().Format(tf))
-	if hasMeta {
-		add("Accessed", timeOrEmpty(meta.atime, tf))
-		add("Changed", timeOrEmpty(meta.ctime, tf))
-		add("Created", timeOrEmpty(meta.btime, tf))
-	}
-	return rows
-}
-
-func timeOrEmpty(t time.Time, layout string) string {
-	if t.IsZero() || t.Unix() <= 0 {
-		return ""
-	}
-	return t.Format(layout)
 }
 
 // userName / groupName resolve an id to a name, falling back to the number when
@@ -120,4 +47,25 @@ func humanSize(n int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
+}
+
+// compactSize formats a byte count for the list's Size column, eza-compact: a
+// bare number under 1 KiB, else one fraction digit + a single-letter unit (no
+// space) — 512, 4.0K, 18K, 1.2M — so the column stays narrow.
+func compactSize(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return strconv.FormatInt(n, 10)
+	}
+	div, exp := int64(unit), 0
+	for m := n / unit; m >= unit; m /= unit {
+		div *= unit
+		exp++
+	}
+	v := float64(n) / float64(div)
+	u := "KMGTPE"[exp]
+	if v >= 10 {
+		return fmt.Sprintf("%.0f%c", v, u)
+	}
+	return fmt.Sprintf("%.1f%c", v, u)
 }
