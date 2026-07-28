@@ -358,6 +358,25 @@ func colorPerm(perm string) string {
 	return b.String()
 }
 
+// colorSize paints a file's size eza color-scale style — warmer as it grows:
+// green under 1 MiB, yellow under 1 GiB, peach under 1 TiB, red beyond. A
+// directory has no size (filu never recurses to compute one), so it is blank.
+func colorSize(it fileItem) string {
+	if it.isDir {
+		return ""
+	}
+	c := lipgloss.Color(ezaGreen)
+	switch {
+	case it.size >= 1<<40:
+		c = lipgloss.Color(ezaRed)
+	case it.size >= 1<<30:
+		c = lipgloss.Color("#fab387") // catppuccin peach
+	case it.size >= 1<<20:
+		c = lipgloss.Color(ezaYellow)
+	}
+	return lipgloss.NewStyle().Foreground(c).Render(compactSize(it.size))
+}
+
 // colorOwner paints "owner:group": owner in eza's user yellow, the group in
 // subtext, the ':' dim. Parked with loadDirStat for the status bar's future
 // content (see statusBar) — unused while the bar is blank.

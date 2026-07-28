@@ -48,3 +48,24 @@ func humanSize(n int64) string {
 	}
 	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
 }
+
+// compactSize formats a byte count for the list's Size column, eza-compact: a
+// bare number under 1 KiB, else one fraction digit + a single-letter unit (no
+// space) — 512, 4.0K, 18K, 1.2M — so the column stays narrow.
+func compactSize(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return strconv.FormatInt(n, 10)
+	}
+	div, exp := int64(unit), 0
+	for m := n / unit; m >= unit; m /= unit {
+		div *= unit
+		exp++
+	}
+	v := float64(n) / float64(div)
+	u := "KMGTPE"[exp]
+	if v >= 10 {
+		return fmt.Sprintf("%.0f%c", v, u)
+	}
+	return fmt.Sprintf("%.1f%c", v, u)
+}

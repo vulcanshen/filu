@@ -742,7 +742,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		}
 		panelOps = append(panelOps,
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
-			menuItem{label: "Sort", key: "S", hint: "order by a column (name / modified / perms)"},
+			menuItem{label: "Sort", key: "S", hint: "order by a column (name / modified / perms / owner / size)"},
 			menuItem{label: "Shell", key: "s", hint: "drop into $SHELL here (exit to return)"},
 			menuItem{label: "Hidden", key: ".", hint: "toggle hidden files"},
 			menuItem{label: "Zoom", key: "z", hint: "expand tabs to full-screen panels"})

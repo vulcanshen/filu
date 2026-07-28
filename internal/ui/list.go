@@ -209,6 +209,7 @@ const (
 	colMtimeW  = 16 // "2006-01-02 15:04"
 	colPermW   = 11 // a padded mode string, and room for the "Perms" header + arrow
 	colOwnerW  = 16 // "user:group", truncated when longer
+	colSizeW   = 7  // compact size (e.g. 1023K), and room for the "Size" header + arrow
 	colNameMin = 12 // keep at least this much name before dropping a column
 )
 
@@ -217,32 +218,43 @@ const (
 func markCellW() int { return dispWidth(markGlyph) + dispWidth(iconPin) }
 
 // listCols is which optional columns fit at a given inner width. They drop in the
-// order owner → perms → mtime → mark as the panel narrows; the name always stays.
+// order owner → size → mtime → perms → mark as the panel narrows; the name always
+// stays. Display order is mark | mtime | owner | perms | size | name.
 type listCols struct {
-	mark, mtime, perm, owner bool
-	nameW                    int
+	mark, mtime, perm, owner, size bool
+	nameW                          int
 }
 
 func computeListCols(w int) listCols {
-	mk := markCellW()
-	// width before the name for each level of columns shown (each column has a
-	// trailing space).
-	all := mk + 1 + colMtimeW + 1 + colPermW + 1 + colOwnerW + 1
-	noOwner := mk + 1 + colMtimeW + 1 + colPermW + 1
-	noPerm := mk + 1 + colMtimeW + 1
-	noMtime := mk + 1
+	// each column's cell cost includes its trailing space.
+	mk := markCellW() + 1
+	mt := colMtimeW + 1
+	ow := colOwnerW + 1
+	pm := colPermW + 1
+	sz := colSizeW + 1
 	switch {
-	case w >= all+colNameMin:
-		return listCols{mark: true, mtime: true, perm: true, owner: true, nameW: w - all}
-	case w >= noOwner+colNameMin:
-		return listCols{mark: true, mtime: true, perm: true, nameW: w - noOwner}
-	case w >= noPerm+colNameMin:
-		return listCols{mark: true, mtime: true, nameW: w - noPerm}
-	case w >= noMtime+colNameMin:
-		return listCols{mark: true, nameW: w - noMtime}
+	case w >= mk+mt+ow+pm+sz+colNameMin:
+		return listCols{mark: true, mtime: true, owner: true, perm: true, size: true, nameW: w - (mk + mt + ow + pm + sz)}
+	case w >= mk+mt+pm+sz+colNameMin: // drop owner
+		return listCols{mark: true, mtime: true, perm: true, size: true, nameW: w - (mk + mt + pm + sz)}
+	case w >= mk+mt+pm+colNameMin: // drop size
+		return listCols{mark: true, mtime: true, perm: true, nameW: w - (mk + mt + pm)}
+	case w >= mk+pm+colNameMin: // drop mtime
+		return listCols{mark: true, perm: true, nameW: w - (mk + pm)}
+	case w >= mk+colNameMin: // drop perms
+		return listCols{mark: true, nameW: w - mk}
 	default:
 		return listCols{nameW: w}
 	}
+}
+
+// fmtSize is a file's compact size for the Size column; a directory is blank
+// (filu never recurses to size a directory).
+func fmtSize(it fileItem) string {
+	if it.isDir {
+		return ""
+	}
+	return compactSize(it.size)
 }
 
 // fmtMtime formats a modified time as "2006-01-02 15:04"; a zero time is blank.
@@ -311,20 +323,24 @@ func listHeaderRow(cols listCols, w int) string {
 	if cols.mtime {
 		b.WriteString(padDisp(sortColHeader("Modified", sortMtime), colMtimeW) + " ")
 	}
+	if cols.owner {
+		b.WriteString(padDisp(sortColHeader("Owner", sortOwner), colOwnerW) + " ")
+	}
 	if cols.perm {
 		b.WriteString(padDisp(sortColHeader("Perms", sortPerm), colPermW) + " ")
 	}
-	if cols.owner {
-		b.WriteString(padDisp(sortColHeader("Owner", sortOwner), colOwnerW) + " ")
+	if cols.size {
+		b.WriteString(padDispRight(sortColHeader("Size", sortSize), colSizeW) + " ")
 	}
 	b.WriteString(sortColHeader("Name", sortName))
 	return truncate(b.String(), w)
 }
 
-// renderListRow renders one file row: mark | modified | perms | owner | icon name,
-// with whichever columns fit (cols). The cursor row is drawn plain on a full-width
-// highlight bar; other rows colour each column (dim mtime, eza perms/owner, type-
-// coloured name), receding to dim when the panel is unfocused.
+// renderListRow renders one file row: mark | modified | owner | perms | size |
+// icon name, with whichever columns fit (cols). The cursor row is drawn plain on a
+// full-width highlight bar; other rows colour each column (dim mtime, eza
+// owner/perms/size, type-coloured name), receding to dim when the panel is
+// unfocused.
 func renderListRow(it fileItem, cols listCols, w int, cursor, focused, carried, pinned bool) string {
 	name := truncate(fileIcon(it)+" "+safeName(it.name), cols.nameW)
 	if cursor { // plain content on a full-width highlight bar
@@ -335,11 +351,14 @@ func renderListRow(it fileItem, cols listCols, w int, cursor, focused, carried, 
 		if cols.mtime {
 			b.WriteString(padDisp(fmtMtime(it.mtime), colMtimeW) + " ")
 		}
+		if cols.owner {
+			b.WriteString(padDisp(truncate(it.owner, colOwnerW), colOwnerW) + " ")
+		}
 		if cols.perm {
 			b.WriteString(padDisp(clipMode(it.perm), colPermW) + " ")
 		}
-		if cols.owner {
-			b.WriteString(padDisp(truncate(it.owner, colOwnerW), colOwnerW) + " ")
+		if cols.size {
+			b.WriteString(padDispRight(fmtSize(it), colSizeW) + " ")
 		}
 		b.WriteString(name)
 		cursorBg := handColor // focused: current hand (subtext1)
@@ -355,11 +374,14 @@ func renderListRow(it fileItem, cols listCols, w int, cursor, focused, carried, 
 	if cols.mtime {
 		b.WriteString(lipgloss.NewStyle().Foreground(dimColor).Render(padDisp(fmtMtime(it.mtime), colMtimeW)) + " ")
 	}
+	if cols.owner {
+		b.WriteString(padDisp(colorOwner(truncate(it.owner, colOwnerW)), colOwnerW) + " ")
+	}
 	if cols.perm {
 		b.WriteString(padDisp(colorPerm(clipMode(it.perm)), colPermW) + " ")
 	}
-	if cols.owner {
-		b.WriteString(padDisp(colorOwner(truncate(it.owner, colOwnerW)), colOwnerW) + " ")
+	if cols.size {
+		b.WriteString(padDispRight(colorSize(it), colSizeW) + " ")
 	}
 	if focused {
 		b.WriteString(lipgloss.NewStyle().Foreground(fileColor(it)).Render(name)) // eza type colour
