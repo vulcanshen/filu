@@ -29,13 +29,14 @@ type sortColDef struct {
 }
 
 // sortCols is the offered picker list — only the columns the list actually shows
-// (Name / Modified / Permissions). Size and Extension remain in the enum but are
-// not sortable now that they are not displayed.
+// (Name / Modified / Permissions / Owner / Size). Extension remains in the enum
+// but is not sortable now that it is not displayed.
 var sortCols = []sortColDef{
 	{sortName, "Name", "n"},
 	{sortMtime, "Modified", "m"},
 	{sortPerm, "Permissions", "p"},
 	{sortOwner, "Owner", "o"},
+	{sortSize, "Size", "s"},
 }
 
 // sortRule is one tier of the sort: a column and its direction.
