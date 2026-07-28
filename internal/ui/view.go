@@ -326,10 +326,10 @@ const (
 // launched from, marked with the launch glyph — a fixed reference (where a
 // cd-on-quit "LaunchDir" returns to), rendered recessively.
 func (m AppModel) statusBar(w int) string {
-	icon := lipgloss.NewStyle().Foreground(handColor).Render(iconCWD)
-	avail := max(1, w-dispWidth(iconCWD)-3) // leading space + icon + gap
+	icon := lipgloss.NewStyle().Foreground(userColor).Render(iconCWD) // lavender: the launch/return anchor
+	avail := max(1, w-dispWidth(iconCWD)-3)                           // icon + gap + trailing margin
 	path := lipgloss.NewStyle().Foreground(dimColor).Render(fitPath(m.launchDir, avail))
-	return padDisp(" "+icon+" "+path, w)
+	return padDispRight(icon+" "+path+" ", w) // right-aligned, one-cell right margin
 }
 
 // colorPerm paints a mode string (drwxr-xr-x) eza-style: the type char blue,
