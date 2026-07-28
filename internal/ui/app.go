@@ -1,5 +1,5 @@
 // Package ui holds filu's Bubble Tea models. The 4-panel layout (list, preview,
-// Carries, Tasks) lives in AppModel. See .forge/meta/IDEA.md for the target
+// Marks, Tasks) lives in AppModel. See .forge/meta/IDEA.md for the target
 // design.
 package ui
 
@@ -16,10 +16,10 @@ import (
 type panelID int
 
 const (
-	panelList    panelID = iota + 1 // [1] CWD file list (main surface)
-	panelDetail                     // [2] preview (right column, top, 1/3 wide)
-	panelCarries                    // [3] Marks bucket (bottom-left)
-	panelTasks                      // [4] land tasks (bottom-right)
+	panelList   panelID = iota + 1 // [1] CWD file list (main surface)
+	panelDetail                    // [2] preview (right column, top, 1/3 wide)
+	panelMarks                     // [3] Marks bucket (bottom-left)
+	panelTasks                     // [4] land tasks (bottom-right)
 )
 
 // inputKind selects what the input popup collects.
@@ -58,7 +58,7 @@ type AppModel struct {
 	pendingG      bool        // vim g-prefix chord: a lone g is armed, awaiting the second key
 	preview       previewModel
 	places        placesModel
-	carry         carryModel
+	marks         marksModel
 	spaceMenu     spaceMenu         // §A.1 contextual popup (kbu form)
 	sortMenu      spaceMenu         // sort picker (column→direction chain, kbu form)
 	sortStep      sortStep          // which step the sort picker is on
@@ -440,7 +440,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "2":
 			m.setFocus(panelDetail)
 		case "3":
-			m.setFocus(panelCarries)
+			m.setFocus(panelMarks)
 		case "4":
 			m.setFocus(panelTasks)
 		default:
@@ -504,7 +504,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		}
 	case "m": // mark: toggle cursor item into the marks bucket
 		if it := l.cursorItem(); it.name != "" {
-			m.carry.toggle(filepath.Join(l.dir, it.name))
+			m.marks.toggle(filepath.Join(l.dir, it.name))
 		}
 	case "c": // copy: land marked items here as copy (async)
 		cmd = m.startLand(l.dir, false)
@@ -598,31 +598,31 @@ func (m *AppModel) clampDetailScroll() {
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
 }
 
-// handleCarriesKey routes keys to the Carries bucket panel [3]: j/k move the
+// handleMarksKey routes keys to the Marks bucket panel [3]: j/k move the
 // cursor, p toggles the item in the land subset, D drops it from the bucket, y
 // yanks its path, z zooms the panel.
-func (m *AppModel) handleCarriesKey(key string) tea.Cmd {
+func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 	switch key {
 	case "j", "down":
-		m.carry.moveCursor(1)
+		m.marks.moveCursor(1)
 	case "k", "up":
-		m.carry.moveCursor(-1)
+		m.marks.moveCursor(-1)
 	case "g":
-		m.carry.cursor = 0
+		m.marks.cursor = 0
 	case "G":
-		m.carry.moveCursor(len(m.carry.items))
+		m.marks.moveCursor(len(m.marks.items))
 	case "p": // pick: toggle this item in the land subset
-		m.carry.togglePick()
+		m.marks.togglePick()
 	case "D": // delete: drop this item from the bucket (not the file)
-		if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
-			m.carry.removeItem(m.carry.items[m.carry.cursor])
+		if m.marks.cursor >= 0 && m.marks.cursor < len(m.marks.items) {
+			m.marks.removeItem(m.marks.items[m.marks.cursor])
 		}
 	case "y": // yank: copy this item's full path to the clipboard
-		if m.carry.cursor >= 0 && m.carry.cursor < len(m.carry.items) {
-			return copyToClipboardCmd(m.carry.items[m.carry.cursor], "Copied path to clipboard")
+		if m.marks.cursor >= 0 && m.marks.cursor < len(m.marks.items) {
+			return copyToClipboardCmd(m.marks.items[m.marks.cursor], "Copied path to clipboard")
 		}
 	case "z":
-		m.toggleZoom(panelCarries)
+		m.toggleZoom(panelMarks)
 	}
 	return nil
 }
@@ -691,8 +691,8 @@ func (m *AppModel) dispatchFocusKey(key string) tea.Cmd {
 		return m.handleListKey(key)
 	case panelDetail:
 		return m.handleDetailKey(key)
-	case panelCarries:
-		return m.handleCarriesKey(key)
+	case panelMarks:
+		return m.handleMarksKey(key)
 	case panelTasks:
 		return m.handleTasksKey(key)
 	}
@@ -723,7 +723,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		if it.isDir {
 			itemOps = append(itemOps, menuItem{label: "Favorite", key: "f", hint: "favorite this dir (reach it via Goto → Favorites)"})
 		}
-		if len(m.carry.items) > 0 {
+		if len(m.marks.items) > 0 {
 			panelOps = append(panelOps,
 				menuItem{label: "Copy", key: "c", hint: "land marked items as copy"},
 				menuItem{label: "Move here", key: "v", hint: "land marked items as move"})
@@ -751,9 +751,9 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		return groupedMenu(
 			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview"}},
 			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "Preview"
-	case panelCarries:
+	case panelMarks:
 		zoom := []menuItem{{label: "Zoom", key: "z", hint: "expand this panel full-screen"}}
-		if len(m.carry.items) > 0 {
+		if len(m.marks.items) > 0 {
 			itemOps := []menuItem{
 				{label: "Pick", key: "p", hint: "toggle this item in the land subset"},
 				{label: "Yank", key: "y", hint: "copy full path to clipboard"},

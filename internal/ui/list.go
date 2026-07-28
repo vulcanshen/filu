@@ -212,9 +212,9 @@ const (
 	colNameMin = 12 // keep at least this much name before dropping a column
 )
 
-// markCellW is the combined width of the two mark slots (carry + pin), fixed so
-// toggling a pick or a pin never shifts the columns that follow.
-func markCellW() int { return dispWidth(pickGlyph) + dispWidth(iconPin) }
+// markCellW is the combined width of the two mark slots (mark + favorite), fixed
+// so toggling a mark or a favorite never shifts the columns that follow.
+func markCellW() int { return dispWidth(markGlyph) + dispWidth(iconPin) }
 
 // listCols is which optional columns fit at a given inner width. They drop in the
 // order owner → perms → mtime → mark as the panel narrows; the name always stays.
@@ -267,11 +267,11 @@ func clipMode(perm string) string {
 // shifts the columns. coloured=false leaves the glyphs plain so a highlighted
 // cursor row can recolour them with the bar.
 func markCell(carried, pinned, coloured bool) string {
-	carrySlot := strings.Repeat(" ", dispWidth(pickGlyph))
+	carrySlot := strings.Repeat(" ", dispWidth(markGlyph))
 	if carried {
-		carrySlot = pickGlyph
+		carrySlot = markGlyph
 		if coloured {
-			carrySlot = lipgloss.NewStyle().Foreground(lipgloss.Color("#a6e3a1")).Render(pickGlyph)
+			carrySlot = lipgloss.NewStyle().Foreground(lipgloss.Color("#a6e3a1")).Render(markGlyph)
 		}
 	}
 	pinSlot := strings.Repeat(" ", dispWidth(iconPin))
