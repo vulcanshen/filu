@@ -37,6 +37,7 @@ const (
 	confirmNone confirmKind = iota
 	confirmDelete
 	confirmShell
+	confirmOpen
 )
 
 // sortStep tracks where the sort picker is in its column→direction flow.
@@ -317,6 +318,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.refreshPreview()
 				case confirmShell:
 					cmd = tea.Batch(cmd, m.pty.start(buildShellCmd(), "Shell", m.cur().dir, m.width, m.height))
+				case confirmOpen:
+					cmd = tea.Batch(cmd, m.openDefault())
 				}
 				m.confirmAction = confirmNone
 			}
@@ -536,8 +539,11 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		if it := l.cursorItem(); it.name != "" {
 			cmd = copyToClipboardCmd(filepath.Join(l.dir, it.name), "Copied path to clipboard")
 		}
-	case "o": // open with the OS default app (fast path; O opens the picker)
-		cmd = m.openDefault()
+	case "o": // open with the OS default app — confirm first (O opens the picker)
+		if it := l.cursorItem(); it.name != "" {
+			m.confirmAction = confirmOpen
+			cmd = m.confirm.open("Open " + it.name + " with the default app?")
+		}
 	case "O": // Open with: pick an app (Default OS open, or a configured one)
 		cmd = m.openOpenWith()
 	case "s": // shell: confirm the directory first, then drop into $SHELL there
