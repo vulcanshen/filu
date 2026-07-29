@@ -41,7 +41,7 @@ func (m *AppModel) setGotoRootItems(title string) {
 	}
 	items = append(items,
 		menuItem{label: "Favorites", key: "f", hint: "a favorited directory"},
-		menuItem{label: "Search", key: "/", hint: "search any directory under home"})
+		menuItem{label: "Search", key: "/", hint: "directories under home; a leading / fuzzy-searches absolute paths"})
 	m.gotoMenu.setItems(items, title)
 }
 

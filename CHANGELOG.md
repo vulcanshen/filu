@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-07-29
+
+### Added
+- **Finders reach outside home** — in Goto and `/` Search's filename mode, a query
+  starting with `/` re-anchors the scan onto that absolute path: fuzzy across the
+  whole path, bounded a few levels below the deepest existing directory it names,
+  so directories anywhere on disk are reachable without leaving the finder. A
+  non-`/` query still searches `$HOME` / the tab's subtree as before.
+
+### Changed
+- **The finder highlights focus in blue** — once `Enter` hands focus from the
+  query input to the result list (nav mode, `j`/`k` to move), the selected row
+  turns blue, distinct from the neutral preselection shown while typing.
+
 ## [0.2.0] — 2026-07-28
 
 ### Changed

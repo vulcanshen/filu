@@ -52,7 +52,9 @@ type fileMatch struct {
 }
 
 type searchModel struct {
-	root      string      // absolute search root (the active tab's dir, or $HOME for goto)
+	root      string      // absolute search root; for Search/Goto it re-anchors as the user types a / path
+	baseRoot  string      // the root a non-/ query returns to (the active tab's dir, or $HOME for Goto)
+	curDepth  int         // current fd scan depth: 0 = recursive (base), 1 = the / anchored single level
 	byContent bool        // true = Find (rg content + preview); false = Search / Goto (name)
 	dirsOnly  bool        // true = Goto: list only directories (fd --type d), no hidden
 	newTab    bool        // true = Goto opened by T: confirm opens a new tab, not a reveal
@@ -62,10 +64,11 @@ type searchModel struct {
 	cursor    int         // into files
 	scroll    int
 	mode      searchMode
-	gen       int  // bumped per content-query change; stale rg results are dropped
-	openGen   int  // bumped per open; guards the fd all-files load (query-gen independent)
-	loading   bool // allFiles still loading
-	searching bool // an rg filter is in flight
+	gen       int                 // bumped per content-query change; stale rg results are dropped
+	openGen   int                 // bumped per open; guards the fd all-files load (query-gen independent)
+	loading   bool                // allFiles still loading
+	searching bool                // an rg filter is in flight
+	ch        chan<- fileBatchMsg // fd stream sink (kept so a / re-anchor can rescan the new root)
 
 	preview       previewModel // preview of the selected file
 	previewFor    string       // abs path the preview currently holds
@@ -141,8 +144,11 @@ func (m *AppModel) openFind() tea.Cmd {
 }
 
 // openGoto opens the finder over $HOME listing only directories (fuzzy on the
-// path), so Enter teleports the active tab to any directory under home. The
-// chord `go` and the panel [2] Space menu both route here.
+// path), so Enter teleports the active tab to any directory under home. Typing a
+// query that starts with / re-anchors onto that absolute path instead — fuzzy
+// across the whole path, bounded a few levels deep (see absAnchor) — so
+// directories outside home are reachable too. The chord `go` and the panel [2]
+// Space menu both route here.
 func (m *AppModel) openGoto() tea.Cmd {
 	home, err := os.UserHomeDir()
 	if err != nil || home == "" {
@@ -165,7 +171,8 @@ func (m *AppModel) openGotoNewTab() tea.Cmd {
 // restricts the listing to directories (Goto). Results appear as fd emits them —
 // no sort, no wait for the full walk.
 func (m *searchModel) open(root string, w, h int, byContent, dirsOnly bool, ch chan<- fileBatchMsg) tea.Cmd {
-	m.root = root
+	m.root, m.baseRoot, m.curDepth = root, root, 0
+	m.ch = ch
 	m.byContent = byContent
 	m.dirsOnly = dirsOnly
 	m.newTab = false // normal opens reveal in place; only openGotoNewTab flips this
@@ -179,7 +186,7 @@ func (m *searchModel) open(root string, w, h int, byContent, dirsOnly bool, ch c
 	m.preview, m.previewFor = previewModel{}, ""
 	m.blink, m.blinkGen = true, m.blinkGen+1
 	m.width, m.height = w, h
-	return tea.Batch(m.anim.open(), streamFilesCmd(m.openGen, root, dirsOnly, ch), blinkTickCmd(m.blinkGen))
+	return tea.Batch(m.anim.open(), streamFilesCmd(m.openGen, root, dirsOnly, 0, ch), blinkTickCmd(m.blinkGen))
 }
 
 // onBlink toggles the input cursor and reschedules, as long as this is still the
@@ -222,12 +229,13 @@ func (m *searchModel) onStreamBatch(msg fileBatchMsg) {
 		m.loading = false
 	}
 	switch {
-	case m.query == "":
+	case m.byContent:
+		if m.query != "" {
+			return // by-content: rg owns the non-empty query
+		}
 		m.files = m.allFiles
-	case !m.byContent:
-		m.filterByName()
 	default:
-		return // by-content: rg owns the non-empty query
+		m.applyNameView()
 	}
 	m.clampCursor()
 	m.refreshPreview()
@@ -318,21 +326,105 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 // bumps the generation and schedules a debounced rg run.
 func (m *searchModel) queryChanged() tea.Cmd {
 	m.cursor, m.scroll = 0, 0
-	if m.query == "" {
+	if m.byContent { // by-content: debounced rg, rooted where the finder opened
+		if m.query == "" {
+			m.files = m.allFiles
+			m.searching = false
+			m.refreshPreview()
+			return nil
+		}
+		m.gen++ // invalidate older rg runs
+		m.searching = true
+		return grepDebounceCmd(m.gen, m.root, m.query)
+	}
+	// Search / Goto (by-name): a leading / re-anchors the scan onto that absolute
+	// path — fuzzy across the whole path, bounded to absAnchorDepth levels below the
+	// deepest directory the path actually names (so it never walks all of /). A
+	// non-/ query stays at baseRoot (recursive).
+	targetRoot, targetDepth := m.baseRoot, 0
+	if strings.HasPrefix(m.query, "/") {
+		targetRoot, targetDepth = absAnchor(m.query)
+	}
+	if targetRoot != m.root || targetDepth != m.curDepth {
+		return m.rescan(targetRoot, targetDepth) // crossed an anchor/depth boundary → restream
+	}
+	m.applyNameView() // same root+depth: in-memory fuzzy on the path remainder
+	m.searching = false
+	m.refreshPreview()
+	return nil
+}
+
+// applyNameView installs the by-name view: the whole listing when the effective
+// filter is empty (e.g. an empty query, or "/usr/" with nothing typed after the
+// slash), otherwise the fuzzy matches. Shared by queryChanged and the stream loop.
+func (m *searchModel) applyNameView() {
+	if m.effectiveFilter() == "" {
 		m.files = m.allFiles
-		m.searching = false
-		m.refreshPreview()
-		return nil
+		return
 	}
-	if !m.byContent { // by-name: synchronous, in-memory, no rg
-		m.filterByName()
-		m.searching = false
-		m.refreshPreview()
-		return nil
+	m.filterByName()
+}
+
+// rescan re-anchors the by-name finder at root with the given fd depth (0 = the
+// recursive base, 1 = a directory boundary's single level, absAnchorDepth = a /
+// path's bounded fuzzy scan), drops the old listing, and streams the new root
+// afresh. The query text is left alone — only the scanned subtree changes. A
+// bumped openGen makes the previous root's in-flight batches stale so
+// onStreamBatch discards them.
+func (m *searchModel) rescan(root string, depth int) tea.Cmd {
+	m.root, m.curDepth = root, depth
+	m.allFiles, m.files = nil, nil
+	m.cursor, m.scroll = 0, 0
+	m.openGen++
+	m.loading, m.searching = true, false
+	m.refreshPreview()
+	return streamFilesCmd(m.openGen, root, m.dirsOnly, depth, m.ch)
+}
+
+// absAnchorDepth bounds how many levels below the anchor root a leading-/ query
+// scans, so fuzzing a path like "/u/lo" stays cheap (a few hundred dirs) instead
+// of walking the whole filesystem. Measured: fd --max-depth 3 over / is ~1s.
+const absAnchorDepth = 3
+
+// absAnchor resolves a leading-/ query to the subtree to scan. It walks the
+// query's slash-separated segments, folding each one that names an existing
+// directory into the root and stopping at the first that doesn't — or at the
+// last, still-being-typed segment, which is always left for the needle. Whatever
+// follows the root is the fuzzy needle (see effectiveFilter). The scan is depth-1
+// when the query rests on a directory boundary (a bare root or a trailing /),
+// else absAnchorDepth deep so the needle can fuzzy-match across intermediate
+// levels: "/u/lo" anchors at / and reaches usr/local, while "/usr/lo" anchors at
+// /usr and only scans below it.
+func absAnchor(query string) (root string, depth int) {
+	root = "/"
+	rest := strings.TrimPrefix(query, "/")
+	for {
+		seg, tail, ok := strings.Cut(rest, "/")
+		if !ok {
+			break // the last segment is always part of the needle, never the root
+		}
+		cand := filepath.Join(root, seg)
+		if fi, err := os.Stat(cand); err != nil || !fi.IsDir() {
+			break // this segment isn't an existing directory → the root is fixed
+		}
+		root, rest = cand, tail
 	}
-	m.gen++ // by-content: invalidate older rg runs
-	m.searching = true
-	return grepDebounceCmd(m.gen, m.root, m.query)
+	if rest == "" {
+		return root, 1 // on a directory boundary → just list that level
+	}
+	return root, absAnchorDepth
+}
+
+// effectiveFilter is the fuzzy needle for the current by-name query. For a
+// leading-/ query it's whatever follows the resolved anchor root (m.root) — which
+// may span several path segments, e.g. "u/lo" under / — so the fuzzy match runs
+// across the whole typed path. Otherwise it's the whole query. By-content queries
+// are never re-anchored, so they pass through unchanged.
+func (m searchModel) effectiveFilter() string {
+	if !m.byContent && strings.HasPrefix(m.query, "/") {
+		return strings.TrimPrefix(strings.TrimPrefix(m.query, m.root), "/")
+	}
+	return m.query
 }
 
 // filterByName narrows allFiles to entries whose relative path fuzzy-matches the
@@ -343,9 +435,10 @@ func (m *searchModel) filterByName() {
 		f     fileMatch
 		score int
 	}
+	filter := m.effectiveFilter()
 	var hits []scored
 	for _, f := range m.allFiles {
-		if s, ok := fuzzyMatch(f.path, m.query); ok {
+		if s, ok := fuzzyMatch(f.path, filter); ok {
 			hits = append(hits, scored{f, s})
 		}
 	}
@@ -545,7 +638,16 @@ func (m searchModel) listColumn(w, rows int) []string {
 	out = append(out, lipgloss.NewStyle().Foreground(dimColor).Render(strings.Repeat("─", w)))
 
 	listRows := rows - len(out)
-	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
+	// While typing (input mode) the highlighted row is just a preselection, so it
+	// wears the neutral hand colour; once Enter hands focus to the list (nav mode)
+	// it turns blue (focusColor, filu's structural focus colour) to signal "you're
+	// now moving this with j/k" — distinct from the lavender used elsewhere for a
+	// remembered, unfocused position.
+	cursorBg := handColor
+	if m.mode == searchNav {
+		cursorBg = focusColor
+	}
+	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	switch {
 	case m.loading:
@@ -653,9 +755,9 @@ const streamBatch = 256
 
 // streamFilesCmd launches the fd stream in the background; batches arrive on ch
 // and are read by the app's waitSearch loop.
-func streamFilesCmd(gen int, root string, dirsOnly bool, ch chan<- fileBatchMsg) tea.Cmd {
+func streamFilesCmd(gen int, root string, dirsOnly bool, maxDepth int, ch chan<- fileBatchMsg) tea.Cmd {
 	return func() tea.Msg {
-		go streamDirFiles(gen, root, dirsOnly, ch)
+		go streamDirFiles(gen, root, dirsOnly, maxDepth, ch)
 		return nil
 	}
 }
@@ -665,12 +767,15 @@ func streamFilesCmd(gen int, root string, dirsOnly bool, ch chan<- fileBatchMsg)
 // list files + dirs (incl. hidden); Goto (dirsOnly) lists directories only, no
 // hidden, with the ignore list applied. It stops at finderCap and always ends
 // with a done batch. No fd → a one-shot Go walk.
-func streamDirFiles(gen int, root string, dirsOnly bool, ch chan<- fileBatchMsg) {
+// maxDepth > 0 limits the walk to that many levels below root (1 = direct
+// children only) — used by the / re-anchored Search/Goto to list one directory
+// level at a time, so anchoring at "/" never triggers a full-filesystem walk.
+func streamDirFiles(gen int, root string, dirsOnly bool, maxDepth int, ch chan<- fileBatchMsg) {
 	send := func(batch []string, done bool) {
 		ch <- fileBatchMsg{gen: gen, root: root, batch: batch, done: done}
 	}
 	if _, err := exec.LookPath("fd"); err != nil {
-		send(walkDirFiles(root, dirsOnly), true)
+		send(walkDirFiles(root, dirsOnly, maxDepth), true)
 		return
 	}
 	args := []string{"--type", "f", "--type", "d", "--hidden"}
@@ -678,6 +783,9 @@ func streamDirFiles(gen int, root string, dirsOnly bool, ch chan<- fileBatchMsg)
 		args = []string{"--type", "d"} // dirs only, no --hidden
 	}
 	args = append(args, "--strip-cwd-prefix")
+	if maxDepth > 0 {
+		args = append(args, "--max-depth", strconv.Itoa(maxDepth))
+	}
 	for _, ig := range finderIgnoreDirs {
 		args = append(args, "--exclude", ig)
 	}
@@ -687,11 +795,11 @@ func streamDirFiles(gen int, root string, dirsOnly bool, ch chan<- fileBatchMsg)
 	cmd.Dir = root
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		send(walkDirFiles(root, dirsOnly), true)
+		send(walkDirFiles(root, dirsOnly, maxDepth), true)
 		return
 	}
 	if err := cmd.Start(); err != nil {
-		send(walkDirFiles(root, dirsOnly), true)
+		send(walkDirFiles(root, dirsOnly, maxDepth), true)
 		return
 	}
 	sc := bufio.NewScanner(stdout)
@@ -795,7 +903,7 @@ func streamLines(root, name string, args ...string) ([]string, bool) {
 	return out, true
 }
 
-func walkDirFiles(root string, dirsOnly bool) []string {
+func walkDirFiles(root string, dirsOnly bool, maxDepth int) []string {
 	ignore := make(map[string]bool, len(finderIgnoreDirs))
 	for _, ig := range finderIgnoreDirs {
 		if !strings.Contains(ig, "/") { // path-glob entries (e.g. go/pkg) are honoured by fd only
@@ -821,8 +929,13 @@ func walkDirFiles(root string, dirsOnly bool) []string {
 				return filepath.SkipDir // skip hidden dirs (and their subtrees), matching fd
 			}
 		}
-		if rel, e := filepath.Rel(root, p); e == nil {
-			out = append(out, rel)
+		rel, e := filepath.Rel(root, p)
+		if e != nil {
+			return nil
+		}
+		out = append(out, rel)
+		if maxDepth > 0 && d.IsDir() && strings.Count(rel, string(os.PathSeparator))+1 >= maxDepth {
+			return filepath.SkipDir // don't descend past maxDepth (1 = direct children only)
 		}
 		if len(out) >= finderCap {
 			return filepath.SkipAll
