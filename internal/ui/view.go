@@ -157,6 +157,18 @@ func (m AppModel) marksTitle() string {
 	return tabBar("[3]", []string{"Marks", "Tasks", "Favorites"}, m.marksTab, m.focus == panelMarks)
 }
 
+// tabDirIndex maps each open list tab's directory (cleaned) to its tab index, so
+// the Favorites tab can badge a favorite that a tab currently has open with that
+// tab's Roman numeral instead of the star. Walked in reverse so the lowest tab
+// index wins when two tabs share a directory.
+func (m AppModel) tabDirIndex() map[string]int {
+	out := make(map[string]int, len(m.tabs))
+	for i := len(m.tabs) - 1; i >= 0; i-- {
+		out[cleanDir(m.tabs[i].dir)] = i
+	}
+	return out
+}
+
 // marksBody renders panel [3]'s active tab — the Marks bucket (with the marks
 // workflow hint), the Tasks land log, or the Favorites list.
 func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
@@ -164,7 +176,7 @@ func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
 	case 1:
 		return m.tasksView(w, rows, focused), ""
 	case 2:
-		return m.places.view(w, rows, focused), favoritesHint()
+		return m.places.view(w, rows, focused, m.tabDirIndex()), favoritesHint()
 	}
 	return m.marks.view(w, rows, focused), marksHint()
 }

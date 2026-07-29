@@ -6,6 +6,9 @@
 - **`[o]pen` asks first** — opening a file or directory with the OS default app
   now pops a yes/no confirm (like `[s]hell`), so a stray `o` never launches an
   app. `[O]` open-with is unchanged (its picker is already a deliberate step).
+- **Favorites tab badges open directories** — in panel `[3]`'s Favorites tab, a
+  favorite that a list tab currently has open shows that tab's Roman numeral (blue)
+  instead of the star, so you can see which favorites are already on screen.
 
 ## [0.2.2] — 2026-07-29
 

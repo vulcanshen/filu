@@ -128,11 +128,33 @@ func TestPanelMarksTabCycle(t *testing.T) {
 // with an empty-state note when there are none.
 func TestFavoritesViewRendersPaths(t *testing.T) {
 	var p placesModel
-	if !strings.Contains(p.view(60, 5, true), "no favorites") {
+	if !strings.Contains(p.view(60, 5, true, nil), "no favorites") {
 		t.Error("empty favorites should show the empty-state note")
 	}
 	p.pinned = []place{{label: "proj", path: "/home/me/work/proj", icon: iconPin}}
-	if out := ansi.Strip(p.view(60, 5, true)); !strings.Contains(out, "proj") {
+	if out := ansi.Strip(p.view(60, 5, true, nil)); !strings.Contains(out, "proj") {
 		t.Errorf("favorites view should show the path, got %q", out)
+	}
+}
+
+// TestFavoritesTabBadge: a favorite that a list tab currently has open shows that
+// tab's Roman numeral instead of the star; the others keep the star.
+func TestFavoritesTabBadge(t *testing.T) {
+	p := placesModel{pinned: []place{
+		{label: "a", path: "/home/me/a", icon: iconPin},
+		{label: "b", path: "/home/me/b", icon: iconPin},
+	}}
+	openTabs := map[string]int{"/home/me/b": 2} // tab index 2 → Ⅲ
+	out := ansi.Strip(p.view(80, 5, false, openTabs))
+	if !strings.Contains(out, tabNumeral(2)) {
+		t.Errorf("favorite open in tab 2 should show its numeral %q, got %q", tabNumeral(2), out)
+	}
+	if !strings.Contains(out, iconPin) {
+		t.Errorf("the unopened favorite should keep the star %q, got %q", iconPin, out)
+	}
+	// the numeral and the star share a display width, so with equal-length paths
+	// the two rows stay aligned (guards the CJK wide-icon width assumption)
+	if lines := strings.Split(out, "\n"); len(lines) == 2 && dispWidth(lines[0]) != dispWidth(lines[1]) {
+		t.Errorf("numeral row and star row must align: widths %d vs %d\n%s", dispWidth(lines[0]), dispWidth(lines[1]), out)
 	}
 }
