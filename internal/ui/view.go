@@ -151,17 +151,20 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	return joinV(topRow, botRow)
 }
 
-// marksTitle renders panel [3]'s Marks | Tasks tab bar (full width, so it always
-// fits — no carousel fallback).
+// marksTitle renders panel [3]'s Marks | Tasks | Favorites tab bar (full width, so
+// it always fits — no carousel fallback).
 func (m AppModel) marksTitle() string {
-	return tabBar("[3]", []string{"Marks", "Tasks"}, m.marksTab, m.focus == panelMarks)
+	return tabBar("[3]", []string{"Marks", "Tasks", "Favorites"}, m.marksTab, m.focus == panelMarks)
 }
 
 // marksBody renders panel [3]'s active tab — the Marks bucket (with the marks
-// workflow hint) or the Tasks land log.
+// workflow hint), the Tasks land log, or the Favorites list.
 func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
-	if m.marksTab == 1 {
+	switch m.marksTab {
+	case 1:
 		return m.tasksView(w, rows, focused), ""
+	case 2:
+		return m.places.view(w, rows, focused), favoritesHint()
 	}
 	return m.marks.view(w, rows, focused), marksHint()
 }
@@ -318,6 +321,13 @@ func listNavHint(focused bool) string {
 // mark from the list.
 func marksHint() string {
 	return keyLegend([][2]string{{"m", "mark"}, {"c", "copy"}, {"v", "move"}})
+}
+
+// favoritesHint is the Favorites tab's bottom-border legend: the one action that
+// lives on this tab. `f` on the LIST still creates/removes favorites; here D
+// prunes the highlighted one (jumping to a favorite lives in the Goto picker).
+func favoritesHint() string {
+	return keyLegend([][2]string{{"D", "remove"}})
 }
 
 // eza-style permission accents (catppuccin-mocha), matching eza's long-format

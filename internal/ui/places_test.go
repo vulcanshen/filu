@@ -3,7 +3,10 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 // TestFavoriteKeyTogglesDir: `f` favorites the cursor dir (into places), toggles
@@ -73,5 +76,63 @@ func TestFitPath(t *testing.T) {
 		if got := fitPath(c.path, c.w); got != c.want {
 			t.Errorf("fitPath(%q, %d) = %q, want %q", c.path, c.w, got, c.want)
 		}
+	}
+}
+
+// TestFavoritesTabManage: panel [3]'s Favorites tab moves a cursor over the
+// favorited dirs and D unfavorites the highlighted one, keeping the cursor in
+// range. Jumping to a favorite stays in the Goto picker, not this tab.
+func TestFavoritesTabManage(t *testing.T) {
+	m := minModel()
+	m.width, m.height = 80, 24
+	m.places.pinned = []place{
+		{label: "a", path: "/home/me/a", icon: iconPin},
+		{label: "b", path: "/home/me/b", icon: iconPin},
+		{label: "c", path: "/home/me/c", icon: iconPin},
+	}
+	m.marksTab = 2 // Favorites tab
+
+	m.handleMarksKey("j") // cursor 0 → 1 (b)
+	if m.places.cursor != 1 {
+		t.Fatalf("j should move to cursor 1, got %d", m.places.cursor)
+	}
+	m.handleMarksKey("D") // unfavorite the highlighted "b"
+	if len(m.places.pinned) != 2 || m.places.pinned[1].path != "/home/me/c" {
+		t.Fatalf("D should remove the highlighted favorite (b); left=%v", m.places.pinned)
+	}
+	if m.places.cursor < 0 || m.places.cursor >= len(m.places.pinned) {
+		t.Errorf("cursor should stay in range after removal, got %d (len %d)", m.places.cursor, len(m.places.pinned))
+	}
+}
+
+// TestPanelMarksTabCycle: l cycles panel [3] forward Marks → Tasks → Favorites →
+// Marks, h cycles back.
+func TestPanelMarksTabCycle(t *testing.T) {
+	m := minModel()
+	m.marksTab = 0
+	for _, want := range []int{1, 2, 0} { // l advances
+		m.handleMarksKey("l")
+		if m.marksTab != want {
+			t.Fatalf("l should advance to tab %d, got %d", want, m.marksTab)
+		}
+	}
+	for _, want := range []int{2, 1, 0} { // h retreats
+		m.handleMarksKey("h")
+		if m.marksTab != want {
+			t.Fatalf("h should retreat to tab %d, got %d", want, m.marksTab)
+		}
+	}
+}
+
+// TestFavoritesViewRendersPaths: the Favorites tab lists a favorite's full path,
+// with an empty-state note when there are none.
+func TestFavoritesViewRendersPaths(t *testing.T) {
+	var p placesModel
+	if !strings.Contains(p.view(60, 5, true), "no favorites") {
+		t.Error("empty favorites should show the empty-state note")
+	}
+	p.pinned = []place{{label: "proj", path: "/home/me/work/proj", icon: iconPin}}
+	if out := ansi.Strip(p.view(60, 5, true)); !strings.Contains(out, "proj") {
+		t.Errorf("favorites view should show the path, got %q", out)
 	}
 }

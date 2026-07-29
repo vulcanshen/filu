@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-07-29
+
+### Added
+- **Favorites tab in panel `[3]`** — the bottom panel is now Marks | Tasks |
+  Favorites (`h`/`l` cycles). The Favorites tab lists every favorited directory by
+  its full path; `D` unfavorites the highlighted one, so managing favorites no
+  longer means opening the Goto picker. `f` on the list still creates/removes a
+  favorite, and Goto → Favorites still jumps.
+
 ## [0.2.1] — 2026-07-29
 
 ### Added

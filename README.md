@@ -115,7 +115,7 @@ filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `c
 ## Features
 
 - **Zero learning curve** — every action surfaces through the `Space` menu. Power-user hotkeys exist for speed but you can ignore the whole cheat sheet; `Space` walks you through the same menus, in context, on every panel. Onboarding doc: *"When in doubt, hit Space."*
-- **3-panel workspace** — `[1]` the file list (main surface), `[2]` Preview, `[3]` a tabbed **Marks | Tasks** panel. The list and preview share the top row at 2:1 (the info-rich list earns the width); the tabbed panel spans the full width below. `Tab` cycles the three (or `1`–`3` to jump); `h`/`l` switches a panel's own tabs.
+- **3-panel workspace** — `[1]` the file list (main surface), `[2]` Preview, `[3]` a tabbed **Marks | Tasks | Favorites** panel. The list and preview share the top row at 2:1 (the info-rich list earns the width); the tabbed panel spans the full width below. `Tab` cycles the three (or `1`–`3` to jump); `h`/`l` switches a panel's own tabs.
 - **Information-rich file list** — each row is a set of columns: a status glyph, `Modified`, `Owner` (user:group), `Perms` (eza-coloured `r` yellow / `w` red / `x` green), `Size` (eza colour-scale, warmer as it grows; directories show `-`, never a recursive sum), and the icon + name. The column header doubles as the sort indicator, and columns drop gracefully (owner → size → modified → perms) as the panel narrows, the name always last to go.
 - **Per-directory sort** — `S` picks a column (Name / Modified / Owner / Perms / Size) and direction, building a multi-tier chain. Each directory remembers its own sort — set one for `~/Downloads` and it sticks there, independent of every other directory — persisted in `state.yaml`.
 - **Powerline breadcrumb header** — the active tab's full path renders as a powerline breadcrumb across the top, coloured along a `crust → blue` gradient by directory depth (root is the darkest chip, where you are is blue). Overflows shrink front segments to their initial (`~/Documents/x` → `~/D/x`), then collapse the middle to `…`.
@@ -126,7 +126,7 @@ filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `c
   - **`go` Goto** — a picker for a **Favorite** directory, or a fuzzy **Search** of directory paths under `$HOME`; a query starting with `/` re-anchors onto that absolute path — fuzzy across the whole path, bounded a few levels below the deepest directory it names — so directories outside home are reachable too. `Enter` teleports the active tab there.
   - **`b` Breadcrumb** — a popup of the current tab's ancestor directories; `Enter` jumps the tab up to any level.
   - In the result list, `Esc` leaves and `q` returns to the input. Scan bounds (`finder_cap`) and skipped tool directories (`ignore_dirs`) are tunable in `config.yaml`.
-- **Favorites** — `f` favorites the cursor directory (a star marks it in the list); reach your favorites any time through **Goto → Favorites**, where `f` unfavorites. Browser-bookmark semantics — a saved place you jump back to.
+- **Favorites** — `f` favorites the cursor directory (a star marks it in the list). Panel `[3]`'s **Favorites** tab lists them by full path — `D` removes one right there; to jump to a favorite, use **Goto → Favorites**. Browser-bookmark semantics — a saved place you jump back to.
 - **Open, and open-with** — `o` opens the cursor file or directory with the OS default app. `O` (shift-o) opens a picker instead: **Default** plus the apps you list under `open_with` in `config.yaml` (VSCode, IntelliJ IDEA, …), each run as `<cmd> <path>` — handy for opening the current folder in your IDE. In filu, `o` / `O` — not `Enter` — open things; `Enter` is navigation only.
 - **Drop to a shell** — `s` confirms the target directory, then opens your `$SHELL` in the active tab's directory inside the embedded terminal; run a few commands and `exit` to come back (the directory reloads in case files changed). It's a modal sub-shell — you leave it by exiting, not by switching away.
 - **Preview by file kind** — detected from magic bytes: directory → inner tree, archive (zip / tar / tar.gz…) → contents, image → base64 `data:` URI, SVG → highlighted XML, text → syntax-highlighted with line numbers (Chroma / catppuccin-mocha), binary → hex + ASCII, PDF → extracted text + page count.
@@ -155,7 +155,7 @@ filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `c
 | **`Esc`** | **Back** — up one directory / close any popup |
 | **`?`** | **Help** — the global (non-contextual) action list |
 
-Where a contextual menu exists, `Space` is enough — you don't need to memorize the per-action keys. `h`/`l` switch the focused panel's tab (`[1]` directory tabs, `[3]` Marks / Tasks).
+Where a contextual menu exists, `Space` is enough — you don't need to memorize the per-action keys. `h`/`l` switch the focused panel's tab (`[1]` directory tabs, `[3]` Marks / Tasks / Favorites).
 
 ### Accelerators — cursor + power triggers
 
@@ -184,8 +184,9 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
 |---|---|
 | **`[1]` List** | Open `o`, Open with `O`, Mark `m`, Yank `y`, Rename `r`, Delete `D`, Favorite `f` · Copy `c`, Move `v`, Search `/`, Goto `go`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Shell `s`, Hidden `.`, Zoom `z` |
 | **`[2]` Preview** | Yank `y`, Zoom `z` |
-| **`[3]` Marks** | Pick `p`, Yank `y`, Unmark `m` · Tasks tab `l`, Zoom `z` |
-| **`[3]` Tasks** | Delete `D` · Marks tab `l`, Zoom `z` |
+| **`[3]` Marks** | Pick `p`, Yank `y`, Unmark `m` · Switch tab `l`, Zoom `z` |
+| **`[3]` Tasks** | Delete `D` · Switch tab `l`, Zoom `z` |
+| **`[3]` Favorites** | Delete `D` (unfavorite) · Switch tab `l`, Zoom `z` |
 
 ## cd-on-quit
 
