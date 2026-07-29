@@ -25,7 +25,7 @@ filu 是 `u`-family 的成員,是 [Vulcan's TUI Design Principle](https://github
 ### 串流 finder — 模糊檔名 & ripgrep 內容
 ![finders](docs/demo-finders.gif)
 
-### Favorites — 存目錄,再用 Goto 跳回
+### Favorites — 標記目錄,在 [3] Favorites 分頁管理
 ![favorites](docs/demo-favorites.gif)
 
 ### 預覽,再 yank 到剪貼簿

@@ -25,7 +25,7 @@ filu is a member of the `u`-family and a filesystem-domain implementation of [Vu
 ### Streaming finders — fuzzy name & ripgrep content
 ![finders](docs/demo-finders.gif)
 
-### Favorites — save directories, jump back via Goto
+### Favorites — star directories, manage them in the [3] Favorites tab
 ![favorites](docs/demo-favorites.gif)
 
 ### Preview, then yank to the clipboard
