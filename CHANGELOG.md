@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+- **`[o]pen` asks first** — opening a file or directory with the OS default app
+  now pops a yes/no confirm (like `[s]hell`), so a stray `o` never launches an
+  app. `[O]` open-with is unchanged (its picker is already a deliberate step).
+
 ## [0.2.2] — 2026-07-29
 
 ### Added

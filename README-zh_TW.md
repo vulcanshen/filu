@@ -127,7 +127,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
   - **`b` Breadcrumb** — 當前分頁祖先目錄的 popup;`Enter` 把分頁跳上任一層。
   - 在結果清單裡,`Esc` 離開、`q` 回到輸入列。掃描上限(`finder_cap`)與要跳過的工具目錄(`ignore_dirs`)可在 `config.yaml` 調。
 - **Favorites** — `f` 把游標目錄加最愛(清單上打星標)。`[3]` 的 **Favorites** 分頁以完整路徑列出所有最愛 —— 直接在那按 `D` 移除;要跳到某個最愛,用 **Goto → Favorites**。瀏覽器書籤語意 —— 一個你會跳回去的存放點。
-- **開啟 / 用 app 開啟** — `o` 用 OS 預設 app 開當前檔案或目錄。`O`(shift-o)改跳 picker:**Default** 加上你在 `config.yaml` 的 `open_with` 列的 app(VSCode、IntelliJ IDEA…),各自跑 `<cmd> <path>` —— 拿來用 IDE 開當前資料夾很方便。在 filu,開檔靠 `o` / `O`(不是 `Enter`);`Enter` 只導覽。
+- **開啟 / 用 app 開啟** — `o` 先跳確認,再用 OS 預設 app 開當前檔案或目錄。`O`(shift-o)改跳 picker:**Default** 加上你在 `config.yaml` 的 `open_with` 列的 app(VSCode、IntelliJ IDEA…),各自跑 `<cmd> <path>` —— 拿來用 IDE 開當前資料夾很方便。在 filu,開檔靠 `o` / `O`(不是 `Enter`);`Enter` 只導覽。
 - **開個 shell** — `s` 先確認目標目錄,再在當前 tab 的目錄開你的 `$SHELL`,跑在內嵌終端裡;下幾個指令、`exit` 就回來(目錄會 reload 以防檔案有變)。它是 **modal 子 shell** —— 靠 `exit` 離開、不能切走。
 - **依型別預覽** — 讀 magic bytes 判定:目錄 → 內層 tree、壓縮包(zip / tar / tar.gz…)→ 內容清單、圖片 → base64 `data:` URI、SVG → 語法高亮的 XML、文字 → 語法高亮 + 行號(Chroma / catppuccin-mocha)、二進位 → hex + ASCII、PDF → 抽出的文字 + 頁數。
 - **Yank 含 visual 選取** — 在 `[2]` Preview 按 `y` 開一個帶 vim 式游標的 viewport;`v` 進字元級 visual 選取,`y` 複製選取內容(沒選取則複製全部),走 OSC 52(可穿 tmux / SSH)。在檔案列或 Marks 項按 `y` 複製它的完整路徑。

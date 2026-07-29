@@ -77,3 +77,38 @@ func TestOpenFileCmd(t *testing.T) {
 		t.Errorf("openFileCmd opened %q, want /tmp/x.txt", opened)
 	}
 }
+
+// TestOpenConfirmsFirst: [o] arms a confirm instead of opening immediately; the
+// action the accepted confirm runs (openDefault) opens the cursor item.
+func TestOpenConfirmsFirst(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "doc.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var opened string
+	old := openFile
+	openFile = func(p string) error { opened = p; return nil }
+	defer func() { openFile = old }()
+
+	m := AppModel{focus: panelList, confirm: newConfirmPopup(), taskCh: make(chan landMsg, 1)}
+	m.tabs = []listModel{newList(dir)}
+	m.width, m.height = 80, 24
+	cursorOn(&m, "doc.txt")
+
+	// o arms the confirm and must NOT open anything yet
+	m.handleListKey("o")
+	if m.confirmAction != confirmOpen {
+		t.Fatalf("o should arm confirmOpen, got %v", m.confirmAction)
+	}
+	if opened != "" {
+		t.Errorf("o must not open before the confirm is accepted, opened %q", opened)
+	}
+
+	// what an accepted confirm runs: openDefault opens the cursor item
+	if cmd := m.openDefault(); cmd != nil {
+		cmd()
+	}
+	if want := filepath.Join(dir, "doc.txt"); opened != want {
+		t.Errorf("openDefault should open the cursor item %q, opened %q", want, opened)
+	}
+}
