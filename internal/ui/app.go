@@ -18,7 +18,7 @@ type panelID int
 const (
 	panelList   panelID = iota + 1 // [1] CWD file list (main surface)
 	panelDetail                    // [2] preview (right column, top, 1/3 wide)
-	panelMarks                     // [3] Marks | Tasks (tabbed, full-width bottom)
+	panelMarks                     // [3] Marks | Tasks | Favorites (tabbed, full-width bottom)
 )
 
 // inputKind selects what the input popup collects.
@@ -59,7 +59,7 @@ type AppModel struct {
 	preview       previewModel
 	places        placesModel
 	marks         marksModel
-	marksTab      int               // panel [3] active tab: 0 Marks / 1 Tasks
+	marksTab      int               // panel [3] active tab: 0 Marks / 1 Tasks / 2 Favorites
 	spaceMenu     spaceMenu         // §A.1 contextual popup (kbu form)
 	sortMenu      spaceMenu         // sort picker (column→direction chain, kbu form)
 	sortStep      sortStep          // which step the sort picker is on
@@ -512,9 +512,10 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.startLand(l.dir, false)
 	case "v": // move: land marked items here as move (async)
 		cmd = m.startLand(l.dir, true)
-	case "f": // favorite: toggle the cursor dir into Favorites (reach it via Goto)
+	case "f": // favorite: toggle the cursor dir into Favorites (manage in panel [3])
 		if it := l.cursorItem(); it.isDir {
 			m.places.togglePin(filepath.Join(l.dir, it.name))
+			m.places.clampCursor() // a removal may leave the Favorites cursor past the end
 		}
 	case ".": // toggle hidden files in this tab
 		l.showHidden = !l.showHidden
@@ -601,20 +602,26 @@ func (m *AppModel) clampDetailScroll() {
 	m.detailScroll = max(0, min(m.detailScroll, maxScroll))
 }
 
-// handleMarksKey routes keys to panel [3] (Marks | Tasks): h/l swap the tab, z
-// zooms; then the active tab handles the rest — the Marks bucket, or the Tasks
-// land log.
+// handleMarksKey routes keys to panel [3] (Marks | Tasks | Favorites): h/l cycle
+// the tab, z zooms; then the active tab handles the rest — the Marks bucket, the
+// Tasks land log, or the Favorites list.
 func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 	switch key {
-	case "l", "right", "h", "left":
-		m.marksTab = (m.marksTab + 1) % 2 // Marks <-> Tasks
+	case "l", "right":
+		m.marksTab = (m.marksTab + 1) % 3 // Marks → Tasks → Favorites
+		return nil
+	case "h", "left":
+		m.marksTab = (m.marksTab + 2) % 3
 		return nil
 	case "z":
 		m.toggleZoom(panelMarks)
 		return nil
 	}
-	if m.marksTab == 1 { // Tasks tab
+	switch m.marksTab {
+	case 1: // Tasks tab
 		return m.handleTasksKey(key)
+	case 2: // Favorites tab
+		return m.handleFavoritesKey(key)
 	}
 	// Marks tab
 	switch key {
@@ -659,6 +666,29 @@ func (m *AppModel) handleTasksKey(key string) tea.Cmd {
 		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
 			m.tasks = append(m.tasks[:m.taskCursor], m.tasks[m.taskCursor+1:]...)
 			m.clampTaskCursor()
+			saveState(m.snapshotState())
+		}
+	}
+	return nil
+}
+
+// handleFavoritesKey routes keys to panel [3]'s Favorites tab: j/k move the
+// cursor, D unfavorites the highlighted directory. Jumping to a favorite still
+// lives in the Goto picker — this tab is purely for viewing and pruning the set.
+func (m *AppModel) handleFavoritesKey(key string) tea.Cmd {
+	switch key {
+	case "j", "down":
+		m.places.moveCursor(1)
+	case "k", "up":
+		m.places.moveCursor(-1)
+	case "g":
+		m.places.cursor = 0
+	case "G":
+		m.places.moveCursor(len(m.places.pinned))
+	case "D": // unfavorite the highlighted directory
+		if m.places.cursor >= 0 && m.places.cursor < len(m.places.pinned) {
+			m.places.unpin(m.places.pinned[m.places.cursor].path)
+			m.places.clampCursor()
 			saveState(m.snapshotState())
 		}
 	}
@@ -758,15 +788,21 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "Preview"
 	case panelMarks:
 		zoom := menuItem{label: "Zoom", key: "z", hint: "expand this panel full-screen"}
-		if m.marksTab == 1 { // Tasks tab
-			panelOps := []menuItem{{label: "Marks tab", key: "l", hint: "switch tab (h/l)"}, zoom}
+		tab := menuItem{label: "Switch tab", key: "l", hint: "Marks / Tasks / Favorites (h/l)"}
+		switch m.marksTab {
+		case 1: // Tasks tab
 			var itemOps []menuItem
 			if len(m.tasks) > 0 {
 				itemOps = []menuItem{{label: "Delete", key: "D", hint: "remove this task from the log"}}
 			}
-			return groupedMenu(itemOps, panelOps), "Tasks"
+			return groupedMenu(itemOps, []menuItem{tab, zoom}), "Tasks"
+		case 2: // Favorites tab
+			var itemOps []menuItem
+			if len(m.places.pinned) > 0 {
+				itemOps = []menuItem{{label: "Delete", key: "D", hint: "unfavorite this directory"}}
+			}
+			return groupedMenu(itemOps, []menuItem{tab, zoom}), "Favorites"
 		}
-		panelOps := []menuItem{{label: "Tasks tab", key: "l", hint: "switch tab (h/l)"}, zoom}
 		var itemOps []menuItem
 		if len(m.marks.items) > 0 {
 			itemOps = []menuItem{
@@ -775,7 +811,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				{label: "Unmark", key: "m", hint: "remove this item from the marks bucket"},
 			}
 		}
-		return groupedMenu(itemOps, panelOps), "Marks"
+		return groupedMenu(itemOps, []menuItem{tab, zoom}), "Marks"
 	}
 	return nil, ""
 }

@@ -115,7 +115,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 ## 功能
 
 - **零學習成本** — 所有動作都從 `Space` 選單浮現。進階快捷鍵是為了加速而存在,但你可以完全忽略整張 cheat sheet;`Space` 每次都在情境裡帶你走一樣的選單。上手一句話:*「遇事不決,就按 Space。」*
-- **3 面板工作區** — `[1]` 檔案清單(主戰場)、`[2]` Preview、`[3]` 一個 tabbed 的 **Marks | Tasks** 面板。上排 list 與 preview 以 2:1 共用(資訊豐富的 list 值得更寬);tabbed 面板在下方橫跨滿寬。`Tab` 輪切三個(或 `1`–`3` 直達);`h`/`l` 切某面板自己的分頁。
+- **3 面板工作區** — `[1]` 檔案清單(主戰場)、`[2]` Preview、`[3]` 一個 tabbed 的 **Marks | Tasks | Favorites** 面板。上排 list 與 preview 以 2:1 共用(資訊豐富的 list 值得更寬);tabbed 面板在下方橫跨滿寬。`Tab` 輪切三個(或 `1`–`3` 直達);`h`/`l` 切某面板自己的分頁。
 - **資訊豐富的檔案清單** — 每一列是一組欄位:狀態 glyph、`Modified`、`Owner`(user:group)、`Perms`(eza 配色 `r` 黃 / `w` 紅 / `x` 綠)、`Size`(eza color-scale,越大越暖;目錄顯示 `-`,絕不遞迴加總)、以及 icon + 檔名。欄位標題兼排序指示,面板變窄時欄位漸進收合(owner → size → modified → perms),檔名永遠最後才收。
 - **每目錄各自排序** — `S` 挑欄位(Name / Modified / Owner / Perms / Size)與方向,可疊多層 chain。每個目錄記住自己的排序 —— 幫 `~/Downloads` 設一種它就固定在那,與其他目錄互不影響 —— 存進 `state.yaml`。
 - **Powerline 麵包屑 header** — 當前分頁的完整路徑以 powerline 麵包屑橫在最上方,顏色依目錄深度沿 `crust → blue` 漸層(root 是最深的 chip、你所在的當前目錄是 blue)。過長時把前段縮成字首(`~/Documents/x` → `~/D/x`),再不夠中間縮 `…`。
@@ -126,7 +126,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
   - **`go` Goto** — 選一個 **Favorite** 目錄,或對 `$HOME` 底下的目錄路徑做 fuzzy **Search**;以 `/` 開頭的 query 會改錨定到該絕對路徑 —— 對整條路徑 fuzzy、深度限錨點下數層 —— 所以 home 以外的目錄也到得了;`Enter` 把當前分頁傳送過去。
   - **`b` Breadcrumb** — 當前分頁祖先目錄的 popup;`Enter` 把分頁跳上任一層。
   - 在結果清單裡,`Esc` 離開、`q` 回到輸入列。掃描上限(`finder_cap`)與要跳過的工具目錄(`ignore_dirs`)可在 `config.yaml` 調。
-- **Favorites** — `f` 把游標目錄加最愛(清單上打星標);任何時候透過 **Goto → Favorites** 跳回你的最愛,在那裡按 `f` 取消最愛。瀏覽器書籤語意 —— 一個你會跳回去的存放點。
+- **Favorites** — `f` 把游標目錄加最愛(清單上打星標)。`[3]` 的 **Favorites** 分頁以完整路徑列出所有最愛 —— 直接在那按 `D` 移除;要跳到某個最愛,用 **Goto → Favorites**。瀏覽器書籤語意 —— 一個你會跳回去的存放點。
 - **開啟 / 用 app 開啟** — `o` 用 OS 預設 app 開當前檔案或目錄。`O`(shift-o)改跳 picker:**Default** 加上你在 `config.yaml` 的 `open_with` 列的 app(VSCode、IntelliJ IDEA…),各自跑 `<cmd> <path>` —— 拿來用 IDE 開當前資料夾很方便。在 filu,開檔靠 `o` / `O`(不是 `Enter`);`Enter` 只導覽。
 - **開個 shell** — `s` 先確認目標目錄,再在當前 tab 的目錄開你的 `$SHELL`,跑在內嵌終端裡;下幾個指令、`exit` 就回來(目錄會 reload 以防檔案有變)。它是 **modal 子 shell** —— 靠 `exit` 離開、不能切走。
 - **依型別預覽** — 讀 magic bytes 判定:目錄 → 內層 tree、壓縮包(zip / tar / tar.gz…)→ 內容清單、圖片 → base64 `data:` URI、SVG → 語法高亮的 XML、文字 → 語法高亮 + 行號(Chroma / catppuccin-mocha)、二進位 → hex + ASCII、PDF → 抽出的文字 + 頁數。
@@ -155,7 +155,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 | **`Esc`** | **返回** — 回上層目錄 / 關閉任何浮層 |
 | **`?`** | **說明** — 全域(非情境)動作清單 |
 
-只要有情境選單,`Space` 就夠了 — 不必背個別動作鍵。`h`/`l` 切當前面板的分頁(`[1]` 目錄分頁、`[3]` Marks / Tasks)。
+只要有情境選單,`Space` 就夠了 — 不必背個別動作鍵。`h`/`l` 切當前面板的分頁(`[1]` 目錄分頁、`[3]` Marks / Tasks / Favorites)。
 
 ### 加速鍵 — 游標 + 觸發
 
@@ -184,8 +184,9 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 |---|---|
 | **`[1]` List** | Open `o`、Open with `O`、Mark `m`、Yank `y`、Rename `r`、Delete `D`、Favorite `f` · Copy `c`、Move `v`、Search `/`、Goto `go`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Shell `s`、Hidden `.`、Zoom `z` |
 | **`[2]` Preview** | Yank `y`、Zoom `z` |
-| **`[3]` Marks** | Pick `p`、Yank `y`、Unmark `m` · Tasks tab `l`、Zoom `z` |
-| **`[3]` Tasks** | Delete `D` · Marks tab `l`、Zoom `z` |
+| **`[3]` Marks** | Pick `p`、Yank `y`、Unmark `m` · Switch tab `l`、Zoom `z` |
+| **`[3]` Tasks** | Delete `D` · Switch tab `l`、Zoom `z` |
+| **`[3]` Favorites** | Delete `D`(取消最愛) · Switch tab `l`、Zoom `z` |
 
 ## cd-on-quit
 
