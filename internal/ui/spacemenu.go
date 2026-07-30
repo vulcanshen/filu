@@ -84,6 +84,13 @@ func newOpenWithMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("openwithmenu", popupLayerColor(1))}
 }
 
+// newOpenInMenu is a spaceMenu instance reused as the Favorites tab's "Open dir
+// in…" picker: New tab (unless the tab count is at maxTabs) or one of the open
+// panel [1] tabs.
+func newOpenInMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("openinmenu", popupLayerColor(1))}
+}
+
 func (m *spaceMenu) setItems(items []menuItem, title string) {
 	m.items = items
 	m.title = title

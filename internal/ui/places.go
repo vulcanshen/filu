@@ -11,8 +11,9 @@ import (
 
 // Nerd Font icons (rune values so no PUA glyph sits in source).
 var (
-	iconCWD = string(rune(0xf14de)) // launch dir (cd-on-quit picker)
-	iconPin = string(rune(0xf04ce)) // favorite dir — nf-md-star (matches markGlyph's MDI family)
+	iconCWD     = string(rune(0xf14de)) // launch dir (cd-on-quit picker)
+	iconPin     = string(rune(0xf04ce)) // favorite dir — nf-md-star (matches markGlyph's MDI family)
+	iconTabHere = string(rune(0xf02fa)) // "Open dir in…" picker: a tab already sits at that dir
 )
 
 type place struct {
@@ -48,18 +49,13 @@ func (m *placesModel) clampCursor() {
 
 // view renders the Favorites tab (panel [3]): one row per favorited directory
 // with its full home-folded path (the panel is wide, so paths show in full and
-// are only left-trimmed on overflow, keeping the tail visible) and the
-// highlighted row following focus. The leading glyph is that favorite's tab
-// numeral (blue) when a list tab currently has the directory open — openTabs maps
-// a cleaned dir to its tab index — otherwise the yellow favorite star. The star
-// and a numeral are both wide-icon runes, so they share a display width and the
-// paths stay aligned across rows.
-func (m placesModel) view(w, rows int, focused bool, openTabs map[string]int) string {
+// are only left-trimmed on overflow, keeping the tail visible), a yellow star,
+// and the highlighted row following focus.
+func (m placesModel) view(w, rows int, focused bool) string {
 	if len(m.pinned) == 0 {
 		return centeredNote(w, rows, "(no favorites — press f on a directory)")
 	}
 	star := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaYellow)) // favorite = yellow star
-	blue := lipgloss.NewStyle().Foreground(focusColor)                // open-in-tab = that tab's numeral
 	cursorBg := handColor
 	if !focused {
 		cursorBg = userColor
@@ -71,19 +67,14 @@ func (m placesModel) view(w, rows int, focused bool, openTabs map[string]int) st
 		start = m.cursor - rows + 1
 	}
 	end := min(start+rows, len(m.pinned))
-	prefixW := 1 + dispWidth(iconPin) + 1 // " <glyph> "
+	prefixW := 1 + dispWidth(iconPin) + 1 // " <star> "
 	var b strings.Builder
 	for i := start; i < end; i++ {
-		p := m.pinned[i].path
-		glyph, gStyle := iconPin, star // default: the favorite star
-		if idx, ok := openTabs[cleanDir(p)]; ok {
-			glyph, gStyle = tabNumeral(idx), blue // a tab has it open → its numeral
-		}
-		path := truncPathLeft(safeName(shortPath(p)), w-prefixW)
+		path := truncPathLeft(safeName(shortPath(m.pinned[i].path)), w-prefixW)
 		if focused && i == m.cursor {
-			b.WriteString(cur.Render(padDisp(" "+glyph+" "+path, w)))
+			b.WriteString(cur.Render(padDisp(" "+iconPin+" "+path, w)))
 		} else {
-			b.WriteString(truncate(" "+gStyle.Render(glyph)+" "+path, w))
+			b.WriteString(truncate(" "+star.Render(iconPin)+" "+path, w))
 		}
 		if i < end-1 {
 			b.WriteByte('\n')

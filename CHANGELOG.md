@@ -7,14 +7,19 @@
   on every platform, so a macOS user can `export XDG_CONFIG_HOME=~/.config` to keep
   `config.yaml` / `state.yaml` under `~/.config/filu` instead of
   `~/Library/Application Support`. Unset leaves the default unchanged.
+- **Open a favorite in a tab** — in the panel `[3]` Favorites tab, `o` opens the
+  highlighted favorite's directory in a New tab (when under the tab limit) or one
+  of the existing panel `[1]` tabs (a tab already at that directory is flagged),
+  then moves focus to the list.
+- **Favorite the current directory** — panel `[1]`'s Space menu gains a panel-op
+  `F` that favorites the directory the tab is browsing (distinct from `f`, which
+  favorites the highlighted subdirectory). The list header's mark column shows a
+  star when the browsed directory is itself a favorite.
 
 ### Changed
 - **`[o]pen` asks first** — opening a file or directory with the OS default app
   now pops a yes/no confirm (like `[s]hell`), so a stray `o` never launches an
   app. `[O]` open-with is unchanged (its picker is already a deliberate step).
-- **Favorites tab badges open directories** — in panel `[3]`'s Favorites tab, a
-  favorite that a list tab currently has open shows that tab's Roman numeral (blue)
-  instead of the star, so you can see which favorites are already on screen.
 
 ## [0.2.2] — 2026-07-29
 

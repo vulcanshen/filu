@@ -152,3 +152,23 @@ func TestListColumns(t *testing.T) {
 		t.Errorf("only Name should survive at w=24:\n%s", tiny)
 	}
 }
+
+// TestListHeaderStarsFavoriteDir: when the browsed directory is itself a
+// favorite, the header's mark column shows the star (flagging the whole dir);
+// otherwise the header carries no star.
+func TestListHeaderStarsFavoriteDir(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m := newList(dir)
+
+	favHeader := strings.SplitN(ansi.Strip(m.view(76, 8, true, nil, map[string]bool{dir: true})), "\n", 2)[0]
+	if !strings.Contains(favHeader, iconPin) {
+		t.Errorf("a favorite dir should star the header mark column: %q", favHeader)
+	}
+	plainHeader := strings.SplitN(ansi.Strip(m.view(76, 8, true, nil, nil)), "\n", 2)[0]
+	if strings.Contains(plainHeader, iconPin) {
+		t.Errorf("a non-favorite dir header should carry no star: %q", plainHeader)
+	}
+}
