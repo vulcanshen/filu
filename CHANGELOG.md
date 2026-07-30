@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.3] — 2026-07-30
+
 ### Added
 - **`XDG_CONFIG_HOME` relocates config/state** — filu now honours `XDG_CONFIG_HOME`
   on every platform, so a macOS user can `export XDG_CONFIG_HOME=~/.config` to keep
