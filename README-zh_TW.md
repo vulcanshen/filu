@@ -207,7 +207,9 @@ filu 從 OS config 目錄的 `config.yaml` 讀使用者設定。`state.yaml`(自
 | OS | 路徑 |
 |---|---|
 | Linux | `$XDG_CONFIG_HOME/filu/` 或 `~/.config/filu/` |
-| macOS | `~/Library/Application Support/filu/` |
+| macOS | `~/Library/Application Support/filu/`(或設了 `$XDG_CONFIG_HOME` 時用它) |
+
+`XDG_CONFIG_HOME` 在所有平台都會被尊重,所以 macOS 上可以 `export XDG_CONFIG_HOME=$HOME/.config` 讓兩個檔改放 `~/.config/filu`。檔案級的 `FILU_CONFIG` / `FILU_STATE` env var 仍可各自覆蓋單一檔案。
 
 首次啟動會寫一份帶註解的模板(已存在的檔永不覆蓋)。finder 旋鈕(`finder_cap`、`ignore_dirs`)加上 `[o]pen` 的 app 清單:
 

@@ -74,11 +74,11 @@ func stateFilePath() (string, bool) {
 	if p := os.Getenv("FILU_STATE"); p != "" { // redirect state I/O (demo recordings / isolated runs)
 		return p, true
 	}
-	dir, err := os.UserConfigDir()
-	if err != nil {
+	dir, ok := filuConfigDir()
+	if !ok {
 		return "", false
 	}
-	return filepath.Join(dir, "filu", "state.yaml"), true
+	return filepath.Join(dir, "state.yaml"), true
 }
 
 func loadState() (sessionState, bool) {

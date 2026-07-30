@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+- **`XDG_CONFIG_HOME` relocates config/state** — filu now honours `XDG_CONFIG_HOME`
+  on every platform, so a macOS user can `export XDG_CONFIG_HOME=~/.config` to keep
+  `config.yaml` / `state.yaml` under `~/.config/filu` instead of
+  `~/Library/Application Support`. Unset leaves the default unchanged.
+
 ### Changed
 - **`[o]pen` asks first** — opening a file or directory with the OS default app
   now pops a yes/no confirm (like `[s]hell`), so a stray `o` never launches an
