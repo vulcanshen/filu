@@ -38,6 +38,7 @@ const (
 	confirmDelete
 	confirmShell
 	confirmOpen
+	confirmUnfavorite
 )
 
 // sortStep tracks where the sort picker is in its column→direction flow.
@@ -50,53 +51,54 @@ const (
 
 // AppModel is filu's root model.
 type AppModel struct {
-	width         int
-	height        int
-	focus         panelID
-	detailScroll  int         // panel [2] preview scroll offset
-	tabs          []listModel // panel [1]'s directory tabs (1..maxTabs, user-created)
-	tab           int         // active tab index
-	pendingG      bool        // vim g-prefix chord: a lone g is armed, awaiting the second key
-	preview       previewModel
-	places        placesModel
-	marks         marksModel
-	marksTab      int               // panel [3] active tab: 0 Marks / 1 Tasks / 2 Favorites
-	spaceMenu     spaceMenu         // §A.1 contextual popup (kbu form)
-	sortMenu      spaceMenu         // sort picker (column→direction chain, kbu form)
-	sortStep      sortStep          // which step the sort picker is on
-	sortFlowCol   sortCol           // column carried from the column step to direction
-	quitMenu      spaceMenu         // cd-on-quit picker (launch dir + distinct tab dirs)
-	openWithMenu  spaceMenu         // [o]pen picker (Default + config.yaml open_with apps)
-	openWithPath  string            // path the open-with picker acts on (captured when it opens)
-	gotoMenu      spaceMenu         // Goto / new-tab picker: {Same?, Favorites, Search} → favorites drill-down
-	gotoStep      gotoStep          // which step the Goto picker is on
-	searchMenu    spaceMenu         // Search chooser: {filename, content} → opens the finder in that mode
-	openInMenu    spaceMenu         // Favorites "Open dir in…" picker: New tab / an existing panel [1] tab
-	openInPath    string            // the favorite dir the openInMenu is acting on
-	gotoNewTab    bool              // Goto picker in new-tab mode (open in a new tab vs move the active one)
-	launchDir     string            // the dir filu was started in (cd-on-quit option 1)
-	zoom          panelID           // 0 = normal; else the panel expanded full-width
-	confirm       confirmPopup      // yes/no popup (delete / quit)
-	confirmAction confirmKind       // what an accepted confirm commits to
-	pendingDelete string            // path awaiting delete confirmation
-	inputPopup    inputPopup        // text prompt (rename / add)
-	help          helpPopup         // §A.2 global help cheatsheet
-	splash        splashModel       // hidden easter-egg logo (V)
-	toast         toastModel        // transient notification (yank feedback)
-	detailYank    detailYank        // panel [2] yank viewport (cursor + visual selection)
-	pty           *ptyPopup         // embedded editor; pointer — shared with its read goroutine
-	search        searchModel       // native fuzzy file/dir finder
-	searchCh      chan fileBatchMsg // finder's fd stream → UI
-	breadcrumb    breadcrumbPopup   // [b] ancestor-directory jump popup
-	tasks         []landTask        // land operations (Tasks tab: running + log)
-	taskCh        chan landMsg      // land goroutines → UI
-	nextTaskID    int
-	spinnerFrame  int               // running-task spinner animation
-	spinning      bool              // a spinner tick is in flight
-	taskCursor    int               // cursor over the Tasks tab
-	watcher       *fsnotify.Watcher // live directory watch (nil if unavailable)
-	watchCh       chan watchMsg     // watcher goroutine → UI
-	watched       map[string]bool   // dirs currently registered with the watcher
+	width             int
+	height            int
+	focus             panelID
+	detailScroll      int         // panel [2] preview scroll offset
+	tabs              []listModel // panel [1]'s directory tabs (1..maxTabs, user-created)
+	tab               int         // active tab index
+	pendingG          bool        // vim g-prefix chord: a lone g is armed, awaiting the second key
+	preview           previewModel
+	places            placesModel
+	marks             marksModel
+	marksTab          int               // panel [3] active tab: 0 Marks / 1 Tasks / 2 Favorites
+	spaceMenu         spaceMenu         // §A.1 contextual popup (kbu form)
+	sortMenu          spaceMenu         // sort picker (column→direction chain, kbu form)
+	sortStep          sortStep          // which step the sort picker is on
+	sortFlowCol       sortCol           // column carried from the column step to direction
+	quitMenu          spaceMenu         // cd-on-quit picker (launch dir + distinct tab dirs)
+	openWithMenu      spaceMenu         // [o]pen picker (Default + config.yaml open_with apps)
+	openWithPath      string            // path the open-with picker acts on (captured when it opens)
+	gotoMenu          spaceMenu         // Goto / new-tab picker: {Same?, Favorites, Search} → favorites drill-down
+	gotoStep          gotoStep          // which step the Goto picker is on
+	searchMenu        spaceMenu         // Search chooser: {filename, content} → opens the finder in that mode
+	openInMenu        spaceMenu         // Favorites "Open dir in…" picker: New tab / an existing panel [1] tab
+	openInPath        string            // the favorite dir the openInMenu is acting on
+	gotoNewTab        bool              // Goto picker in new-tab mode (open in a new tab vs move the active one)
+	launchDir         string            // the dir filu was started in (cd-on-quit option 1)
+	zoom              panelID           // 0 = normal; else the panel expanded full-width
+	confirm           confirmPopup      // yes/no popup (delete / quit)
+	confirmAction     confirmKind       // what an accepted confirm commits to
+	pendingDelete     string            // path awaiting delete confirmation
+	pendingUnfavorite string            // favorite path awaiting unfavorite confirmation
+	inputPopup        inputPopup        // text prompt (rename / add)
+	help              helpPopup         // §A.2 global help cheatsheet
+	splash            splashModel       // hidden easter-egg logo (V)
+	toast             toastModel        // transient notification (yank feedback)
+	detailYank        detailYank        // panel [2] yank viewport (cursor + visual selection)
+	pty               *ptyPopup         // embedded editor; pointer — shared with its read goroutine
+	search            searchModel       // native fuzzy file/dir finder
+	searchCh          chan fileBatchMsg // finder's fd stream → UI
+	breadcrumb        breadcrumbPopup   // [b] ancestor-directory jump popup
+	tasks             []landTask        // land operations (Tasks tab: running + log)
+	taskCh            chan landMsg      // land goroutines → UI
+	nextTaskID        int
+	spinnerFrame      int               // running-task spinner animation
+	spinning          bool              // a spinner tick is in flight
+	taskCursor        int               // cursor over the Tasks tab
+	watcher           *fsnotify.Watcher // live directory watch (nil if unavailable)
+	watchCh           chan watchMsg     // watcher goroutine → UI
+	watched           map[string]bool   // dirs currently registered with the watcher
 }
 
 // maxTabs caps panel [2]'s directory tabs. It opens with one (at the CWD); the
@@ -323,6 +325,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmd = tea.Batch(cmd, m.pty.start(buildShellCmd(), "Shell", m.cur().dir, m.width, m.height))
 				case confirmOpen:
 					cmd = tea.Batch(cmd, m.openDefault())
+				case confirmUnfavorite:
+					m.places.unpin(m.pendingUnfavorite)
+					m.pendingUnfavorite = ""
+					m.places.clampCursor()
+					saveState(m.snapshotState())
 				}
 				m.confirmAction = confirmNone
 			}
@@ -711,11 +718,12 @@ func (m *AppModel) handleFavoritesKey(key string) tea.Cmd {
 		m.places.moveCursor(len(m.places.pinned))
 	case "o": // open this favorite's dir in a tab (New tab / an existing tab)
 		return m.openOpenInMenu()
-	case "D": // unfavorite the highlighted directory
+	case "D": // unfavorite the highlighted directory — confirm first
 		if m.places.cursor >= 0 && m.places.cursor < len(m.places.pinned) {
-			m.places.unpin(m.places.pinned[m.places.cursor].path)
-			m.places.clampCursor()
-			saveState(m.snapshotState())
+			p := m.places.pinned[m.places.cursor]
+			m.pendingUnfavorite = p.path
+			m.confirmAction = confirmUnfavorite
+			return m.confirm.open("Unfavorite " + p.label + "?")
 		}
 	}
 	return nil
