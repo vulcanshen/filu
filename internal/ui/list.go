@@ -316,11 +316,17 @@ func sortColHeader(label string, col sortCol, rules []sortRule) string {
 
 // listHeaderRow is the column-header line above the file rows: the sortable
 // column labels aligned to the row columns, each reflecting rules (the dir's sort
-// chain). The mark column carries no label.
-func listHeaderRow(cols listCols, w int, rules []sortRule) string {
+// chain). The mark column carries no label — except when the browsed directory is
+// itself a favorite (dirFav), where it shows a star to flag the whole directory.
+func listHeaderRow(cols listCols, w int, rules []sortRule, dirFav bool) string {
 	var b strings.Builder
 	if cols.mark {
-		b.WriteString(strings.Repeat(" ", markCellW()+1))
+		if dirFav {
+			star := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaYellow)).Render(iconPin)
+			b.WriteString(padDisp(star, markCellW()) + " ")
+		} else {
+			b.WriteString(strings.Repeat(" ", markCellW()+1))
+		}
 	}
 	if cols.mtime {
 		b.WriteString(padDisp(sortColHeader("Modified", sortMtime, rules), colMtimeW) + " ")
@@ -398,7 +404,7 @@ func renderListRow(it fileItem, cols listCols, w int, cursor, focused, carried, 
 // and the favorites, driving the single mark-column glyph.
 func (m listModel) view(w, rows int, focused bool, carried, pinned map[string]bool) string {
 	cols := computeListCols(w)
-	header := listHeaderRow(cols, w, sortRulesFor(m.dir))
+	header := listHeaderRow(cols, w, sortRulesFor(m.dir), pinned[m.dir])
 	rows-- // reserve the column-header row
 	if len(m.items) == 0 {
 		msg := "(empty)"

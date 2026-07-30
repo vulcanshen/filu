@@ -71,6 +71,8 @@ type AppModel struct {
 	gotoMenu      spaceMenu         // Goto / new-tab picker: {Same?, Favorites, Search} → favorites drill-down
 	gotoStep      gotoStep          // which step the Goto picker is on
 	searchMenu    spaceMenu         // Search chooser: {filename, content} → opens the finder in that mode
+	openInMenu    spaceMenu         // Favorites "Open dir in…" picker: New tab / an existing panel [1] tab
+	openInPath    string            // the favorite dir the openInMenu is acting on
 	gotoNewTab    bool              // Goto picker in new-tab mode (open in a new tab vs move the active one)
 	launchDir     string            // the dir filu was started in (cd-on-quit option 1)
 	zoom          panelID           // 0 = normal; else the panel expanded full-width
@@ -110,7 +112,7 @@ func New() AppModel {
 	if err != nil {
 		dir = "/"
 	}
-	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
@@ -224,6 +226,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.quitMenu.setSize(msg.Width)
 		m.openWithMenu.setSize(msg.Width)
 		m.gotoMenu.setSize(msg.Width)
+		m.openInMenu.setSize(msg.Width)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
@@ -237,7 +240,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)
@@ -361,6 +364,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.gotoMenu, key, cmd = m.gotoMenu.update(msg)
 			if key != "" { // stays open on a drill, closes on a terminal jump/search
 				cmd = tea.Batch(cmd, m.advanceGotoFlow(key))
+			}
+			return m, cmd
+		}
+		if m.openInMenu.isActive() { // Favorites "Open dir in…" picker
+			if !m.openInMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.openInMenu, key, cmd = m.openInMenu.update(msg)
+			if key != "" {
+				cmd = tea.Batch(cmd, m.advanceOpenIn(key))
 			}
 			return m, cmd
 		}
@@ -515,11 +530,14 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.startLand(l.dir, false)
 	case "v": // move: land marked items here as move (async)
 		cmd = m.startLand(l.dir, true)
-	case "f": // favorite: toggle the cursor dir into Favorites (manage in panel [3])
+	case "f": // favorite: toggle the highlighted subdirectory into Favorites
 		if it := l.cursorItem(); it.isDir {
 			m.places.togglePin(filepath.Join(l.dir, it.name))
 			m.places.clampCursor() // a removal may leave the Favorites cursor past the end
 		}
+	case "F": // favorite: toggle THIS tab's current directory (not the highlighted item)
+		m.places.togglePin(l.dir)
+		m.places.clampCursor()
 	case ".": // toggle hidden files in this tab
 		l.showHidden = !l.showHidden
 		l.reload()
@@ -691,6 +709,8 @@ func (m *AppModel) handleFavoritesKey(key string) tea.Cmd {
 		m.places.cursor = 0
 	case "G":
 		m.places.moveCursor(len(m.places.pinned))
+	case "o": // open this favorite's dir in a tab (New tab / an existing tab)
+		return m.openOpenInMenu()
 	case "D": // unfavorite the highlighted directory
 		if m.places.cursor >= 0 && m.places.cursor < len(m.places.pinned) {
 			m.places.unpin(m.places.pinned[m.places.cursor].path)
@@ -762,7 +782,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				menuItem{label: "Delete", key: "D", hint: "move to the system trash"})
 		}
 		if it.isDir {
-			itemOps = append(itemOps, menuItem{label: "Favorite", key: "f", hint: "favorite this dir (reach it via Goto → Favorites)"})
+			itemOps = append(itemOps, menuItem{label: "Favorite", key: "f", hint: "favorite the highlighted subdirectory"})
 		}
 		if len(m.marks.items) > 0 {
 			panelOps = append(panelOps,
@@ -772,6 +792,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		panelOps = append(panelOps,
 			menuItem{label: "Search", key: "/", hint: "find a file by name or content in this tree"},
 			menuItem{label: "Goto", key: "go", hint: "jump to a pinned dir, or search under home"},
+			menuItem{label: "Favorite", key: "F", hint: "favorite this tab's current directory"},
 			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
 		if len(m.tabs) < maxTabs {
 			panelOps = append(panelOps,
@@ -805,7 +826,10 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		case 2: // Favorites tab
 			var itemOps []menuItem
 			if len(m.places.pinned) > 0 {
-				itemOps = []menuItem{{label: "Delete", key: "D", hint: "unfavorite this directory"}}
+				itemOps = []menuItem{
+					{label: "Open in", key: "o", hint: "open this dir in a new or existing tab"},
+					{label: "Delete", key: "D", hint: "unfavorite this directory"},
+				}
 			}
 			return groupedMenu(itemOps, []menuItem{tab, zoom}), "Favorites"
 		}

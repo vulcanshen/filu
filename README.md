@@ -126,7 +126,7 @@ filu's cd-on-quit follows [superfile](https://github.com/yorukot/superfile)'s `c
   - **`go` Goto** — a picker for a **Favorite** directory, or a fuzzy **Search** of directory paths under `$HOME`; a query starting with `/` re-anchors onto that absolute path — fuzzy across the whole path, bounded a few levels below the deepest directory it names — so directories outside home are reachable too. `Enter` teleports the active tab there.
   - **`b` Breadcrumb** — a popup of the current tab's ancestor directories; `Enter` jumps the tab up to any level.
   - In the result list, `Esc` leaves and `q` returns to the input. Scan bounds (`finder_cap`) and skipped tool directories (`ignore_dirs`) are tunable in `config.yaml`.
-- **Favorites** — `f` favorites the cursor directory (a star marks it in the list). Panel `[3]`'s **Favorites** tab lists them by full path (one a list tab currently has open shows that tab's Roman numeral instead of the star) — `D` removes one right there; to jump to a favorite, use **Goto → Favorites**. Browser-bookmark semantics — a saved place you jump back to.
+- **Favorites** — `f` favorites the highlighted subdirectory; `F` (panel op) favorites the directory the tab is currently browsing. A star marks a favorited dir in the list, and the list header shows a star when the directory you're in is itself a favorite. Panel `[3]`'s **Favorites** tab lists them by full path — `o` opens one in a new or existing tab, `D` removes it; to jump you can also use **Goto → Favorites**. Browser-bookmark semantics — a saved place you jump back to.
 - **Open, and open-with** — `o` opens the cursor file or directory with the OS default app, after a yes/no confirm. `O` (shift-o) opens a picker instead: **Default** plus the apps you list under `open_with` in `config.yaml` (VSCode, IntelliJ IDEA, …), each run as `<cmd> <path>` — handy for opening the current folder in your IDE. In filu, `o` / `O` — not `Enter` — open things; `Enter` is navigation only.
 - **Drop to a shell** — `s` confirms the target directory, then opens your `$SHELL` in the active tab's directory inside the embedded terminal; run a few commands and `exit` to come back (the directory reloads in case files changed). It's a modal sub-shell — you leave it by exiting, not by switching away.
 - **Preview by file kind** — detected from magic bytes: directory → inner tree, archive (zip / tar / tar.gz…) → contents, image → base64 `data:` URI, SVG → highlighted XML, text → syntax-highlighted with line numbers (Chroma / catppuccin-mocha), binary → hex + ASCII, PDF → extracted text + page count.
@@ -182,11 +182,11 @@ Where a contextual menu exists, `Space` is enough — you don't need to memorize
 
 | Focus | Menu items |
 |---|---|
-| **`[1]` List** | Open `o`, Open with `O`, Mark `m`, Yank `y`, Rename `r`, Delete `D`, Favorite `f` · Copy `c`, Move `v`, Search `/`, Goto `go`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Shell `s`, Hidden `.`, Zoom `z` |
+| **`[1]` List** | Open `o`, Open with `O`, Mark `m`, Yank `y`, Rename `r`, Delete `D`, Favorite `f` · Copy `c`, Move `v`, Search `/`, Goto `go`, Favorite dir `F`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Shell `s`, Hidden `.`, Zoom `z` |
 | **`[2]` Preview** | Yank `y`, Zoom `z` |
 | **`[3]` Marks** | Pick `p`, Yank `y`, Unmark `m` · Switch tab `l`, Zoom `z` |
 | **`[3]` Tasks** | Delete `D` · Switch tab `l`, Zoom `z` |
-| **`[3]` Favorites** | Delete `D` (unfavorite) · Switch tab `l`, Zoom `z` |
+| **`[3]` Favorites** | Open in `o`, Delete `D` (unfavorite) · Switch tab `l`, Zoom `z` |
 
 ## cd-on-quit
 

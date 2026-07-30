@@ -58,6 +58,9 @@ func (m AppModel) View() string {
 	if m.gotoMenu.isActive() {
 		out = overlay.Composite(m.gotoMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.openInMenu.isActive() {
+		out = overlay.Composite(m.openInMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.searchMenu.isActive() {
 		out = overlay.Composite(m.searchMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -157,18 +160,6 @@ func (m AppModel) marksTitle() string {
 	return tabBar("[3]", []string{"Marks", "Tasks", "Favorites"}, m.marksTab, m.focus == panelMarks)
 }
 
-// tabDirIndex maps each open list tab's directory (cleaned) to its tab index, so
-// the Favorites tab can badge a favorite that a tab currently has open with that
-// tab's Roman numeral instead of the star. Walked in reverse so the lowest tab
-// index wins when two tabs share a directory.
-func (m AppModel) tabDirIndex() map[string]int {
-	out := make(map[string]int, len(m.tabs))
-	for i := len(m.tabs) - 1; i >= 0; i-- {
-		out[cleanDir(m.tabs[i].dir)] = i
-	}
-	return out
-}
-
 // marksBody renders panel [3]'s active tab — the Marks bucket (with the marks
 // workflow hint), the Tasks land log, or the Favorites list.
 func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
@@ -176,7 +167,7 @@ func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
 	case 1:
 		return m.tasksView(w, rows, focused), ""
 	case 2:
-		return m.places.view(w, rows, focused, m.tabDirIndex()), favoritesHint()
+		return m.places.view(w, rows, focused), favoritesHint()
 	}
 	return m.marks.view(w, rows, focused), marksHint()
 }
@@ -335,11 +326,11 @@ func marksHint() string {
 	return keyLegend([][2]string{{"m", "mark"}, {"c", "copy"}, {"v", "move"}})
 }
 
-// favoritesHint is the Favorites tab's bottom-border legend: the one action that
-// lives on this tab. `f` on the LIST still creates/removes favorites; here D
-// prunes the highlighted one (jumping to a favorite lives in the Goto picker).
+// favoritesHint is the Favorites tab's bottom-border legend: o opens the
+// highlighted favorite's dir in a tab (New tab / an existing one), D unfavorites
+// it. `f` on the LIST still creates/removes favorites.
 func favoritesHint() string {
-	return keyLegend([][2]string{{"D", "remove"}})
+	return keyLegend([][2]string{{"o", "open in"}, {"D", "remove"}})
 }
 
 // eza-style permission accents (catppuccin-mocha), matching eza's long-format
