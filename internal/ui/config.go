@@ -54,6 +54,24 @@ type openWithApp struct {
 
 var configPathOverride string // tests redirect config I/O here
 
+// filuConfigDir resolves the directory that holds config.yaml and state.yaml.
+// XDG_CONFIG_HOME wins on every platform when set — so a macOS user can opt into
+// ~/.config/filu by exporting it, instead of being stuck with
+// ~/Library/Application Support — otherwise os.UserConfigDir() decides (macOS:
+// ~/Library/Application Support; Linux: $XDG_CONFIG_HOME or ~/.config). Go's
+// UserConfigDir already honours XDG_CONFIG_HOME on Linux, so this only changes
+// macOS behaviour; the result is identical on Linux.
+func filuConfigDir() (string, bool) {
+	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
+		return filepath.Join(x, "filu"), true
+	}
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", false
+	}
+	return filepath.Join(dir, "filu"), true
+}
+
 func configFilePath() (string, bool) {
 	if configPathOverride != "" {
 		return configPathOverride, true
@@ -61,11 +79,11 @@ func configFilePath() (string, bool) {
 	if p := os.Getenv("FILU_CONFIG"); p != "" { // redirect config I/O (demo recordings / isolated runs)
 		return p, true
 	}
-	dir, err := os.UserConfigDir()
-	if err != nil {
+	dir, ok := filuConfigDir()
+	if !ok {
 		return "", false
 	}
-	return filepath.Join(dir, "filu", "config.yaml"), true
+	return filepath.Join(dir, "config.yaml"), true
 }
 
 // loadConfig applies config.yaml over the defaults. On first run (no file) it

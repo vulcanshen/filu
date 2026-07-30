@@ -207,7 +207,9 @@ filu reads user settings from `config.yaml` in the OS config directory. `state.y
 | OS | Path |
 |---|---|
 | Linux | `$XDG_CONFIG_HOME/filu/` or `~/.config/filu/` |
-| macOS | `~/Library/Application Support/filu/` |
+| macOS | `~/Library/Application Support/filu/` (or `$XDG_CONFIG_HOME/filu/` when set) |
+
+`XDG_CONFIG_HOME` is honoured on every platform, so on macOS you can `export XDG_CONFIG_HOME=$HOME/.config` to keep both files under `~/.config/filu` instead. The file-level `FILU_CONFIG` / `FILU_STATE` env vars still override each file individually.
 
 A commented template is written on first launch (an existing file is never overwritten). The finder knobs (`finder_cap`, `ignore_dirs`) plus the `[o]pen` app list:
 

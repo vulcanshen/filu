@@ -23,11 +23,15 @@ fi
 rm "$FOUND"
 echo "removed $FOUND"
 
-# filu keeps state under the OS config dir (os.UserConfigDir()/filu).
-if [ "$(uname -s)" = "Darwin" ]; then
+# filu keeps state under its config dir: XDG_CONFIG_HOME wins on every platform
+# (matching the binary), else macOS uses Library/Application Support and Linux
+# ~/.config.
+if [ -n "$XDG_CONFIG_HOME" ]; then
+  CONFIG_DIR="$XDG_CONFIG_HOME/filu"
+elif [ "$(uname -s)" = "Darwin" ]; then
   CONFIG_DIR="$HOME/Library/Application Support/filu"
 else
-  CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/filu"
+  CONFIG_DIR="$HOME/.config/filu"
 fi
 if [ -d "$CONFIG_DIR" ]; then
   printf "Remove filu state in %s? [y/N]: " "$CONFIG_DIR"
