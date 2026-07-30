@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -106,9 +107,9 @@ func TestFitPath(t *testing.T) {
 	}
 }
 
-// TestFavoritesTabManage: panel [3]'s Favorites tab moves a cursor over the
-// favorited dirs and D unfavorites the highlighted one, keeping the cursor in
-// range. Jumping to a favorite stays in the Goto picker, not this tab.
+// TestFavoritesTabManage: the Favorites tab moves a cursor over the favorited
+// dirs; D asks to confirm, and accepting unfavorites the highlighted one, keeping
+// the cursor in range.
 func TestFavoritesTabManage(t *testing.T) {
 	m := minModel()
 	m.width, m.height = 80, 24
@@ -123,12 +124,23 @@ func TestFavoritesTabManage(t *testing.T) {
 	if m.places.cursor != 1 {
 		t.Fatalf("j should move to cursor 1, got %d", m.places.cursor)
 	}
-	m.handleMarksKey("D") // unfavorite the highlighted "b"
+	// D arms a confirm — nothing is removed yet
+	m.handleMarksKey("D")
+	if m.confirmAction != confirmUnfavorite {
+		t.Fatalf("D should arm the unfavorite confirm, got %v", m.confirmAction)
+	}
+	if len(m.places.pinned) != 3 {
+		t.Errorf("D must not unfavorite before the confirm is accepted, %d left", len(m.places.pinned))
+	}
+	// accepting removes the highlighted "b"
+	m.confirm.anim.state = popupOpen
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(AppModel)
 	if len(m.places.pinned) != 2 || m.places.pinned[1].path != "/home/me/c" {
-		t.Fatalf("D should remove the highlighted favorite (b); left=%v", m.places.pinned)
+		t.Fatalf("accepting should unfavorite b; left=%v", m.places.pinned)
 	}
 	if m.places.cursor < 0 || m.places.cursor >= len(m.places.pinned) {
-		t.Errorf("cursor should stay in range after removal, got %d (len %d)", m.places.cursor, len(m.places.pinned))
+		t.Errorf("cursor should stay in range, got %d (len %d)", m.places.cursor, len(m.places.pinned))
 	}
 }
 

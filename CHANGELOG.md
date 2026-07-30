@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+- **Unfavoriting asks first** — removing a favorite in the `[3]` Favorites tab
+  (`D`) now pops a yes/no confirm, matching delete-to-trash. The Tasks-log `D`
+  stays confirmation-free — clearing a log row is non-destructive.
+
 ## [0.2.3] — 2026-07-30
 
 ### Added
