@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.6] — 2026-08-03
+
 ### Changed
 - **Goto reaches hidden directories** — the `go` Goto finder now lists hidden
   directories (e.g. `~/.m2`, `~/.config`) instead of skipping every dotdir; the
