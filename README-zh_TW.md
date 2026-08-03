@@ -123,8 +123,8 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 - **Marks 複製與搬移** — 延遲的 cp/mv,像 Finder 的 Cmd+C / Cmd+V。`m` 把檔案 mark 進 marks bucket(清單上打 glyph 標記 — 一種 in-place 多選),接著切到目標目錄,`c` 複製 / `v` 搬移整個 bucket 過去。在 Marks 分頁,`p` 改成 pick 一個要落地的**子集**、`m` 則把某項 unmark。複製會保留 bucket(可連續落地到多個目錄);搬移會更新 bucket 內路徑讓它保持有效。
 - **非同步落地 + 可讀 Tasks 分頁** — 複製/搬移在背景跑;進度串流到 `[3]` 的 Tasks 分頁,是帶時間戳的人話 log(`2026-07-28 14:32:07  Copied report.pdf → proj` / `… Move 5 items → proj (2/5 failed)`)。同磁碟搬移是瞬間 `rename`;跨磁碟 / 複製會顯示進度。`D` 從 log 移除一列。中斷的任務存進 `state.yaml`、還原成 pending。
 - **原生串流 finder** — filu 自畫的分割 picker(清單 + 預覽),不是 fzf binary。每種模式都串流列檔(`fd` 走訪序、首批近乎立即、載入中可濾):
-  - **`/` Search** — 開一個 chooser:**filename**(對當前分頁子樹的檔名做 fuzzy;以 `/` 開頭的 query 則改錨定到絕對路徑,磁碟上任何位置都到得了)或 **content**(用 `ripgrep` 對內容過濾;預覽自動 scroll 到命中行並反白)。
-  - **`go` Goto** — 選一個 **Favorite** 目錄,或對 `$HOME` 底下的目錄路徑做 fuzzy **Search**;以 `/` 開頭的 query 會改錨定到該絕對路徑 —— 對整條路徑 fuzzy、深度限錨點下數層 —— 所以 home 以外的目錄也到得了;`Enter` 把當前分頁傳送過去。
+  - **`/` Search** — 開一個 chooser:**filename**(對當前分頁子樹的檔名做 fuzzy;以 `/` 開頭 —— 或 `~/` 代表 home —— 的 query 則改錨定到絕對路徑,磁碟上任何位置都到得了)或 **content**(用 `ripgrep` 對內容過濾;預覽自動 scroll 到命中行並反白)。
+  - **`go` Goto** — 選一個 **Favorite** 目錄,或對 `$HOME` 底下的目錄路徑做 fuzzy **Search**(含隱藏目錄 —— `ignore_dirs` 黑名單仍會濾掉 `.git` 這類工具目錄);以 `/`、或 `~/` 代表 home 路徑的 query 會改錨定到該絕對路徑 —— 對整條路徑 fuzzy、深度限錨點下數層 —— 所以 home 以外的目錄也到得了;`Enter` 把當前分頁傳送過去。
   - **`b` Breadcrumb** — 當前分頁祖先目錄的 popup;`Enter` 把分頁跳上任一層。
   - 在結果清單裡,`Esc` 離開、`q` 回到輸入列。掃描上限(`finder_cap`)與要跳過的工具目錄(`ignore_dirs`)可在 `config.yaml` 調。
 - **Favorites** — `f` 把游標指向的子目錄加最愛;`F`(panel op)把當前 tab 正在瀏覽的目錄加最愛。清單上以星標標記最愛目錄,而你所在的目錄本身若是最愛,清單 header 也會顯示星標。`[3]` 的 **Favorites** 分頁以完整路徑列出 —— `o` 把某個最愛開在新的或既有的 tab、`D` 移除(帶確認);要跳過去也可以用 **Goto → Favorites**。瀏覽器書籤語意 —— 一個你會跳回去的存放點。
