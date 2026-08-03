@@ -56,7 +56,7 @@ type searchModel struct {
 	baseRoot  string      // the root a non-/ query returns to (the active tab's dir, or $HOME for Goto)
 	curDepth  int         // current fd scan depth: 0 = recursive (base), 1 = the / anchored single level
 	byContent bool        // true = Find (rg content + preview); false = Search / Goto (name)
-	dirsOnly  bool        // true = Goto: list only directories (fd --type d), no hidden
+	dirsOnly  bool        // true = Goto: list only directories (fd --type d), hidden included
 	newTab    bool        // true = Goto opened by T: confirm opens a new tab, not a reveal
 	query     string      // filter text
 	allFiles  []fileMatch // every file + dir under root (the empty-query list)
@@ -342,8 +342,8 @@ func (m *searchModel) queryChanged() tea.Cmd {
 	// deepest directory the path actually names (so it never walks all of /). A
 	// non-/ query stays at baseRoot (recursive).
 	targetRoot, targetDepth := m.baseRoot, 0
-	if strings.HasPrefix(m.query, "/") {
-		targetRoot, targetDepth = absAnchor(m.query)
+	if rq := m.resolvedQuery(); strings.HasPrefix(rq, "/") {
+		targetRoot, targetDepth = absAnchor(rq)
 	}
 	if targetRoot != m.root || targetDepth != m.curDepth {
 		return m.rescan(targetRoot, targetDepth) // crossed an anchor/depth boundary → restream
@@ -415,14 +415,28 @@ func absAnchor(query string) (root string, depth int) {
 	return root, absAnchorDepth
 }
 
+// resolvedQuery expands a leading ~ or ~/ in the query to the home directory, so
+// a ~/… path is treated as the absolute path it names (picking up the leading-/
+// anchor + fuzzy). The raw m.query stays as typed (what the input shows) — only
+// the path logic here and in queryChanged uses the expanded form.
+func (m searchModel) resolvedQuery() string {
+	if m.query == "~" || strings.HasPrefix(m.query, "~/") {
+		if home, err := os.UserHomeDir(); err == nil && home != "" {
+			return home + strings.TrimPrefix(m.query, "~")
+		}
+	}
+	return m.query
+}
+
 // effectiveFilter is the fuzzy needle for the current by-name query. For a
-// leading-/ query it's whatever follows the resolved anchor root (m.root) — which
-// may span several path segments, e.g. "u/lo" under / — so the fuzzy match runs
-// across the whole typed path. Otherwise it's the whole query. By-content queries
-// are never re-anchored, so they pass through unchanged.
+// leading-/ query (a ~/ path resolves to one too) it's whatever follows the
+// resolved anchor root (m.root) — which may span several path segments, e.g.
+// "u/lo" under / — so the fuzzy match runs across the whole typed path. Otherwise
+// it's the whole query. By-content queries are never re-anchored, so they pass
+// through unchanged.
 func (m searchModel) effectiveFilter() string {
-	if !m.byContent && strings.HasPrefix(m.query, "/") {
-		return strings.TrimPrefix(strings.TrimPrefix(m.query, m.root), "/")
+	if rq := m.resolvedQuery(); !m.byContent && strings.HasPrefix(rq, "/") {
+		return strings.TrimPrefix(strings.TrimPrefix(rq, m.root), "/")
 	}
 	return m.query
 }
@@ -764,8 +778,8 @@ func streamFilesCmd(gen int, root string, dirsOnly bool, maxDepth int, ch chan<-
 
 // streamDirFiles runs fd under root and streams its output to ch in batches,
 // tagged with gen+root so a reopen's stale batches are dropped. Search / Find
-// list files + dirs (incl. hidden); Goto (dirsOnly) lists directories only, no
-// hidden, with the ignore list applied. It stops at finderCap and always ends
+// list files + dirs (incl. hidden); Goto (dirsOnly) lists directories only, also
+// including hidden, with the ignore list applied. It stops at finderCap and always ends
 // with a done batch. No fd → a one-shot Go walk.
 // maxDepth > 0 limits the walk to that many levels below root (1 = direct
 // children only) — used by the / re-anchored Search/Goto to list one directory
@@ -780,7 +794,7 @@ func streamDirFiles(gen int, root string, dirsOnly bool, maxDepth int, ch chan<-
 	}
 	args := []string{"--type", "f", "--type", "d", "--hidden"}
 	if dirsOnly {
-		args = []string{"--type", "d"} // dirs only, no --hidden
+		args = []string{"--type", "d", "--hidden"} // dirs only, hidden dirs included
 	}
 	args = append(args, "--strip-cwd-prefix")
 	if maxDepth > 0 {
@@ -921,13 +935,8 @@ func walkDirFiles(root string, dirsOnly bool, maxDepth int) []string {
 		if d.IsDir() && ignore[d.Name()] {
 			return filepath.SkipDir
 		}
-		if dirsOnly {
-			if !d.IsDir() {
-				return nil // Goto lists directories only
-			}
-			if strings.HasPrefix(d.Name(), ".") {
-				return filepath.SkipDir // skip hidden dirs (and their subtrees), matching fd
-			}
+		if dirsOnly && !d.IsDir() {
+			return nil // Goto lists directories only (hidden dirs included, matching fd)
 		}
 		rel, e := filepath.Rel(root, p)
 		if e != nil {

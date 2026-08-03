@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+- **Goto reaches hidden directories** — the `go` Goto finder now lists hidden
+  directories (e.g. `~/.m2`, `~/.config`) instead of skipping every dotdir; the
+  `ignore_dirs` blocklist still filters tool dirs like `.git`. A finder query may
+  also start with `~/` (expands to your home) in addition to `/`.
+
 ## [0.2.5] — 2026-08-03
 
 ### Added

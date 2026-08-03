@@ -393,3 +393,47 @@ func TestWalkDirFilesDepth(t *testing.T) {
 		t.Errorf("recursive dirsOnly = %v, want a/a1 present", got)
 	}
 }
+
+// TestWalkDirFilesIncludesHidden: Goto (dirsOnly) now lists hidden directories
+// and descends into them, so ~/.m2 & friends are reachable (the ignore list still
+// filters tool dirs, but a plain hidden dir is kept).
+func TestWalkDirFilesIncludesHidden(t *testing.T) {
+	root := t.TempDir()
+	for _, d := range []string{".hidden/inner", "proj"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got := walkDirFiles(root, true, 0) // dirsOnly, recursive
+	for _, want := range []string{".hidden", filepath.Join(".hidden", "inner"), "proj"} {
+		if !slices.Contains(got, want) {
+			t.Errorf("walkDirFiles(dirsOnly) should list hidden dir %q; got %v", want, got)
+		}
+	}
+}
+
+// TestResolvedQuery: a leading ~ / ~/ expands to $HOME so a ~/… path is treated
+// as the absolute path it names; everything else is left untouched.
+func TestResolvedQuery(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		t.Skip("no home dir")
+	}
+	cases := []struct {
+		query string
+		want  string
+	}{
+		{"~", home},
+		{"~/.m2", home + "/.m2"},
+		{"~/proj/x", home + "/proj/x"},
+		{"/etc", "/etc"}, // already absolute → unchanged
+		{".m2", ".m2"},   // bare name → unchanged
+		{"~foo", "~foo"}, // ~ not followed by / → literal
+	}
+	for _, c := range cases {
+		m := searchModel{query: c.query}
+		if got := m.resolvedQuery(); got != c.want {
+			t.Errorf("resolvedQuery(%q) = %q, want %q", c.query, got, c.want)
+		}
+	}
+}
