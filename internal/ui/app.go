@@ -106,16 +106,27 @@ type AppModel struct {
 const maxTabs = 5
 
 // New returns the root model, focused on the file list. Panel [2] opens with a
-// single tab at the current dir; extra tabs the user created last session are
-// restored by applyState.
-func New() AppModel {
+// single tab at startDir (the CWD when empty — the `filu` no-arg case); when
+// focusName is set (the `filu <file>` case) the cursor lands on that entry.
+// Extra tabs the user created last session are restored by applyState.
+func New(startDir, focusName string) AppModel {
 	loadConfig() // apply config.yaml (finder cap) before any finder can open
-	dir, err := os.Getwd()
-	if err != nil {
-		dir = "/"
+	dir := startDir
+	if dir == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			wd = "/"
+		}
+		dir = wd
 	}
 	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
-	m.tabs = []listModel{newList(dir)}
+	first := newList(dir)
+	if focusName != "" && !first.focusEntry(focusName) { // `filu <file>`: land on the passed file
+		first.showHidden = true // not listed — it's a dotfile; reveal hidden and retry
+		first.reload()
+		first.focusEntry(focusName)
+	}
+	m.tabs = []listModel{first}
 	if st, ok := loadState(); ok { // restore last session
 		m.applyState(st)
 	}

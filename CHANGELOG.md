@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+- **`filu <path>` opens there** — passing a path launches filu in that directory
+  (relative paths resolve against `$PWD`). If the path is a file, filu opens its
+  parent directory with the cursor on that file. A path that doesn't exist errors
+  out. No arguments still opens the current directory.
+
 ## [0.2.4] — 2026-07-30
 
 ### Changed

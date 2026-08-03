@@ -95,10 +95,11 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh |
 ## Quick Start
 
 ```bash
-filu
+filu            # 開在當前目錄
+filu ~/proj     # 直接開某個路徑(相對路徑以 $PWD 為基準)
 ```
 
-開在你當前的目錄、focus 在檔案清單。`Enter` 進目錄,`Space` 開情境選單,`Esc` 退回,`Tab` 切換面板。
+開在你當前的目錄 —— 或若你傳了路徑,就開那個目錄(傳檔案則開它的父目錄、游標停在該檔)。focus 在檔案清單:`Enter` 進目錄,`Space` 開情境選單,`Esc` 退回,`Tab` 切換面板。
 
 想讓 filu 在離開時把你的 shell 切到某個目錄(`q` picker),在 `~/.zshrc` / `~/.bashrc` 加一行,並用 **`filu`**(不是 `./filu`)啟動:
 
