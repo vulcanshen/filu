@@ -25,8 +25,17 @@ func main() {
 		fmt.Println(ui.IconCells())
 		return
 	}
+	var startDir, focusName string
+	if len(os.Args) > 1 { // `filu <path>`: open under that dir (a file → its parent, focused)
+		dir, focus, err := ui.ResolveStartDir(os.Args[1])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "filu:", err)
+			os.Exit(1)
+		}
+		startDir, focusName = dir, focus
+	}
 	ui.DetectIconWidth() // measure Nerd Font icon cell width (CJK fonts draw them 2-wide)
-	p := tea.NewProgram(ui.New(), tea.WithAltScreen())
+	p := tea.NewProgram(ui.New(startDir, focusName), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "filu:", err)
 		os.Exit(1)

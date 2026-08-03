@@ -70,6 +70,19 @@ func (m *listModel) reloadPreserving() {
 	}
 }
 
+// focusEntry moves the cursor onto the named entry when it's listed, reporting
+// whether it found it. A miss (e.g. a dotfile while hidden) leaves the cursor
+// where it was. Used by `filu <file>` to land on the passed file.
+func (m *listModel) focusEntry(name string) bool {
+	for i, it := range m.items {
+		if it.name == name {
+			m.cursor = i
+			return true
+		}
+	}
+	return false
+}
+
 // readEntries lists a directory: directories first, alphabetical, dotfiles
 // hidden unless showHidden. The error (e.g. permission denied) is returned so
 // callers can distinguish "empty" from "unreadable".

@@ -95,10 +95,11 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh |
 ## Quick Start
 
 ```bash
-filu
+filu            # open the current directory
+filu ~/proj     # open a path directly (relative paths resolve against $PWD)
 ```
 
-Opens on your current directory, focused on the file list. Press `Enter` to enter a directory, `Space` for the contextual menu, `Esc` to back out, `Tab` to move between panels.
+Opens on your current directory — or, if you pass a path, that directory (a file opens its parent with the cursor on that file). Focused on the file list: press `Enter` to enter a directory, `Space` for the contextual menu, `Esc` to back out, `Tab` to move between panels.
 
 To have filu change your shell's directory when you quit (the `q` picker), add one line to `~/.zshrc` / `~/.bashrc` and launch with **`filu`** (not `./filu`):
 
