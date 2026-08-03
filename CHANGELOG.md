@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.5] — 2026-08-03
+
 ### Added
 - **`filu <path>` opens there** — passing a path launches filu in that directory
   (relative paths resolve against `$PWD`). If the path is a file, filu opens its
