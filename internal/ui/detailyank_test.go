@@ -11,7 +11,7 @@ func dyRune(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: 
 func openYank(lines ...string) detailYank {
 	m := newDetailYank()
 	m.setSize(80, 24)
-	m.open("t", lines, false)
+	m.open("t", lines, false, nil)
 	m.anim.state = popupOpen // skip the open animation so update() is interactive
 	return m
 }
@@ -29,6 +29,27 @@ func TestDetailYankVisualSelectionText(t *testing.T) {
 	m, _ = m.update(dyRune("j")) // extend to (1,?) — multi-line
 	if got := m.selectionText(); got == "hel" || got == "" {
 		t.Errorf("multi-line selection should span both lines, got %q", got)
+	}
+}
+
+// TestDetailYankHardWrapNoNewline: a value the display hard-wrapped (like an
+// image data URI) must yank back as one line — cont marks the wrap boundary so
+// both copy-all and a selection spanning it skip the newline there.
+func TestDetailYankHardWrapNoNewline(t *testing.T) {
+	m := newDetailYank()
+	m.setSize(80, 24)
+	m.open("t", []string{"AAAAA", "BBBBB"}, false, []bool{false, true}) // row 1 continues row 0
+	m.anim.state = popupOpen
+
+	if m.full != "AAAAABBBBB" {
+		t.Errorf("copy-all across a wrap boundary = %q, want AAAAABBBBB (no newline)", m.full)
+	}
+
+	m, _ = m.update(dyRune("v")) // anchor (0,0)
+	m, _ = m.update(dyRune("G")) // to the last line
+	m, _ = m.update(dyRune("$")) // to end of line
+	if got := m.selectionText(); got != "AAAAABBBBB" {
+		t.Errorf("selection across a wrap boundary = %q, want AAAAABBBBB (no newline)", got)
 	}
 }
 
@@ -71,7 +92,7 @@ func TestDetailYankEscPeelsVisualThenCloses(t *testing.T) {
 func TestDetailYankGutterExcludedFromYank(t *testing.T) {
 	m := newDetailYank()
 	m.setSize(80, 24)
-	m.open("t", []string{"foo", "bar"}, true) // line-number gutter on
+	m.open("t", []string{"foo", "bar"}, true, nil) // line-number gutter on
 	if m.plain[0] != "foo" || m.plain[1] != "bar" {
 		t.Errorf("plain should be the raw content without line numbers: %v", m.plain)
 	}

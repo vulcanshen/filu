@@ -32,9 +32,18 @@ func TestImageDataURI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lines, ok := imageDataURI(p, "pixel.png", 20)
+	lines, cont, ok := imageDataURI(p, "pixel.png", 20)
 	if !ok {
 		t.Fatal("expected ok=true")
+	}
+	if len(cont) != len(lines) {
+		t.Fatalf("cont length %d != lines %d", len(cont), len(lines))
+	}
+	if cont[0] || cont[1] || cont[2] {
+		t.Errorf("head/blank/first-uri-line must be real lines, cont=%v", cont)
+	}
+	if len(cont) > 3 && !cont[3] {
+		t.Errorf("wrapped uri lines after the first must be continuations, cont=%v", cont)
 	}
 	joined := ansi.Strip(strings.Join(lines, "")) // "" join drops the wrap newlines
 	if !strings.Contains(joined, "data:image/png") {
@@ -59,7 +68,7 @@ func TestImageDataURITooLarge(t *testing.T) {
 	if err := os.WriteFile(p, make([]byte, dataURIMaxBytes+1), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	lines, ok := imageDataURI(p, "big.png", 40)
+	lines, _, ok := imageDataURI(p, "big.png", 40)
 	if !ok {
 		t.Fatal("expected ok=true (with a note)")
 	}
@@ -69,7 +78,7 @@ func TestImageDataURITooLarge(t *testing.T) {
 }
 
 func TestImageDataURIMissing(t *testing.T) {
-	if _, ok := imageDataURI("/no/such/file.png", "file.png", 40); ok {
+	if _, _, ok := imageDataURI("/no/such/file.png", "file.png", 40); ok {
 		t.Error("a missing image must return ok=false")
 	}
 }

@@ -32,6 +32,7 @@ type previewModel struct {
 	kind  previewKind
 	lines []string // panel display lines (text/hex carry a line-number gutter)
 	body  []string // same content WITHOUT the gutter — the yank source
+	cont  []bool   // body[i] is a hard-wrap continuation of i-1 (image data URI); nil = all real lines
 	note  string   // empty / unreadable
 }
 
@@ -48,8 +49,8 @@ func loadPreview(it fileItem, parent string, imgW int) previewModel {
 		return previewModel{kind: previewArchive, lines: lines, body: lines}
 	}
 	if isImage(it.name) {
-		if lines, ok := imageDataURI(full, it.name, imgW); ok {
-			return previewModel{kind: previewImage, lines: lines, body: lines}
+		if lines, cont, ok := imageDataURI(full, it.name, imgW); ok {
+			return previewModel{kind: previewImage, lines: lines, body: lines, cont: cont}
 		}
 	}
 	if strings.HasSuffix(strings.ToLower(it.name), ".pdf") {
