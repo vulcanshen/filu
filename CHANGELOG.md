@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.7] — 2026-08-04
+
 ### Fixed
 - **Yank keeps a hard-wrapped value on one line** — copying from the `[2]` Preview
   yank viewport (the whole content or a visual selection) no longer bakes the
