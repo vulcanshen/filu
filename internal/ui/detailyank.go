@@ -17,6 +17,7 @@ type detailYank struct {
 	title string
 	lines []string // styled (syntax-highlighted) display lines
 	plain []string // ANSI-stripped mirror — authoritative for cursor/selection
+	cont  []bool   // cont[i]=true: plain[i] is a hard-wrap continuation of i-1 (no real newline)
 	full  string   // whole content joined, for "copy all"
 
 	showGutter bool // draw a non-selectable line-number gutter (text/hex)
@@ -37,18 +38,39 @@ func newDetailYank() detailYank {
 
 // open loads content and resets the cursor to the top. showGutter draws a
 // non-selectable line-number gutter (for text/hex, like kbu's YAML popup).
-func (m *detailYank) open(title string, lines []string, showGutter bool) tea.Cmd {
+func (m *detailYank) open(title string, lines []string, showGutter bool, cont []bool) tea.Cmd {
 	m.title = title
 	m.lines = lines
 	m.showGutter = showGutter
+	m.cont = cont
 	m.plain = make([]string, len(lines))
 	for i, l := range lines {
 		m.plain[i] = ansi.Strip(l)
 	}
-	m.full = strings.Join(m.plain, "\n")
+	m.full = m.joinAll()
 	m.cursorLine, m.cursorCol, m.scroll = 0, 0, 0
 	m.visual, m.pendingG = false, false
 	return m.anim.open()
+}
+
+// contAt reports whether plain[i] is a hard-wrap continuation of the line above
+// it — i.e. the display split it there, but the source has no newline. A nil/short
+// cont slice means "every line is a real line" (the common case).
+func (m detailYank) contAt(i int) bool {
+	return i >= 0 && i < len(m.cont) && m.cont[i]
+}
+
+// joinAll joins every plain line, inserting "\n" only at real line boundaries so a
+// hard-wrapped value (e.g. an image data URI) is reassembled without stray breaks.
+func (m detailYank) joinAll() string {
+	var b strings.Builder
+	for i, l := range m.plain {
+		if i > 0 && !m.contAt(i) {
+			b.WriteByte('\n')
+		}
+		b.WriteString(l)
+	}
+	return b.String()
 }
 
 func (m *detailYank) setSize(w, h int) { m.width, m.height = w, h }
@@ -220,17 +242,21 @@ func (m detailYank) selectionText() string {
 	if sC < len(start) {
 		b.WriteString(string(start[sC:]))
 	}
-	b.WriteByte('\n')
-	for i := sL + 1; i < eL; i++ {
-		b.WriteString(m.plain[i])
-		b.WriteByte('\n')
-	}
-	end := []rune(m.plain[eL])
-	if len(end) > 0 {
-		if eC >= len(end) {
-			eC = len(end) - 1
+	for i := sL + 1; i <= eL; i++ {
+		if !m.contAt(i) {
+			b.WriteByte('\n') // real line boundary; a hard-wrap continuation gets none
 		}
-		b.WriteString(string(end[0 : eC+1]))
+		if i < eL {
+			b.WriteString(m.plain[i])
+			continue
+		}
+		end := []rune(m.plain[eL])
+		if len(end) > 0 {
+			if eC >= len(end) {
+				eC = len(end) - 1
+			}
+			b.WriteString(string(end[0 : eC+1]))
+		}
 	}
 	return b.String()
 }

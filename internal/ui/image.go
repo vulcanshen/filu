@@ -30,27 +30,32 @@ func isImage(name string) bool {
 // imageDataURI renders an image as a base64 data: URI wrapped to w columns so
 // the whole string scrolls into view. ok is false when the file can't be read;
 // a file over dataURIMaxBytes shows a note instead of an enormous blob.
-func imageDataURI(path, name string, w int) (lines []string, ok bool) {
+func imageDataURI(path, name string, w int) (lines []string, cont []bool, ok bool) {
 	mime := imageMime[strings.ToLower(strings.TrimPrefix(filepath.Ext(name), "."))]
 	if mime == "" {
-		return nil, false
+		return nil, nil, false
 	}
 	info, err := os.Stat(path)
 	if err != nil {
-		return nil, false
+		return nil, nil, false
 	}
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	head := dim.Render(fmt.Sprintf("data:%s · %s", mime, humanSize(info.Size())))
 	if info.Size() > dataURIMaxBytes {
 		note := dim.Render(fmt.Sprintf("(%s — too large to inline as a data URI)", humanSize(info.Size())))
-		return []string{head, "", note}, true
+		return []string{head, "", note}, nil, true
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, false
+		return nil, nil, false
 	}
 	uri := "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
-	return append([]string{head, ""}, wrapCols(uri, max(w, 1))...), true
+	body := append([]string{head, ""}, wrapCols(uri, max(w, 1))...)
+	cont = make([]bool, len(body))
+	for i := 3; i < len(body); i++ { // body[2] is the first wrapped URI line; [3:] continue it
+		cont[i] = true
+	}
+	return body, cont, true
 }
 
 // wrapCols hard-wraps ASCII s into lines of at most w columns (base64 is ASCII,

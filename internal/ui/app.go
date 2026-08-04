@@ -635,7 +635,7 @@ func (m *AppModel) openDetailYank() tea.Cmd {
 	}
 	showGutter := m.preview.kind == previewText || m.preview.kind == previewBinary
 	m.detailYank.setSize(m.width, m.height)
-	return m.detailYank.open("Yank: Preview", lines, showGutter)
+	return m.detailYank.open("Yank: Preview", lines, showGutter, m.preview.cont)
 }
 
 // clampDetailScroll keeps panel [2] (preview) from scrolling past its last page.

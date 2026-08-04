@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Yank keeps a hard-wrapped value on one line** — copying from the `[2]` Preview
+  yank viewport (the whole content or a visual selection) no longer bakes the
+  display's line breaks into a value the view had to wrap, such as an image's
+  `data:` base64 URI; the copied text now matches the source exactly.
+
 ## [0.2.6] — 2026-08-03
 
 ### Changed
