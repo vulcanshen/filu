@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.8] — 2026-08-30
+
 ### Changed
 - **Breadcrumb moved into panel `[1]`** — the powerline path bar no longer spans
   the top of the screen; it is now the list panel's first row, shrunk to the
