@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.8] — 2026-08-30
+
 ### Changed
 - **Top chrome folded into panel `[1]`** — the two full-width top rows (the
   powerline breadcrumb and the launch-dir status line) are gone and the panels
