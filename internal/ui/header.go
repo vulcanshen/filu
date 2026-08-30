@@ -10,8 +10,8 @@ import (
 
 // Header path gradient endpoints. Unlike the ZLC popup scale (a low-contrast
 // lavender→sapphire span), the breadcrumb runs a WIDE blue→crust gradient: the
-// capHard triangle between two segments is visible only when their colours
-// differ — the triangle *is* the colour boundary — so a big luminance drop per
+// backHard "\" slant between two segments is visible only when their colours
+// differ — the slant *is* the colour boundary — so a big luminance drop per
 // step keeps every separator legible, even on a deep path where the per-segment
 // step is small. Root = crust, current = blue (the structural focus colour). The
 // interpolation is still continuous by depth (the concept kept from the ZLC
@@ -112,34 +112,36 @@ func pathSegments(dir string) []string {
 	return segs
 }
 
-// headerBar renders the location breadcrumb as a powerline chip chain: a
-// crust folder + active-tab-numeral chip, then one chip per path segment
-// coloured along the ZLC depth gradient (root→current = crust→blue).
-// Unlike a panel title it never dims — the header is always the live "you are
-// here". When the bar overflows the width, front segments shrink to their
-// initial (~/Documents/x → ~/D/x); if that is not enough the middle collapses to
-// … keeping root + as many tail segments as fit, then a final hard clip.
-func (m AppModel) headerBar(w int) string {
+// crumbRow renders a tab's location breadcrumb as a powerline chip chain: a
+// crust folder chip, then one chip per path segment coloured along the ZLC
+// depth gradient (root→current = crust→blue). It is panel [1]'s first content
+// row — the live "you are here", so it never dims. No tab numeral: the panel
+// title's tab bar right above already marks which tab this is. Always a
+// single line: when the bar overflows w, front segments shrink to their
+// initial (~/Documents/x → ~/D/x); if that is not enough the middle collapses
+// to … keeping root + as many tail segments as fit, then a final hard clip.
+func crumbRow(dir string, w int) string {
 	glyph := string(rune(0xf07c)) // nf-fa-folder-open
-	folderChip := m.folderChip(tabNumeral(m.tab) + " " + glyph + " ")
-	segs := breadcrumbSegments(m.active().dir, w-dispWidth(folderChip))
-	return padDisp(folderChip+renderCrumb(segs), w)
+	chip := folderChip(glyph + " ")
+	segs := breadcrumbSegments(dir, w-dispWidth(chip))
+	return truncate(padDisp(chip+renderCrumb(segs), w), w)
 }
 
 // folderChip is the leading "you are here" chip: a round-left cap + a body whose
 // text takes the same WCAG-contrast colour as the crumbs (crust start = dark
-// chip → light text), carrying the folder glyph and the active tab's Roman numeral.
-func (m AppModel) folderChip(label string) string {
+// chip → light text), carrying the folder glyph.
+func folderChip(label string) string {
 	c := crumbColorAt(0) // crust = the gradient start (root), so the bar opens dark
 	cap := lipgloss.NewStyle().Foreground(c)
 	body := lipgloss.NewStyle().Foreground(crumbTextAt(0)).Background(c).Bold(true)
 	return cap.Render(capLeft) + body.Render(label)
 }
 
-// renderCrumb draws the path portion of the breadcrumb: a capHard triangle
-// transition into each segment chip (coloured by crumbColor), then a capHard
-// tail in the current segment's colour on the terminal background. The first
-// transition blends from the folder chip's crust.
+// renderCrumb draws the path portion of the breadcrumb: a backHard "\" slant
+// transition into each segment chip (coloured by crumbColor) — the opposite
+// diagonal from the tab bar's "/" so the two chains read differently — then a
+// rounded tail in the current segment's colour on the terminal background. The
+// first transition blends from the folder chip's crust.
 func renderCrumb(segs []string) string {
 	if len(segs) == 0 {
 		return ""
@@ -153,7 +155,7 @@ func renderCrumb(segs []string) string {
 		// §8.2: the cap separates, so no leading space after it — only a trailing
 		// space closes each segment before the next cap. Text colour flips with the
 		// background luminance so the name stays legible across the crust→blue span.
-		b.WriteString(lipgloss.NewStyle().Foreground(prev).Background(c).Render(capHard))
+		b.WriteString(lipgloss.NewStyle().Foreground(prev).Background(c).Render(backHard))
 		b.WriteString(lipgloss.NewStyle().Foreground(crumbTextAt(t)).Background(c).Bold(true).Render(seg + " "))
 		prev = c
 	}

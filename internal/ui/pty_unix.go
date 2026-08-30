@@ -197,19 +197,19 @@ func (p *ptyPopup) setSize(hostW, hostH int) {
 	p.mu.Unlock()
 }
 
-// ptyChromeRows is how many rows of filu stay visible above the shell popup: the
-// header bar + the directory status line. The popup pins just below them so the
-// "where am I" context shows without the shell having to print it (see view.go's
+// ptyChromeRows is how many rows of filu stay visible above the shell popup.
+// Nothing does any more — the breadcrumb lives inside panel [1] and the top
+// status row is gone — so the popup starts at the very top (see view.go's
 // overlay offset, which must match).
-const ptyChromeRows = 2
+const ptyChromeRows = 0
 
-// dims is the PTY content size inside the popup. The popup is full width and runs
-// from just below filu's header+status down to the very bottom (covering the
-// panels + footer), so the content is the full width minus the two side borders,
-// and the height below the chrome minus the top/bottom border.
+// dims is the PTY content size inside the popup. The popup is full width and
+// runs from the top of the screen down to the very bottom (covering the panels
+// + footer), so the content is the full width minus the two side borders, and
+// the height minus the top/bottom border.
 func (p *ptyPopup) dims() (cols, rows int) {
 	cols = p.hostW - 2                 // full width, minus the two │ borders
-	rows = p.hostH - ptyChromeRows - 2 // below header+status, minus top/bottom border
+	rows = p.hostH - ptyChromeRows - 2 // minus top/bottom border
 	if cols < 20 {
 		cols = 20
 	}
