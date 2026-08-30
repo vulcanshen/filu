@@ -13,7 +13,7 @@ func TestListNavHintFocusGated(t *testing.T) {
 		t.Errorf("unfocused list should have no hint, got %q", got)
 	}
 	plain := ansi.Strip(listNavHint(true))
-	for _, want := range []string{"enter into", "esc back", "j/k move", "d/u page"} {
+	for _, want := range []string{"enter into", "esc back", "jkud move", "hl switch tab"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("focused list hint missing %q, got %q", want, plain)
 		}

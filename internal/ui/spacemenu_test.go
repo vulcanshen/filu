@@ -16,6 +16,11 @@ func TestBracketHotkey(t *testing.T) {
 		{"Hidden", ".", "[.] Hidden"},
 		{"Delete", "D", "[D]elete"},
 		{"Jump", "enter", "Jump"}, // multi-char key → plain
+		// A digit key is an ordinal, never a mnemonic: always prefixed, even when
+		// the digit appears in the label (a quit-menu path like 432hz).
+		{"~/Documents/sideproj/432hz", "3", "[3] ~/Documents/sideproj/432hz"},
+		{"~/dir2", "2", "[2] ~/dir2"},
+		{"~/Documents", "1", "[1] ~/Documents"},
 	}
 	for _, c := range cases {
 		if got := bracketHotkey(c.label, c.key); got != c.want {
@@ -61,8 +66,8 @@ func TestQuitMenuSingleGlyphAlign(t *testing.T) {
 	m.setSize(120)
 	m.setItems([]menuItem{
 		{label: "~/Documents/sideproj/filu", key: "1", hint: iconCWD + " "},
-		{label: "~/Downloads", key: "2", hint: tabNumeral(1) + " "},
-		{label: "~/Documents/sideproj", key: "3", hint: tabNumeral(2) + " "},
+		{label: "~/Downloads", key: "2", hint: tabMark(1) + " "},
+		{label: "~/Documents/sideproj", key: "3", hint: tabMark(2) + " "},
 	}, "Quit — cd to…")
 	lines := strings.Split(ansi.Strip(m.renderFull()), "\n")
 

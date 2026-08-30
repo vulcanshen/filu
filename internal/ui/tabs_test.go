@@ -13,7 +13,7 @@ func TestListTitleShowsNumerals(t *testing.T) {
 	m := AppModel{focus: panelList}
 	m.tabs = []listModel{{dir: "/home/me/projects"}, {dir: "/etc"}}
 	bar := m.listTitle(40)
-	if !strings.Contains(bar, tabNumeral(0)) || !strings.Contains(bar, tabNumeral(1)) {
+	if !strings.Contains(bar, tabMark(0)) || !strings.Contains(bar, tabMark(1)) {
 		t.Errorf("tab bar should show a numeral per tab, bar=%q", bar)
 	}
 	if strings.Contains(bar, "projects") || strings.Contains(bar, "etc") {
@@ -35,8 +35,8 @@ func TestZoomTabNumeralPadded(t *testing.T) {
 	top := strings.Split(m.expandedListTabs(120, 8), "\n")[0]
 	plain := ansi.Strip(top)
 	for i := range m.tabs {
-		if !strings.Contains(plain, tabNumeral(i)+" ") {
-			t.Errorf("zoom tab %d numeral %q not padded before the cap: %q", i, tabNumeral(i), plain)
+		if !strings.Contains(plain, tabMark(i)+" ") {
+			t.Errorf("zoom tab %d numeral %q not padded before the cap: %q", i, tabMark(i), plain)
 		}
 	}
 }

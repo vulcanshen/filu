@@ -1,23 +1,12 @@
 package ui
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
-)
 
-func TestCrumbColorEndpoints(t *testing.T) {
-	// Root of a path = crust; current = blue; a single-segment path is the blue
-	// (current) endpoint.
-	if got := string(crumbColor(0, 4)); got != "#11111b" {
-		t.Errorf("crumbColor(0,4) = %s, want crust #11111b (root)", got)
-	}
-	if got := string(crumbColor(3, 4)); got != "#89b4fa" {
-		t.Errorf("crumbColor(3,4) = %s, want blue #89b4fa (current)", got)
-	}
-	if got := string(crumbColor(0, 1)); got != "#89b4fa" {
-		t.Errorf("crumbColor(0,1) = %s, want blue (single segment = current)", got)
-	}
-}
+	"github.com/charmbracelet/x/ansi"
+)
 
 // TestCrumbRowFitsPanel: the breadcrumb row (panel [1]'s first content line) is
 // always a single line of at most w display cells, even for a deep path in a
@@ -40,7 +29,8 @@ func TestCrumbRowFitsPanel(t *testing.T) {
 func TestListBodyStartsWithCrumb(t *testing.T) {
 	m := minModel()
 	m.width, m.height = 100, 30
-	m.tabs = []listModel{newList(t.TempDir())}
+	dir := t.TempDir()
+	m.tabs = []listModel{newList(dir)}
 	m.tab = 0
 
 	body := m.listBody(0, 60, 10, true)
@@ -48,37 +38,8 @@ func TestListBodyStartsWithCrumb(t *testing.T) {
 	if len(lines) < 2 {
 		t.Fatalf("list body should have a crumb row + list, got %d line(s)", len(lines))
 	}
-	if !strings.Contains(lines[0], string(rune(0xf07c))) {
-		t.Errorf("first line should be the breadcrumb (folder glyph), got %q", lines[0])
-	}
-}
-
-// TestCrumbGradientMonotone: perceived luminance must rise monotonically from
-// the crust root to the blue current, so the z-axis never reverses across depth.
-func TestCrumbGradientMonotone(t *testing.T) {
-	lum := func(t float64) int { r, g, b := crumbRGB(t); return (299*r + 587*g + 114*b) / 1000 }
-	prev := -1
-	for i := 0; i <= 10; i++ {
-		if l := lum(float64(i) / 10); l < prev {
-			t.Fatalf("luminance fell at t=%.1f (%d < %d)", float64(i)/10, l, prev)
-		} else {
-			prev = l
-		}
-	}
-}
-
-// TestCrumbTextFlips: light text on the dark crust end (and still light a third of
-// the way in — the flip must not come too early), dark text on the bright blue
-// end, so the segment name never renders dark-on-dark.
-func TestCrumbTextFlips(t *testing.T) {
-	if got := string(crumbTextAt(0)); got != crumbLightText {
-		t.Errorf("crumbTextAt(0) = %s, want light %s on the crust end", got, crumbLightText)
-	}
-	if got := string(crumbTextAt(0.3)); got != crumbLightText {
-		t.Errorf("crumbTextAt(0.3) = %s, want light %s (flip must not be too early)", got, crumbLightText)
-	}
-	if got := string(crumbTextAt(1)); got != baseHex {
-		t.Errorf("crumbTextAt(1) = %s, want dark %s on the blue end", got, baseHex)
+	if !strings.Contains(ansi.Strip(lines[0]), filepath.Base(dir)) {
+		t.Errorf("first line should be the breadcrumb (ends at %q), got %q", filepath.Base(dir), lines[0])
 	}
 }
 
@@ -104,6 +65,20 @@ func TestPathSegments(t *testing.T) {
 // crumbWidth is the on-screen width of the rendered path portion (same measure
 // breadcrumbSegments uses to decide fit).
 func crumbWidth(segs []string) int { return dispWidth(renderCrumb(segs)) }
+
+// TestRenderCrumbAbsoluteRoot: with plain-text "/" separators, an absolute
+// path's root segment must render as the leading slash, never a "//" double-up.
+func TestRenderCrumbAbsoluteRoot(t *testing.T) {
+	if got := ansi.Strip(renderCrumb([]string{"/", "usr", "local"})); got != "/usr/local" {
+		t.Errorf("absolute path rendered %q, want /usr/local", got)
+	}
+	if got := ansi.Strip(renderCrumb([]string{"/"})); got != "/" {
+		t.Errorf("bare root rendered %q, want /", got)
+	}
+	if got := ansi.Strip(renderCrumb([]string{"~", "proj"})); got != "~/proj" {
+		t.Errorf("home path rendered %q, want ~/proj", got)
+	}
+}
 
 func TestBreadcrumbSegmentsFits(t *testing.T) {
 	// An absolute path (not under $HOME) is returned by shortPath unchanged, so

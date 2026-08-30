@@ -53,8 +53,8 @@ func TestQuitTargetsDedup(t *testing.T) {
 	if tg[0].hint != iconCWD+" " { // launch glyph + trailing space
 		t.Errorf("launch hint = %q, want %q", tg[0].hint, iconCWD+" ")
 	}
-	if tg[1].hint != tabNumeral(1)+" " { // /b first appeared as tab Ⅱ (index 1)
-		t.Errorf("/b hint = %q, want %q", tg[1].hint, tabNumeral(1)+" ")
+	if tg[1].hint != tabMark(1)+" " { // /b first appeared as tab Ⅱ (index 1)
+		t.Errorf("/b hint = %q, want %q", tg[1].hint, tabMark(1)+" ")
 	}
 }
 

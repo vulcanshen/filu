@@ -195,9 +195,15 @@ func (m spaceMenu) prevSelectable(from int) int {
 // the label is bracketed in place — a single letter ("[S]ort") or a chord that is
 // a substring ("[go]to"). A single key not in the label is prefixed ("[/] Search")
 // so it stays visible; a multi-char key not in the label (e.g. "Esc") renders plain.
+// A digit key is ALWAYS a prefix: it is an ordinal, not a mnemonic — bracketing
+// it in place would mangle an arbitrary label that happens to contain the digit
+// (a quit-menu path like 432hz must never render as 4[3]2hz).
 func bracketHotkey(label, key string) string {
 	if label == "" || key == "" {
 		return label
+	}
+	if len(key) == 1 && key[0] >= '0' && key[0] <= '9' {
+		return "[" + key + "] " + label
 	}
 	idx := strings.Index(strings.ToUpper(label), strings.ToUpper(key))
 	if idx < 0 {

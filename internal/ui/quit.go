@@ -47,7 +47,7 @@ func (m AppModel) quitTargets() []quitTarget {
 	// cell of content keeps the right column aligned regardless of glyph width.
 	add(m.launchDir, iconCWD+" ")
 	for i, t := range m.tabs {
-		add(t.dir, tabNumeral(i)+" ")
+		add(t.dir, tabMark(i)+" ")
 	}
 	return out
 }

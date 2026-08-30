@@ -22,17 +22,14 @@ var (
 	// popup layer scale (lavenphire25→sapphire) comes when popups land.
 )
 
-// §8.0/§8.2 powerline caps (rune values so no glyph sits in source). Both bars
-// now slant instead of the classic triangle, in opposite directions so the two
-// chip chains read as distinct vocabularies: the tab bar slants "/" (upper-left
-// half = the left chip), the breadcrumb slants "\" (lower-left half = the
-// previous segment).
+// §8.0/§8.2 powerline caps (rune values so no glyph sits in source). Only the
+// tab bars are chips now — the breadcrumb is plain text with "/" separators —
+// so these all belong to the tab-bar vocabulary.
 var (
-	capLeft   = string(rune(0xe0b6)) // round-left  — chip start
-	capRight  = string(rune(0xe0b4)) // round-right — chip end
-	slashHard = string(rune(0xe0bc)) // solid "/" (upper-left tri) — tab boundary
-	slashThin = string(rune(0xe0bb)) // thin "/" — inactive↔inactive divider
-	backHard  = string(rune(0xe0b8)) // solid "\" (lower-left tri) — breadcrumb boundary
+	capLeft  = string(rune(0xe0b6)) // round-left  — chip start
+	capRight = string(rune(0xe0b4)) // round-right — chip end
+	backHard = string(rune(0xe0b8)) // solid "\" (lower-left tri) — tab boundary
+	backThin = string(rune(0xe0b9)) // thin "\" — inactive↔inactive divider
 )
 
 const crustHex = "#11111b" // catppuccin crust — tab-bar recessed background
@@ -192,17 +189,20 @@ func (m AppModel) expandedListTabs(w, h int) string {
 		focused := m.focus == panelList && m.tab == i
 		// trailing space: singleChip sits flush against its round cap, so a wide
 		// Roman-numeral glyph (Ⅱ/Ⅲ/Ⅳ) gets clipped by it — pad a cell as tabBar does.
-		cols[i] = m.panelBox(focused, singleChip("[1] "+tabNumeral(i)+" ", focused), cw, h, m.listBody(i, cw-2, h-2, focused))
+		cols[i] = m.panelBox(focused, singleChip("[1] "+tabMark(i)+" ", focused), cw, h, m.listBody(i, cw-2, h-2, focused))
 	}
 	return joinH(cols...)
 }
 
 // listBody is panel [1]'s inner content: the tab's breadcrumb row first (a
-// single line, shrunk to the panel width — see crumbRow), then the file list,
-// which gives up one row for it.
+// single line, shrunk to the panel width — see crumbRow), a recessive rule to
+// give it air from the list, then the file list, which gives up two rows. (A
+// terminal can't pad half a cell, and a full blank padding row reads too tall
+// — tried and reverted.)
 func (m AppModel) listBody(i, w, rows int, focused bool) string {
-	return crumbRow(m.tabs[i].dir, w) + "\n" +
-		m.tabs[i].view(w, rows-1, focused, m.marks.inBucket(), m.places.pinnedSet())
+	rule := lipgloss.NewStyle().Foreground(lipgloss.Color("#313244")).Render(strings.Repeat("─", max(w, 0))) // surface0
+	return crumbRow(m.tabs[i].dir, w) + "\n" + rule + "\n" +
+		m.tabs[i].view(w, rows-2, focused, m.marks.inBucket(), m.places.pinnedSet())
 }
 
 // zoomDetailView (panel [2] zoom): the preview full-screen.
@@ -217,35 +217,42 @@ func (m AppModel) zoomMarksView(w, midH int) string {
 	return m.panelBoxHint(true, m.marksTitle(), hint, w, midH, body)
 }
 
-// listTitle renders panel [1]'s tab bar: one Roman-numeral chip per directory tab
-// (Ⅰ … Ⅴ), no text — the active tab's path is shown by the breadcrumb row inside
-// the panel, so the tabs only mark position and which is active. Fixed width, so
-// the bar always fits.
+// listTitle renders panel [1]'s tab bar: one mark glyph per directory tab, no
+// text — the active tab's path is shown by the breadcrumb row inside the
+// panel, so the tabs only mark position and which is active. Each mark gets a
+// trailing space only — a "/" divider hugs the next icon directly, which reads
+// evenly because the MD glyphs fill their cell. The bar places the dividers
+// between these labels as-is (tabBarPad pad=false); when the first tab is
+// active and merges with the [1] chip, the bar's structural merge space
+// separates them. Fixed width, so the bar always fits.
 func (m AppModel) listTitle(w int) string {
 	focused := m.focus == panelList
 	labels := make([]string, len(m.tabs))
 	for i := range m.tabs {
-		labels[i] = tabNumeral(i)
+		labels[i] = tabMark(i) + " "
 	}
-	return tabBar("[1]", labels, m.tab, focused)
+	return tabBarPad("[1]", labels, m.tab, focused, false)
 }
 
-// tabNumerals mark a tab's position. The first slot is the launch glyph — tab
-// one opens at the launch directory every start (it is never persisted), so it
-// carries the launch identity that the removed top status row used to show.
-// The rest are the Roman numerals Ⅱ … Ⅴ (Unicode ROMAN NUMERAL TWO..FIVE;
-// nf-md-roman_numeral_* is absent from Nerd Fonts, so these true Roman-numeral
-// codepoints are used for a consistent set). Both kinds are wide icons on a CJK
-// Nerd Font, so any slot lines up the same.
-var tabNumerals = []string{
-	iconCWD, string(rune(0x2161)), string(rune(0x2162)),
-	string(rune(0x2163)), string(rune(0x2164)),
+// tabMarks mark a tab's position. The first slot is the launch glyph
+// (nf-md-rocket_launch, the same iconCWD the quit menu uses) — tab one opens
+// at the launch directory every start (it is never persisted), so it carries
+// the launch identity that the removed top status row used to show. The rest
+// are Material Design companions: friendly, unmistakable one-glyph identities
+// (codepoints from nerd-fonts glyphnames.json). All slots are wide icons on a
+// CJK Nerd Font, so any of them lines up the same.
+var tabMarks = []string{
+	iconCWD,               // nf-md-rocket_launch
+	string(rune(0xf011b)), // nf-md-cat
+	string(rune(0xf0a43)), // nf-md-dog
+	string(rune(0xf03e9)), // nf-md-paw
+	string(rune(0xf0ab0)), // nf-md-egg_easter
 }
 
-// tabNumeral is the position mark for the idx-th (0-based) tab.
-func tabNumeral(idx int) string {
-	if idx >= 0 && idx < len(tabNumerals) {
-		return tabNumerals[idx]
+// tabMark is the position mark for the idx-th (0-based) tab.
+func tabMark(idx int) string {
+	if idx >= 0 && idx < len(tabMarks) {
+		return tabMarks[idx]
 	}
 	return ""
 }
@@ -327,15 +334,15 @@ func keyLegendGap(pairs [][2]string, gap string) string {
 }
 
 // listNavHint is the key legend shown in the focused list panel's bottom border:
-// the core open-model navigation keys (Enter enters a dir, Esc goes up, j/k move,
-// d/u half-page, h/l switch the directory tab). "" when the list is unfocused so
-// an idle panel keeps a clean edge.
+// the core open-model navigation keys, packed tight (jkud folds cursor + paging
+// into one entry, hl switches the directory tab). "" when the list is unfocused
+// so an idle panel keeps a clean edge.
 func listNavHint(focused bool) string {
 	if !focused {
 		return ""
 	}
 	return keyLegendGap([][2]string{
-		{"enter", "into"}, {"esc", "back"}, {"j/k", "move"}, {"d/u", "page"}, {"h/l", "tab"},
+		{"enter", "into"}, {"esc", "back"}, {"jkud", "move"}, {"hl", "switch tab"},
 	}, "  ")
 }
 

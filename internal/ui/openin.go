@@ -30,7 +30,7 @@ func (m *AppModel) openOpenInMenu() tea.Cmd {
 		if cleanDir(m.tabs[i].dir) == cleanDir(path) {
 			mark = iconTabHere // this tab is already at that dir
 		}
-		label := mark + " " + tabNumeral(i) + "  " + safeName(filepath.Base(m.tabs[i].dir))
+		label := mark + " " + tabMark(i) + "  " + safeName(filepath.Base(m.tabs[i].dir))
 		items = append(items, menuItem{label: label, key: strconv.Itoa(i + 1)})
 	}
 	m.openInMenu.setItems(items, "Open dir in…")

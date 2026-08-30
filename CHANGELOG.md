@@ -2,24 +2,27 @@
 
 ## [Unreleased]
 
-## [0.2.8] — 2026-08-30
-
 ### Changed
-- **Breadcrumb moved into panel `[1]`** — the powerline path bar no longer spans
-  the top of the screen; it is now the list panel's first row, shrunk to the
-  panel width with the existing scheme (front initials, then a middle `…`) so it
-  never wraps. The list content moves down one row, the panels gain the freed
-  top row, and in a zoomed `[1]` every tab column shows its own breadcrumb.
-- **List legend mentions tab switching** — panel `[1]`'s bottom-border hint adds
-  `h/l tab` alongside the navigation keys.
-- **Slanted powerline separators** — with the breadcrumb sharing panel `[1]`, the
-  two chip chains now slant in opposite directions instead of both using the
-  triangle: tab bars (panels `[1]` and `[3]`) separate with `/`, the breadcrumb
-  with `\`. Round chip ends are unchanged.
-- **Launch mark folded into tab one** — the top launch-dir status row is gone
-  (the panels gain the row). The first tab — which always opens at the launch
-  directory — now carries the launch glyph instead of `Ⅰ`, everywhere tabs are
-  marked: the tab bar, the open-in picker, and the quit picker.
+- **Top chrome folded into panel `[1]`** — the two full-width top rows (the
+  powerline breadcrumb and the launch-dir status line) are gone and the panels
+  gain their space. The tab's path now renders as plain lavender text with dim
+  `/` separators on panel `[1]`'s first row, a recessive rule under it, shrunk
+  to the panel width (front initials, then a middle `…`) so it never wraps; in
+  a zoomed `[1]` every tab column shows its own path.
+- **Tab marks** — panel `[1]`'s tabs are marked by one glyph each instead of
+  Roman numerals: the launch glyph for tab one (it always opens at the launch
+  directory — the same mark the quit picker uses for the launch row), then a
+  cat, a dog, a paw, and an easter egg. The open-in and quit pickers use the
+  same marks. Tab-bar chips (panels `[1]` and `[3]`) now separate with a `\`
+  slant instead of the solid triangle.
+- **Tighter list legend** — panel `[1]`'s bottom-border hint packs to
+  `enter into · esc back · jkud move · hl switch tab`.
+
+### Fixed
+- **A digit hotkey no longer mangles a menu label** — ordinal keys (the quit /
+  open-in / Goto-favorites pickers) always render as a `[N]` prefix now; a label
+  that happens to contain the digit (a directory like `432hz`) was previously
+  bracketed in place (`4[3]2hz`).
 
 ## [0.2.7] — 2026-08-04
 
