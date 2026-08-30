@@ -19,6 +19,40 @@ func TestCrumbColorEndpoints(t *testing.T) {
 	}
 }
 
+// TestCrumbRowFitsPanel: the breadcrumb row (panel [1]'s first content line) is
+// always a single line of at most w display cells, even for a deep path in a
+// narrow panel — it shrinks, never wraps.
+func TestCrumbRowFitsPanel(t *testing.T) {
+	deep := "/very/long/path/that/goes/on/and/on/with/many/segments/deep-directory-name"
+	for _, w := range []int{20, 40, 78} {
+		row := crumbRow(deep, w)
+		if strings.Contains(row, "\n") {
+			t.Fatalf("crumbRow(w=%d) must be a single line", w)
+		}
+		if got := dispWidth(row); got != w {
+			t.Errorf("crumbRow(w=%d) width = %d, want exactly %d (padded/clipped)", w, got, w)
+		}
+	}
+}
+
+// TestListBodyStartsWithCrumb: panel [1]'s inner content opens with the active
+// tab's breadcrumb row; the file list follows below it.
+func TestListBodyStartsWithCrumb(t *testing.T) {
+	m := minModel()
+	m.width, m.height = 100, 30
+	m.tabs = []listModel{newList(t.TempDir())}
+	m.tab = 0
+
+	body := m.listBody(0, 60, 10, true)
+	lines := strings.Split(body, "\n")
+	if len(lines) < 2 {
+		t.Fatalf("list body should have a crumb row + list, got %d line(s)", len(lines))
+	}
+	if !strings.Contains(lines[0], string(rune(0xf07c))) {
+		t.Errorf("first line should be the breadcrumb (folder glyph), got %q", lines[0])
+	}
+}
+
 // TestCrumbGradientMonotone: perceived luminance must rise monotonically from
 // the crust root to the blue current, so the z-axis never reverses across depth.
 func TestCrumbGradientMonotone(t *testing.T) {

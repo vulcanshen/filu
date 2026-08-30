@@ -55,11 +55,11 @@ func tabBar(num string, labels []string, active int, focused bool) string {
 		case prevBright && cur:
 			lead = " " // merge: no cap, one space separates from the previous chip
 		case prevBright && !cur:
-			b.WriteString(lipgloss.NewStyle().Foreground(bc).Background(crust).Render(capHard))
+			b.WriteString(lipgloss.NewStyle().Foreground(bc).Background(crust).Render(slashHard))
 		case !prevBright && cur:
-			b.WriteString(lipgloss.NewStyle().Foreground(crust).Background(bc).Render(capHard))
+			b.WriteString(lipgloss.NewStyle().Foreground(crust).Background(bc).Render(slashHard))
 		default:
-			b.WriteString(lipgloss.NewStyle().Foreground(chev).Background(crust).Render(capThin))
+			b.WriteString(lipgloss.NewStyle().Foreground(chev).Background(crust).Render(slashThin))
 		}
 		seg := lead + lab + " "
 		if cur {

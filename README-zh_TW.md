@@ -119,7 +119,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 - **3 面板工作區** — `[1]` 檔案清單(主戰場)、`[2]` Preview、`[3]` 一個 tabbed 的 **Marks | Tasks | Favorites** 面板。上排 list 與 preview 以 2:1 共用(資訊豐富的 list 值得更寬);tabbed 面板在下方橫跨滿寬。`Tab` 輪切三個(或 `1`–`3` 直達);`h`/`l` 切某面板自己的分頁。
 - **資訊豐富的檔案清單** — 每一列是一組欄位:狀態 glyph、`Modified`、`Owner`(user:group)、`Perms`(eza 配色 `r` 黃 / `w` 紅 / `x` 綠)、`Size`(eza color-scale,越大越暖;目錄顯示 `-`,絕不遞迴加總)、以及 icon + 檔名。欄位標題兼排序指示,面板變窄時欄位漸進收合(owner → size → modified → perms),檔名永遠最後才收。
 - **每目錄各自排序** — `S` 挑欄位(Name / Modified / Owner / Perms / Size)與方向,可疊多層 chain。每個目錄記住自己的排序 —— 幫 `~/Downloads` 設一種它就固定在那,與其他目錄互不影響 —— 存進 `state.yaml`。
-- **Powerline 麵包屑 header** — 當前分頁的完整路徑以 powerline 麵包屑橫在最上方,顏色依目錄深度沿 `crust → blue` 漸層(root 是最深的 chip、你所在的當前目錄是 blue)。過長時把前段縮成字首(`~/Documents/x` → `~/D/x`),再不夠中間縮 `…`。
+- **Powerline 麵包屑** — 分頁的完整路徑以 powerline 麵包屑放在 `[1]` 面板的第一列,顏色依目錄深度沿 `crust → blue` 漸層(root 是最深的 chip、你所在的當前目錄是 blue)。長度收在面板寬度內 —— 前段縮成字首(`~/Documents/x` → `~/D/x`),再不夠中間縮 `…` —— 永不折行。
 - **Marks 複製與搬移** — 延遲的 cp/mv,像 Finder 的 Cmd+C / Cmd+V。`m` 把檔案 mark 進 marks bucket(清單上打 glyph 標記 — 一種 in-place 多選),接著切到目標目錄,`c` 複製 / `v` 搬移整個 bucket 過去。在 Marks 分頁,`p` 改成 pick 一個要落地的**子集**、`m` 則把某項 unmark。複製會保留 bucket(可連續落地到多個目錄);搬移會更新 bucket 內路徑讓它保持有效。
 - **非同步落地 + 可讀 Tasks 分頁** — 複製/搬移在背景跑;進度串流到 `[3]` 的 Tasks 分頁,是帶時間戳的人話 log(`2026-07-28 14:32:07  Copied report.pdf → proj` / `… Move 5 items → proj (2/5 failed)`)。同磁碟搬移是瞬間 `rename`;跨磁碟 / 複製會顯示進度。`D` 從 log 移除一列。中斷的任務存進 `state.yaml`、還原成 pending。
 - **原生串流 finder** — filu 自畫的分割 picker(清單 + 預覽),不是 fzf binary。每種模式都串流列檔(`fd` 走訪序、首批近乎立即、載入中可濾):
@@ -133,8 +133,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 - **依型別預覽** — 讀 magic bytes 判定:目錄 → 內層 tree、壓縮包(zip / tar / tar.gz…)→ 內容清單、圖片 → base64 `data:` URI、SVG → 語法高亮的 XML、文字 → 語法高亮 + 行號(Chroma / catppuccin-mocha)、二進位 → hex + ASCII、PDF → 抽出的文字 + 頁數。
 - **Yank 含 visual 選取** — 在 `[2]` Preview 按 `y` 開一個帶 vim 式游標的 viewport;`v` 進字元級 visual 選取,`y` 複製選取內容(沒選取則複製全部),走 OSC 52(可穿 tmux / SSH)。在檔案列或 Marks 項按 `y` 複製它的完整路徑。
 - **刪到系統垃圾桶** — `D`(帶確認對話框)把檔案移到 OS 垃圾桶(macOS Trash / Linux XDG)。還原走你的檔案管理器垃圾桶介面。
-- **動態目錄分頁** — `[1]` 預設開一個分頁;`t` 走 `{Same, Favorites, Search}` picker 開新分頁(合計最多五個)、`w` 關掉 active;到上限會 toast 提示、不再默默沒反應。分頁用羅馬數字(`Ⅰ` … `Ⅴ`)標 — 路徑在 header,分頁列只標位置與哪個 active。
-- **啟動目錄狀態列** — header 下方一列靠右對齊,顯示 filu 啟動時所在的目錄(以薰衣草色 glyph 標記) —— cd-on-quit picker 會返回的那個固定參照。
+- **動態目錄分頁** — `[1]` 預設開一個分頁;`t` 走 `{Same, Favorites, Search}` picker 開新分頁(合計最多五個)、`w` 關掉 active;到上限會 toast 提示、不再默默沒反應。第一個分頁掛啟動 glyph(它永遠開在啟動目錄 —— cd-on-quit picker 會返回的那個固定參照),其餘用羅馬數字(`Ⅱ` … `Ⅴ`)標 — 路徑在面板的麵包屑列,分頁列只標位置與哪個 active。
 - **eza icon + 配色** — 檔案型別 glyph 取自 eza 完整 icon 表(~760 個);顏色來自烘進 binary 的 `vivid generate catppuccin-mocha` `LS_COLORS` palette,依 eza 的優先序解析(目錄 → symlink → executable → 最長 suffix → 副檔名)。執行時不需要 `LS_COLORS` — 每個安裝都是同一套配色,與你終端的 `eza` / `ls` 一致。
 - **即時刷新** — 清單分頁監看自己的目錄(fsnotify),外部增刪檔案時自動 reload、保留游標;連續事件會 debounce。
 - **session 持久化** — 多開的分頁(dir + cursor)、marks bucket、favorites、tasks、每目錄排序都存進 `state.yaml`;第一個分頁永遠開在啟動目錄,而且每次啟動都 focus 在清單。

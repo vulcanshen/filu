@@ -22,12 +22,17 @@ var (
 	// popup layer scale (lavenphire25→sapphire) comes when popups land.
 )
 
-// §8.0/§8.2 powerline caps (rune values so no glyph sits in source).
+// §8.0/§8.2 powerline caps (rune values so no glyph sits in source). Both bars
+// now slant instead of the classic triangle, in opposite directions so the two
+// chip chains read as distinct vocabularies: the tab bar slants "/" (upper-left
+// half = the left chip), the breadcrumb slants "\" (lower-left half = the
+// previous segment).
 var (
-	capLeft  = string(rune(0xe0b6)) // round-left  — chip start
-	capRight = string(rune(0xe0b4)) // round-right — chip end
-	capHard  = string(rune(0xe0b0)) // hard right triangle — tab boundary
-	capThin  = string(rune(0xe0b1)) // thin chevron — inactive↔inactive divider
+	capLeft   = string(rune(0xe0b6)) // round-left  — chip start
+	capRight  = string(rune(0xe0b4)) // round-right — chip end
+	slashHard = string(rune(0xe0bc)) // solid "/" (upper-left tri) — tab boundary
+	slashThin = string(rune(0xe0bb)) // thin "/" — inactive↔inactive divider
+	backHard  = string(rune(0xe0b8)) // solid "\" (lower-left tri) — breadcrumb boundary
 )
 
 const crustHex = "#11111b" // catppuccin crust — tab-bar recessed background
@@ -38,7 +43,7 @@ func (m AppModel) View() string {
 	}
 
 	w, h := m.width, m.height
-	midH := h - 3 // minus header + spacer + footer rows
+	midH := h - 1 // minus the footer row (the breadcrumb lives inside panel [1])
 	if midH < 3 || w < 24 {
 		return "terminal too small"
 	}
@@ -47,7 +52,7 @@ func (m AppModel) View() string {
 		return m.splash.render(w, h)
 	}
 
-	out := joinV(m.headerBar(w), m.statusBar(w), m.middleView(w, midH), m.footerBar(w))
+	out := joinV(m.middleView(w, midH), m.footerBar(w))
 	// Compose-don't-Replace: overlay popups onto the canvas (last = on top).
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
@@ -134,7 +139,7 @@ func (m AppModel) middleView(w, midH int) string {
 func (m AppModel) normalMiddle(w, midH int) string {
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
-		return m.panelBoxHint(listFocus, m.listTitle(w), listNavHint(listFocus), w, midH, m.active().view(w-2, midH-2, listFocus, m.marks.inBucket(), m.places.pinnedSet()))
+		return m.panelBoxHint(listFocus, m.listTitle(w), listNavHint(listFocus), w, midH, m.listBody(m.tab, w-2, midH-2, listFocus))
 	}
 	topH := midH * 2 / 3
 	botH := midH - topH
@@ -142,7 +147,7 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	// Top row: list | preview, 2:1.
 	listW := w * 2 / 3
 	previewW := w - listW
-	list := m.panelBoxHint(listFocus, m.listTitle(listW), listNavHint(listFocus), listW, topH, m.active().view(listW-2, topH-2, listFocus, m.marks.inBucket(), m.places.pinnedSet()))
+	list := m.panelBoxHint(listFocus, m.listTitle(listW), listNavHint(listFocus), listW, topH, m.listBody(m.tab, listW-2, topH-2, listFocus))
 	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
 	topRow := joinH(list, preview)
 
@@ -182,16 +187,22 @@ func (m AppModel) zoomListView(w, midH int) string {
 func (m AppModel) expandedListTabs(w, h int) string {
 	widths := splitN(w, len(m.tabs))
 	cols := make([]string, len(m.tabs))
-	carried := m.marks.inBucket()
-	pinned := m.places.pinnedSet()
 	for i := range m.tabs {
 		cw := widths[i]
 		focused := m.focus == panelList && m.tab == i
 		// trailing space: singleChip sits flush against its round cap, so a wide
 		// Roman-numeral glyph (Ⅱ/Ⅲ/Ⅳ) gets clipped by it — pad a cell as tabBar does.
-		cols[i] = m.panelBox(focused, singleChip("[1] "+tabNumeral(i)+" ", focused), cw, h, m.tabs[i].view(cw-2, h-2, focused, carried, pinned))
+		cols[i] = m.panelBox(focused, singleChip("[1] "+tabNumeral(i)+" ", focused), cw, h, m.listBody(i, cw-2, h-2, focused))
 	}
 	return joinH(cols...)
+}
+
+// listBody is panel [1]'s inner content: the tab's breadcrumb row first (a
+// single line, shrunk to the panel width — see crumbRow), then the file list,
+// which gives up one row for it.
+func (m AppModel) listBody(i, w, rows int, focused bool) string {
+	return crumbRow(m.tabs[i].dir, w) + "\n" +
+		m.tabs[i].view(w, rows-1, focused, m.marks.inBucket(), m.places.pinnedSet())
 }
 
 // zoomDetailView (panel [2] zoom): the preview full-screen.
@@ -206,9 +217,10 @@ func (m AppModel) zoomMarksView(w, midH int) string {
 	return m.panelBoxHint(true, m.marksTitle(), hint, w, midH, body)
 }
 
-// listTitle renders panel [2]'s tab bar: one Roman-numeral chip per directory tab
-// (Ⅰ … Ⅴ), no text — the active tab's path is shown by the header bar, so the
-// tabs only mark position and which is active. Fixed width, so the bar always fits.
+// listTitle renders panel [1]'s tab bar: one Roman-numeral chip per directory tab
+// (Ⅰ … Ⅴ), no text — the active tab's path is shown by the breadcrumb row inside
+// the panel, so the tabs only mark position and which is active. Fixed width, so
+// the bar always fits.
 func (m AppModel) listTitle(w int) string {
 	focused := m.focus == panelList
 	labels := make([]string, len(m.tabs))
@@ -218,11 +230,15 @@ func (m AppModel) listTitle(w int) string {
 	return tabBar("[1]", labels, m.tab, focused)
 }
 
-// tabNumerals mark a tab's position: the Roman numerals Ⅰ … Ⅴ (Unicode ROMAN
-// NUMERAL ONE..FIVE). nf-md-roman_numeral_1 is absent from Nerd Fonts, so these
-// true Roman-numeral codepoints are used instead for a consistent set.
+// tabNumerals mark a tab's position. The first slot is the launch glyph — tab
+// one opens at the launch directory every start (it is never persisted), so it
+// carries the launch identity that the removed top status row used to show.
+// The rest are the Roman numerals Ⅱ … Ⅴ (Unicode ROMAN NUMERAL TWO..FIVE;
+// nf-md-roman_numeral_* is absent from Nerd Fonts, so these true Roman-numeral
+// codepoints are used for a consistent set). Both kinds are wide icons on a CJK
+// Nerd Font, so any slot lines up the same.
 var tabNumerals = []string{
-	string(rune(0x2160)), string(rune(0x2161)), string(rune(0x2162)),
+	iconCWD, string(rune(0x2161)), string(rune(0x2162)),
 	string(rune(0x2163)), string(rune(0x2164)),
 }
 
@@ -296,26 +312,31 @@ func (m AppModel) panelBoxHint(focused bool, title, hint string, w, h int, body 
 // keyLegend renders a "key desc   key desc …" hint line — each key in the chrome
 // blue, each description dim — wrapped with a space on both sides. Shared by the
 // list panel's bottom-border hint and the footer.
-func keyLegend(pairs [][2]string) string {
+func keyLegend(pairs [][2]string) string { return keyLegendGap(pairs, "   ") }
+
+// keyLegendGap is keyLegend with a caller-chosen gap between the pairs — the
+// list panel's five-pair legend uses a tighter one so it stays compact.
+func keyLegendGap(pairs [][2]string, gap string) string {
 	keyStyle := lipgloss.NewStyle().Foreground(focusColor)
 	descStyle := lipgloss.NewStyle().Foreground(dimColor)
 	parts := make([]string, len(pairs))
 	for i, p := range pairs {
 		parts[i] = keyStyle.Render(p[0]) + " " + descStyle.Render(p[1])
 	}
-	return " " + strings.Join(parts, "   ") + " "
+	return " " + strings.Join(parts, gap) + " "
 }
 
 // listNavHint is the key legend shown in the focused list panel's bottom border:
 // the core open-model navigation keys (Enter enters a dir, Esc goes up, j/k move,
-// d/u half-page). "" when the list is unfocused so an idle panel keeps a clean edge.
+// d/u half-page, h/l switch the directory tab). "" when the list is unfocused so
+// an idle panel keeps a clean edge.
 func listNavHint(focused bool) string {
 	if !focused {
 		return ""
 	}
-	return keyLegend([][2]string{
-		{"enter", "into"}, {"esc", "back"}, {"j/k", "move"}, {"d/u", "page"},
-	})
+	return keyLegendGap([][2]string{
+		{"enter", "into"}, {"esc", "back"}, {"j/k", "move"}, {"d/u", "page"}, {"h/l", "tab"},
+	}, "  ")
 }
 
 // marksHint is the always-shown key legend on the Marks panel's bottom border: the
@@ -341,16 +362,6 @@ const (
 	ezaRed    = "#f38ba8" // write bit
 	ezaGreen  = "#a6e3a1" // execute bit / sizes
 )
-
-// statusBar is the top status row under the header: the directory filu was
-// launched from, marked with the launch glyph — a fixed reference (where a
-// cd-on-quit "LaunchDir" returns to), rendered recessively.
-func (m AppModel) statusBar(w int) string {
-	icon := lipgloss.NewStyle().Foreground(userColor).Render(iconCWD) // lavender: the launch/return anchor
-	avail := max(1, w-dispWidth(iconCWD)-3)                           // icon + gap + trailing margin
-	path := lipgloss.NewStyle().Foreground(dimColor).Render(fitPath(m.launchDir, avail))
-	return padDispRight(icon+" "+path+" ", w) // right-aligned, one-cell right margin
-}
 
 // colorPerm paints a mode string (drwxr-xr-x) eza-style: the type char blue,
 // read yellow, write red, execute green, and a bare '-' dim.
