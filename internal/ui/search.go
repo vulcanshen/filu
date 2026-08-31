@@ -19,14 +19,15 @@ import (
 )
 
 // searchModel is filu's native file finder (snacks/Telescope form, not the fzf
-// binary). It has two modes over the same picker UI, both rooted at the active
-// tab's subtree:
-//   - Search (`/`, byContent=false): fuzzy-filter the file list BY NAME,
-//     in-memory, ranked best-first — a single list box, no preview.
-//   - Find (`f`, byContent=true): filter BY CONTENT (`rg --files-with-matches`,
-//     so a file that matches many times still appears once) — a split popup with
-//     the list on the left and a preview on the right (stacked when narrow), the
-//     preview scrolled to the matched line.
+// binary). It has three modes over the same picker UI — a split popup with the
+// list on the left and a preview on the right (stacked when narrow):
+//   - by name (`/` chooser → filename, byContent=false): fuzzy-filter the file
+//     list BY NAME, in-memory, ranked best-first, over the active tab's subtree.
+//   - by content (`/` chooser → content, byContent=true): filter BY CONTENT
+//     (`rg --files-with-matches`, so a file that matches many times still appears
+//     once) over the same subtree, the preview scrolled to the matched line.
+//   - goto (`go`, dirsOnly=true): fuzzy-filter DIRECTORIES under $HOME (hidden
+//     included), or an absolute path when the query starts with / or ~/.
 //
 // The unit you pick is always a file/dir — Enter drops focus into the list, a
 // second Enter reveals the pick in the active tab (descending into its subdir).
@@ -57,7 +58,7 @@ type searchModel struct {
 	curDepth  int         // current fd scan depth: 0 = recursive (base), 1 = the / anchored single level
 	byContent bool        // true = Find (rg content + preview); false = Search / Goto (name)
 	dirsOnly  bool        // true = Goto: list only directories (fd --type d), hidden included
-	newTab    bool        // true = Goto opened by T: confirm opens a new tab, not a reveal
+	newTab    bool        // true = Goto opened from the `t` new-tab picker: confirm opens a tab, not a reveal
 	query     string      // filter text
 	allFiles  []fileMatch // every file + dir under root (the empty-query list)
 	files     []fileMatch // current list: allFiles, or the name/content matches
@@ -109,7 +110,7 @@ type grepFilesMsg struct {
 }
 
 // searchConfirmMsg asks the app to act on an absolute path chosen in a finder:
-// reveal it in the active tab, or (newTab) open it as a new panel [2] tab.
+// reveal it in the active tab, or (newTab) open it as a new panel [1] tab.
 type searchConfirmMsg struct {
 	path   string
 	newTab bool
@@ -147,7 +148,7 @@ func (m *AppModel) openFind() tea.Cmd {
 // path), so Enter teleports the active tab to any directory under home. Typing a
 // query that starts with / re-anchors onto that absolute path instead — fuzzy
 // across the whole path, bounded a few levels deep (see absAnchor) — so
-// directories outside home are reachable too. The chord `go` and the panel [2]
+// directories outside home are reachable too. The chord `go` and the panel [1]
 // Space menu both route here.
 func (m *AppModel) openGoto() tea.Cmd {
 	home, err := os.UserHomeDir()
@@ -158,7 +159,7 @@ func (m *AppModel) openGoto() tea.Cmd {
 }
 
 // openGotoNewTab opens the same Goto finder as openGoto (`T`), but its confirm
-// opens the chosen directory as a NEW panel [2] tab instead of teleporting the
+// opens the chosen directory as a NEW panel [1] tab instead of teleporting the
 // active one. The caller has already checked the tab count is under maxTabs.
 func (m *AppModel) openGotoNewTab() tea.Cmd {
 	cmd := m.openGoto()
@@ -687,7 +688,7 @@ func (m searchModel) listColumn(w, rows int) []string {
 }
 
 // fileRow renders one search-list entry with its Nerd Font type icon + eza
-// colour, matching panel [2]. fd marks directories with a trailing "/".
+// colour, matching panel [1]. fd marks directories with a trailing "/".
 func fileRow(rel string, w int, cursor bool, cursorStyle lipgloss.Style) string {
 	isDir := strings.HasSuffix(rel, "/")
 	name := safeName(strings.TrimSuffix(rel, "/"))

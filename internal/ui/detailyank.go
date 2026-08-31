@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// detailYank is panel [3]'s yank viewport (kbu yamlpopup form): a vim-style
+// detailYank is panel [2]'s yank viewport (kbu yamlpopup form): a vim-style
 // cursor over the detail content with character-wise visual selection. `y`
 // copies the selection, or the whole content when nothing is selected.
 type detailYank struct {

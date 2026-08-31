@@ -30,12 +30,12 @@ type fileItem struct {
 	owner  string    // "user:group" (Owner column + owner sort)
 }
 
-// listModel is panel [2]: the CWD file list. Hidden files are dropped by
-// default (the '.' toggle comes later).
+// listModel is panel [1]: the CWD file list. Hidden files are dropped by
+// default until the '.' toggle turns them on.
 type listModel struct {
 	dir        string
 	items      []fileItem
-	hidden     int   // count of dotfile entries (whether shown or not) — for the status bar
+	hidden     int   // count of dotfile entries (whether shown or not)
 	err        error // last read error (permission denied, etc.)
 	cursor     int
 	offset     int

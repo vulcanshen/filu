@@ -174,7 +174,8 @@ func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
 	return m.marks.view(w, rows, focused), marksHint()
 }
 
-// zoomListView (panel [1] zoom): the directory tabs expanded 1:1:1 full-screen.
+// zoomListView (panel [1] zoom): the directory tabs expanded full-screen, one
+// equal-width column each (however many tabs are open).
 func (m AppModel) zoomListView(w, midH int) string {
 	return m.expandedListTabs(w, midH)
 }
@@ -188,7 +189,7 @@ func (m AppModel) expandedListTabs(w, h int) string {
 		cw := widths[i]
 		focused := m.focus == panelList && m.tab == i
 		// trailing space: singleChip sits flush against its round cap, so a wide
-		// Roman-numeral glyph (Ⅱ/Ⅲ/Ⅳ) gets clipped by it — pad a cell as tabBar does.
+		// tab mark glyph gets clipped by it — pad a cell as tabBar does.
 		cols[i] = m.panelBox(focused, singleChip("[1] "+tabMark(i)+" ", focused), cw, h, m.listBody(i, cw-2, h-2, focused))
 	}
 	return joinH(cols...)
@@ -216,7 +217,7 @@ func (m AppModel) zoomDetailView(w, midH int) string {
 		renderLinesFrom(m.preview.contentLines(), m.detailScroll, w-2, midH-2))
 }
 
-// zoomMarksView (panel [3] zoom): the Marks | Tasks panel full-screen.
+// zoomMarksView (panel [3] zoom): the Marks | Tasks | Favorites panel full-screen.
 func (m AppModel) zoomMarksView(w, midH int) string {
 	body, hint := m.marksBody(w-2, midH-2, true)
 	return m.panelBoxHint(true, m.marksTitle(), hint, w, midH, body)

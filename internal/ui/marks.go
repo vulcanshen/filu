@@ -118,7 +118,7 @@ func (m *marksModel) removeItem(path string) {
 }
 
 // centeredNote renders a dim message centred both ways in a w×rows box — used
-// for panel [4]'s empty states.
+// for panel [3]'s empty states.
 func centeredNote(w, rows int, text string) string {
 	msg := lipgloss.NewStyle().Foreground(dimColor).Render(text)
 	if w < 1 || rows < 1 {

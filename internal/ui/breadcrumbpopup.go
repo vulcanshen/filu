@@ -18,7 +18,7 @@ type crumbLevel struct {
 // breadcrumbPopup lists the current tab's ancestor directories (root at top,
 // current at the bottom) and jumps the active tab to any level on Enter. Ported
 // from kbu's BreadcrumbPopupModel into filu's popup form. Opened by [b] on panel
-// [2]; closed by Esc / b / Space. The cursor starts on the current level so
+// [1]; closed by Esc / b / Space. The cursor starts on the current level so
 // Enter is a no-op until the user moves.
 type breadcrumbPopup struct {
 	anim    popupAnimator
