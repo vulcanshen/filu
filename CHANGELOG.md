@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-31
+
 ### Added
 - **Zip the picks** — `Z` in panel `[3]`'s Marks tab packs whatever a Copy would
   land (the picked subset, or the whole bucket) into one archive. It prompts for
