@@ -120,7 +120,9 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 - **資訊豐富的檔案清單** — 每一列是一組欄位:狀態 glyph、`Modified`、`Owner`(user:group)、`Perms`(eza 配色 `r` 黃 / `w` 紅 / `x` 綠)、`Size`(eza color-scale,越大越暖;目錄顯示 `-`,絕不遞迴加總)、以及 icon + 檔名。欄位標題兼排序指示,面板變窄時欄位漸進收合(owner → size → modified → perms),檔名永遠最後才收。
 - **每目錄各自排序** — `S` 挑欄位(Name / Modified / Owner / Perms / Size)與方向,可疊多層 chain。每個目錄記住自己的排序 —— 幫 `~/Downloads` 設一種它就固定在那,與其他目錄互不影響 —— 存進 `state.yaml`。
 - **麵包屑路徑列** — 分頁的完整路徑以 lavender 純文字放在 `[1]` 面板的第一列,下方一條低調分隔線與清單區隔。過長時前段縮成字首(`~/Documents/x` → `~/D/x`),再不夠中間縮 `…` —— 永不折行。
-- **Marks 複製與搬移** — 延遲的 cp/mv,像 Finder 的 Cmd+C / Cmd+V。`m` 把檔案 mark 進 marks bucket(清單上打 glyph 標記 — 一種 in-place 多選),接著切到目標目錄,`c` 複製 / `v` 搬移整個 bucket 過去。在 Marks 分頁,`p` 改成 pick 一個要落地的**子集**、`m` 則把某項 unmark。複製會保留 bucket(可連續落地到多個目錄);搬移會更新 bucket 內路徑讓它保持有效。
+- **Marks 複製與搬移** — 延遲的 cp/mv,像 Finder 的 Cmd+C / Cmd+V。`m` 把檔案 mark 進 marks bucket(清單上打 glyph 標記 — 一種 in-place 多選),接著切到目標目錄,`c` 複製 / `v` 搬移整個 bucket 過去。在 Marks 分頁,`p` 改成 pick 一個要落地的**子集**、`m` 把某項 unmark、`C` 清空整個 bucket(先 confirm — 檔案本身不動)。複製會保留 bucket(可連續落地到多個目錄);搬移會更新 bucket 內路徑讓它保持有效。
+
+- **把 picks 打包成 zip** — 在 Marks 分頁按 `Z`,把「Copy 會落地的那些」(pick 的子集,沒 pick 就是整個 bucket)打包成一個壓縮檔。它會問檔名,預設值依你選的內容填好 — 單項用它自己的名字、同一個目錄的多項用該目錄名、跨目錄則用時間戳。壓縮檔寫進暫存目錄,不動任何工作目錄,並且會成為 bucket 裡**唯一**的 pick:切到該去的地方按 `c` / `v` 就落地。打包在背景跑,進度顯示在 Tasks 分頁。每個 pick 以自己的名字放在壓縮檔內(目錄保留其內部結構);兩個同名的 pick 也都會留下。
 - **非同步落地 + 可讀 Tasks 分頁** — 複製/搬移在背景跑;進度串流到 `[3]` 的 Tasks 分頁,是帶時間戳的人話 log(`2026-07-28 14:32:07  Copied report.pdf → proj` / `… Move 5 items → proj (2/5 failed)`)。同磁碟搬移是瞬間 `rename`;跨磁碟 / 複製會顯示進度。`D` 從 log 移除一列。中斷的任務存進 `state.yaml`、還原成 pending。
 - **原生串流 finder** — filu 自畫的分割 picker(清單 + 預覽),不是 fzf binary。每種模式都串流列檔(`fd` 走訪序、首批近乎立即、載入中可濾):
   - **`/` Search** — 開一個 chooser:**filename**(對當前分頁子樹的檔名做 fuzzy;以 `/` 開頭 —— 或 `~/` 代表 home —— 的 query 則改錨定到絕對路徑,磁碟上任何位置都到得了)或 **content**(用 `ripgrep` 對內容過濾;預覽自動 scroll 到命中行並反白)。
@@ -184,7 +186,7 @@ filu 的 cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile) 的
 |---|---|
 | **`[1]` List** | Open `o`、Open with `O`、Mark `m`、Yank `y`、Rename `r`、Delete `D`、Favorite `f` · Copy `c`、Move `v`、Search `/`、Goto `go`、Favorite dir `F`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Shell `s`、Hidden `.`、Zoom `z` |
 | **`[2]` Preview** | Yank `y`、Zoom `z` |
-| **`[3]` Marks** | Pick `p`、Yank `y`、Unmark `m` · Switch tab `l`、Zoom `z` |
+| **`[3]` Marks** | Pick `p`、Yank `y`、Unmark `m` · Zip `Z`、Clear `C`、Switch tab `l`、Zoom `z` |
 | **`[3]` Tasks** | Delete `D` · Switch tab `l`、Zoom `z` |
 | **`[3]` Favorites** | Open in `o`、Delete `D`(取消最愛) · Switch tab `l`、Zoom `z` |
 

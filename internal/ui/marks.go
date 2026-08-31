@@ -97,6 +97,14 @@ func (m marksModel) landItems() []string {
 	return out
 }
 
+// clear empties the bucket — every mark and every pick. The files themselves
+// are untouched; only the selection is dropped.
+func (m *marksModel) clear() {
+	m.items = nil
+	m.picked = nil
+	m.cursor = 0
+}
+
 // removeItem drops path from the bucket (used when a move lands it elsewhere).
 func (m *marksModel) removeItem(path string) {
 	for i, p := range m.items {
@@ -129,6 +137,17 @@ var (
 	markPickGlyph = string(rune(0xf05d))  // nf-fa-check_circle — "in land subset" (Marks panel)
 )
 
+// pathIcon is the type glyph for a bucket entry. The bucket only keeps paths, so
+// the file type is read back from disk — the same fileIcon panel [1] draws, not a
+// generic file glyph for everything.
+func pathIcon(p string) string {
+	it := fileItem{name: filepath.Base(p)}
+	if fi, err := os.Lstat(p); err == nil { // matches the list: a symlink is not a dir
+		it.isDir = fi.IsDir()
+	}
+	return fileIcon(it)
+}
+
 func (m marksModel) view(w, rows int, focused bool) string {
 	if len(m.items) == 0 {
 		return centeredNote(w, rows, "(empty)")
@@ -150,23 +169,24 @@ func (m marksModel) view(w, rows int, focused bool) string {
 		if picked {
 			markW = dispWidth(markPickGlyph)
 		}
-		// Fixed prefix cells: " <mark> <icon> " — reserve them, then fit the full
-		// path (home-folded) into the rest, trimmed from the left so the filename
-		// stays on screen.
-		prefixW := 1 + markW + 1 + dispWidth(iconFile) + 1
+		// Prefix cells: " <mark> <icon> " — reserve them, then fit the full path
+		// (home-folded) into the rest, trimmed from the left so the filename stays
+		// on screen.
+		icon := pathIcon(p)
+		prefixW := 1 + markW + 1 + dispWidth(icon) + 1
 		path := truncPathLeft(safeName(shortPath(p)), w-prefixW)
 		if focused && i == m.cursor {
 			mark := " "
 			if picked {
 				mark = markPickGlyph
 			}
-			b.WriteString(cur.Render(padDisp(" "+mark+" "+iconFile+" "+path, w)))
+			b.WriteString(cur.Render(padDisp(" "+mark+" "+icon+" "+path, w)))
 		} else {
 			mark := " "
 			if picked {
 				mark = check.Render(markPickGlyph)
 			}
-			b.WriteString(truncate(" "+mark+" "+us.Render(iconFile+" "+path), w))
+			b.WriteString(truncate(" "+mark+" "+us.Render(icon+" "+path), w))
 		}
 		if i < n-1 {
 			b.WriteByte('\n')

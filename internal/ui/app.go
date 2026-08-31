@@ -4,6 +4,7 @@
 package ui
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,6 +29,7 @@ const (
 	inputNone inputKind = iota
 	inputRename
 	inputAdd
+	inputZip
 )
 
 // confirmKind selects what the yes/no popup commits to when accepted.
@@ -39,6 +41,7 @@ const (
 	confirmShell
 	confirmOpen
 	confirmUnfavorite
+	confirmClearMarks
 )
 
 // sortStep tracks where the sort picker is in its column→direction flow.
@@ -313,7 +316,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.inputPopup, ok, cmd = m.inputPopup.update(msg)
 			if ok {
-				m.performInput()
+				cmd = tea.Batch(cmd, m.performInput())
 			}
 			return m, cmd
 		}
@@ -340,6 +343,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.places.unpin(m.pendingUnfavorite)
 					m.pendingUnfavorite = ""
 					m.places.clampCursor()
+					saveState(m.snapshotState())
+				case confirmClearMarks:
+					m.marks.clear()
+					m.cur().reload() // the list's mark column follows the bucket
 					saveState(m.snapshotState())
 				}
 				m.confirmAction = confirmNone
@@ -685,6 +692,15 @@ func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 		if m.marks.cursor >= 0 && m.marks.cursor < len(m.marks.items) {
 			return copyToClipboardCmd(m.marks.items[m.marks.cursor], "Copied path to clipboard")
 		}
+	case "Z": // zip: pack the land subset into a temp archive, named here
+		if items := m.marks.landItems(); len(items) > 0 {
+			return m.inputPopup.open(inputZip, zipPrompt(len(items)), suggestZipName(items), fileItem{})
+		}
+	case "C": // clear: empty the bucket (marks + picks) — confirm first
+		if len(m.marks.items) > 0 {
+			m.confirmAction = confirmClearMarks
+			return m.confirm.open(fmt.Sprintf("Clear all %d marks?", len(m.marks.items)))
+		}
 	}
 	return nil
 }
@@ -860,7 +876,14 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				{label: "Unmark", key: "m", hint: "remove this item from the marks bucket"},
 			}
 		}
-		return groupedMenu(itemOps, []menuItem{tab, zoom}), "Marks"
+		panelOps := []menuItem{tab, zoom}
+		if len(m.marks.items) > 0 {
+			panelOps = append([]menuItem{
+				{label: "Zip", key: "Z", hint: "pack the picked items into a zip, carried as the new pick"},
+				{label: "Clear", key: "C", hint: "drop every mark and pick (files untouched)"},
+			}, panelOps...)
+		}
+		return groupedMenu(itemOps, panelOps), "Marks"
 	}
 	return nil, ""
 }
@@ -898,12 +921,16 @@ func (m AppModel) previewWidth() int {
 	return 1
 }
 
-// performInput applies the committed input popup (rename / add) to the CWD.
-func (m *AppModel) performInput() {
+// performInput applies the committed input popup (rename / add to the CWD, or a
+// Zip of the marks bucket — that one runs async, hence the command).
+func (m *AppModel) performInput() tea.Cmd {
 	name := strings.TrimSpace(m.inputPopup.buffer)
 	kind, target := m.inputPopup.kind, m.inputPopup.item.name
 	if name == "" {
-		return
+		return nil
+	}
+	if kind == inputZip { // packs into a temp dir — the CWD is untouched
+		return m.startZip(m.marks.landItems(), zipFileName(name))
 	}
 	l := m.cur()
 	switch kind {
@@ -925,6 +952,7 @@ func (m *AppModel) performInput() {
 	l.reload()
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
+	return nil
 }
 
 // navigateActive points the active tab at dir; focus stays put.
@@ -958,9 +986,11 @@ func (m AppModel) listPanelHeight() int {
 	return midH * 2 / 3
 }
 
-// listRows: panel [2] file rows = box height − border(2) − Files header(1).
+// listRows: panel [1] file rows = box height − border(2) − listBody's breadcrumb
+// and rule (listChromeRows) − the column header (1). Keep it in step with
+// listBody, or the cursor scrolls past the last drawn row.
 func (m AppModel) listRows() int {
-	if r := m.listPanelHeight() - 3; r > 0 {
+	if r := m.listPanelHeight() - 2 - listChromeRows - 1; r > 0 {
 		return r
 	}
 	return 1
