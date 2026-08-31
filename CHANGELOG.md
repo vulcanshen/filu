@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Fixed
+- The `?` help popup listed a panel that does not exist — it offered `1 2 3 4`
+  for direct panel focus, but filu has had three panels since the redesign. It
+  also still described `Enter` as opening a file; `Enter` enters a directory and
+  `o` opens a file.
+- The bottom rows of the file list and the preview were drawn but unreachable:
+  the panel-height maths still reserved space for the two top rows removed in
+  0.2.8, so holding `j` scrolled the list while the cursor sat a row or two above
+  the last visible entry, and the preview stopped short of its last lines. Zoom
+  was worse — a zoomed panel gets the whole screen, but the budget still assumed
+  two thirds of it, leaving a third of the panel unreachable.
+
 ## [0.3.0] — 2026-08-31
 
 ### Added

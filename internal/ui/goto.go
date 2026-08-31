@@ -107,7 +107,7 @@ func (m *AppModel) advanceGotoFlow(key string) tea.Cmd {
 
 // unpinAtGotoCursor removes the highlighted favorited dir while the Favorites
 // list is open, then rebuilds the list in place. With the Places sidebar removed,
-// this picker is the home for unfavorite (was panel [1]'s P).
+// this picker is the home for unfavorite (was the Places sidebar's P).
 func (m *AppModel) unpinAtGotoCursor() tea.Cmd {
 	if idx := m.gotoMenu.cursor; idx >= 0 && idx < len(m.places.pinned) {
 		m.places.unpin(m.places.pinned[idx].path)

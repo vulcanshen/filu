@@ -104,11 +104,11 @@ type AppModel struct {
 	watched           map[string]bool   // dirs currently registered with the watcher
 }
 
-// maxTabs caps panel [2]'s directory tabs. It opens with one (at the CWD); the
+// maxTabs caps panel [1]'s directory tabs. It opens with one (at the CWD); the
 // user creates more with `t` (up to this many) and closes them with `w`.
 const maxTabs = 5
 
-// New returns the root model, focused on the file list. Panel [2] opens with a
+// New returns the root model, focused on the file list. Panel [1] opens with a
 // single tab at startDir (the CWD when empty — the `filu` no-arg case); when
 // focusName is set (the `filu <file>` case) the cursor lands on that entry.
 // Extra tabs the user created last session are restored by applyState.
@@ -154,14 +154,14 @@ func (m *AppModel) shutdown() tea.Cmd {
 // cur returns a pointer to the active directory tab.
 func (m *AppModel) cur() *listModel { return &m.tabs[m.tab] }
 
-// addTab appends a new panel [2] tab at dir and makes it active. Callers guard
+// addTab appends a new panel [1] tab at dir and makes it active. Callers guard
 // against exceeding maxTabs.
 func (m *AppModel) addTab(dir string) {
 	m.tabs = append(m.tabs, newList(dir))
 	m.tab = len(m.tabs) - 1
 }
 
-// tabLimitToast is the message shown when t / T would exceed maxTabs.
+// tabLimitToast is the message shown when t would exceed maxTabs.
 func tabLimitToast() string {
 	return "Tab limit reached (" + strconv.Itoa(maxTabs) + ") — close one with w"
 }
@@ -452,7 +452,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// lone g arms and waits, then `gg` jumps to the top (falling through to the
 		// handlers' `case "g"`) and `go` opens goto. Any other second key cancels and
 		// runs normally. (The Space menu and the finder keep a single g, as they do
-		// in kbu; the panel [3] yank viewport carries its own gg.)
+		// in kbu; the panel [2] yank viewport carries its own gg.)
 		if m.pendingG {
 			m.pendingG = false
 			if msg.String() == "o" && m.focus == panelList { // `go` → goto
@@ -504,7 +504,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleListKey routes navigation keys to panel [2] while it is focused. It may
+// handleListKey routes navigation keys to panel [1] while it is focused. It may
 // return a tea.Cmd when a key opens an animated popup (delete confirm, input).
 func (m *AppModel) handleListKey(key string) tea.Cmd {
 	l := m.cur()
@@ -600,7 +600,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		cmd = m.openGotoMenu()
 	case "b": // Breadcrumb: jump this tab up to any ancestor directory
 		cmd = m.breadcrumb.open(m.cur().dir)
-	case "z": // zoom panel [2]: 3 directory tabs full-screen (1:1:1)
+	case "z": // zoom panel [1]: the directory tabs full-screen, one column each
 		m.toggleZoom(panelList)
 	}
 	m.cur().ensureVisible(m.listRows())
@@ -608,7 +608,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	return cmd
 }
 
-// handleDetailKey routes keys to panel [3] (the preview) while it is focused:
+// handleDetailKey routes keys to panel [2] (the preview) while it is focused:
 // j/k/u/d/g/G scroll, y yanks the preview, z zooms it full-screen.
 func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 	switch key {
@@ -767,7 +767,7 @@ func (m *AppModel) toggleZoom(p panelID) {
 }
 
 // setFocus moves focus to p, exiting zoom only when p isn't part of the current
-// zoom layout. [2]-zoom shows [2]+[4], so 2/4 switch focus without un-zooming.
+// zoom layout. Each panel zooms alone, so focusing any other panel un-zooms.
 func (m *AppModel) setFocus(p panelID) {
 	if !m.zoomVisible(p) {
 		m.zoom = 0
@@ -904,17 +904,17 @@ func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
 	return append(out, panelOps...)
 }
 
-// refreshPreview reloads panel [3]'s preview for the current cursor item.
+// refreshPreview reloads panel [2]'s preview for the current cursor item.
 func (m *AppModel) refreshPreview() {
 	l := m.cur()
 	m.preview = loadPreview(l.cursorItem(), l.dir, m.previewWidth())
 	m.detailScroll = 0 // new cursor item — the preview scrolls back to the top
 }
 
-// previewWidth is panel [3]'s inner content width (1:1:1 columns, minus border),
-// used to size image ASCII previews.
+// previewWidth is panel [2]'s inner content width (the narrow side of the top
+// row's 2:1 split, minus border), used to size image ASCII previews.
 func (m AppModel) previewWidth() int {
-	rightW := m.width - (m.width/3)*2 // panel [3] is the remainder column
+	rightW := m.width - (m.width/3)*2 // panel [2] is the remainder column
 	if w := rightW - 2; w > 0 {
 		return w
 	}
@@ -965,22 +965,23 @@ func (m *AppModel) navigateActive(dir string) {
 	m.refreshPreview()
 }
 
-// navigateTo navigates and moves focus to panel [2].
+// navigateTo navigates and moves focus to panel [1].
 func (m *AppModel) navigateTo(dir string) {
 	m.navigateActive(dir)
 	m.focus = panelList
 }
 
-// midHeight is the panel region's height: total minus the header, status bar,
-// and footer rows.
-func (m AppModel) midHeight() int { return m.height - 3 }
+// midHeight is the panel region's height: everything but the footer row. It has
+// to agree with View's own midH — the row budgets below are what stops the
+// cursor at the last row a panel actually draws.
+func (m AppModel) midHeight() int { return m.height - 1 }
 
-// listPanelHeight is panel [2]'s box height: full in the narrow list-only
-// fallback, otherwise the top 2/3 (both the normal grid and [2]-zoom put [2] over
-// [4] at 2/3 : 1/3).
+// listPanelHeight is panel [1]'s box height, matching what middleView draws: the
+// whole panel region when [1] is zoomed or the terminal is too narrow for the
+// grid, otherwise the top 2/3 (the grid puts [1] over [3] at 2/3 : 1/3).
 func (m AppModel) listPanelHeight() int {
 	midH := m.midHeight()
-	if m.width < 72 {
+	if m.zoom == panelList || m.width < 72 {
 		return midH
 	}
 	return midH * 2 / 3
@@ -996,10 +997,14 @@ func (m AppModel) listRows() int {
 	return 1
 }
 
-// detailRows: panel [3] preview content rows (right column, top 2/3, minus its
-// two borders).
+// detailRows: panel [2] preview content rows — the whole panel region when [2]
+// is zoomed, otherwise the top 2/3 — minus its two borders.
 func (m AppModel) detailRows() int {
-	if r := m.midHeight()*2/3 - 2; r > 0 {
+	h := m.midHeight()
+	if m.zoom != panelDetail {
+		h = h * 2 / 3
+	}
+	if r := h - 2; r > 0 {
 		return r
 	}
 	return 1

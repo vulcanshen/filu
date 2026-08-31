@@ -26,8 +26,8 @@ const (
 	previewBinary
 )
 
-// previewModel is panel [3]'s Preview tab: a classified view of the cursor item.
-// image / archive classes come later; for now dir / text / binary.
+// previewModel is panel [2]: a classified view of the cursor item — dir tree,
+// archive listing, image, text (syntax-highlighted), or binary hex.
 type previewModel struct {
 	kind  previewKind
 	lines []string // panel display lines (text/hex carry a line-number gutter)

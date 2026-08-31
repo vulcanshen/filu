@@ -105,7 +105,7 @@ func (m inputPopup) renderFull() string {
 	glyph := lipgloss.NewStyle().Foreground(lipgloss.Color("#fab387")).Bold(true).Render(inputGlyph)
 	field := glyph + " " + safeName(m.buffer) + cur
 
-	// description: the item exactly as panel [2] shows it — type icon + eza colour.
+	// description: the item exactly as panel [1] shows it — type icon + eza colour.
 	var desc string
 	if m.item.name != "" {
 		desc = " " + lipgloss.NewStyle().Foreground(fileColor(m.item)).Render(fileIcon(m.item)+" "+safeName(m.item.name))

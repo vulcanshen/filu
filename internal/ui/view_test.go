@@ -59,36 +59,66 @@ func TestPanelBoxHintBottomBorder(t *testing.T) {
 	}
 }
 
-// TestListRowsMatchesListBody: the cursor's row budget must equal the rows
-// listBody actually draws. When the breadcrumb and its rule moved into the panel
-// they took two rows off the list, and a listRows that still counted them let the
-// cursor scroll off the bottom of the panel.
-func TestListRowsMatchesListBody(t *testing.T) {
+// TestListRowsMatchesRender: the cursor's row budget must equal the file rows
+// the app really puts on screen. It renders through middleView with View's own
+// midH and counts them, rather than re-deriving a height — an earlier version
+// measured a body drawn at listPanelHeight(), which was self-consistent and so
+// stayed green while midHeight() quietly disagreed with View by two rows.
+func TestListRowsMatchesRender(t *testing.T) {
 	dir := t.TempDir()
 	for i := range 80 { // comfortably more files than any test panel can show
 		if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("f%02d.txt", i)), nil, 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, size := range []struct{ w, h int }{
-		{120, 40}, // wide grid
-		{100, 24},
-		{60, 30}, // narrow fallback: the list takes the whole middle
+	for _, tc := range []struct {
+		w, h int
+		zoom panelID
+	}{
+		{120, 40, 0},         // wide grid
+		{100, 24, 0},         // a height where the 2/3 split doesn't divide evenly
+		{60, 30, 0},          // narrow fallback: the list takes the whole middle
+		{120, 40, panelList}, // [1] zoomed: the list gets the whole panel region
 	} {
 		m := minModel()
-		m.width, m.height = size.w, size.h
+		m.width, m.height, m.zoom = tc.w, tc.h, tc.zoom
 		m.tabs = []listModel{{dir: dir}}
 		m.tabs[0].reload()
 
-		panelW, panelH := m.width*2/3, m.listPanelHeight()
-		if m.width < 72 {
-			panelW, panelH = m.width, m.midHeight()
-		}
-		body := m.listBody(0, panelW-2, panelH-2, true)
-		drawn := len(strings.Split(body, "\n")) - listChromeRows - 1 // minus the column header
+		frame := ansi.Strip(m.middleView(m.width, m.height-1)) // exactly what View passes
+		drawn := strings.Count(frame, ".txt")                  // one per rendered file row
 		if drawn != m.listRows() {
-			t.Errorf("%dx%d: listBody draws %d file rows but listRows says %d",
-				size.w, size.h, drawn, m.listRows())
+			t.Errorf("%dx%d zoom=%d: %d file rows on screen but listRows says %d",
+				tc.w, tc.h, tc.zoom, drawn, m.listRows())
+		}
+	}
+}
+
+// TestDetailRowsMatchesRender: the preview's scroll budget must equal the
+// content rows panel [2] draws, both in the grid and zoomed.
+func TestDetailRowsMatchesRender(t *testing.T) {
+	lines := make([]string, 200)
+	for i := range lines {
+		lines[i] = fmt.Sprintf("line %d", i)
+	}
+	for _, tc := range []struct {
+		w, h int
+		zoom panelID
+	}{
+		{120, 40, 0},
+		{100, 24, 0},
+		{120, 40, panelDetail},
+	} {
+		m := minModel()
+		m.width, m.height, m.zoom = tc.w, tc.h, tc.zoom
+		m.tabs = []listModel{{dir: t.TempDir()}}
+		m.preview = previewModel{kind: previewText, lines: lines, body: lines}
+
+		frame := ansi.Strip(m.middleView(m.width, m.height-1))
+		drawn := strings.Count(frame, "line ")
+		if drawn != m.detailRows() {
+			t.Errorf("%dx%d zoom=%d: %d preview rows on screen but detailRows says %d",
+				tc.w, tc.h, tc.zoom, drawn, m.detailRows())
 		}
 	}
 }

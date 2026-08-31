@@ -15,7 +15,7 @@ func drawPopupBox(bc lipgloss.Color, title, hint string, rows []string, innerW i
 
 // drawPopupBoxPad is drawPopupBox with control over the blank padding rows that
 // frame the content. pad=false makes the content hug the borders (kbu's YAML
-// popup form — used by the panel [3] yank viewport).
+// popup form — used by the panel [2] yank viewport and the finder).
 func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, innerW int, pad bool) string {
 	bStyle := lipgloss.NewStyle().Foreground(bc)
 	tStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)

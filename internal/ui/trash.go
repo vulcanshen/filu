@@ -7,7 +7,7 @@ import (
 )
 
 // moveToTrash moves path into the system trash (macOS ~/.Trash, Linux XDG).
-// Recovery is via the OS trash UI or the [1] Recycle Bin place. TODO: Linux
+// Recovery is via the OS trash UI — filu has no undelete. TODO: Linux
 // .trashinfo sidecar; macOS Finder "Put Back" needs the Cocoa API (cgo).
 func moveToTrash(path string) error {
 	td := trashDir()
