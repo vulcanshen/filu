@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-08-31
+
 ### Fixed
 - The `?` help popup listed a panel that does not exist — it offered `1 2 3 4`
   for direct panel focus, but filu has had three panels since the redesign. It
