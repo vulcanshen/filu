@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -85,6 +86,41 @@ func TestMarksViewShowsFullPath(t *testing.T) {
 	}
 }
 
+// TestMarksViewTypeGlyphs: a bucket row carries the same type glyph panel [1]
+// draws — a folder reads as a folder, a .go file as Go — not one generic file
+// glyph for everything.
+func TestMarksViewTypeGlyphs(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "pkg")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	src := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(src, []byte("package main"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := ansi.Strip(marksModel{items: []string{sub, src}}.view(70, 4, false))
+	if !strings.Contains(out, iconDir) {
+		t.Errorf("a marked directory should show the folder glyph, got %q", out)
+	}
+	if want := fileIcon(fileItem{name: "main.go"}); !strings.Contains(out, want) {
+		t.Errorf("a marked .go file should show the Go glyph %q, got %q", want, out)
+	}
+}
+
+// TestPathIcon: the glyph is resolved from the path, and an unreadable path still
+// falls back to its extension rather than erroring out.
+func TestPathIcon(t *testing.T) {
+	dir := t.TempDir()
+	if got := pathIcon(dir); got != iconDir {
+		t.Errorf("pathIcon(dir) = %q, want the folder glyph %q", got, iconDir)
+	}
+	if got, want := pathIcon("/no/such/file.go"), fileIcon(fileItem{name: "file.go"}); got != want {
+		t.Errorf("pathIcon on a missing path = %q, want the extension glyph %q", got, want)
+	}
+}
+
 // TestMarkPickGlyphIsDistinct: a picked Marks item uses markPickGlyph, never the
 // list's mark markGlyph — the two "picked" states must not read the same.
 func TestMarkPickGlyphIsDistinct(t *testing.T) {
@@ -142,5 +178,44 @@ func TestRunLandCopy(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dst, "a.txt")); err != nil {
 		t.Error("a.txt should be copied to dst")
+	}
+}
+
+// TestMarksClearConfirms: C on the Marks tab arms a confirm and leaves the
+// bucket alone; accepting drops every mark and every pick.
+func TestMarksClearConfirms(t *testing.T) {
+	m := minModel()
+	m.width, m.height = 80, 24
+	m.focus = panelMarks
+	m.marks.items = []string{"/tmp/a", "/tmp/b"}
+	m.marks.picked = map[string]bool{"/tmp/b": true}
+	m.marks.cursor = 1
+
+	m.handleMarksKey("C")
+	if m.confirmAction != confirmClearMarks {
+		t.Fatalf("C should arm the clear confirm, got %v", m.confirmAction)
+	}
+	if len(m.marks.items) != 2 {
+		t.Errorf("C must not clear before the confirm is accepted, %d left", len(m.marks.items))
+	}
+
+	m.confirm.anim.state = popupOpen
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(AppModel)
+	if len(m.marks.items) != 0 || len(m.marks.picked) != 0 {
+		t.Fatalf("accepting should empty the bucket, items=%v picked=%v", m.marks.items, m.marks.picked)
+	}
+	if m.marks.cursor != 0 {
+		t.Errorf("cursor should reset to 0, got %d", m.marks.cursor)
+	}
+}
+
+// TestMarksClearNoopWhenEmpty: C on an empty bucket arms nothing.
+func TestMarksClearNoopWhenEmpty(t *testing.T) {
+	m := minModel()
+	m.focus = panelMarks
+	m.handleMarksKey("C")
+	if m.confirmAction != confirmNone {
+		t.Errorf("C on an empty bucket should arm no confirm, got %v", m.confirmAction)
 	}
 }

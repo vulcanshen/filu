@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Added
+- **Zip the picks** — `Z` in panel `[3]`'s Marks tab packs whatever a Copy would
+  land (the picked subset, or the whole bucket) into one archive. It prompts for
+  a name, pre-filled from the picks — their own name, the directory they came
+  from, or a timestamp when they span directories. The archive is written to a
+  temp directory, so no working directory is touched, and it joins the bucket as
+  the only pick: navigate to where it belongs and `c` / `v` lands it. Packing
+  runs in the background and reports in the Tasks tab.
+- **Clear the marks bucket** — `C` in the Marks tab drops every mark and pick
+  after a confirm. The files themselves are untouched.
+
+### Fixed
+- The panel `[1]` cursor could move below the last row the panel draws: the
+  breadcrumb and its rule take two rows off the list, but the cursor's row
+  budget still counted them.
+- Marks rows drew the plain file glyph for everything. They now carry the same
+  type glyph the list does — a folder reads as a folder, a `.go` file as Go.
+
 ## [0.2.8] — 2026-08-30
 
 ### Changed

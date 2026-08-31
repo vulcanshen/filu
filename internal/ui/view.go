@@ -194,6 +194,11 @@ func (m AppModel) expandedListTabs(w, h int) string {
 	return joinH(cols...)
 }
 
+// listChromeRows is what listBody spends above the file list: the breadcrumb row
+// and the rule under it. listRows subtracts the same two, so the cursor can't
+// scroll past the last row actually drawn.
+const listChromeRows = 2
+
 // listBody is panel [1]'s inner content: the tab's breadcrumb row first (a
 // single line, shrunk to the panel width — see crumbRow), a recessive rule to
 // give it air from the list, then the file list, which gives up two rows. (A
@@ -202,7 +207,7 @@ func (m AppModel) expandedListTabs(w, h int) string {
 func (m AppModel) listBody(i, w, rows int, focused bool) string {
 	rule := lipgloss.NewStyle().Foreground(lipgloss.Color("#313244")).Render(strings.Repeat("─", max(w, 0))) // surface0
 	return crumbRow(m.tabs[i].dir, w) + "\n" + rule + "\n" +
-		m.tabs[i].view(w, rows-2, focused, m.marks.inBucket(), m.places.pinnedSet())
+		m.tabs[i].view(w, rows-listChromeRows, focused, m.marks.inBucket(), m.places.pinnedSet())
 }
 
 // zoomDetailView (panel [2] zoom): the preview full-screen.

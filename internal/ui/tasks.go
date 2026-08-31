@@ -38,7 +38,8 @@ type landTask struct {
 }
 
 // landMsg is emitted by a land goroutine: per-item progress, then a finished
-// message with the failure count and the srcs that left the bucket (moves).
+// message with the failure count, the srcs that left the bucket (moves), and the
+// file the task produced (zips).
 type landMsg struct {
 	taskID   int
 	done     int
@@ -46,6 +47,7 @@ type landMsg struct {
 	finished bool
 	failed   int
 	moved    []string
+	produced string
 }
 
 // spinnerFrames animates running tasks (braille dots).
@@ -167,6 +169,11 @@ func (m *AppModel) handleLandMsg(msg landMsg) {
 		for _, src := range msg.moved {
 			m.marks.removeItem(src)
 		}
+		if msg.produced != "" { // a zip: carry it as the sole pick, ready to land
+			m.marks.items = append(m.marks.items, msg.produced)
+			m.marks.picked = map[string]bool{msg.produced: true}
+			m.marks.cursor = len(m.marks.items) - 1
+		}
 		for j := range m.tabs { // surface the landed files
 			if m.tabs[j].dir == destPath {
 				m.tabs[j].reload()
@@ -233,8 +240,11 @@ func (m AppModel) taskLine(t landTask) string {
 		subject = safeName(filepath.Base(t.srcs[0]))
 	}
 	verb, verbing, verbed := "Copy", "Copying", "Copied"
-	if t.action == "mv" {
+	switch t.action {
+	case "mv":
 		verb, verbing, verbed = "Move", "Moving", "Moved"
+	case "zip":
+		verb, verbing, verbed = "Zip", "Zipping", "Zipped"
 	}
 	to := " → " + t.dest
 	stamp := " " + dim.Render(taskTime(t.at)) + " " // leading timestamp column
