@@ -12,16 +12,17 @@ import (
 )
 
 type splashTickMsg struct{}
-type splashIdentityMsg struct{} // fires the name + tagline together
+type splashIdentityMsg struct{} // fires the name + version + tagline + credit together
 type splashHintMsg struct{}
 
 // splashModel renders the filu logo as a hidden easter egg (the `V` key), a
-// sibling of kbu's splash: the mark is revealed one letter at a time — F, I, L,
-// then the U frame — and the caption fades in. The u-family logo spells "fiL" in
-// gold inside a navy "U".
+// sibling of kbu's splash: the mark is revealed one letter at a time — F, i, L,
+// then the U frame — and the caption fades in. The reveal spells filu, whatever
+// order the letters sit in: the gold letters are placed L then i inside the navy
+// "U", but they still light up F → i → L.
 type splashModel struct {
 	active          bool
-	pixelOrder      []int    // reveal order across all stages: bg sheet, then F, I, L, then U
+	pixelOrder      []int    // reveal order across all stages: bg sheet, then F, i, L, then U
 	orderColor      []string // colour for pixelOrder[i] (parallel), set by the stage that paints it
 	stageEnds       []int    // cumulative pixel count at each stage's end; last == len(pixelOrder)
 	stageStep       []int    // pixels revealed per tick within each stage
@@ -30,6 +31,7 @@ type splashModel struct {
 	identityVisible bool // "filu" line
 	versionVisible  bool // the version line
 	taglineVisible  bool // the tagline line
+	creditVisible   bool // the "developed by" credit lines
 	hintVisible     bool // the Esc hint
 }
 
@@ -39,9 +41,10 @@ func (m splashModel) isActive() bool { return m.active }
 
 // show activates the splash and returns the first animation tick. Reveal stages,
 // each held apart by a beat: (1) background — a dark sheet, row-major top-to-bottom
-// sweep; (2) F; (3) I; (4) L — the gold letters, one at a time, each shuffled in;
+// sweep; (2) F; (3) i; (4) L — the gold letters, one at a time, each shuffled in;
 // (5) the U frame (navy), bottom-to-top so it rises from the base around them.
-// Then a hold reveals the name + version + tagline, and a final hold the Esc hint.
+// Then a hold reveals the name + version + tagline + credit, and a final hold the
+// Esc hint.
 func (m *splashModel) show() tea.Cmd {
 	m.active = true
 	m.revealedCount = 0
@@ -49,6 +52,7 @@ func (m *splashModel) show() tea.Cmd {
 	m.identityVisible = false
 	m.versionVisible = false
 	m.taglineVisible = false
+	m.creditVisible = false
 	m.hintVisible = false
 
 	rows, cols := len(logoPixels), len(logoPixels[0])
@@ -83,7 +87,7 @@ func (m *splashModel) show() tea.Cmd {
 		}
 	}
 
-	// Assemble the stages in reveal order — bg, F, I, L, U — recording each stage's
+	// Assemble the stages in reveal order — bg, F, i, L, U — recording each stage's
 	// colour (parallel to pixelOrder), cumulative end, and per-tick reveal step.
 	m.pixelOrder, m.orderColor, m.stageEnds, m.stageStep = nil, nil, nil, nil
 	addStage := func(px []int, color string, step int) {
@@ -104,8 +108,9 @@ func (m *splashModel) show() tea.Cmd {
 }
 
 // filu logo — generated from docs/icon.svg (25×25, trimmed to 23 rows). The mark
-// spells filu: F, I and L in gold sit inside the navy U frame (side rails + base)
-// that wraps them. D = background sheet, U = navy frame, F/I/L = gold letters.
+// carries F, i and L in gold inside the navy U frame (side rails + base) that
+// wraps them, with L placed before i. D = background sheet, U = navy frame,
+// F/I/L = gold letters.
 var logoPixels = [23]string{
 	"DDDDDDDDDDDDDDDDDDDDDDDDD",
 	"DDDDDDDDDDDDDDDDDDDDDDDDD",
@@ -116,15 +121,15 @@ var logoPixels = [23]string{
 	"DDDUUDFFFFFFFFFFFFFDUUDDD",
 	"DDDUUDFFFFFFFFFFFFFDUUDDD",
 	"DDDUUDFFDDDDDDDDDDDDUUDDD",
-	"DDDUUDFFDIIDLLDDDDDDUUDDD",
-	"DDDUUDFFDIIDLLDDDDDDUUDDD",
-	"DDDUUDFFDDDDLLDDDDDDUUDDD",
-	"DDDUUDFFDIIDLLDDDDDDUUDDD",
-	"DDDUUDFFDIIDLLDDDDDDUUDDD",
-	"DDDUUDFFDIIDLLDDDDDDUUDDD",
-	"DDDUUDFFDIIDLLDDDDDDUUDDD",
-	"DDDUUDFFDIIDLLLLLLLDUUDDD",
-	"DDDUUDFFDIIDLLLLLLLDUUDDD",
+	"DDDUUDFFDLLDDDDDDIIDUUDDD",
+	"DDDUUDFFDLLDDDDDDIIDUUDDD",
+	"DDDUUDFFDLLDDDDDDDDDUUDDD",
+	"DDDUUDFFDLLDDDDDDIIDUUDDD",
+	"DDDUUDFFDLLDDDDDDIIDUUDDD",
+	"DDDUUDFFDLLDDDDDDIIDUUDDD",
+	"DDDUUDFFDLLDDDDDDIIDUUDDD",
+	"DDDUUDFFDLLLLLLLDIIDUUDDD",
+	"DDDUUDFFDLLLLLLLDIIDUUDDD",
 	"DDDUUDDDDDDDDDDDDDDDUUDDD",
 	"DDUUUUUUUUUUUUUUUUUUUUUDD",
 	"DUUUUUUUUUUUUUUUUUUUUUUUD",
@@ -135,7 +140,10 @@ var logoPixels = [23]string{
 const (
 	logoBg   = "#313244" // background sheet (catppuccin surface0)
 	logoNavy = "#205090" // U frame — side rails + base (icon.svg)
-	logoGold = "#f2b753" // F / I / L letters (icon.svg)
+	logoGold = "#f2b753" // F / i / L letters (icon.svg)
+
+	// authorEmail is credited under the tagline, above the Esc hint.
+	authorEmail = "vulcan.shen.2304@gmail.com"
 
 	// pixelGlyph is one logo pixel: the nf-fa-square Nerd Font glyph, coloured per
 	// cell (same glyph everywhere, matching kbu's splash).
@@ -177,7 +185,8 @@ func (m splashModel) render(width, height int) string {
 	name := lipgloss.NewStyle().Foreground(focusColor).Bold(true)
 	line := lipgloss.NewStyle().Foreground(focusColor)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
-	identityText, versionText, taglineText, hintText := " ", " ", " ", " "
+	identityText, versionText, taglineText := " ", " ", " "
+	creditText, emailText, hintText := " ", " ", " "
 	if m.identityVisible {
 		identityText = name.Render("filu")
 	}
@@ -186,6 +195,10 @@ func (m splashModel) render(width, height int) string {
 	}
 	if m.taglineVisible {
 		taglineText = line.Render("A single-pane terminal file manager")
+	}
+	if m.creditVisible {
+		creditText = dim.Render("developed by")
+		emailText = dim.Render(authorEmail)
 	}
 	if m.hintVisible {
 		hintText = dim.Render("Press Esc to close")
@@ -196,6 +209,10 @@ func (m splashModel) render(width, height int) string {
 		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, versionText) +
 		"\n" +
 		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, taglineText) +
+		"\n\n" +
+		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, creditText) +
+		"\n" +
+		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, emailText) +
 		"\n\n" +
 		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, hintText)
 
@@ -212,7 +229,7 @@ func (m splashModel) update(msg tea.Msg) (splashModel, tea.Cmd) {
 		// Any key dismisses the easter egg.
 		m = splashModel{}
 	case splashTickMsg:
-		// Hold once at each stage boundary (bg→F→I→L→U) before the next begins.
+		// Hold once at each stage boundary (bg→F→i→L→U) before the next begins.
 		// Stages reveal in order, so beatsDone is also the next boundary to check.
 		if m.beatsDone < len(m.stageEnds)-1 && m.revealedCount == m.stageEnds[m.beatsDone] {
 			m.beatsDone++
@@ -241,6 +258,7 @@ func (m splashModel) update(msg tea.Msg) (splashModel, tea.Cmd) {
 		m.identityVisible = true
 		m.versionVisible = true
 		m.taglineVisible = true
+		m.creditVisible = true
 		return m, tea.Tick(500*time.Millisecond, func(time.Time) tea.Msg { return splashHintMsg{} })
 	case splashHintMsg:
 		m.hintVisible = true
