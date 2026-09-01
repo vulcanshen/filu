@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // The logo grid must be a clean rectangle — Render indexes it as rows×cols, so a
@@ -82,7 +84,7 @@ func TestSplashTickDoesNotExceedTotal(t *testing.T) {
 }
 
 func TestSplashBoundaryBeats(t *testing.T) {
-	// Every stage boundary (bg→F, F→I, I→L, L→U) holds for exactly one tick before
+	// Every stage boundary (bg→F, F→i, i→L, L→U) holds for exactly one tick before
 	// the next stage advances. The U stage is last, so there is no beat after it.
 	for k := 0; k < 4; k++ {
 		m := newSplashModel()
@@ -116,10 +118,11 @@ func TestSplashCaptionRevealsAfterAnimation(t *testing.T) {
 		t.Error("identity must wait for splashIdentityMsg")
 	}
 
-	// splashIdentityMsg reveals name + version + tagline together and schedules the hint.
+	// splashIdentityMsg reveals name + version + tagline + credit together and
+	// schedules the hint.
 	m, cmd = m.update(splashIdentityMsg{})
-	if !m.identityVisible || !m.versionVisible || !m.taglineVisible {
-		t.Error("splashIdentityMsg must reveal the name, version and tagline together")
+	if !m.identityVisible || !m.versionVisible || !m.taglineVisible || !m.creditVisible {
+		t.Error("splashIdentityMsg must reveal the name, version, tagline and credit together")
 	}
 	if cmd == nil {
 		t.Fatal("splashIdentityMsg must schedule the hint reveal")
@@ -131,6 +134,29 @@ func TestSplashCaptionRevealsAfterAnimation(t *testing.T) {
 	m, _ = m.update(splashHintMsg{})
 	if !m.hintVisible {
 		t.Error("splashHintMsg must reveal the hint")
+	}
+}
+
+// The credit lines sit under the tagline and above the Esc hint. Asserted against
+// the drawn frame, not the visibility flags, so reordering the caption is caught.
+func TestSplashCreditRendersAboveHint(t *testing.T) {
+	m := newSplashModel()
+	m.show()
+	m.revealedCount = len(m.pixelOrder) // fast-forward past the pixel reveal
+	m, _ = m.update(splashIdentityMsg{})
+	m, _ = m.update(splashHintMsg{})
+
+	frame := ansi.Strip(m.render(80, 40))
+	tagline := strings.Index(frame, "A single-pane terminal file manager")
+	credit := strings.Index(frame, "developed by")
+	email := strings.Index(frame, authorEmail)
+	hint := strings.Index(frame, "Press Esc to close")
+	if tagline < 0 || credit < 0 || email < 0 || hint < 0 {
+		t.Fatalf("caption line missing (tagline=%d credit=%d email=%d hint=%d)", tagline, credit, email, hint)
+	}
+	if tagline > credit || credit > email || email > hint {
+		t.Errorf("caption must read tagline→credit→email→hint, got offsets %d, %d, %d, %d",
+			tagline, credit, email, hint)
 	}
 }
 
