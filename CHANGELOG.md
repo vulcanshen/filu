@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-09-01
+
+### Changed
+- Refreshed the product icon: the gold letters take a new arrangement inside the
+  navy frame. The mark filu draws for itself follows the same layout, as do the
+  READMEs and the GitHub social-preview card.
+
 ## [0.3.1] — 2026-08-31
 
 ### Fixed
