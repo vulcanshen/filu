@@ -1,21 +1,20 @@
 # filu — Implementation
 
-[**VTP** — Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/vtp.md)
-是一套**與領域無關的通用 TUI 設計原則** —— 目標:
-不看文件、不背 hotkey,靠一套跨 surface 不變的基礎操作就能用完整個 app。VTP
-**不屬於任何單一 app**:kbu 是它在 K8s domain 的一個實現、**filu 是它在
-filesystem domain 的另一個平行實現**。兩者是 sibling、共用同一套 VTP,不是
-誰派生自誰。
+[this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md)
+是一套**與領域無關的通用 TUI 設計原則** —— 目標:不看文件、不背 hotkey,靠
+一套跨 surface 不變的基礎操作就能用完整個 app。它**不屬於任何單一 app**:
+kbu 是它在 K8s domain 的一個實現、**filu 是它在 filesystem domain 的另一個
+平行實現**。兩者是 sibling、共用同一套原則,不是誰派生自誰。
 
-本文件是 filu 對 VTP 的**具體落地紀錄**,結構鏡射同為實現的
-`kbu-implementation.md`(平行參照、非上位),逐節對照 filu 的實作 —— VTP
+本文件是 filu 對這套原則的**具體落地紀錄**,結構鏡射同為實現的
+`kbu-implementation.md`(平行參照、非上位),逐節對照 filu 的實作 —— 原則
 是 **interface**、本文件是 filu 這個 **implementation class**(kbu 是另一
-個 class)。想知道**為什麼**這樣做、看 VTP;想知道 filu **怎麼**做,看這裡。
+個 class)。想知道**為什麼**這樣做、看原則;想知道 filu **怎麼**做,看這裡。
 
-> **設計權威順序**:`.forge/meta/IDEA.md`(filu 專屬決定)> **VTP**
-> ([Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/vtp.md))。
+> **設計權威順序**:`.forge/meta/IDEA.md`(filu 專屬決定)>
+> [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md)。
 > `kbu-implementation.md` 是**平行實現的參照、不是 filu 的上位權威**。衝突
-> 時以 IDEA.md 為準、VTP 其次。
+> 時以 IDEA.md 為準、通用原則其次。
 >
 > **狀態標記**:本文件描述**當前已落地**的實作(對齊 `v0.3.0`)。尚未完成者
 > 標 `(planned)`,不宣稱未落地的行為。實作狀態總表見 §9。
@@ -30,50 +29,49 @@ bucket 兩層 pick、依動態 tab 分欄的 zoom、preview yank visual、破壞
 
 ## §A. Implementation in filu
 
-通用 §A.0(score)+ §A.1(contextual track)+ §A.2(non-contextual
-track)在 filu 的具體實現。
+通用 §A.0(揭露)+ §A.0.K(core-key 語意)+ §A.1(contextual track)
++ §A.2(non-contextual track)在 filu 的具體實現。
 
-### §A.0 filu score 對照
+### §A.0 filu 揭露對照
 
-| 軸 / 結果 | filu 值 | 計算 |
-|---|---|---|
-| **X. 揭露程度** | ~1.0 | Space menu 列出當前 focus 的 contextual 動作 100%、`?` help popup 列出全域動作 100%。以 user 學習單位計:`o` open 對所有型別通用算 1 個 action、`m` mark 對所有 entry 通用算 1 個 |
-| **Y. core-key role 數量** | 5 | `Tab`(focus 切換)/ `Enter`(確認·進入)/ `Esc`(取消·回上層)/ `Space`(contextual 入口)/ `?`(non-contextual 入口)。`Ctrl+C`(硬退)與 `q`(cd-on-quit picker)不另計 role —— 見 §A.0.Y |
-| `min(1, 5/Y)` 係數 | 1.0 | Y = 5、無 penalty |
-| **Score** | `~1.0 × 1.0` = **~100%** | 不靠事先學就能用 |
+| Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
+|---|---|---|---|
+| **Contextual** | `Space` | footer 常駐 `space menu` | 當前 focus 的 contextual 動作 100% 在 Space menu 內。以 user 學習單位計:`o` open 對所有型別通用算 1 個動作、`m` mark 對所有 entry 通用算 1 個 |
+| **Non-contextual** | `?` | footer 常駐 `? help` | 全域動作 100% 在 help popup 內 |
 
 filu 的定位不是「再做一個 yazi」,而是「**第一次開就能不看文件開到底**」的
 檔案管理器 —— letter hotkey 是加速捷徑、不是必經之路,光靠 `Space` + `?`
 就能走完該 focus 的所有動作。
 
-### §A.0.Y filu core-key 集合(5 個)
+### §A.0.K filu core-key 語意
 
 | Core-key | filu 語意 | 對應通用條款 |
 |---|---|---|
 | `Tab` | focus 切到下個 panel(`1`–`3` 直達 alias) | §4.1 |
 | `Enter` | 進入目錄 / popup 內確認 | §4.1 |
 | `Esc` | 關閉最上層浮層 / 回上層目錄(LIFO back) | §4.3 |
-| `Space` | §A.1 contextual 入口(Space menu) | §A.1 |
-| `?` | §A.2 non-contextual 入口(help popup) | §A.2 |
+| `Space` | §A.1 contextual 入口(Space menu);**再按一次關閉** | §A.1 |
+| `?` | §A.2 non-contextual 入口(help popup);**再按一次關閉** | §A.2 |
 
-5 個,剛好通用 §A.0.Y 上限。letter hotkey(`o`/`O`/`m`/`y`/`r`/`D`/`f`/`F`/
-`c`/`v`/`a`/`S`/`s`/`.`/`b`/`t`/`w`/`z`/`p`/`Z`/`C`/`/`)與導覽 chord
-(`gg` 跳頂、`go` goto)**不算 core-key**,是入口內動作的加速捷徑。
+通用 §A.0.K 規定這五個鍵的語意、不限總數。letter hotkey
+(`o`/`O`/`m`/`y`/`r`/`D`/`f`/`F`/`c`/`v`/`a`/`S`/`s`/`.`/`b`/`t`/`w`/`z`/
+`p`/`Z`/`C`/`/`)與導覽 chord(`gg` 跳頂、`go` goto)**不是 core-key**,是
+入口內動作的加速捷徑。
 
 **`Enter` 不開檔**:filu 的 `Enter` **只進目錄**,對檔案列是 no-op。開檔是
 `[o]pen`(OS 預設 app,先 confirm)/ `[O]pen with`(挑 app)的職責。理由是
 §B 一元素一語意 —— 「進入」與「交給外部程式」是兩件不同代價的事,`Enter` 一
 鍵兼職會讓 user 在目錄與檔案間游標移動時無法預期後果。
 
-**`Ctrl+C` 與 `q` 為何不各記一個 role**:`q` 不是「取消」—— 它開 cd-on-quit
+**`Ctrl+C` 與 `q` 為何不是 core-key**:`q` 不是「取消」—— 它開 cd-on-quit
 picker(選離開時要 `cd` 去哪),語意屬「離開 app 並帶目錄回 shell」,是一個
 全域動作(列在 footer + help)。`Ctrl+C` 是逃生硬退,與 `Esc`(退浮層 / 退
-目錄)語意不同、不重疊,屬 emergency exit,不佔 core-key role 上限。取消
-role 由 `Esc` 單獨承載(§4.3)。
+目錄)語意不同、不重疊,屬 emergency exit。取消語意
+由 `Esc` 單獨承載(§4.3);兩者都不在通用 §A.0.K 的語意表上。
 
-**`gg` / `go` chord 為何不 +Y**:`gg` 是 vim 跳頂(單 `g` 待命等第二鍵、對齊
+**`gg` / `go` chord 為何不是 core-key**:`gg` 是 vim 跳頂(單 `g` 待命等第二鍵、對齊
 kbu)、`go` 開 Goto picker —— 兩者都是既有動作的**加速捷徑**、走 letter-hotkey
-層,不是新的 core-key role。實作:單一 `AppModel.pendingG` 掛在主 switch 的
+層,不是新的 core-key 語意。實作:單一 `AppModel.pendingG` 掛在主 switch 的
 chokepoint(所有 popup return **之後**、只管主面板),`gg` 落既有 `case "g"`、
 `go` 呼 `handleListKey("go")`。
 
@@ -88,10 +86,28 @@ chokepoint(所有 popup return **之後**、只管主面板),`gg` 落既有 `cas
 
 user 第一次開、沒看 README,從 footer 就知道按 `Space` 會跳選單。
 
-filu 各 focus 的 Space menu(`app.go buildSpaceMenu`,`groupedMenu` 分
-item-region / panel-region、cursor-first,見 §6.6):
+`Space` 是 **toggle**(通用 §A.1):開著時再按 `Space` 收起來,`Esc` 同樣
+可關 —— `spacemenu.go` 的 `case "esc", " "` 一條分支同時承擔兩者。
 
-| Focus | item-region 動作(對游標項) | panel-region 動作(對這個面板 / tab) |
+**每一列的形狀**(通用 §A.1.2 / §A.1.3):**`[X]label` + 一句說明**,說明
+靠右對齊(`menuItem.label` / `.key` / `.hint`)。有 letter hotkey 才加
+bracket,沒有的列只有名稱。
+
+```
+ item operation
+ [o]pen                          open with the OS default app
+ [m]ark                              add to the marks bucket
+ [D]elete                          move to the system trash
+ ─────────────────────────────────────────────────────────────
+ panel operation
+ [/] Search        find a file by name or content in this tree
+ [go]to            jump to a pinned dir, or search under home
+```
+
+filu 各 focus 的 Space menu(`app.go buildSpaceMenu`,`groupedMenu` 分
+item operation / panel operation 兩區、cursor-first,見 §6.6):
+
+| Focus | `item operation`(對游標項) | `panel operation`(對這個面板 / tab) |
 |---|---|---|
 | **[1] List** | Open `o`、Open with `O`、Mark `m`、Yank `y`、Rename `r`、Delete `D`、(Favorite `f`,僅目錄) | (Copy `c`、Move here `v`,僅 bucket 非空)、Search `/`、Goto `go`、Favorite `F`、Breadcrumb `b`、(Tab `t`,未達上限)、(Close tab `w`,>1 個 tab)、Add `a`、Sort `S`、Shell `s`、Hidden `.`、Zoom `z` |
 | **[2] Preview** | Yank `y`(開 yank viewport) | Zoom `z` |
@@ -364,7 +380,7 @@ breadcrumb / rename input)。
 
 ### 4.1 Core 5 鍵 + 導覽
 
-見 §A.0.Y。五鍵語意在任何 panel / popup 都不變。
+見 §A.0.K。五鍵語意在任何 panel / popup 都不變。
 
 - **`h`/`l`** = 切當前 focused panel 的 tab(`[1]` 切目錄分頁、`[3]` 切
   Marks/Tasks/Favorites;`[2]` 無 tab、h/l no-op)。
@@ -557,7 +573,7 @@ toast)。yank viewport 的 `Esc` 兩段式(先退 visual)、finder 清單態 `Es
 
 ### §6.6 Menu region cursor-first
 
-Space menu 分 item-region(對 cursor item)/ panel-region(對當前 panel),
+Space menu 分 `item operation`(對 cursor item)/ `panel operation`(對當前 panel),
 cursor-first 排序(`groupedMenu`);單一類動作時不分 region、直接列(通用 §6.6)。
 
 ---
@@ -781,5 +797,5 @@ marks bucket 延遲決策、破壞性動作先 confirm。filu 自己長出來的
 用 picker、原生串流 finder、兩層 pick 兩個 glyph、mark 三態合併成單格、依動態
 tab 分欄的 zoom、preview yank visual、Zip 打到 temp 再走既有落地路徑 —— 都收
 在對應章節。凡設計決定以 `.forge/meta/IDEA.md` 為準;凡通用原則以
-**VTP**([Vulcan's TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/vtp.md))為準。本文件隨
+[this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md)為準。本文件隨
 實作演進更新,不宣稱未落地的行為。
