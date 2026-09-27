@@ -46,6 +46,7 @@ func newHelpPopup() helpPopup {
 func (m *helpPopup) open() tea.Cmd      { return m.anim.open() }
 func (m *helpPopup) setSize(w int)      { m.screenW = w }
 func (m helpPopup) isActive() bool      { return m.anim.isActive() }
+func (m helpPopup) owns() bool          { return m.anim.owns() }
 func (m helpPopup) isInteractive() bool { return m.anim.isInteractive() }
 func (m *helpPopup) handleTick(msg AnimTickMsg) tea.Cmd {
 	if msg.Target != m.anim.target {

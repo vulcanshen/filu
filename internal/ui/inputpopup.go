@@ -58,6 +58,7 @@ func inputBlinkCmd(gen int) tea.Cmd {
 func (m *inputPopup) close() tea.Cmd     { return m.anim.close() }
 func (m *inputPopup) setSize(w int)      { m.screenW = w }
 func (m inputPopup) isActive() bool      { return m.anim.isActive() }
+func (m inputPopup) owns() bool          { return m.anim.owns() }
 func (m inputPopup) isInteractive() bool { return m.anim.isInteractive() }
 func (m *inputPopup) handleTick(msg AnimTickMsg) tea.Cmd {
 	if msg.Target != m.anim.target {

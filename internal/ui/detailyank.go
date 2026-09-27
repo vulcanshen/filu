@@ -75,6 +75,7 @@ func (m detailYank) joinAll() string {
 
 func (m *detailYank) setSize(w, h int) { m.width, m.height = w, h }
 func (m detailYank) isActive() bool    { return m.anim.isActive() }
+func (m detailYank) owns() bool        { return m.anim.owns() }
 func (m detailYank) isInteractive() bool {
 	return m.anim.isInteractive()
 }

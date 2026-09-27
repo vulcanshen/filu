@@ -270,7 +270,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.pty.isActive() { // the embedded editor owns every keystroke
 			return m, m.pty.update(msg)
 		}
-		if m.detailYank.isActive() { // yank viewport owns the keyboard while open
+		if m.toast.owns() && msg.String() == "esc" { // tdp F3: Esc closes the toast before anything beneath it
+			return m, m.toast.closeNow()
+		}
+		if m.detailYank.owns() { // yank viewport owns the keyboard while open
 			if !m.detailYank.isInteractive() {
 				return m, nil
 			}
@@ -278,7 +281,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.detailYank, cmd = m.detailYank.update(msg)
 			return m, cmd
 		}
-		if m.search.isActive() { // fuzzy finder owns the keyboard while open
+		if m.search.owns() { // fuzzy finder owns the keyboard while open
 			if !m.search.isInteractive() {
 				return m, nil
 			}
@@ -286,7 +289,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.search, cmd = m.search.update(msg)
 			return m, cmd
 		}
-		if m.breadcrumb.isActive() { // ancestor-jump popup owns the keyboard while open
+		if m.breadcrumb.owns() { // ancestor-jump popup owns the keyboard while open
 			if !m.breadcrumb.isInteractive() {
 				return m, nil
 			}
@@ -300,7 +303,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.help.isActive() { // modal cheatsheet
+		if m.help.owns() { // modal cheatsheet
 			if !m.help.isInteractive() {
 				return m, nil
 			}
@@ -308,7 +311,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help, cmd = m.help.update(msg)
 			return m, cmd
 		}
-		if m.inputPopup.isActive() { // text entry owns the keyboard while open
+		if m.inputPopup.owns() { // text entry owns the keyboard while open
 			if !m.inputPopup.isInteractive() {
 				return m, nil
 			}
@@ -320,7 +323,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.confirm.isActive() { // modal: owns the keyboard while open
+		if m.confirm.owns() { // modal: owns the keyboard while open
 			if !m.confirm.isInteractive() {
 				return m, nil
 			}
@@ -353,7 +356,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.spaceMenu.isActive() { // popup owns the keyboard while open
+		if m.spaceMenu.owns() { // popup owns the keyboard while open
 			if !m.spaceMenu.isInteractive() {
 				return m, nil // swallow keys mid-animation
 			}
@@ -365,7 +368,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.sortMenu.isActive() { // sort picker owns the keyboard; commits drive the chain flow
+		if m.sortMenu.owns() { // sort picker owns the keyboard; commits drive the chain flow
 			if !m.sortMenu.isInteractive() {
 				return m, nil
 			}
@@ -377,7 +380,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.gotoMenu.isActive() { // Goto picker: Favorites drill-down or Search finder
+		if m.gotoMenu.owns() { // Goto picker: Favorites drill-down or Search finder
 			if !m.gotoMenu.isInteractive() {
 				return m, nil
 			}
@@ -392,7 +395,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.openInMenu.isActive() { // Favorites "Open dir in…" picker
+		if m.openInMenu.owns() { // Favorites "Open dir in…" picker
 			if !m.openInMenu.isInteractive() {
 				return m, nil
 			}
@@ -404,7 +407,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.searchMenu.isActive() { // Search chooser: filename vs content, then open the finder
+		if m.searchMenu.owns() { // Search chooser: filename vs content, then open the finder
 			if !m.searchMenu.isInteractive() {
 				return m, nil
 			}
@@ -419,7 +422,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.quitMenu.isActive() { // cd-on-quit picker; a commit cds and quits
+		if m.quitMenu.owns() { // cd-on-quit picker; a commit cds and quits
 			if !m.quitMenu.isInteractive() {
 				return m, nil
 			}
@@ -433,7 +436,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.openWithMenu.isActive() { // [o]pen picker; a commit launches the app
+		if m.openWithMenu.owns() { // [o]pen picker; a commit launches the app
 			if !m.openWithMenu.isInteractive() {
 				return m, nil
 			}

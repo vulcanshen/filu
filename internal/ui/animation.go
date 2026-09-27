@@ -47,6 +47,13 @@ func newPopupAnimator(target string, color lipgloss.Color) popupAnimator {
 func (a popupAnimator) isActive() bool      { return a.state != popupClosed }
 func (a popupAnimator) isInteractive() bool { return a.state == popupOpen }
 
+// owns reports whether the popup holds the keyboard: opening or open, not
+// closing. A popup already on its way out hands keys to the layer beneath it
+// (tdp F3), while isActive still counts it so it keeps drawing until gone.
+func (a popupAnimator) owns() bool {
+	return a.state == popupOpeningLine || a.state == popupOpeningExpand || a.state == popupOpen
+}
+
 // open begins the opening animation. No-op if already opening/open.
 func (a *popupAnimator) open() tea.Cmd {
 	if a.state == popupOpen || a.state == popupOpeningLine || a.state == popupOpeningExpand {
