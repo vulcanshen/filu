@@ -116,25 +116,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 ---
 
-## 3. `Space` 會關掉 Space menu 以外的 popup —— K5
-
-- **現況**：
-  - `spacemenu.go` `update()` 的 `case "esc", " "`（:132）關閉 menu。`spaceMenu` 同時被拿來當 sort
-    picker、Goto / New tab picker、Search chooser、quit picker、Open with picker、Favorites 的 Open in
-    picker，所以 `Space` 在這些 popup 上全都等於 `Esc`；下框 hint 一律寫 `j/k move   Space close`（:227）。
-  - `confirm.go` `update()` 的 `case "esc", "n", " "`（:48）：`Space` 取消 confirm。
-  - `breadcrumbpopup.go` `update()` 的 `case "esc", "b", " "`（:71）。
-  - `helppopup.go` `update()` 的 `case "esc", "?", " ", "q"`（:62）。
-  - 其他 popup 已經符合：yank viewport、finder 清單態不理 `Space`；input popup 與 finder 輸入態的 `Space` 是字元（K8）。
-- **規則**：`Space` 只開關它自己開的 Space menu；其他 popup（由 `Enter` 或熱鍵打開的 confirm、menu、
-  viewport、global operation popup、key reference……）上按 `Space` 不作用，它們由 `Esc` 或自己的流程關閉。
-- **怎麼改**：`spaceMenu` 加一個旗標（例如 `spaceToggle`），只有真正的 Space menu（`newSpaceMenu()`）
-  讓 `Space` 關閉，而且只在它是最上層（上面沒有疊別的框）時才關；其他 instance（包括第 6 條新增的 global operation
-  popup）的 `" "` 不作用，hint 改成 `j/k move · Enter run · Esc close`（D4）。confirm、breadcrumb、help 拿掉 `" "`。
-  breadcrumb 同時拿掉 `b`（開它的熱鍵兼關閉；其他熱鍵開的 popup 都只認 `Esc`，2026-09-28 user 裁定，見「已定案」第 3 題）。
-  confirm 的下框 hint `enter/y confirm   esc cancel`（`confirm.go` :59）順手照 D3 改成 `Enter <動詞> · Esc cancel`
-  （家族預設，不是違反）。
-
 ## 4. `?` 在 popup 上沒有反應 —— K6、M4、D3
 
 - **現況**：`?` 只在 `app.go` 主 switch（:470）處理，打開全 app 的 help。Space menu 與各 picker、confirm、
@@ -180,7 +161,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **怎麼改**：
   - 定義一份 `globalActions`（目前只有 `[q]uit`，說明例：`pick a dir to cd to, then leave`），是 global operation
     popup 的唯一來源（sshu 的做法）。global operation popup 用一個新的 `spaceMenu` instance（不是 Space menu，
-    `Space` 不關它，見第 3 條），層色比 Space menu 深一層（D2）。filu 的其他動作都作用在某個 panel 或 cursor 上
+    `Space` 不關它：新 instance 不設 `spaceToggle` 即可，原第 3 條已修），層色比 Space menu 深一層（D2）。filu 的其他動作都作用在某個 panel 或 cursor 上
     （切分頁、Goto、Search、Shell 都作用在 `[1]`），不進 global operation popup。
   - `groupedMenu()` 改成一律加標題，最後接上分隔線、`global operation` 標題與 `Global operation` 那一列；只剩一區時
     不加標題的分支拿掉。`Global operation` 列沒有熱鍵，commit 一個按不出來、也不是 label 子字串的 key（`bracketHotkey()`
@@ -350,7 +331,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **裁定**：檔案列上的 `Enter` 打開**這個檔案的 metadata popup**；目錄列的 `Enter` 維持進目錄。
 - **怎麼改**：
   - 新增一類 popup（F1：唯讀資訊框，不兼 menu、不兼 viewport）：沒有游標、不能執行，`Esc` 關閉，`?` 是它的 key
-    reference（第 4 條），`Space` 不作用（第 3 條），`q` / `Ctrl-C` 已走離開流程（原第 1、2 條，路由在所有 popup 之前）。
+    reference（第 4 條），`Space` 不作用（原第 3 條的規則，新 popup 不處理 `" "` 即可），`q` / `Ctrl-C` 已走離開流程（原第 1、2 條，路由在所有 popup 之前）。
   - 欄位：完整絕對路徑（symlink 多一列指向的目標）、類型（沿用 preview 的 magic bytes 判型）、精確大小（人話單位 +
     bytes）、Modified / Accessed / Changed（macOS 為 Created）完整日期時間、權限（`rwx` + 八進位）、`owner:group`。
   - **文字 word-wrap、能折行，所有資訊都完整揭露在 popup 裡**（長路徑折行，不截斷）。框寬在打開時定一次（L2），
@@ -376,7 +357,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **M3 與 P3「同一個動作在兩區」**：沒有熱鍵同時出現在兩個區。全域動作只有離開；切分頁、Goto、Search、Shell、Sort
   都作用在 `[1]`，是 `[1]` 的 panel operation（webu 的 `P` / `N` 那種「作用在 panel 的動作放在 global」在 filu 沒有）。
 - **K5 在其他 popup**：yank viewport 與 finder 清單態不理 `Space`；input popup 與 finder 輸入態的 `Space` 是字元（K8）。
-  要改的只有第 3 條列的四處。
+  原第 3 條列的四處已修（`spaceToggle`，confirm、breadcrumb、help 拿掉 `" "`）。
 - **M2 vs M6（`Favorite` 只在目錄列出現）**：檔案**永遠**不能收藏，不是「現在不能」，所以是動作對這個項目不成立，
   照 M2 不列；M6 的變暗只給狀態一變就能做的動作（例如分頁已滿的 `Tab`，第 7 條）。2026-09-28 user 裁定。
 - **S3、S4**：splash 在路由第一站（`app.go` :265）；`V` 只在主 switch（:472），popup、輸入態、PTY 都叫不出來。
@@ -390,6 +371,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 2. **（已定案，2026-09-28）`Favorite`（`f`）只在 cursor 是目錄時才列（`app.go` :819）。** → 維持不列，已移到
    「已經符合」。
 3. **（已定案，2026-09-28）`b` 也能關掉 breadcrumb popup（`breadcrumbpopup.go` :71）。** → 拿掉 `b`，只留 `Esc`，
-   併入第 3 條。
+   併入原第 3 條，已修。
 4. **（已定案，2026-09-28）panel `[1]` 的 Space menu 標題要不要照 D4 改成 `[1] …`？** → 兩者並列：
    `[1] <cursor 項目名>`（空目錄 `[1] CWD`），併入第 16 條。

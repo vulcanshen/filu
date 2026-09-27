@@ -170,7 +170,7 @@ func TestK9QOnQuitPickerDoesNotReopen(t *testing.T) {
 // opened over is back in charge.
 func TestK9EscOnQuitPickerReturnsToPopup(t *testing.T) {
 	m := k9Model()
-	m.confirm.open("Delete a?")
+	m.confirm.open("Delete a?", "trash")
 	m.confirm.anim.state = popupOpen
 	model, _ := m.Update(qKey)
 	m = model.(AppModel)
@@ -191,7 +191,7 @@ func TestK9QuitPickerDrawnOnTop(t *testing.T) {
 	m := k9Model()
 	m.width, m.height = 100, 40
 	m.confirm.setSize(m.width)
-	m.confirm.open(strings.Repeat("delete everything ", 12))
+	m.confirm.open(strings.Repeat("delete everything ", 12), "trash")
 	m.confirm.anim.state = popupOpen
 	m.openQuitMenu()
 	m.quitMenu.anim.state = popupOpen
