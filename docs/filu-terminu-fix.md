@@ -304,9 +304,11 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **規則**：PTY 裡按鍵屬於子程序；app **至少**指定一個出口鍵讓 focus 離開 PTY（選子程序幾乎不會用到的組合，例：
   kbu 的 `Alt-t`、sshu 的 `Alt+Esc`），focus 在 PTY 時常駐揭露。出口鍵以外要不要保留其他 app 的組合鍵、按了出口鍵
   之後 focus 落在哪裡，由 app 決定；保留的鍵跟出口鍵一樣常駐揭露。
-- **怎麼改**：在 PTY 路由前攔一個出口鍵（建議跟 kbu 或 sshu 對齊），按下時關閉 PTY popup（結束 shell，或保留
-  session 下次再接回 —— 由 app 決定；依 T1，出來後回到 panel），下框改成 `exit or <鍵> to close`。filu 的 PTY 只有
-  一格 shell，不需要其他組合鍵。README「開啟、編輯，以及其他」一節的 `type exit to come back` 一起改。
+- **裁定（2026-09-28 user）**：出口鍵用 **`Alt+Esc`**（跟 sshu 對齊）；按下**直接結束 shell**（等同打 `exit`），
+  filu 沒有保留 PTY session 的功能，不做接回。
+- **怎麼改**：在 PTY 路由前攔 `Alt+Esc`，按下時結束子 shell、關閉 PTY popup（依 T1，出來後回到 panel），下框改成
+  `exit or Alt+Esc to close`。filu 的 PTY 只有一格 shell，不需要其他組合鍵。README「開啟、編輯，以及其他」一節的
+  `type exit to come back` 一起改。
 
 ## 13. panel `[1]` 的切換分頁不在 Space menu 裡 —— M3
 
