@@ -32,6 +32,9 @@
   out: Switch tab and Close tab with a single tab, Tab and the Favorites
   "Open in" New tab at the five-tab limit. Pressing `t` at the limit now does
   nothing instead of showing a message.
+- Menus keep each item on one line (the box widens to fit the descriptions)
+  and scroll with the cursor when they are taller than the screen, so every
+  item stays reachable in a small terminal. Section dividers are drawn dim.
 
 ### Fixed
 - `Esc` now closes a toast notification straight away instead of reaching the

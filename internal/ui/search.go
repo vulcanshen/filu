@@ -128,7 +128,7 @@ func (m *AppModel) openSearchMenu() tea.Cmd {
 		{label: "filename", key: "f", hint: "fuzzy match on file names (fd)"},
 		{label: "content", key: "c", hint: "grep inside files (rg), with preview"},
 	}, "Search…")
-	m.searchMenu.setSize(m.width)
+	m.searchMenu.setSize(m.width, m.height)
 	return m.searchMenu.open()
 }
 

@@ -82,7 +82,7 @@ func TestD4MenuTitles(t *testing.T) {
 // keypress commits it.
 func TestM2GlobalRowHasNoHotkey(t *testing.T) {
 	m := newSpaceMenu()
-	m.setSize(100)
+	m.setSize(100, 40)
 	m.setItems(groupedMenu(nil, []menuItem{{label: "Zoom", key: "z"}}), "[2] Preview")
 	plain := ansi.Strip(m.renderFull())
 	if !strings.Contains(plain, "Global operation") || strings.Contains(plain, "[Global") || strings.Contains(plain, "[\x00") {

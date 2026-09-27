@@ -27,7 +27,7 @@ func (m *AppModel) openNavMenu(newTab bool, title string) tea.Cmd {
 	m.gotoNewTab = newTab
 	m.gotoStep = gotoStepRoot
 	m.setGotoRootItems(title)
-	m.gotoMenu.setSize(m.width)
+	m.gotoMenu.setSize(m.width, m.height)
 	return m.gotoMenu.open()
 }
 

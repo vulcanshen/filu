@@ -33,7 +33,7 @@ func (m *AppModel) openOpenInMenu() tea.Cmd {
 		items = append(items, menuItem{label: label, key: strconv.Itoa(i + 1)})
 	}
 	m.openInMenu.setItems(items, "Open dir in…")
-	m.openInMenu.setSize(m.width)
+	m.openInMenu.setSize(m.width, m.height)
 	return m.openInMenu.open()
 }
 
