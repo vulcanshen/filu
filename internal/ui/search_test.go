@@ -169,11 +169,21 @@ func TestSearchModalFlow(t *testing.T) {
 		t.Error("Enter in nav mode should return a confirm cmd")
 	}
 
-	// q (nav mode) returns to the input to refine the query
+	// q in nav mode is not the finder's key any more: it is the leave flow (tdp K9)
 	m, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	if m.mode != searchInput {
-		t.Fatal("q in nav mode should return to input mode")
+	if m.mode != searchNav {
+		t.Fatal("q in nav mode should not switch modes")
 	}
+	// Tab moves between the query line and the result list (tdp K2)
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyTab})
+	if m.mode != searchInput {
+		t.Fatal("Tab in nav mode should return to input mode")
+	}
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyTab})
+	if m.mode != searchNav {
+		t.Fatal("Tab in input mode should switch to the result list")
+	}
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyTab})
 
 	// Esc closes the finder from either mode (like every other popup) — never
 	// dropping back to input from nav.

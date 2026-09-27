@@ -107,7 +107,10 @@ filu/
   見 `filu-terminu-fix.md` 第 17 條;修好時改寫本條。)
 - **quit 是 picker、不是 confirm。** 「離開時 shell 要 `cd` 去哪」是個選擇、不是一次確認
   (`quit.go quitMenu`):列出啟動目錄 + 各分頁的當前目錄,去重;有任務在跑時頂端插
-  一條紅字 warning header。這是 tdp K9 的「離開流程由 app 決定」。
+  一條紅字 warning header。這是 tdp K9 的「離開流程由 app 決定」。`q` 與 `Ctrl-C` 都打開
+  它(`Ctrl-C` 在輸入態也有效，`q` 在輸入態是字母),在 picker 上再按 `Ctrl-C` 立即離開。
+  picker 疊在當下整疊 popup 的最上面、不關底下的框，所以 `Esc` 回到原本的框;按鍵路由
+  在 splash、PTY、toast 的 `Esc` 之後第一個處理它，繪製時也只有 toast 畫在它上面。
 - **會改變磁碟或把控制權交出去的動作一律先 confirm**:`D` Delete(list)、`D`
   Unfavorite(Favorites)、`o` Open、`s` Shell、`C` Clear(Marks)。`Open` 要問,是因為
   交給外部 app 之後 filu 就管不到了;`Clear` 要問,是因為 bucket 是慢慢累積的、一鍵
