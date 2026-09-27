@@ -14,23 +14,9 @@
 
 ## Demo
 
-### 上手操作
-![basics](docs/demo-basics.gif)
+![demo](docs/demo-basics.gif)
 
-### Marks — 跨 tab 收集後複製 / 搬移
-![marks](docs/demo-marks.gif)
-
-### 串流 finder — 模糊檔名 & ripgrep 內容
-![finders](docs/demo-finders.gif)
-
-### Favorites — 標記目錄,在 [3] Favorites 分頁管理
-![favorites](docs/demo-favorites.gif)
-
-### 預覽,再 yank 到剪貼簿
-![preview](docs/demo-preview.gif)
-
-### 當前 tab 目錄的 shell
-![shell](docs/demo-shell.gif)
+在 filu 裡走動：面板、分頁、`Space` menu，還有一直看得到的路徑。
 
 ## 為什麼用 filu
 
@@ -44,7 +30,11 @@
 
 ## 安裝
 
-> filu 支援 **macOS 與 Linux**。Windows 請在 WSL 裡使用。
+### 系統需求
+
+- 終端機要用 **Nerd Font** —— filu 的 icon 都是 Nerd Font glyph。CJK Nerd Font(如 Maple Mono NF CN)也沒問題。
+- **ripgrep** 用於內容搜尋,**fd** 讓 finder 更快(快速安裝與 Homebrew 都會幫你裝好)。
+- **macOS 或 Linux** —— Windows 請用 WSL。
 
 ### 快速安裝
 
@@ -223,17 +213,21 @@ open_with:
     cmd: idea
 ```
 
-## 系統需求
+## 限制
 
-- 終端機要用 **Nerd Font** —— filu 的 icon 都是 Nerd Font glyph。CJK Nerd Font(如 Maple Mono NF CN)也沒問題。
-- **ripgrep** 用於內容搜尋,**fd** 讓 finder 更快(快速安裝與 Homebrew 都會幫你裝好)。
-- **macOS 或 Linux** —— Windows 請用 WSL。
+刻意不做的：
+- **原生 Windows** —— filu 支援 macOS 與 Linux；Windows 請在 WSL 裡使用
+- **滑鼠** —— 所有操作都在鍵盤上
+- **目錄大小** —— 目錄的大小欄顯示 `-`，filu 不會把整棵樹加總
 
-## 更多
+## 相關連結
 
-- filu 與 Kubernetes TUI [kbu](https://github.com/vulcanshen/kbu) 共用同一套設計 —— 兩者都遵循 [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md)。
-- 以 Go 與 [Bubble Tea](https://github.com/charmbracelet/bubbletea) 打造。cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile),finder 取法 [LazyVim](https://github.com/LazyVim/LazyVim) 的 search。
-- 從原始碼建置、平台決策、實作備註:[`docs/dev-remarks.md`](docs/dev-remarks.md)。
+- [CHANGELOG.md](CHANGELOG.md) —— 每個版本改了什麼
+- [`docs/dev-remarks.md`](docs/dev-remarks.md) —— 開發者備忘：運作方式、設計理由、從原始碼建置、發布
+
+## terminu family
+
+filu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.6/principle)：跟家族其他成員一樣的按鍵、一樣的 menu —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）與 [locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
 
 ## License
 

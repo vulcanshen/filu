@@ -5,7 +5,7 @@ globs: *
 
 # filu Project Rules
 
-filu 是 kbu `u`-family 的成員,共用 [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md) 與技術棧。設計權威見 `.forge/meta/IDEA.md`,以及 kbu repo 的 `docs/kbu-implementation.md`(平行實作參照)。
+filu 是 terminu family 的成員,遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.6/principle)(tdp),與 kbu 共用技術棧。設計權威見 `.forge/meta/IDEA.md`;開發者備忘(運作方式、設計決定、偏離 tdp)在 `docs/dev-remarks.md`,尚未符合 tdp 的地方在 `docs/filu-terminu-fix.md`。
 
 ## Code Quality
 - `gofmt` / `go vet` 乾淨才算完成。
@@ -24,7 +24,8 @@ filu 是 kbu `u`-family 的成員,共用 [this TUI Design Principle](https://git
 ## Async / UI
 - 長時操作(複製、搬移、watch)跑 goroutine,進度/事件經 channel → `tea.Msg` 餵回 UI,比照 kbu 的 log-stream / watch / PTY 套路。
 
-## ZLC 紀律(來自設計原則)
-- core-key 只有 4 個(Tab/Enter/Esc/Space)+ `?`;新動作先判 contextual(→ Space menu)還是 non-contextual(→ `?`)。
-- letter hotkey ⊆ Space menu(完整性:光靠 Space 就能做完該 focus 的所有 contextual 動作)。
-- 一元素一語意(§B 專職化);明度當 z-axis;popup 走四類 taxonomy。
+## tdp 紀律
+- core key(`Tab` / `Enter` / `Esc` / `Space` / `?` / `q`)的意義全 app 不變(tdp K1);新動作先依作用對象判 item / panel / global operation(tdp P3),item / panel 放進 Space menu 對應的區,global 放進 Space menu 最後那一列打開的 global operation popup(tdp M2、M4);`?` 只讀,是 key reference(tdp K6)。
+- letter hotkey 是 menu 某一列的捷徑,只能靠熱鍵觸發的動作是違反(tdp M3)。
+- 一元素一語意(tdp P4);明度當 z-axis(tdp D2);每個 popup 只屬於一類(tdp F1)。
+- 有意不照 tdp 做的,寫進 `docs/dev-remarks.md`「偏離 tdp」並附理由;沒寫理由的列進 `docs/filu-terminu-fix.md`。

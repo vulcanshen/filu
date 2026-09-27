@@ -14,23 +14,9 @@
 
 ## Demo
 
-### Getting around filu
-![basics](docs/demo-basics.gif)
+![demo](docs/demo-basics.gif)
 
-### Marks — copy / move across tabs
-![marks](docs/demo-marks.gif)
-
-### Streaming finders — fuzzy name & ripgrep content
-![finders](docs/demo-finders.gif)
-
-### Favorites — star directories, manage them in the [3] Favorites tab
-![favorites](docs/demo-favorites.gif)
-
-### Preview, then yank to the clipboard
-![preview](docs/demo-preview.gif)
-
-### A shell in the active tab's directory
-![shell](docs/demo-shell.gif)
+Getting around filu: panels, tabs, the `Space` menu and the path you can always see.
 
 ## Why filu
 
@@ -44,7 +30,11 @@
 
 ## Install
 
-> filu runs on **macOS and Linux**. On Windows, use it inside WSL.
+### Requirements
+
+- **A Nerd Font** in your terminal — filu's icons are Nerd Font glyphs. CJK Nerd Fonts (e.g. Maple Mono NF CN) work too.
+- **ripgrep** for content search, and **fd** for fast finders (the quick installer and Homebrew handle both).
+- **macOS or Linux** — or WSL on Windows.
 
 ### Quick install
 
@@ -225,17 +215,21 @@ open_with:
     cmd: idea
 ```
 
-## Requirements
+## Limits
 
-- **A Nerd Font** in your terminal — filu's icons are Nerd Font glyphs. CJK Nerd Fonts (e.g. Maple Mono NF CN) work too.
-- **ripgrep** for content search, and **fd** for fast finders (the quick installer and Homebrew handle both).
-- **macOS or Linux** — or WSL on Windows.
+Not there, on purpose:
+- **native Windows** — filu runs on macOS and Linux; on Windows, run it inside WSL
+- **the mouse** — everything is on the keyboard
+- **directory sizes** — a directory's size shows as `-`; filu never adds up a whole tree
 
-## More
+## Links
 
-- filu shares its design with [kbu](https://github.com/vulcanshen/kbu), a Kubernetes TUI — both follow [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md).
-- Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea). cd-on-quit follows [superfile](https://github.com/yorukot/superfile); the finders take after [LazyVim](https://github.com/LazyVim/LazyVim)'s search.
-- Building from source, platform decisions and implementation notes: [`docs/dev-remarks.md`](docs/dev-remarks.md).
+- [CHANGELOG.md](CHANGELOG.md) — what each release changed
+- [`docs/dev-remarks.md`](docs/dev-remarks.md) — the developer's notes: how it works, why, building from source, releasing
+
+## terminu family
+
+filu follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.6/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [sshu](https://github.com/vulcanshen/sshu) (ssh), [webu](https://github.com/vulcanshen/webu) (the web) and [locku](https://github.com/vulcanshen/locku) (screen lock).
 
 ## License
 
