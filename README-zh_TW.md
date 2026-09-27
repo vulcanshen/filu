@@ -160,11 +160,11 @@ eval "$(filu shell)"
 | `q` | 離開,並選擇 shell 要停在哪裡(打字時 `q` 就是一個字母) |
 | `Ctrl+C` | 同 `q`,打字時也有效;在離開畫面上再按一次就立即離開 |
 
-各面板的 `Space` 選單:
+各面板的 `Space` 選單依序列出：對游標項目能做的事、對整個面板能做的事，最後一列是 **Global operation**,打開全 app 的動作選單(目前只有 Quit `q`)。暫時不能做的項目(例如只開一個分頁時的 Close tab)會變暗顯示。
 
 | Focus | 選單項目 |
 |---|---|
-| **`[1]` Files** | Open `o`、Open with `O`、Mark `m`、Yank `y`、Rename `r`、Delete `D`、Favorite `f` · Copy `c`、Move `v`、Search `/`、Goto `go`、Favorite dir `F`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Shell `s`、Hidden `.`、Zoom `z` |
+| **`[1]` Files** | Open `o`、Open with `O`、Mark `m`、Yank `y`、Rename `r`、Delete `D`、Favorite `f` · Copy `c`、Move `v`、Search `/`、Goto `go`、Favorite dir `F`、Breadcrumb `b`、Switch tab `l`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Shell `s`、Hidden `.`、Zoom `z` |
 | **`[2]` Preview** | Yank `y`、Zoom `z` |
 | **`[3]` Marks** | Pick `p`、Yank `y`、Unmark `m` · Zip `Z`、Clear `C`、Switch tab `l`、Zoom `z` |
 | **`[3]` Tasks** | Delete `D` · Switch tab `l`、Zoom `z` |

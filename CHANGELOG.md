@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+- Every panel's `Space` menu now ends with **Global operation**, which opens a
+  menu of app-wide actions — for now, Quit (the same quit picker as `q`).
+- Panel `[1]`'s `Space` menu has a **Switch tab** row (`l`), like panel `[3]`.
+
 ### Changed
 - `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
   (with its warning when a copy or move is still running). Press `Ctrl+C` again
@@ -21,6 +26,12 @@
   Search chooser and the Goto picker stay under the finder they open. Finishing
   the action closes the whole stack. Each deeper popup takes a slightly
   different border colour, so you can see which one is on top.
+- `Space` menus always show their section headings, and their titles name the
+  panel: `[1] report.pdf`, `[2] Preview`, `[3] Marks`.
+- Menu rows that can't run right now are shown dimmed instead of being left
+  out: Switch tab and Close tab with a single tab, Tab and the Favorites
+  "Open in" New tab at the five-tab limit. Pressing `t` at the limit now does
+  nothing instead of showing a message.
 
 ### Fixed
 - `Esc` now closes a toast notification straight away instead of reaching the

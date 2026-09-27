@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // popupLayerColor is kbu's popup colour-layer rule: border colour by nesting
@@ -32,7 +33,15 @@ type menuItem struct {
 	separator bool   // non-selectable horizontal rule
 	header    bool   // non-selectable region label (dim, or red when warn)
 	warn      bool   // header rendered as a red warning line
+	// disabled: the target exists but the action can't run right now (tdp M6).
+	// The row is drawn dim with its usual hint; the cursor can rest on it, but
+	// neither Enter nor its hotkey does anything.
+	disabled bool
 }
+
+// disabledColor draws a row that can't run right now: dimmer than the hint and
+// header text, so it reads as present but out of reach (tdp M6).
+const disabledColor = lipgloss.Color("#585b70") // surface2
 
 // spaceMenu is the §A.1 contextual popup, following kbu's form (animation,
 // layout, colour layer).
@@ -55,6 +64,13 @@ type spaceMenu struct {
 
 func newSpaceMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("spacemenu", popupLayerColor(1)), spaceToggle: true}
+}
+
+// newGlobalMenu is the spaceMenu instance used as the global operation popup: a
+// menu of globalActions opened from the Space menu's last row. Space does not
+// close it (it is not the Space menu); Esc returns to the Space menu.
+func newGlobalMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("globalmenu", popupLayerColor(1))}
 }
 
 // newSortMenu is a second spaceMenu instance reused as the sort picker; the
@@ -131,7 +147,7 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string, tea.Cmd) {
 	case "G":
 		m.cursor = m.lastSelectable()
 	case "enter":
-		if it := m.at(m.cursor); it != nil {
+		if it := m.at(m.cursor); it != nil && !it.disabled {
 			return m, it.key, nil
 		}
 	case "esc":
@@ -143,6 +159,9 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string, tea.Cmd) {
 	default:
 		for _, it := range m.items {
 			if !it.separator && !it.header && it.key == msg.String() {
+				if it.disabled { // the hotkey of a dimmed row does nothing (tdp M6)
+					return m, "", nil
+				}
 				return m, it.key, nil
 			}
 		}
@@ -273,6 +292,12 @@ func (m spaceMenu) renderFull() string {
 			continue
 		}
 		labelDisplay := bracketHotkey(it.label, it.key)
+		rowHint, rowCursor := hintStyle, cursorStyle
+		if it.disabled { // label and hint both dim; the cursor bar greys out too
+			labelDisplay = lipgloss.NewStyle().Foreground(disabledColor).Render(labelDisplay)
+			rowHint = lipgloss.NewStyle().Foreground(disabledColor)
+			rowCursor = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(disabledColor).Bold(true)
+		}
 
 		if m.hintRight {
 			// Single trailing glyph right-aligned to the inner edge (the quit
@@ -281,9 +306,9 @@ func (m spaceMenu) renderFull() string {
 			lead := " " + gutter + labelDisplay
 			line := lead + strings.Repeat(" ", max(2, innerW-1-lipgloss.Width(lead)-lipgloss.Width(it.hint)))
 			if i == m.cursor {
-				rows = append(rows, cursorStyle.Render(line+it.hint))
+				rows = append(rows, rowCursor.Render(ansi.Strip(line)+it.hint))
 			} else {
-				rows = append(rows, line+hintStyle.Render(it.hint))
+				rows = append(rows, line+rowHint.Render(it.hint))
 			}
 			continue
 		}
@@ -299,9 +324,9 @@ func (m spaceMenu) renderFull() string {
 			}
 			padW := max(0, innerW-1-lipgloss.Width(lead)-lipgloss.Width(hl))
 			if i == m.cursor {
-				rows = append(rows, cursorStyle.Render(lead+hl+strings.Repeat(" ", padW)))
+				rows = append(rows, rowCursor.Render(ansi.Strip(lead)+hl+strings.Repeat(" ", padW)))
 			} else {
-				rows = append(rows, lead+hintStyle.Render(hl)+strings.Repeat(" ", padW))
+				rows = append(rows, lead+rowHint.Render(hl)+strings.Repeat(" ", padW))
 			}
 		}
 	}

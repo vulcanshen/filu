@@ -107,6 +107,8 @@ func stillOpen(m AppModel, name string) bool {
 		return m.confirm.owns()
 	case "spaceMenu":
 		return m.spaceMenu.owns()
+	case "globalMenu":
+		return m.globalMenu.owns()
 	case "sortMenu":
 		return m.sortMenu.owns()
 	case "gotoMenu":

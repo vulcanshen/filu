@@ -9,7 +9,7 @@ import (
 )
 
 // openOpenInMenu opens the Favorites tab's "Open dir in…" picker for the
-// highlighted favorite: New tab (unless the tab count is already at maxTabs) plus
+// highlighted favorite: New tab (dimmed once the tab count is at maxTabs) plus
 // one entry per open panel [1] tab, each labelled with its tab mark and current
 // directory. A tab already sitting at this favorite's directory is
 // flagged with iconTabHere. Choosing acts on panel [1] and moves focus there.
@@ -21,9 +21,8 @@ func (m *AppModel) openOpenInMenu() tea.Cmd {
 	m.openInPath = path
 
 	var items []menuItem
-	if len(m.tabs) < maxTabs {
-		items = append(items, menuItem{label: "New tab", key: "n", hint: "open in a new tab"})
-	}
+	// New tab is always offered; at maxTabs it is dimmed rather than hidden (tdp M6).
+	items = append(items, menuItem{label: "New tab", key: "n", hint: "open in a new tab", disabled: len(m.tabs) >= maxTabs})
 	blank := strings.Repeat(" ", dispWidth(iconTabHere)) // keep tab marks aligned when there's no flag
 	for i := range m.tabs {
 		mark := blank

@@ -160,11 +160,11 @@ Three panels:
 | `q` | Quit, choosing where your shell ends up (while typing, `q` is just a letter) |
 | `Ctrl+C` | Same as `q`, even while typing; press it again on the quit picker to leave at once |
 
-Every panel's `Space` menu:
+Every panel's `Space` menu lists what you can do to the item under the cursor, then to the panel, and ends with **Global operation**, which opens a menu of app-wide actions (for now: Quit `q`). A row that can't run right now — say, Close tab with only one tab open — is shown dimmed.
 
 | Focus | Menu items |
 |---|---|
-| **`[1]` Files** | Open `o`, Open with `O`, Mark `m`, Yank `y`, Rename `r`, Delete `D`, Favorite `f` · Copy `c`, Move `v`, Search `/`, Goto `go`, Favorite dir `F`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Shell `s`, Hidden `.`, Zoom `z` |
+| **`[1]` Files** | Open `o`, Open with `O`, Mark `m`, Yank `y`, Rename `r`, Delete `D`, Favorite `f` · Copy `c`, Move `v`, Search `/`, Goto `go`, Favorite dir `F`, Breadcrumb `b`, Switch tab `l`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Shell `s`, Hidden `.`, Zoom `z` |
 | **`[2]` Preview** | Yank `y`, Zoom `z` |
 | **`[3]` Marks** | Pick `p`, Yank `y`, Unmark `m` · Zip `Z`, Clear `C`, Switch tab `l`, Zoom `z` |
 | **`[3]` Tasks** | Delete `D` · Switch tab `l`, Zoom `z` |

@@ -3,9 +3,11 @@ package ui
 import (
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
-// TestOpenInMenuItems: the picker offers New tab (when under maxTabs) plus one
+// TestOpenInMenuItems: the picker offers New tab (dimmed at maxTabs) plus one
 // entry per open tab; a tab not at the favorite's dir carries no flag.
 func TestOpenInMenuItems(t *testing.T) {
 	m := minModel() // 3 tabs at /tmp
@@ -46,21 +48,26 @@ func TestOpenInMenuFlagsOpenTab(t *testing.T) {
 	}
 }
 
-// TestOpenInMenuNoNewTabWhenFull: at maxTabs there is no New tab option.
-func TestOpenInMenuNoNewTabWhenFull(t *testing.T) {
+// TestOpenInMenuNewTabDimmedWhenFull: at maxTabs New tab is still listed, dimmed,
+// and neither Enter nor n on it does anything (tdp M6).
+func TestOpenInMenuNewTabDimmedWhenFull(t *testing.T) {
 	m := minModel()
 	m.tabs = []listModel{{dir: "/a"}, {dir: "/b"}, {dir: "/c"}, {dir: "/d"}, {dir: "/e"}} // == maxTabs
 	m.places.pinned = []place{{path: "/x", icon: iconPin}}
 	m.places.cursor = 0
 
 	m.openOpenInMenu()
-	for _, it := range m.openInMenu.items {
-		if it.key == "n" {
-			t.Error("tab count at maxTabs → no New tab option")
-		}
+	if len(m.openInMenu.items) != 6 {
+		t.Fatalf("want New tab + 5 tab entries = 6, got %d", len(m.openInMenu.items))
 	}
-	if len(m.openInMenu.items) != 5 {
-		t.Errorf("want 5 tab entries, got %d", len(m.openInMenu.items))
+	if it := m.openInMenu.items[0]; it.key != "n" || !it.disabled {
+		t.Errorf("at maxTabs New tab should be listed and dimmed: %+v", it)
+	}
+	m.openInMenu.anim.state = popupOpen
+	for _, k := range []tea.KeyMsg{{Type: tea.KeyEnter}, {Type: tea.KeyRunes, Runes: []rune("n")}} {
+		if _, key, _ := m.openInMenu.update(k); key != "" {
+			t.Errorf("%q on the dimmed New tab committed %q", k.String(), key)
+		}
 	}
 }
 

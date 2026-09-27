@@ -60,7 +60,8 @@
   `.trashinfo`。
 - **分頁標記** — 第一個分頁掛啟動 glyph(它永遠開在啟動目錄,是 cd-on-quit picker 的
   固定參照),其餘各掛一隻動物(cat / dog / paw / egg)。路徑交給麵包屑列,分頁列只標
-  位置與哪個 active。上限五個,到上限 toast 提示。
+  位置與哪個 active。上限五個：到上限時 Space menu 的 `Tab` 列變暗、`t` 不作用(tdp M6),
+  分頁列已畫出 5 個分頁，看得出原因。
 - **icon 與配色** — 型別 glyph 取自 eza 完整 icon 表(~760 個);顏色來自烘進 binary 的
   `vivid generate catppuccin-mocha` `LS_COLORS` palette,依 eza 的優先序解析(目錄 →
   symlink → executable → 最長 suffix → 副檔名)。執行時不讀 `LS_COLORS`,每個安裝都是
