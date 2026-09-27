@@ -16,6 +16,11 @@
   Goto, Search, Open with, quit…), confirmations, the help and the breadcrumb
   it does nothing; `Esc` closes them. `b` no longer closes the breadcrumb popup.
 - Confirmations name what `Enter` will do (`Enter trash`, `Enter clear`, …).
+- Popups now stack. A `Space`-menu item that opens a confirmation, a text
+  field or a picker leaves the menu underneath, so `Esc` goes back to it; the
+  Search chooser and the Goto picker stay under the finder they open. Finishing
+  the action closes the whole stack. Each deeper popup takes a slightly
+  different border colour, so you can see which one is on top.
 
 ### Fixed
 - `Esc` now closes a toast notification straight away instead of reaching the

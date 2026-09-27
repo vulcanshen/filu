@@ -41,7 +41,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   filu 目前沒有 `closeTop`，每個 popup 在自己的 `update()` 裡處理 `Esc`。
 - **（locku v0.1.4）「有框握著鍵盤」的判斷要把離開的框算進去。** 執行 menu 的一列後，locku 用 `boxUp()` 決定留住整疊
   還是清掉。global operation popup 的 `[q]uit` 會開出 quit picker；判斷若不認 `quitMenu`，底下的 global operation popup
-  與 Space menu 會被清掉，`Esc` 就回不去（第 6、9 條）。
+  與 Space menu 會被清掉，`Esc` 就回不去（第 6 條；filu 的判斷是 `boxOverSpaceMenu()`，已把 `quitMenu` 算進去，原第 9 條已修）。
 - **（webu）F4 可以統一在按鍵路由處理**：記下按鍵前最上層的等級，按鍵後若不是 `Esc`、最上層掉了一級以上，就關掉
   底下的 menu。執行 menu 的一列時，在 **dispatch 回傳的 model** 上判斷有沒有開出新框，不要在舊 model 上關（會關在
   沒人回傳的副本上；locku 也踩過 value receiver 的同類陷阱）。
@@ -186,23 +186,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **怎麼改**：`menuItem` 加 `disabled`，render 變暗；`spaceMenu.update()` 在 disabled 列上的 `Enter` 與
   熱鍵都不回傳 key。`Tab`、`Close tab`、Open in 的 `New tab` 改成 disabled 而不是不列；`t` / `w` 在不能做
   時直接不作用，拿掉 `tabLimitToast()`。先確認畫面上別處看得出原因（分頁列已經畫出 5 個分頁）。README「瀏覽」一節不受影響。
-
-## 9. 從 popup 開出的 popup，取消後回不到原本的框 —— F4、K4、D2
-
-- **現況**：
-  - `app.go` Space menu 分支（:363–364）選定一列後 `tea.Batch(cmd, m.dispatchFocusKey(key), m.spaceMenu.close())`：
-    Space menu 先關，再打開 confirm（Delete、Open、Shell、Unfavorite、Clear）、input（Rename、Add、Zip）或 picker
-    （Open with、Sort、Search、Goto、Tab、Breadcrumb、Open in）。在這些 popup 上按 `Esc` 取消，回到的是 panel，
-    不是 Space menu。
-  - Search chooser 選了 filename / content 之後先關自己再開 finder（:414–:417）；Goto picker 選了 Search 也是先關
-    （`advanceGotoFlow()`）。在 finder 上 `Esc` 回到 panel，不是 chooser / picker。
-  - 所有 popup 的層色都是 `popupLayerColor(1)`；疊起來以後分不出層次。
-- **規則**：從 popup A 開出 popup B 時，A 預設留在底下；取消 B 回到 A，`Esc` 只關最上層，底下的階層原樣呈現。
-  完成 B 之後 A 要不要留，依 T1 判斷（短的 confirm / 訊息通常保留；完成動作清掉整疊，D3）。
-- **怎麼改**：Space menu 選到「會開 popup」的列時不關 menu，讓新 popup 疊在上面；取消回到 menu，完成後連同 menu
-  一起清掉。直接執行、不開 popup 的列（Mark、Yank、Hidden、Zoom……）照舊執行後關 menu。Search chooser、Goto
-  picker 開 finder 時同樣留在底下。建議統一在按鍵路由處理（webu 的做法，見「先看」），在 dispatch 回傳的 model 上判斷
-  有沒有開出新框；「有框握著鍵盤」要把 `quitMenu` 算進去（第 6 條）。依疊的深度給層色（D2）。
 
 ## 10. input popup 的 `Enter` 不驗證、送不出去也不說 —— K3、L2
 

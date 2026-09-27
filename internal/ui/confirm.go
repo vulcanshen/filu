@@ -56,7 +56,7 @@ func (m confirmPopup) update(msg tea.KeyMsg) (confirmPopup, bool, tea.Cmd) {
 func (m confirmPopup) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
 func (m confirmPopup) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	title := " " + string(rune(0xf071)) + " Confirm" // nf-fa-warning
 	hint := " Enter " + m.verb + " · Esc cancel "
 

@@ -67,22 +67,21 @@ func (m *AppModel) setGotoPinnedItems() {
 // advanceGotoFlow handles a committed picker key. At root: Same opens a new tab
 // here (new-tab mode), Search opens the finder, Favorites drills in. At the
 // favorites step a number picks that dir — jumping the active tab or opening a new
-// one per the mode. It closes the menu on a terminal action, stays open on a drill.
+// one per the mode. A terminal action clears the stack (T1); a drill or the finder keeps it.
 func (m *AppModel) advanceGotoFlow(key string) tea.Cmd {
 	switch m.gotoStep {
 	case gotoStepRoot:
 		switch key {
 		case "s": // Same → a new tab in the current dir (new-tab mode only)
 			if m.gotoNewTab {
-				cmd := m.gotoMenu.close()
 				m.addTab(m.cur().dir)
-				return cmd
+				return m.clearStack()
 			}
-		case "/": // Search → the $HOME dirs-only finder
+		case "/": // Search → the $HOME dirs-only finder, over this picker (tdp F4)
 			if m.gotoNewTab {
-				return tea.Batch(m.gotoMenu.close(), m.openGotoNewTab())
+				return m.openGotoNewTab()
 			}
-			return tea.Batch(m.gotoMenu.close(), m.openGoto())
+			return m.openGoto()
 		case "f": // Favorites → drill into the list
 			m.gotoStep = gotoStepPinned
 			m.setGotoPinnedItems()
@@ -91,14 +90,13 @@ func (m *AppModel) advanceGotoFlow(key string) tea.Cmd {
 	case gotoStepPinned:
 		if idx, err := strconv.Atoi(key); err == nil && idx >= 1 && idx <= len(m.places.pinned) {
 			dir := m.places.pinned[idx-1].path
-			cmd := m.gotoMenu.close()
 			if m.gotoNewTab {
 				m.addTab(dir)
 			} else {
 				m.navigateTo(dir)
 			}
 			m.syncWatches()
-			return cmd
+			return m.clearStack()
 		}
 		return nil
 	}

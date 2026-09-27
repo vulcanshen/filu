@@ -151,6 +151,29 @@ func (m *AppModel) shutdown() tea.Cmd {
 	return tea.Quit
 }
 
+// clearStack closes every popup still in the stack: once an action is done, the
+// menus and pickers that led to it have nothing left to offer (tdp T1, D3).
+func (m *AppModel) clearStack() tea.Cmd {
+	var cmds []tea.Cmd
+	for _, a := range m.stackOrder() {
+		if a.owns() {
+			cmds = append(cmds, a.close())
+		}
+	}
+	return tea.Batch(cmds...)
+}
+
+// boxOverSpaceMenu reports whether a popup (or the shell) now holds the keyboard
+// above the Space menu — the quit picker included, which a row can open too.
+func (m *AppModel) boxOverSpaceMenu() bool {
+	for _, a := range m.stackOrder() {
+		if a != &m.spaceMenu.anim && a.owns() {
+			return true
+		}
+	}
+	return m.pty.isActive()
+}
+
 // typing reports whether keys are text entry right now (tdp K8): the input
 // popup, or the finder's query line. Letter keys, q included, are characters.
 func (m AppModel) typing() bool {
@@ -232,7 +255,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.syncWatches() // the tab may have moved to a new dir
 		m.refreshPreview()
-		return m, nil
+		return m, m.clearStack() // the pick is made: the chooser / Goto picker and Space menu go too (T1)
 	case spinnerTickMsg:
 		m.spinnerFrame++
 		if m.anyRunning() {
@@ -303,12 +326,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if k := msg.String(); k == "ctrl+c" || (k == "q" && !m.typing()) {
 			return m, m.openQuitMenu()
 		}
-		if m.detailYank.owns() { // yank viewport owns the keyboard while open
-			if !m.detailYank.isInteractive() {
+		// Popups, top of the stack first (the reverse of View's draw order,
+		// stackOrder): the popup on top takes the key (tdp D3).
+		if m.help.owns() { // modal cheatsheet
+			if !m.help.isInteractive() {
 				return m, nil
 			}
 			var cmd tea.Cmd
-			m.detailYank, cmd = m.detailYank.update(msg)
+			m.help, cmd = m.help.update(msg)
 			return m, cmd
 		}
 		if m.search.owns() { // fuzzy finder owns the keyboard while open
@@ -319,6 +344,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.search, cmd = m.search.update(msg)
 			return m, cmd
 		}
+		if m.detailYank.owns() { // yank viewport owns the keyboard while open
+			if !m.detailYank.isInteractive() {
+				return m, nil
+			}
+			var cmd tea.Cmd
+			m.detailYank, cmd = m.detailYank.update(msg)
+			return m, cmd
+		}
 		if m.breadcrumb.owns() { // ancestor-jump popup owns the keyboard while open
 			if !m.breadcrumb.isInteractive() {
 				return m, nil
@@ -327,18 +360,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.breadcrumb, path, cmd = m.breadcrumb.update(msg)
 			if path != "" { // Enter on a level: jump the active tab there
+				cmd = tea.Batch(cmd, m.clearStack())
 				m.revealPath(path)
 				m.cur().ensureVisible(m.listRows())
 				m.refreshPreview()
 			}
-			return m, cmd
-		}
-		if m.help.owns() { // modal cheatsheet
-			if !m.help.isInteractive() {
-				return m, nil
-			}
-			var cmd tea.Cmd
-			m.help, cmd = m.help.update(msg)
 			return m, cmd
 		}
 		if m.inputPopup.owns() { // text entry owns the keyboard while open
@@ -349,7 +375,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.inputPopup, ok, cmd = m.inputPopup.update(msg)
 			if ok {
-				cmd = tea.Batch(cmd, m.performInput())
+				cmd = tea.Batch(cmd, m.performInput(), m.clearStack())
 			}
 			return m, cmd
 		}
@@ -383,30 +409,48 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					saveState(m.snapshotState())
 				}
 				m.confirmAction = confirmNone
+				cmd = tea.Batch(cmd, m.clearStack()) // the action is done: the menus that led here go too (T1)
 			}
 			return m, cmd
 		}
-		if m.spaceMenu.owns() { // popup owns the keyboard while open
-			if !m.spaceMenu.isInteractive() {
-				return m, nil // swallow keys mid-animation
-			}
-			var key string
-			var cmd tea.Cmd
-			m.spaceMenu, key, cmd = m.spaceMenu.update(msg)
-			if key != "" { // committed: fire on the focused panel, then close
-				cmd = tea.Batch(cmd, m.dispatchFocusKey(key), m.spaceMenu.close())
-			}
-			return m, cmd
-		}
-		if m.sortMenu.owns() { // sort picker owns the keyboard; commits drive the chain flow
-			if !m.sortMenu.isInteractive() {
+		if m.openWithMenu.owns() { // [o]pen picker; a commit launches the app
+			if !m.openWithMenu.isInteractive() {
 				return m, nil
 			}
 			var key string
 			var cmd tea.Cmd
-			m.sortMenu, key, cmd = m.sortMenu.update(msg)
-			if key != "" { // stays open, swapping to the next step / looping back
-				cmd = tea.Batch(cmd, m.advanceSortFlow(key))
+			m.openWithMenu, key, cmd = m.openWithMenu.update(msg)
+			if idx, err := strconv.Atoi(key); err == nil { // a number → that app (1 = Default)
+				if run := m.runOpenWith(idx); run != nil {
+					return m, tea.Batch(run, m.clearStack())
+				}
+			}
+			return m, cmd
+		}
+		if m.searchMenu.owns() { // Search chooser: filename vs content, then open the finder
+			if !m.searchMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.searchMenu, key, cmd = m.searchMenu.update(msg)
+			switch key { // the chooser stays beneath the finder, so Esc there comes back (tdp F4)
+			case "f": // filename → the by-name (fd) finder
+				return m, m.openSearch()
+			case "c": // content → the by-content (rg) finder
+				return m, m.openFind()
+			}
+			return m, cmd
+		}
+		if m.openInMenu.owns() { // Favorites "Open dir in…" picker
+			if !m.openInMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.openInMenu, key, cmd = m.openInMenu.update(msg)
+			if key != "" {
+				cmd = tea.Batch(cmd, m.advanceOpenIn(key), m.clearStack())
 			}
 			return m, cmd
 		}
@@ -425,43 +469,31 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.openInMenu.owns() { // Favorites "Open dir in…" picker
-			if !m.openInMenu.isInteractive() {
+		if m.sortMenu.owns() { // sort picker owns the keyboard; commits drive the chain flow
+			if !m.sortMenu.isInteractive() {
 				return m, nil
 			}
 			var key string
 			var cmd tea.Cmd
-			m.openInMenu, key, cmd = m.openInMenu.update(msg)
-			if key != "" {
-				cmd = tea.Batch(cmd, m.advanceOpenIn(key))
+			m.sortMenu, key, cmd = m.sortMenu.update(msg)
+			if key != "" { // stays open, swapping to the next step / looping back
+				cmd = tea.Batch(cmd, m.advanceSortFlow(key))
 			}
 			return m, cmd
 		}
-		if m.searchMenu.owns() { // Search chooser: filename vs content, then open the finder
-			if !m.searchMenu.isInteractive() {
-				return m, nil
+		if m.spaceMenu.owns() { // popup owns the keyboard while open
+			if !m.spaceMenu.isInteractive() {
+				return m, nil // swallow keys mid-animation
 			}
 			var key string
 			var cmd tea.Cmd
-			m.searchMenu, key, cmd = m.searchMenu.update(msg)
-			switch key {
-			case "f": // filename → the by-name (fd) finder
-				return m, tea.Batch(m.searchMenu.close(), m.openSearch())
-			case "c": // content → the by-content (rg) finder
-				return m, tea.Batch(m.searchMenu.close(), m.openFind())
-			}
-			return m, cmd
-		}
-		if m.openWithMenu.owns() { // [o]pen picker; a commit launches the app
-			if !m.openWithMenu.isInteractive() {
-				return m, nil
-			}
-			var key string
-			var cmd tea.Cmd
-			m.openWithMenu, key, cmd = m.openWithMenu.update(msg)
-			if idx, err := strconv.Atoi(key); err == nil { // a number → that app (1 = Default)
-				if run := m.runOpenWith(idx); run != nil {
-					return m, tea.Batch(run, m.openWithMenu.close())
+			m.spaceMenu, key, cmd = m.spaceMenu.update(msg)
+			if key != "" { // committed: fire on the focused panel
+				cmd = tea.Batch(cmd, m.dispatchFocusKey(key))
+				// A row that opened a popup keeps the menu beneath it, so Esc there
+				// comes back (tdp F4); a row that just ran closes the menu.
+				if !m.boxOverSpaceMenu() {
+					cmd = tea.Batch(cmd, m.spaceMenu.close())
 				}
 			}
 			return m, cmd

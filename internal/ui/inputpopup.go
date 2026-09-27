@@ -93,7 +93,7 @@ func (m inputPopup) update(msg tea.KeyMsg) (inputPopup, bool, tea.Cmd) {
 func (m inputPopup) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
 func (m inputPopup) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	title := " " + m.prompt
 	hint := " enter confirm   esc cancel "
 

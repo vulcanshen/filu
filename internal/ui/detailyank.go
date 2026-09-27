@@ -265,7 +265,7 @@ func (m detailYank) selectionText() string {
 func (m detailYank) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
 func (m detailYank) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	innerW, rows := m.innerW(), m.contentRows()
 	selStyle := lipgloss.NewStyle().Background(userColor).Foreground(lipgloss.Color(baseHex)).Bold(true)
 	curStyle := lipgloss.NewStyle().Reverse(true)

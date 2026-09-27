@@ -86,6 +86,13 @@
 - **popup 共用框** — 全部走 `drawPopupBox`(title 嵌上框、hint 嵌下框、內容上下各一列
   padding);yank viewport 與 finder 用 `drawPopupBoxPad(pad=false)` 貼齊邊框。popup
   內容列刻意不放 glyph(`lipgloss.Width` 會低估 ambiguous / PUA 寬度),glyph 只擺在框線上。
+- **popup 疊層** — `stackOrder()` 是整疊由下往上的唯一順序:Space menu 在最底、它開出的
+  picker / confirm / input / breadcrumb / yank viewport 在上、finder 在開它的 chooser 或
+  Goto picker 之上、key reference 與 quit picker 最上。`View` 照這個順序畫(`assignLayers()`
+  依深度給層色),`Update` 反過來由上往下路由按鍵，所以最上面那個框收鍵、`Esc` 只關它。
+  Space menu 的列若開出了框(`boxOverSpaceMenu()`),menu 留在底下;完成動作時(confirm
+  接受、input 送出、breadcrumb 跳轉、open-in / open-with、finder 選定)`clearStack()` 整疊
+  一起收掉(tdp F4、T1)。正在關閉的框不收鍵(`owns()`),下一個 `Esc` 直接關底下那層(F3)。
 
 ### 程式碼目錄
 
