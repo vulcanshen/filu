@@ -228,7 +228,7 @@ func bracketHotkey(label, key string) string {
 // title embedded in the top border, hint in the bottom border, rows of
 // "[K]label   hint", cursor row reverse-highlighted.
 func (m spaceMenu) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f849c"))
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
 

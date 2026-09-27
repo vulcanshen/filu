@@ -50,7 +50,10 @@ func (m AppModel) View() string {
 	}
 
 	out := joinV(m.middleView(w, midH), m.footerBar(w))
-	// Compose-don't-Replace: overlay popups onto the canvas (last = on top).
+	// Compose-don't-Replace: overlay popups onto the canvas (last = on top), in the
+	// stack order Update routes keys by, top-first (tdp D3); assignLayers gives
+	// each open popup its depth colour (D2).
+	m.assignLayers()
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -75,8 +78,8 @@ func (m AppModel) View() string {
 	if m.inputPopup.isActive() {
 		out = overlay.Composite(m.inputPopup.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
-	if m.help.isActive() {
-		out = overlay.Composite(m.help.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	if m.breadcrumb.isActive() { // ancestor-jump popup over the panels
+		out = overlay.Composite(m.breadcrumb.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.detailYank.isActive() { // yank viewport over the panels
 		out = overlay.Composite(m.detailYank.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
@@ -84,8 +87,8 @@ func (m AppModel) View() string {
 	if m.search.isActive() { // fuzzy finder over the panels
 		out = overlay.Composite(m.search.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
-	if m.breadcrumb.isActive() { // ancestor-jump popup over the panels
-		out = overlay.Composite(m.breadcrumb.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	if m.help.isActive() { // key reference over whatever it describes
+		out = overlay.Composite(m.help.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.pty.isRendered() { // shell popup: full width, pinned below header+status, down to the bottom
 		out = overlay.Composite(m.pty.renderPopup(), out, overlay.Left, overlay.Top, 0, ptyChromeRows)
@@ -447,4 +450,31 @@ func shortPath(p string) string {
 		return "~" + strings.TrimPrefix(p, home)
 	}
 	return p
+}
+
+// stackOrder is the popup stack bottom-first: the one order View draws in and
+// Update routes keys by (walked top-first), so the popup on top is the one that
+// takes the keys (tdp D3). The Space menu is always the source at the bottom; a
+// picker, confirm or input it opens sits above it; the finder sits above the
+// chooser or Goto picker that opened it; the key reference and the leave flow
+// sit above everything.
+func (m *AppModel) stackOrder() []*popupAnimator {
+	return []*popupAnimator{
+		&m.spaceMenu.anim, &m.sortMenu.anim, &m.gotoMenu.anim, &m.openInMenu.anim, &m.searchMenu.anim,
+		&m.openWithMenu.anim, &m.confirm.anim, &m.inputPopup.anim, &m.breadcrumb.anim, &m.detailYank.anim,
+		&m.search.anim, &m.help.anim, &m.quitMenu.anim,
+	}
+}
+
+// assignLayers numbers the open popups by their depth in the stack so each one
+// takes its layer colour: the deeper it sits on top, the further along the
+// lavenphire→sapphire scale (tdp D2).
+func (m *AppModel) assignLayers() {
+	layer := 0
+	for _, a := range m.stackOrder() {
+		if a.isActive() {
+			layer++
+			a.setLayer(layer)
+		}
+	}
 }

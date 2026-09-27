@@ -628,7 +628,7 @@ func (m searchModel) renderPopup() string { return m.anim.renderFrame(m.renderFu
 // (wide) or stacked (narrow). Find previews the file's content, Search the file
 // from the top, Goto the selected directory's tree.
 func (m searchModel) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	side, sW, sRows, pW, pRows := m.geometry()
 	title := " Search"
 	switch {

@@ -78,7 +78,7 @@ func (m breadcrumbPopup) update(msg tea.KeyMsg) (breadcrumbPopup, string, tea.Cm
 func (m breadcrumbPopup) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
 func (m breadcrumbPopup) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
 	hereStyle := lipgloss.NewStyle().Foreground(userColor) // current level, lavender = you-are-here
 

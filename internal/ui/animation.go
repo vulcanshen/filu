@@ -38,6 +38,14 @@ type popupAnimator struct {
 	frame  int
 	target string
 	color  lipgloss.Color
+	layer  int // depth in the popup stack, 1 = lowest; set per frame by View (tdp D2)
+}
+
+// setLayer records the popup's depth in the stack and takes that layer's colour
+// for the border and the open/close line.
+func (a *popupAnimator) setLayer(n int) {
+	a.layer = n
+	a.color = popupLayerColor(n)
 }
 
 func newPopupAnimator(target string, color lipgloss.Color) popupAnimator {

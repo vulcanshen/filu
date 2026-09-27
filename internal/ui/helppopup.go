@@ -69,7 +69,7 @@ func (m helpPopup) update(msg tea.KeyMsg) (helpPopup, tea.Cmd) {
 func (m helpPopup) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
 func (m helpPopup) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	keyStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)
 	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f849c"))
 
