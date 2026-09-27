@@ -34,6 +34,7 @@ func (m *toastModel) show(message string) tea.Cmd {
 
 func (m *toastModel) setSize(w int) { m.screenW = w }
 func (m toastModel) isActive() bool { return m.anim.isActive() }
+func (m toastModel) owns() bool     { return m.anim.owns() }
 
 func (m *toastModel) handleTick(msg AnimTickMsg) tea.Cmd {
 	if msg.Target != m.anim.target {
@@ -50,6 +51,10 @@ func (m *toastModel) dismiss(msg toastDismissMsg) tea.Cmd {
 	}
 	return m.anim.close()
 }
+
+// closeNow starts closing the toast right away (Esc, tdp F3); the pending
+// auto-dismiss tick then finds it already closing and does nothing.
+func (m *toastModel) closeNow() tea.Cmd { return m.anim.close() }
 
 func (m toastModel) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 

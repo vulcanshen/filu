@@ -206,6 +206,7 @@ func blinkTickCmd(gen int) tea.Cmd {
 
 func (m *searchModel) setSize(w, h int)   { m.width, m.height = w, h }
 func (m searchModel) isActive() bool      { return m.anim.isActive() }
+func (m searchModel) owns() bool          { return m.anim.owns() }
 func (m searchModel) isInteractive() bool { return m.anim.isInteractive() }
 
 func (m *searchModel) handleTick(msg AnimTickMsg) tea.Cmd {

@@ -27,6 +27,7 @@ func (m *confirmPopup) open(message string) tea.Cmd {
 func (m *confirmPopup) close() tea.Cmd     { return m.anim.close() }
 func (m *confirmPopup) setSize(w int)      { m.screenW = w }
 func (m confirmPopup) isActive() bool      { return m.anim.isActive() }
+func (m confirmPopup) owns() bool          { return m.anim.owns() }
 func (m confirmPopup) isInteractive() bool { return m.anim.isInteractive() }
 
 func (m *confirmPopup) handleTick(msg AnimTickMsg) tea.Cmd {

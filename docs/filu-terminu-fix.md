@@ -46,7 +46,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   底下的 menu。執行 menu 的一列時，在 **dispatch 回傳的 model** 上判斷有沒有開出新框，不要在舊 model 上關（會關在
   沒人回傳的副本上；locku 也踩過 value receiver 的同類陷阱）。
 - **F3 不只看 toast**：判斷「popup 還在不在」用開啟中或已開（`owns()` 一類），不用含關閉中的 `isActive()`。
-  locku 的 bug 在 toast，sshu 照抄只寫了 toast，實際上每一個 popup 都用 `isActive()`；filu 也是（見第 8 條）。
+  locku 的 bug 在 toast，sshu 照抄只寫了 toast，實際上每一個 popup 都用 `isActive()`；filu 也是，已修（原第 8 條：路由改用 `owns()`）。
 - **K9 的離開流程**：離開流程開著時，`Ctrl-C` 直接離開；`q` 在離開流程上不再疊一個。
 - **S3**：splash 的判斷放在 `Ctrl-C` 之前，任何鍵都只關 splash（filu 目前已是如此，`app.go` :265）。
 - **層數會變多**：Space menu → global operation popup → quit picker → 它的 `?`，或 Space menu → Delete confirm → `?` →
@@ -237,21 +237,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **怎麼改**：`menuItem` 加 `disabled`，render 變暗；`spaceMenu.update()` 在 disabled 列上的 `Enter` 與
   熱鍵都不回傳 key。`Tab`、`Close tab`、Open in 的 `New tab` 改成 disabled 而不是不列；`t` / `w` 在不能做
   時直接不作用，拿掉 `tabLimitToast()`。先確認畫面上別處看得出原因（分頁列已經畫出 5 個分頁）。README「瀏覽」一節不受影響。
-
-## 8. toast 開著時 `Esc` 不關 toast；關到一半的 popup 吃掉按鍵 —— F3、K4
-
-- **現況**：
-  - `toastModel`（`toast.go`）只靠計時自己關；`app.go` `Update()` 的按鍵路由沒有檢查 toast。toast 開著時按 `Esc`，
-    鍵照常送到 panel —— `handleListKey()` 的 `case "esc"`（:531）把分頁帶到上一層目錄；若底下還有 popup，關掉的是
-    那個 popup。
-  - 其他每一個 popup 的路由都是 `if m.X.isActive() { if !m.X.isInteractive() { return m, nil } … }`（:273–:448）：
-    `popupAnimator.isActive()`（`animation.go` :47）連關閉動畫中的也算，所以正在關的 popup 把所有按鍵吞掉。popup
-    還不能疊的時候看不出來；第 4、6、9 條讓 popup 疊起來以後，關到一半再按 `Esc`，這一下會被吞掉，而不是關底下那層。
-- **規則**：任何看得到的 popup —— 包括會自動消失的 toast —— 按 `Esc` 都立即開始關閉；`Esc` 一次關一層，
-  最上層先關。已經在跑關閉動畫的 popup 不再理會 `Esc`，也不再接收其他按鍵。
-- **怎麼改**：`popupAnimator` 加 `owns()`（開啟中或已開，不含關閉中）。按鍵路由在 PTY 之後、其他 popup 之前加一段：
-  `m.toast.owns()` 時 `Esc` 呼叫 toast 的關閉並 return。其他 popup 的路由判斷從 `isActive()` 改成 `owns()`，
-  讓正在關的那層把鍵讓給底下（開啟動畫中仍照舊不收鍵）。整個路由一起看，不只 toast（sshu 的教訓）。
 
 ## 9. 從 popup 開出的 popup，取消後回不到原本的框 —— F4、K4、D2
 

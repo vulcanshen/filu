@@ -42,6 +42,7 @@ func (m *breadcrumbPopup) open(dir string) tea.Cmd {
 func (m *breadcrumbPopup) close() tea.Cmd     { return m.anim.close() }
 func (m *breadcrumbPopup) setSize(w int)      { m.screenW = w }
 func (m breadcrumbPopup) isActive() bool      { return m.anim.isActive() }
+func (m breadcrumbPopup) owns() bool          { return m.anim.owns() }
 func (m breadcrumbPopup) isInteractive() bool { return m.anim.isInteractive() }
 
 func (m *breadcrumbPopup) handleTick(msg AnimTickMsg) tea.Cmd {

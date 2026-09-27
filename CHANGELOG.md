@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+- `Esc` now closes a toast notification straight away instead of reaching the
+  panel underneath (where it went up a directory).
+- A popup that is already closing no longer swallows the next key: pressing
+  `Esc` again closes the layer beneath it right away.
+
 ## [0.3.2] — 2026-09-01
 
 ### Changed

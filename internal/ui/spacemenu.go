@@ -101,6 +101,7 @@ func (m *spaceMenu) setSize(w int)      { m.screenW = w }
 func (m *spaceMenu) open() tea.Cmd      { return m.anim.open() }
 func (m *spaceMenu) close() tea.Cmd     { return m.anim.close() }
 func (m spaceMenu) isActive() bool      { return m.anim.isActive() }
+func (m spaceMenu) owns() bool          { return m.anim.owns() }
 func (m spaceMenu) isInteractive() bool { return m.anim.isInteractive() }
 func (m *spaceMenu) handleTick(msg AnimTickMsg) tea.Cmd {
 	if msg.Target != m.anim.target {
