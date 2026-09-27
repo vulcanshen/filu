@@ -157,8 +157,8 @@ Three panels:
 | Key | Anywhere |
 |---|---|
 | `?` | Help |
-| `q` | Quit, choosing where your shell ends up |
-| `Ctrl+C` | Quit now (stops any copy or move in progress) |
+| `q` | Quit, choosing where your shell ends up (while typing, `q` is just a letter) |
+| `Ctrl+C` | Same as `q`, even while typing; press it again on the quit picker to leave at once |
 
 Every panel's `Space` menu:
 

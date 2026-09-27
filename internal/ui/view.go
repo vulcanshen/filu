@@ -66,9 +66,6 @@ func (m AppModel) View() string {
 	if m.searchMenu.isActive() {
 		out = overlay.Composite(m.searchMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
-	if m.quitMenu.isActive() {
-		out = overlay.Composite(m.quitMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
 	if m.openWithMenu.isActive() {
 		out = overlay.Composite(m.openWithMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -92,6 +89,9 @@ func (m AppModel) View() string {
 	}
 	if m.pty.isRendered() { // shell popup: full width, pinned below header+status, down to the bottom
 		out = overlay.Composite(m.pty.renderPopup(), out, overlay.Left, overlay.Top, 0, ptyChromeRows)
+	}
+	if m.quitMenu.isActive() { // the leave flow sits over the whole stack (tdp D3)
+		out = overlay.Composite(m.quitMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.toast.isActive() { // transient, always on top
 		out = overlay.Composite(m.toast.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)

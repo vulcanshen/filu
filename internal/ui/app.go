@@ -151,6 +151,12 @@ func (m *AppModel) shutdown() tea.Cmd {
 	return tea.Quit
 }
 
+// typing reports whether keys are text entry right now (tdp K8): the input
+// popup, or the finder's query line. Letter keys, q included, are characters.
+func (m AppModel) typing() bool {
+	return m.inputPopup.owns() || (m.search.owns() && m.search.mode == searchInput)
+}
+
 // cur returns a pointer to the active directory tab.
 func (m *AppModel) cur() *listModel { return &m.tabs[m.tab] }
 
@@ -272,6 +278,30 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.toast.owns() && msg.String() == "esc" { // tdp F3: Esc closes the toast before anything beneath it
 			return m, m.toast.closeNow()
+		}
+		// tdp K9: q and Ctrl-C lead into the leave flow (the cd-on-quit picker)
+		// from any surface. The picker stacks on top of whatever is open, so Esc
+		// on it returns there (D3); Ctrl-C on the picker leaves at once. Ctrl-C
+		// works while typing too (K8); q is a character there.
+		if m.quitMenu.owns() {
+			if msg.String() == "ctrl+c" {
+				return m, m.shutdown()
+			}
+			if !m.quitMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.quitMenu, key, cmd = m.quitMenu.update(msg)
+			if idx, err := strconv.Atoi(key); err == nil { // a number → that distinct dir
+				if targets := m.quitTargets(); idx >= 1 && idx <= len(targets) {
+					return m, m.quitTo(targets[idx-1].dir)
+				}
+			}
+			return m, cmd
+		}
+		if k := msg.String(); k == "ctrl+c" || (k == "q" && !m.typing()) {
+			return m, m.openQuitMenu()
 		}
 		if m.detailYank.owns() { // yank viewport owns the keyboard while open
 			if !m.detailYank.isInteractive() {
@@ -422,20 +452,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.quitMenu.owns() { // cd-on-quit picker; a commit cds and quits
-			if !m.quitMenu.isInteractive() {
-				return m, nil
-			}
-			var key string
-			var cmd tea.Cmd
-			m.quitMenu, key, cmd = m.quitMenu.update(msg)
-			if idx, err := strconv.Atoi(key); err == nil { // a number → that distinct dir
-				if targets := m.quitTargets(); idx >= 1 && idx <= len(targets) {
-					return m, m.quitTo(targets[idx-1].dir)
-				}
-			}
-			return m, cmd
-		}
 		if m.openWithMenu.owns() { // [o]pen picker; a commit launches the app
 			if !m.openWithMenu.isInteractive() {
 				return m, nil
@@ -466,10 +482,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		switch msg.String() {
-		case "ctrl+c": // hard quit — abandon any running task, no cd-on-quit
-			return m, m.shutdown()
-		case "q": // pick where to leave the shell, then quit (cd-on-quit)
-			return m, m.openQuitMenu()
 		case "?": // §A.2 global help cheatsheet
 			return m, m.help.open()
 		case "V": // hidden easter-egg: the u-family logo

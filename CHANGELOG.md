@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Changed
+- `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
+  (with its warning when a copy or move is still running). Press `Ctrl+C` again
+  on the picker to leave at once.
+- `q` and `Ctrl+C` now reach the quit picker from anywhere — over a menu, a
+  confirmation, the help, a preview or the finder's results — and `Esc` on the
+  picker returns to where you were. While typing, `q` is just a letter.
+- In the finder's result list, `Tab` (not `q`) goes back to the query line;
+  `Tab` on the query line jumps to the results.
+- `q` no longer closes the help; `Esc` or `?` does.
+
 ### Fixed
 - `Esc` now closes a toast notification straight away instead of reaching the
   panel underneath (where it went up a directory).

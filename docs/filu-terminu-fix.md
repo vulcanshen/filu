@@ -116,38 +116,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 ---
 
-## 1. `Ctrl-C` 在 panel 上直接結束、在 popup 裡被吞掉 —— K9、K8、D3
-
-- **現況**：`internal/ui/app.go` `Update()` 的主 switch，`case "ctrl+c"`（:466）直接 `m.shutdown()`，
-  不開 cd-on-quit picker、有任務在跑也直接走。這個 switch 只在沒有 popup 時才走得到；popup 開著時
-  `Ctrl-C` 交給該 popup 的 `update()`，而 `spaceMenu.update()`（所有 picker 共用）、`confirmPopup.update()`、
-  `helpPopup.update()`、`breadcrumbPopup.update()`、`detailYank.update()`、`searchModel.update()`（輸入態與
-  清單態）、`inputPopup.update()` 都沒有處理它，按了沒反應。quit picker（`quitMenu`）開著時再按
-  `Ctrl-C` 也一樣被吞。
-- **規則**：`q` 與 `Ctrl-C` 做同一件事 —— 進入離開流程（filu 的離開流程就是 cd-on-quit picker）；
-  `Ctrl-C` 在輸入態仍然有效；離開流程進行中再按一次 `Ctrl-C` 立刻離開。離開的框是自己的 popup，疊在整疊最上面（D3）。
-- **怎麼改**：`Ctrl-C` 的處理提到 popup 路由之前（splash 之後、PTY 之後，K10）：quit picker 開著時 `m.shutdown()`，
-  否則 `m.openQuitMenu()`，疊在開著的 popup 上（不關底下那疊；在 picker 上 `Esc` 回到原本的框）。quit picker 在
-  最上層要三處一起改，順序 `quitHelp`（第 4 條）> `quitMenu` > `help` > 其他：按鍵路由（目前 `quitMenu` 排在 confirm、
-  Space menu、sort / goto / openIn / search picker 之後，:422）、`Esc` 的處理、繪製順序（`view.go` 目前在 confirm、
-  input、help 之前畫 `quitMenu`，:69）。README 兩份「按鍵一覽」的 `Ctrl+C  Quit now (stops any copy or move in progress)`
-  改成「同 `q`；在離開畫面上再按一次立刻離開」之類的說法。
-
-## 2. `q` 只在沒有 popup 時是離開；help 與 finder 裡另有意義 —— K1、K9、K2
-
-- **現況**：`q` 在 `app.go` 主 switch（:468）才開 quit picker。popup 開著時：`helppopup.go` `update()`
-  （:62）把 `q` 當成關閉 help；`search.go` `update()` 清單態（:299）的 `q` 是「回到輸入列」；其他 popup
-  （Space menu 與各 picker、confirm、breadcrumb、yank viewport）按 `q` 沒反應。
-- **規則**：`q` 是 core key，除了輸入態以外在每一個 surface 都是「進入離開流程」；letter hotkey 與
-  popup 自己的鍵不能佔用它。quit picker 開著時再按 `q` 不疊第二個。
-- **怎麼改**：`q` 跟第 1 條的 `Ctrl-C` 放在同一處（輸入態除外：`inputPopup`、finder 輸入態）。help 拿掉
-  `q`；finder 清單態「回到輸入列」改用 `Tab`：輸入列與結果清單是 finder 裡的兩個同層物件，`Tab` 在兩者之間切換（K2），
-  並更新 finder 下框 hint（`search.go` `hint()` :760 的 `q=input`）。finder 的輸入列沒有灰字提議，所以 v0.1.6 K2
-  「單一輸入框的 `Tab` 接受提議」不適用，`Tab` 可以拿來換到結果清單。輸入列上的 `Enter` 維持現狀：它是輸入列這個
-  單一欄位的 submit（K3，v0.1.3「submit 的對象可以是單一欄位，由 app 決定」），送出後 focus 到結果；沒有結果時清單
-  已寫出 `(no matches)`（:673），不算送不出去卻不說。「quit picker 上再按 `q` 不疊第二個」的測試要斷言沒有重播
-  開啟動畫（見「先看」的 mutation）。
-
 ## 3. `Space` 會關掉 Space menu 以外的 popup —— K5
 
 - **現況**：
@@ -182,7 +150,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   `Esc`；Goto 收藏清單加上 `f`；quit picker：數字、`Enter`、`Esc`、再按 `Ctrl-C` 立刻離開）。key reference 疊在該 popup 上，
   路由與繪製都在最上層（D3）：目前 `m.help.isActive()` 的路由排在 detailYank、finder、breadcrumb 之後（:303），`view.go`
   也在它們之前畫 help（:81），兩處都要改。quit picker 的 `?` 另開一個 help popup（`quitHelp`），排在 `quitMenu` 之上，
-  見「先看」與第 1 條。finder 輸入態的 `?` 是字元（K8），不打開。新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試。
+  見「先看」；`quitMenu` 已在路由與繪製的最上層（原第 1 條），`quitHelp` 排在它之上。finder 輸入態的 `?` 是字元（K8），不打開。新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試。
 
 ## 5. panel 上的 `?` 是全 app 共用的一份，沒列這個 panel 的鍵 —— K6、M4、D4
 
@@ -219,7 +187,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
     會把 label 裡找得到的多字元 key 括起來），在 Space menu 分支（:356–:367）攔下來開 popup，不進 `dispatchFocusKey()`。
   - global operation popup 的 `[q]uit` 打開 cd-on-quit picker，疊在 global operation popup 上（F4）：picker 上
     `Esc` 回到 global operation popup、再 `Esc` 回到 Space menu；選定目錄才離開。離開流程跟 `q` / `Ctrl-C` 是同一個
-    （第 1 條），在 picker 上再按 `Ctrl-C` 立刻離開。執行這一列之後「有框握著鍵盤」的判斷要把 `quitMenu` 算進去，
+    （原第 1 條，已修），在 picker 上再按 `Ctrl-C` 立刻離開。執行這一列之後「有框握著鍵盤」的判斷要把 `quitMenu` 算進去，
     否則底下兩層會被清掉（locku 的 `boxUp()`）。選定目錄離開時，整疊在同一拍清掉（T1 只能在這一拍量）。
   - `app.go` :476 的 `if len(items) == 0 { return m, nil }` 拿掉（global 那一列永遠在，menu 不會空；M7）。
   - README 兩份「按鍵一覽」的 Space menu 表格補上 `Global operation` 與 global operation popup。
@@ -253,7 +221,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **怎麼改**：Space menu 選到「會開 popup」的列時不關 menu，讓新 popup 疊在上面；取消回到 menu，完成後連同 menu
   一起清掉。直接執行、不開 popup 的列（Mark、Yank、Hidden、Zoom……）照舊執行後關 menu。Search chooser、Goto
   picker 開 finder 時同樣留在底下。建議統一在按鍵路由處理（webu 的做法，見「先看」），在 dispatch 回傳的 model 上判斷
-  有沒有開出新框；「有框握著鍵盤」要把 `quitMenu` 算進去（第 1、6 條）。依疊的深度給層色（D2）。
+  有沒有開出新框；「有框握著鍵盤」要把 `quitMenu` 算進去（第 6 條）。依疊的深度給層色（D2）。
 
 ## 10. input popup 的 `Enter` 不驗證、送不出去也不說 —— K3、L2
 
@@ -344,7 +312,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 裡的選取」。）
 
 - **現況**：`detailyank.go` `update()`（:125–:212）：`v` 切換 `visual`（選取），選取中 `Esc` 先離開選取（:131–:134），
-  這點已經符合。選取中按 `Space`、`?`、`q`、`Tab` 都沒有 case，按了沒反應；`Ctrl-C` 也被吞（第 1 條）。模式裡能按的
+  這點已經符合。選取中按 `Space`、`?`、`Tab` 都沒有 case，按了沒反應（`q`、`Ctrl-C` 已在路由最前面進入離開流程，原第 1、2 條已修）。模式裡能按的
   鍵是 `h j k l` / 方向鍵、`0` `$`、`gg` `G`、`u` `d`、`v`、`y`（選取中是複製選取、否則複製全部）、`Esc`，但下框 hint
   不分狀態都只寫 `v:visual   y:copy   Esc:close`（:307），移動鍵哪裡都沒列。footer（`view.go` `footerBar()` :438）在
   viewport 底下仍露出 `space menu   ? help`（框高 `height-4`、置中），M1 這點符合。
@@ -357,7 +325,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   - 把模式的鍵寫成一張結構化的鍵表（鍵、說明），模式的按鍵清單與模式的 help 都從它產生（webu 的 `selectKeys`、sshu
     的選取模式）；viewport 的 key reference（第 4 條）也可以從同一張表取非選取狀態的那幾列。
   - 選取中 `Space` 開按鍵清單（新 popup，疊在 viewport 上，方向鍵移動，`Enter` 或按該鍵執行後關掉清單），再按 `Space`
-    關掉；`?` 開模式的 help；`q` / `Ctrl-C` 走第 1、2 條的離開流程；`Tab` 跳 toast（例：`Esc leaves the selection first`）。
+    關掉；`?` 開模式的 help；`q` / `Ctrl-C` 已走離開流程（原第 1、2 條）；`Tab` 跳 toast（例：`Esc leaves the selection first`）。
   - 下框 hint 分兩種狀態寫（例：選取外 `v select · y copy all · Esc close`，選取中 `y copy · Esc leave · Space keys`），
     框寬在打開時照最寬的 hint 定下來，切換狀態時不變（L2）。
   - 新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試；測試要守「選取中 `Space` 開清單、選取外 `Space` 不作用」
@@ -382,7 +350,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **裁定**：檔案列上的 `Enter` 打開**這個檔案的 metadata popup**；目錄列的 `Enter` 維持進目錄。
 - **怎麼改**：
   - 新增一類 popup（F1：唯讀資訊框，不兼 menu、不兼 viewport）：沒有游標、不能執行，`Esc` 關閉，`?` 是它的 key
-    reference（第 4 條），`Space` 不作用（第 3 條），`q` / `Ctrl-C` 走離開流程（第 1、2 條）。
+    reference（第 4 條），`Space` 不作用（第 3 條），`q` / `Ctrl-C` 已走離開流程（原第 1、2 條，路由在所有 popup 之前）。
   - 欄位：完整絕對路徑（symlink 多一列指向的目標）、類型（沿用 preview 的 magic bytes 判型）、精確大小（人話單位 +
     bytes）、Modified / Accessed / Changed（macOS 為 Created）完整日期時間、權限（`rwx` + 八進位）、`owner:group`。
   - **文字 word-wrap、能折行，所有資訊都完整揭露在 popup 裡**（長路徑折行，不截斷）。框寬在打開時定一次（L2），
@@ -403,7 +371,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **K2（v0.1.6，單一輸入框有灰字提議時 `Tab` 接受提議）**：filu 沒有灰字提議。Rename 預填的是原名（`app.go` :577）、
   Zip 預填的是 `suggestZipName()`（:697），兩者都是可以直接編輯的**值**，不是灰字；Add 是空的。input popup 裡 `Tab`
   沒有 case、不作用，也不會漏到底下去切 panel（input popup 的路由排在主 switch 之前，:311）。finder 輸入列同樣沒有
-  提議（第 2 條讓 `Tab` 在輸入列與結果清單之間切換）。
+  提議（`Tab` 已在輸入列與結果清單之間切換，原第 2 條）。
 - **K10（v0.1.4，至少一個出口鍵）**：filu 的 PTY 只有一格 shell，只需要出口鍵（第 12 條）。
 - **M3 與 P3「同一個動作在兩區」**：沒有熱鍵同時出現在兩個區。全域動作只有離開；切分頁、Goto、Search、Shell、Sort
   都作用在 `[1]`，是 `[1]` 的 panel operation（webu 的 `P` / `N` 那種「作用在 panel 的動作放在 global」在 filu 沒有）。

@@ -273,7 +273,7 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyEsc:
 			return m, m.anim.close()
-		case tea.KeyEnter:
+		case tea.KeyEnter, tea.KeyTab: // submit the query / Tab to the result list (tdp K2)
 			if len(m.files) > 0 { // hand focus to the list
 				m.mode = searchNav
 			}
@@ -297,7 +297,7 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 	switch msg.String() {
 	case "esc": // leave the finder, like every other popup in the app
 		return m, m.anim.close()
-	case "q": // back to the input to refine the query
+	case "tab": // back to the input to refine the query (tdp K2; q is the leave flow)
 		m.mode = searchInput
 	case "enter": // confirm → reveal in the active tab, then close
 		if p := m.selectedAbs(); p != "" {
@@ -758,7 +758,7 @@ func (m searchModel) inputBar(w int) string {
 
 func (m searchModel) hint() string {
 	if m.mode == searchNav {
-		return " j/k/u/d · Enter=go · q=input · Esc=close "
+		return " j/k/u/d · Enter=go · Tab=input · Esc=close "
 	}
 	return " Enter=list · Esc=close "
 }

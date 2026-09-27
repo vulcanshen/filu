@@ -60,7 +60,7 @@ func (m helpPopup) update(msg tea.KeyMsg) (helpPopup, tea.Cmd) {
 		return m, nil
 	}
 	switch msg.String() {
-	case "esc", "?", " ", "q":
+	case "esc", "?", " ": // q is the leave flow everywhere (tdp K9), routed before the help
 		return m, m.anim.close()
 	}
 	return m, nil
