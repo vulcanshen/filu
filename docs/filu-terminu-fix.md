@@ -262,6 +262,15 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   - 新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試。
   - `dev-remarks.md`「設計決定」的 `Enter` 那條改寫成新行為；README 兩份的五鍵表 `Enter` 說明、「瀏覽」一節一起改。
 
+---
+
+## 回報 tdp、等結論的
+
+- **M2 / M4：global 區只有一列 `Global operation`**（2026-09-28）。filu 已照 v0.1.6 做成 sshu、locku、webu 的樣子：
+  Space menu 最後一區標題 `global operation`，底下固定一列 `Global operation`，`Enter` 開 global operation popup
+  （`groupedMenu()`、`globalOpRow`、`globalMenu`、`globalActions`）。user 實機看了認為「一個區塊裡只有一個項目」的
+  設計太詭異，帶回 terminu session 討論 M2 / M4 怎麼修。**tdp 出結論前不動這部分**；結論出來後照新版改 filu，
+  README 兩份的 Space menu 說明、`m2_test.go` 一起改。
 
 ---
 
