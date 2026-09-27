@@ -41,7 +41,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   filu 目前沒有 `closeTop`，每個 popup 在自己的 `update()` 裡處理 `Esc`。
 - **（locku v0.1.4）「有框握著鍵盤」的判斷要把離開的框算進去。** 執行 menu 的一列後，locku 用 `boxUp()` 決定留住整疊
   還是清掉。global operation popup 的 `[q]uit` 會開出 quit picker；判斷若不認 `quitMenu`，底下的 global operation popup
-  與 Space menu 會被清掉，`Esc` 就回不去（第 6 條；filu 的判斷是 `boxOverSpaceMenu()`，已把 `quitMenu` 算進去，原第 9 條已修）。
+  與 Space menu 會被清掉，`Esc` 就回不去（filu 的判斷是 `boxOverSpaceMenu()`，已把 `quitMenu` 算進去；原第 6、9 條已修）。
 - **（webu）F4 可以統一在按鍵路由處理**：記下按鍵前最上層的等級，按鍵後若不是 `Esc`、最上層掉了一級以上，就關掉
   底下的 menu。執行 menu 的一列時，在 **dispatch 回傳的 model** 上判斷有沒有開出新框，不要在舊 model 上關（會關在
   沒人回傳的副本上；locku 也踩過 value receiver 的同類陷阱）。
@@ -141,51 +141,13 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   它把所有列一次畫完（`drawPopupBox`），沒有捲動。唯讀、不能執行這點已經符合。
 - **規則**：panel 上的 `?` 打開這個 panel 的 key reference：至少列出這個 panel 能按的鍵與 core key；唯讀、可以捲動，
   沒有游標、不能執行，不是 menu。寬度依最長的說明計算（D4）。能執行的全域動作不在這裡，在 global operation popup
-  （第 6 條）。
+  （`globalActions`，原第 6 條已修）。
 - **怎麼改**：key reference 由 focus panel 的 Space menu 列產生（`buildSpaceMenu()` 的 item / panel 區，只收按得出來
   的鍵：單一字元、`go` 和絃；`Global operation` 這種 menu-only 的列不列、空的區塊標題拿掉），再接 core key 與導覽鍵
   （`Tab`、`1 2 3`、`h l`、`j k`、`g G`、`u d`、`Enter`、`Esc`、`Space`、`?`、`q`），兩邊就不會不一致（sshu、webu、locku
   的做法）。加上捲動（`j/k` 或方向鍵捲、沒有游標）。寬度計算（:79–:85）已經依最長說明，保留，但多留一欄、不比下框
   hint 窄（locku）。README 兩份「開始使用」表格裡 `?` 的說明（`Help — every app-wide action in one list`）與「按鍵一覽」的
   `?  Help` 改成 key reference 的說法（例：`Keys — what you can press here`）。
-
-## 6. Space menu 沒有 global operation 那一列，也沒有 global operation popup —— M2、M4、K9、F4
-
-- **現況**：`app.go` `buildSpaceMenu()`（:801）經 `groupedMenu()`（:895）只組 `item operation` 與
-  `panel operation` 兩區，只剩一區時不加標題（:895–:904）；離開 app 不在任何一個 panel 的 Space menu 裡，只能靠
-  `q`（以及 help 裡的一行說明）。沒有 global operation popup。
-- **規則**：panel 上的 Space menu 最後一區是 `global operation`，**固定一列** `Global operation`（全域動作只有一個
-  時也一樣）；`Enter` 打開 global operation popup，疊在 Space menu 上，是一種 menu，列出全部全域動作，`j/k` 選、
-  `Enter` 或熱鍵執行；離開 app 必須在這裡。`Esc` 回到 Space menu（F4）。panel 上的 Space menu 一律帶區塊標題。
-  目前所在畫面的切換列照 M6 變暗（filu 只有一個畫面，目前不適用）。
-- **怎麼改**：
-  - 定義一份 `globalActions`（目前只有 `[q]uit`，說明例：`pick a dir to cd to, then leave`），是 global operation
-    popup 的唯一來源（sshu 的做法）。global operation popup 用一個新的 `spaceMenu` instance（不是 Space menu，
-    `Space` 不關它：新 instance 不設 `spaceToggle` 即可，原第 3 條已修），層色比 Space menu 深一層（D2）。filu 的其他動作都作用在某個 panel 或 cursor 上
-    （切分頁、Goto、Search、Shell 都作用在 `[1]`），不進 global operation popup。
-  - `groupedMenu()` 改成一律加標題，最後接上分隔線、`global operation` 標題與 `Global operation` 那一列；只剩一區時
-    不加標題的分支拿掉。`Global operation` 列沒有熱鍵，commit 一個按不出來、也不是 label 子字串的 key（`bracketHotkey()`
-    會把 label 裡找得到的多字元 key 括起來），在 Space menu 分支（:356–:367）攔下來開 popup，不進 `dispatchFocusKey()`。
-  - global operation popup 的 `[q]uit` 打開 cd-on-quit picker，疊在 global operation popup 上（F4）：picker 上
-    `Esc` 回到 global operation popup、再 `Esc` 回到 Space menu；選定目錄才離開。離開流程跟 `q` / `Ctrl-C` 是同一個
-    （原第 1 條，已修），在 picker 上再按 `Ctrl-C` 立刻離開。執行這一列之後「有框握著鍵盤」的判斷要把 `quitMenu` 算進去，
-    否則底下兩層會被清掉（locku 的 `boxUp()`）。選定目錄離開時，整疊在同一拍清掉（T1 只能在這一拍量）。
-  - `app.go` :476 的 `if len(items) == 0 { return m, nil }` 拿掉（global 那一列永遠在，menu 不會空；M7）。
-  - README 兩份「按鍵一覽」的 Space menu 表格補上 `Global operation` 與 global operation popup。
-
-## 7. 暫時不能執行的列被藏起來、熱鍵還會 toast —— M6
-
-- **現況**：
-  - `buildSpaceMenu()` 在 `len(m.tabs) >= maxTabs` 時不列 `Tab`（:832）、在只有一個分頁時不列
-    `Close tab`（:836）；作用對象（`[1]` 這個 panel、當前分頁）都存在，只是現在不能做。
-  - 分頁已滿時按 `t`，`handleListKey()`（:537–542）跳 toast `Tab limit reached (5) — close one with w`。
-  - `openin.go` `openOpenInMenu()`（:24）分頁已滿時不列 `New tab`。
-- **規則**：對象存在、但現在不能執行：列照樣出現、變暗，說明欄維持原本那句，不另外寫原因；cursor 可以停
-  在上面，`Enter` 與熱鍵都不作用。（對象不存在才不出現 —— marks bucket 是空的時候不列 `Copy`、
-  `Move here`、`Zip`、`Clear` 是對的。）
-- **怎麼改**：`menuItem` 加 `disabled`，render 變暗；`spaceMenu.update()` 在 disabled 列上的 `Enter` 與
-  熱鍵都不回傳 key。`Tab`、`Close tab`、Open in 的 `New tab` 改成 disabled 而不是不列；`t` / `w` 在不能做
-  時直接不作用，拿掉 `tabLimitToast()`。先確認畫面上別處看得出原因（分頁列已經畫出 5 個分頁）。README「瀏覽」一節不受影響。
 
 ## 10. input popup 的 `Enter` 不驗證、送不出去也不說 —— K3、L2
 
@@ -226,17 +188,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **怎麼改**：在 PTY 路由前攔 `Alt+Esc`，按下時結束子 shell、關閉 PTY popup（依 T1，出來後回到 panel），下框改成
   `exit or Alt+Esc to close`。filu 的 PTY 只有一格 shell，不需要其他組合鍵。README「開啟、編輯，以及其他」一節的
   `type exit to come back` 一起改。
-
-## 13. panel `[1]` 的切換分頁不在 Space menu 裡 —— M3
-
-- **現況**：panel `[1]` 上 `h` / `l`（與方向鍵）切換分頁（`handleListKey()` :533–536），但 `buildSpaceMenu()` 的
-  panel `[1]` 分支（:803–:846）沒有這一列；panel `[3]` 同樣的動作有列（`Switch tab`，:853）。`[1]` 的切換分頁只能
-  靠事先知道熱鍵（help 裡有一行 `h l`，但那不是能執行的清單）。三個 panel 的其他熱鍵都已經在各自的 Space menu 裡
-  （`t` / `w` 在不能做時不列，見第 7 條）。
-- **規則**：每個 panel 的每個 item operation 與 panel operation，都在該 panel 的 Space menu 裡；letter hotkey 是
-  清單裡某一列的捷徑。
-- **怎麼改**：panel `[1]` 的 `panel operation` 加一列 `Switch tab`（`l`，說明例：`next tab (h/l)`），跟 `[3]` 同一種
-  寫法；只有一個分頁時照 M6 變暗（對象存在、現在不能做），跟第 7 條的 `Close tab` 一致。
 
 ## 14. 程式碼註解仍引用 VTP 的 § 編號、ZLC 與 u-family —— 文件對齊
 
@@ -295,18 +246,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   - 新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試；測試要守「選取中 `Space` 開清單、選取外 `Space` 不作用」
     兩個方向，並逐處 mutation。
 
-## 16. Space menu 的標題不是 `[N] label` —— D4（家族預設，不是違反）
-
-（新增。D4 是 family default，照用最省事、不照用不算違規；webu 第二輪照改，這裡列出來讓 filu 決定。）
-
-- **現況**：`buildSpaceMenu()` 的標題：panel `[1]` 是 cursor 所在項目的名稱，沒有項目時是 `CWD`（:805–:808）；
-  `[2]` 是 `Preview`（:850）；`[3]` 是 `Tasks` / `Favorites` / `Marks`（:860、:869、:886）。panel 自己的膠囊是
-  `[1] <分頁記號>`（`view.go` :193）、`[2] Preview`（:268）、`[3]` 加 `Marks` / `Tasks` / `Favorites` 的 tab 列（:162）。
-- **規則**：D4「menu 標題是 focus panel 的 `[N] label`」。
-- **怎麼改**：`[2]` 改成 `[2] Preview`，`[3]` 改成 `[3] Marks` / `[3] Tasks` / `[3] Favorites`（跟膠囊一致）。
-  `[1]` 改成 `[1] <cursor 項目名>`（例 `[1] report.pdf`，沒有項目時 `[1] CWD`）：符合 D4 的 `[N]`，又保留 item operation
-  作用在哪個檔案上（2026-09-28 user 裁定，見「已定案」第 4 題）。
-
 ## 17. 檔案列上的 `Enter` 不做事 —— K3（2026-09-28 user 裁定，見「已定案」第 1 題）
 
 - **現況**：`handleListKey()` 的 `case "enter"`（`app.go` :525–530）只進目錄，檔案列上是 no-op；
@@ -322,6 +261,18 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   - 取不到的欄位（例如 stat 失敗）照 F5 在 popup 裡寫出原因，不留空白。
   - 新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試。
   - `dev-remarks.md`「設計決定」的 `Enter` 那條改寫成新行為；README 兩份的五鍵表 `Enter` 說明、「瀏覽」一節一起改。
+
+## 18. `[1]` 的 Space menu 高過 40 列 —— L1
+
+（新增，2026-09-28 修第 6、7、13 條時把畫面印出來發現。）
+
+- **現況**：`spaceMenu.renderFull()` 的說明欄只有約 20 欄寬（`maxHintW` 與框寬上限），長說明折成 2–4 行；`[1]` 的 menu
+  有 item / panel / global 三區、二十多列，印出來約 49 列（含框）。menu 沒有捲動，所以在 L1 的最低 80 × 40 下超出
+  畫面、上下被截掉。加上 global 區（分隔線、標題、一列）與 `Switch tab` 之前就已經超過 40 列。
+- **規則**：L1 最低支援 80 欄 × 40 列，所有畫面在這個尺寸下都要完整可用。
+- **怎麼改**（待選）：放寬說明欄、縮短說明讓每列只佔一行；或讓 menu 超過畫面高度時捲動（cursor 帶著捲，上下露出
+  還有內容的提示）。改完以 80 × 40 render 出來量，測試守「menu 高度 ≤ 畫面高度」。
+
 
 ---
 
@@ -342,7 +293,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **K5 在其他 popup**：yank viewport 與 finder 清單態不理 `Space`；input popup 與 finder 輸入態的 `Space` 是字元（K8）。
   原第 3 條列的四處已修（`spaceToggle`，confirm、breadcrumb、help 拿掉 `" "`）。
 - **M2 vs M6（`Favorite` 只在目錄列出現）**：檔案**永遠**不能收藏，不是「現在不能」，所以是動作對這個項目不成立，
-  照 M2 不列；M6 的變暗只給狀態一變就能做的動作（例如分頁已滿的 `Tab`，第 7 條）。2026-09-28 user 裁定。
+  照 M2 不列；M6 的變暗只給狀態一變就能做的動作（例如分頁已滿的 `Tab`，原第 7 條已修）。2026-09-28 user 裁定。
 - **S3、S4**：splash 在路由第一站（`app.go` :265）；`V` 只在主 switch（:472），popup、輸入態、PTY 都叫不出來。
 
 ---
@@ -356,4 +307,4 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 3. **（已定案，2026-09-28）`b` 也能關掉 breadcrumb popup（`breadcrumbpopup.go` :71）。** → 拿掉 `b`，只留 `Esc`，
    併入原第 3 條，已修。
 4. **（已定案，2026-09-28）panel `[1]` 的 Space menu 標題要不要照 D4 改成 `[1] …`？** → 兩者並列：
-   `[1] <cursor 項目名>`（空目錄 `[1] CWD`），併入第 16 條。
+   `[1] <cursor 項目名>`（空目錄 `[1] CWD`），併入原第 16 條，已修。

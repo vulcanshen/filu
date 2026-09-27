@@ -71,6 +71,7 @@ var keyedPopups = []struct {
 	{"inputPopup", func(m *AppModel, s popupAnimState) { m.inputPopup.anim.state = s }},
 	{"confirm", func(m *AppModel, s popupAnimState) { m.confirm.anim.state = s }},
 	{"spaceMenu", func(m *AppModel, s popupAnimState) { m.spaceMenu.anim.state = s }},
+	{"globalMenu", func(m *AppModel, s popupAnimState) { m.globalMenu.anim.state = s }},
 	{"sortMenu", func(m *AppModel, s popupAnimState) { m.sortMenu.anim.state = s }},
 	{"gotoMenu", func(m *AppModel, s popupAnimState) { m.gotoMenu.anim.state = s }},
 	{"openInMenu", func(m *AppModel, s popupAnimState) { m.openInMenu.anim.state = s }},

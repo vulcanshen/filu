@@ -68,6 +68,7 @@ func TestSpaceClosesOnlyTheSpaceMenu(t *testing.T) {
 		closes bool
 	}{
 		{"Space menu", newSpaceMenu(), true},
+		{"global operation popup", newGlobalMenu(), false},
 		{"sort picker", newSortMenu(), false},
 		{"goto picker", newGotoMenu(), false},
 		{"search chooser", newSearchMenu(), false},
@@ -114,8 +115,8 @@ func TestBuildSpaceMenuList(t *testing.T) {
 	m := AppModel{focus: panelList}
 	m.tabs = []listModel{{dir: "/tmp", items: []fileItem{{name: "foo.txt"}}}}
 	items, title := m.buildSpaceMenu()
-	if title != "foo.txt" {
-		t.Errorf("title = %q, want foo.txt", title)
+	if title != "[1] foo.txt" { // tdp D4 "[N] label", label = the cursor item
+		t.Errorf("title = %q, want [1] foo.txt", title)
 	}
 	keys := map[string]bool{}
 	headers := map[string]bool{}
@@ -134,8 +135,8 @@ func TestBuildSpaceMenuList(t *testing.T) {
 	if keys["f"] {
 		t.Error("Favorite should be hidden for a non-dir cursor item")
 	}
-	if !headers["item operation"] || !headers["panel operation"] {
-		t.Errorf("panel [2] menu should label both regions: %v", headers)
+	if !headers["item operation"] || !headers["panel operation"] || !headers["global operation"] {
+		t.Errorf("panel [1] menu should label all three regions (tdp M2): %v", headers)
 	}
 }
 
@@ -156,10 +157,19 @@ func TestGroupedMenu(t *testing.T) {
 		t.Error("two-region menu needs a separator and a panel-operation header")
 	}
 
-	flat := groupedMenu(nil, panelOps)
-	for _, it := range flat {
-		if it.header || it.separator {
-			t.Errorf("single-region menu should stay flat: %+v", it)
+	// tdp M2: the global region is always last, one Global operation row; with no
+	// item operations the menu still has headers (panel + global), no item header.
+	last := both[len(both)-1]
+	if last.label != "Global operation" || last.key != globalOpKey || both[len(both)-2].label != "global operation" {
+		t.Errorf("menu should end with the global operation header + row: %+v", both[len(both)-2:])
+	}
+	noItem := groupedMenu(nil, panelOps)
+	if !noItem[0].header || noItem[0].label != "panel operation" {
+		t.Errorf("without item operations the menu should open with the panel header: %+v", noItem[0])
+	}
+	for _, it := range noItem {
+		if it.header && it.label == "item operation" {
+			t.Error("an empty item region must not show its header")
 		}
 	}
 }

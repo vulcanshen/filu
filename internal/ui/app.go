@@ -66,6 +66,7 @@ type AppModel struct {
 	marks             marksModel
 	marksTab          int               // panel [3] active tab: 0 Marks / 1 Tasks / 2 Favorites
 	spaceMenu         spaceMenu         // §A.1 contextual popup (kbu form)
+	globalMenu        spaceMenu         // the global operation popup, opened from the Space menu's last row (tdp M4)
 	sortMenu          spaceMenu         // sort picker (column→direction chain, kbu form)
 	sortStep          sortStep          // which step the sort picker is on
 	sortFlowCol       sortCol           // column carried from the column step to direction
@@ -122,7 +123,7 @@ func New(startDir, focusName string) AppModel {
 		}
 		dir = wd
 	}
-	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	first := newList(dir)
 	if focusName != "" && !first.focusEntry(focusName) { // `filu <file>`: land on the passed file
 		first.showHidden = true // not listed — it's a dotfile; reveal hidden and retry
@@ -188,11 +189,6 @@ func (m *AppModel) cur() *listModel { return &m.tabs[m.tab] }
 func (m *AppModel) addTab(dir string) {
 	m.tabs = append(m.tabs, newList(dir))
 	m.tab = len(m.tabs) - 1
-}
-
-// tabLimitToast is the message shown when t would exceed maxTabs.
-func tabLimitToast() string {
-	return "Tab limit reached (" + strconv.Itoa(maxTabs) + ") — close one with w"
 }
 
 // active returns the active tab by value (read-only paths).
@@ -267,6 +263,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
 		m.spaceMenu.setSize(msg.Width)
+		m.globalMenu.setSize(msg.Width)
 		m.sortMenu.setSize(msg.Width)
 		m.quitMenu.setSize(msg.Width)
 		m.openWithMenu.setSize(msg.Width)
@@ -285,7 +282,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)
@@ -481,6 +478,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
+		if m.globalMenu.owns() { // global operation popup, over the Space menu
+			if !m.globalMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.globalMenu, key, cmd = m.globalMenu.update(msg)
+			if key != "" {
+				cmd = tea.Batch(cmd, m.runGlobalAction(key))
+			}
+			return m, cmd
+		}
 		if m.spaceMenu.owns() { // popup owns the keyboard while open
 			if !m.spaceMenu.isInteractive() {
 				return m, nil // swallow keys mid-animation
@@ -488,6 +497,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var key string
 			var cmd tea.Cmd
 			m.spaceMenu, key, cmd = m.spaceMenu.update(msg)
+			if key == globalOpKey { // the global row opens its popup over the menu (tdp M4, F4)
+				return m, tea.Batch(cmd, m.openGlobalMenu())
+			}
 			if key != "" { // committed: fire on the focused panel
 				cmd = tea.Batch(cmd, m.dispatchFocusKey(key))
 				// A row that opened a popup keeps the menu beneath it, so Esc there
@@ -519,10 +531,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "V": // hidden easter-egg: the u-family logo
 			return m, m.splash.show()
 		case " ": // Space opens the contextual menu for the focused panel
-			items, title := m.buildSpaceMenu()
-			if len(items) == 0 {
-				return m, nil // nothing contextual here
-			}
+			items, title := m.buildSpaceMenu() // never empty: the global row is always there (tdp M7)
 			m.spaceMenu.setItems(items, title)
 			return m, m.spaceMenu.open()
 		case "tab":
@@ -582,10 +591,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "h", "left":
 		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
 	case "t": // new tab: open the Same / Favorites / Search picker (up to maxTabs)
-		if len(m.tabs) < maxTabs {
+		if len(m.tabs) < maxTabs { // at the limit t does nothing; the menu row is dimmed (tdp M6)
 			cmd = m.openTabMenu()
-		} else {
-			cmd = m.toast.show(tabLimitToast())
 		}
 	case "w": // close the active tab (always keep at least one)
 		if len(m.tabs) > 1 {
@@ -849,9 +856,11 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 	switch m.focus {
 	case panelList:
 		it := m.active().cursorItem()
-		title := "CWD"
+		// tdp D4's "[N] label", with the cursor item as the label so the item
+		// operations say which file they act on (2026-09-28 decision).
+		title := "[1] CWD"
 		if it.name != "" {
-			title = it.name
+			title = "[1] " + it.name
 		}
 		var itemOps, panelOps []menuItem
 		if it.name != "" {
@@ -876,15 +885,12 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			menuItem{label: "Goto", key: "go", hint: "jump to a pinned dir, or search under home"},
 			menuItem{label: "Favorite", key: "F", hint: "favorite this tab's current directory"},
 			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
-		if len(m.tabs) < maxTabs {
-			panelOps = append(panelOps,
-				menuItem{label: "Tab", key: "t", hint: "create a new tab"})
-		}
-		if len(m.tabs) > 1 {
-			panelOps = append(panelOps,
-				menuItem{label: "Close tab", key: "w", hint: "close the active tab"})
-		}
+		// The tab rows are always listed; one that can't run right now (a single
+		// tab, or the maxTabs limit) is dimmed instead of hidden (tdp M6).
 		panelOps = append(panelOps,
+			menuItem{label: "Switch tab", key: "l", hint: "next tab (h/l)", disabled: len(m.tabs) < 2},
+			menuItem{label: "Tab", key: "t", hint: "create a new tab", disabled: len(m.tabs) >= maxTabs},
+			menuItem{label: "Close tab", key: "w", hint: "close the active tab", disabled: len(m.tabs) < 2},
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
 			menuItem{label: "Sort", key: "S", hint: "order by a column (name / modified / perms / owner / size)"},
 			menuItem{label: "Shell", key: "s", hint: "drop into $SHELL here (exit to return)"},
@@ -894,7 +900,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 	case panelDetail:
 		return groupedMenu(
 			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview"}},
-			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "Preview"
+			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "[2] Preview"
 	case panelMarks:
 		zoom := menuItem{label: "Zoom", key: "z", hint: "expand this panel full-screen"}
 		tab := menuItem{label: "Switch tab", key: "l", hint: "Marks / Tasks / Favorites (h/l)"}
@@ -904,7 +910,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			if len(m.tasks) > 0 {
 				itemOps = []menuItem{{label: "Delete", key: "D", hint: "remove this task from the log"}}
 			}
-			return groupedMenu(itemOps, []menuItem{tab, zoom}), "Tasks"
+			return groupedMenu(itemOps, []menuItem{tab, zoom}), "[3] Tasks"
 		case 2: // Favorites tab
 			var itemOps []menuItem
 			if len(m.places.pinned) > 0 {
@@ -913,7 +919,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 					{label: "Delete", key: "D", hint: "unfavorite this directory"},
 				}
 			}
-			return groupedMenu(itemOps, []menuItem{tab, zoom}), "Favorites"
+			return groupedMenu(itemOps, []menuItem{tab, zoom}), "[3] Favorites"
 		}
 		var itemOps []menuItem
 		if len(m.marks.items) > 0 {
@@ -930,25 +936,68 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				{label: "Clear", key: "C", hint: "drop every mark and pick (files untouched)"},
 			}, panelOps...)
 		}
-		return groupedMenu(itemOps, panelOps), "Marks"
+		return groupedMenu(itemOps, panelOps), "[3] Marks"
 	}
 	return nil, ""
 }
 
-// groupedMenu assembles a Space menu from item-level and panel-level actions.
-// With both groups present it labels each region (kbu's "item operation" /
-// "panel operation" headers, split by a rule); a single region stays flat and
-// header-less so the menu doesn't shout when there's nothing to disambiguate.
+// groupedMenu assembles a panel's Space menu in tdp M2's fixed order: item
+// operation, panel operation, then the global operation region, which is always
+// the single Global operation row. Every region gets its header (the global one
+// is always there, so there are always at least two); a region with nothing in
+// it is left out, header and all. Regions are split by a rule.
 func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
-	if len(itemOps) == 0 {
-		return panelOps
+	var out []menuItem
+	for _, r := range []struct {
+		title string
+		items []menuItem
+	}{
+		{"item operation", itemOps},
+		{"panel operation", panelOps},
+		{"global operation", []menuItem{globalOpRow}},
+	} {
+		if len(r.items) == 0 {
+			continue
+		}
+		if len(out) > 0 {
+			out = append(out, menuItem{separator: true})
+		}
+		out = append(out, menuItem{header: true, label: r.title})
+		out = append(out, r.items...)
 	}
-	if len(panelOps) == 0 {
-		return itemOps
+	return out
+}
+
+// globalOpKey is the Global operation row's commit key. The row has no hotkey,
+// so the key is one no keypress produces, and it is not a substring of the
+// label (bracketHotkey would otherwise bracket it in place).
+const globalOpKey = "\x00global"
+
+// globalOpRow ends every panel's Space menu (tdp M2); Enter on it opens the
+// global operation popup over the menu (M4).
+var globalOpRow = menuItem{label: "Global operation", key: globalOpKey, hint: "actions for the whole app"}
+
+// globalActions is the one source of the global operation popup: everything
+// that acts on filu as a whole rather than on a panel or the cursor. Leaving is
+// the only one (tdp K9 requires it here).
+var globalActions = []menuItem{
+	{label: "Quit", key: "q", hint: "pick a dir to cd to, then leave"},
+}
+
+// openGlobalMenu opens the global operation popup over the Space menu.
+func (m *AppModel) openGlobalMenu() tea.Cmd {
+	m.globalMenu.setItems(globalActions, "Global operation")
+	m.globalMenu.setSize(m.width)
+	return m.globalMenu.open()
+}
+
+// runGlobalAction runs a committed global operation.
+func (m *AppModel) runGlobalAction(key string) tea.Cmd {
+	switch key {
+	case "q": // the leave flow, stacked over this popup (tdp F4)
+		return m.openQuitMenu()
 	}
-	out := append([]menuItem{{header: true, label: "item operation"}}, itemOps...)
-	out = append(out, menuItem{separator: true}, menuItem{header: true, label: "panel operation"})
-	return append(out, panelOps...)
+	return nil
 }
 
 // refreshPreview reloads panel [2]'s preview for the current cursor item.
