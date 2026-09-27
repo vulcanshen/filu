@@ -206,7 +206,7 @@ func sortBadgeText(rules []sortRule, c sortCol) string {
 func (m *AppModel) openSortColumnPicker() tea.Cmd {
 	m.sortStep = sortStepColumn
 	m.setSortColumnItems()
-	m.sortMenu.setSize(m.width)
+	m.sortMenu.setSize(m.width, m.height)
 	return m.sortMenu.open()
 }
 

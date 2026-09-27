@@ -262,13 +262,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
-		m.spaceMenu.setSize(msg.Width)
-		m.globalMenu.setSize(msg.Width)
-		m.sortMenu.setSize(msg.Width)
-		m.quitMenu.setSize(msg.Width)
-		m.openWithMenu.setSize(msg.Width)
-		m.gotoMenu.setSize(msg.Width)
-		m.openInMenu.setSize(msg.Width)
+		m.spaceMenu.setSize(msg.Width, msg.Height)
+		m.globalMenu.setSize(msg.Width, msg.Height)
+		m.sortMenu.setSize(msg.Width, msg.Height)
+		m.quitMenu.setSize(msg.Width, msg.Height)
+		m.openWithMenu.setSize(msg.Width, msg.Height)
+		m.gotoMenu.setSize(msg.Width, msg.Height)
+		m.openInMenu.setSize(msg.Width, msg.Height)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width)
@@ -987,7 +987,7 @@ var globalActions = []menuItem{
 // openGlobalMenu opens the global operation popup over the Space menu.
 func (m *AppModel) openGlobalMenu() tea.Cmd {
 	m.globalMenu.setItems(globalActions, "Global operation")
-	m.globalMenu.setSize(m.width)
+	m.globalMenu.setSize(m.width, m.height)
 	return m.globalMenu.open()
 }
 

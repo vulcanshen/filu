@@ -48,7 +48,7 @@ func TestSpaceMenuCommit(t *testing.T) {
 
 func TestSpaceMenuRender(t *testing.T) {
 	m := newSpaceMenu()
-	m.setSize(100)
+	m.setSize(100, 40)
 	m.setItems([]menuItem{{label: "Carry", key: "C", hint: "add to bucket"}}, "README.md")
 	plain := ansi.Strip(m.renderFull())
 	for _, want := range []string{"README.md", "[C]arry", "add to bucket", "Enter run", "Esc close"} {
@@ -94,7 +94,7 @@ func TestQuitMenuSingleGlyphAlign(t *testing.T) {
 	// numeral), right-aligned. Rows with very different path widths must still
 	// render to the same width, so the glyphs sit in one clean column on the right.
 	m := newQuitMenu()
-	m.setSize(120)
+	m.setSize(120, 40)
 	m.setItems([]menuItem{
 		{label: "~/Documents/sideproj/filu", key: "1", hint: iconCWD + " "},
 		{label: "~/Downloads", key: "2", hint: tabMark(1) + " "},
@@ -214,5 +214,67 @@ func TestZoomFocusSwitch(t *testing.T) {
 	m3.setFocus(panelList)
 	if m3.zoom != 0 {
 		t.Error("switching away from [3]-zoom should exit zoom")
+	}
+}
+
+// panel1Menu is the Space menu for a file row on panel [1], at the given size.
+func panel1Menu(w, h int) spaceMenu {
+	am := AppModel{focus: panelList}
+	am.tabs = []listModel{{dir: "/tmp", items: []fileItem{{name: "foo.txt"}}}}
+	items, title := am.buildSpaceMenu()
+	m := newSpaceMenu()
+	m.setSize(w, h)
+	m.setItems(items, title)
+	m.anim.state = popupOpen
+	return m
+}
+
+// tdp L1: at the family minimum of 80 x 40 the whole [1] menu fits on screen,
+// one line per row (no hint wraps under its label).
+func TestL1SpaceMenuFitsAt80x40(t *testing.T) {
+	m := panel1Menu(80, 40)
+	lines := strings.Split(ansi.Strip(m.renderFull()), "\n")
+	if len(lines) > 40-2 {
+		t.Errorf("menu is %d rows tall at 80x40:\n%s", len(lines), strings.Join(lines, "\n"))
+	}
+	if want := len(m.items) + 4; len(lines) != want { // items + 2 borders + 2 padding
+		t.Errorf("every item should take one line: %d lines for %d items", len(lines), len(m.items))
+	}
+}
+
+// tdp L1: a menu taller than the screen scrolls — the window follows the
+// cursor, so every row can be reached and the box never outgrows the screen.
+func TestSpaceMenuScrollsWithCursor(t *testing.T) {
+	m := panel1Menu(80, 16)
+	for step := 0; step < len(m.items); step++ {
+		out := ansi.Strip(m.renderFull())
+		if lines := strings.Split(out, "\n"); len(lines) > 16-2 {
+			t.Fatalf("step %d: box is %d rows on a 16-row screen", step, len(lines))
+		}
+		cur := bracketHotkey(m.items[m.cursor].label, m.items[m.cursor].key)
+		if !strings.Contains(out, cur) {
+			t.Fatalf("step %d: the cursor row %q scrolled out of view:\n%s", step, cur, out)
+		}
+		m, _, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	}
+	m, _, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")})
+	if out := ansi.Strip(m.renderFull()); !strings.Contains(out, "Global operation") {
+		t.Errorf("G should scroll to the last row:\n%s", out)
+	}
+	m, _, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("g")})
+	if out := ansi.Strip(m.renderFull()); !strings.Contains(out, "item operation") {
+		t.Errorf("g should scroll back to the top, header included:\n%s", out)
+	}
+}
+
+// With room on screen the box widens to the longest hint rather than cutting
+// it: on a wide screen every hint shows in full.
+func TestSpaceMenuWidensForHints(t *testing.T) {
+	m := panel1Menu(160, 50)
+	out := ansi.Strip(m.renderFull())
+	for _, it := range m.items {
+		if !it.header && !it.separator && !strings.Contains(out, it.hint) {
+			t.Errorf("hint %q should show in full on a wide screen:\n%s", it.hint, out)
+		}
 	}
 }
