@@ -69,7 +69,7 @@ func (m breadcrumbPopup) update(msg tea.KeyMsg) (breadcrumbPopup, string, tea.Cm
 		m.cursor = len(m.levels) - 1
 	case "enter":
 		return m, m.levels[m.cursor].path, m.anim.close()
-	case "esc", "b", " ":
+	case "esc":
 		return m, "", m.anim.close()
 	}
 	return m, "", nil

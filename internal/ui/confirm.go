@@ -8,10 +8,11 @@ import (
 )
 
 // confirmPopup is a yes/no confirmation, following kbu's confirm form: a bold
-// message, Enter/y to confirm, Esc/n/Space to cancel.
+// message, Enter/y to confirm, Esc/n to cancel.
 type confirmPopup struct {
 	anim    popupAnimator
 	message string
+	verb    string // what Enter does, named in the hint ("Enter trash")
 	screenW int
 }
 
@@ -19,8 +20,8 @@ func newConfirmPopup() confirmPopup {
 	return confirmPopup{anim: newPopupAnimator("confirm", popupLayerColor(1))}
 }
 
-func (m *confirmPopup) open(message string) tea.Cmd {
-	m.message = message
+func (m *confirmPopup) open(message, verb string) tea.Cmd {
+	m.message, m.verb = message, verb
 	return m.anim.open()
 }
 
@@ -46,7 +47,7 @@ func (m confirmPopup) update(msg tea.KeyMsg) (confirmPopup, bool, tea.Cmd) {
 	switch msg.String() {
 	case "enter", "y":
 		return m, true, m.anim.close()
-	case "esc", "n", " ":
+	case "esc", "n":
 		return m, false, m.anim.close()
 	}
 	return m, false, nil
@@ -57,7 +58,7 @@ func (m confirmPopup) renderPopup() string { return m.anim.renderFrame(m.renderF
 func (m confirmPopup) renderFull() string {
 	bc := popupLayerColor(1)
 	title := " " + string(rune(0xf071)) + " Confirm" // nf-fa-warning
-	hint := " enter/y confirm   esc cancel "
+	hint := " Enter " + m.verb + " · Esc cancel "
 
 	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
 	innerW = min(max(innerW, lipgloss.Width(m.message)+4), maxInnerWidth(m.screenW))

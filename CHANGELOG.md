@@ -12,6 +12,10 @@
 - In the finder's result list, `Tab` (not `q`) goes back to the query line;
   `Tab` on the query line jumps to the results.
 - `q` no longer closes the help; `Esc` or `?` does.
+- `Space` now only opens and closes the `Space` menu. On the pickers (sort,
+  Goto, Search, Open with, quit…), confirmations, the help and the breadcrumb
+  it does nothing; `Esc` closes them. `b` no longer closes the breadcrumb popup.
+- Confirmations name what `Enter` will do (`Enter trash`, `Enter clear`, …).
 
 ### Fixed
 - `Esc` now closes a toast notification straight away instead of reaching the

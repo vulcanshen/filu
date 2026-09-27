@@ -585,7 +585,7 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		if it := l.cursorItem(); it.name != "" {
 			m.pendingDelete = filepath.Join(l.dir, it.name)
 			m.confirmAction = confirmDelete
-			cmd = m.confirm.open("Move " + it.name + " to the trash?")
+			cmd = m.confirm.open("Move "+it.name+" to the trash?", "trash")
 		}
 	case "r": // rename cursor item (input popup: name as the description, pre-filled)
 		if it := l.cursorItem(); it.name != "" {
@@ -600,13 +600,13 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "o": // open with the OS default app — confirm first (O opens the picker)
 		if it := l.cursorItem(); it.name != "" {
 			m.confirmAction = confirmOpen
-			cmd = m.confirm.open("Open " + it.name + " with the default app?")
+			cmd = m.confirm.open("Open "+it.name+" with the default app?", "open")
 		}
 	case "O": // Open with: pick an app (Default OS open, or a configured one)
 		cmd = m.openOpenWith()
 	case "s": // shell: confirm the directory first, then drop into $SHELL there
 		m.confirmAction = confirmShell
-		cmd = m.confirm.open("Open a shell in " + shortPath(l.dir) + "?")
+		cmd = m.confirm.open("Open a shell in "+shortPath(l.dir)+"?", "open")
 	case "S": // Sort: pick a column → direction; the column-header row shows the active sort
 		cmd = m.openSortColumnPicker()
 	case "/": // Search: choose filename (fd) or content (rg), then reveal the pick here
@@ -714,7 +714,7 @@ func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 	case "C": // clear: empty the bucket (marks + picks) — confirm first
 		if len(m.marks.items) > 0 {
 			m.confirmAction = confirmClearMarks
-			return m.confirm.open(fmt.Sprintf("Clear all %d marks?", len(m.marks.items)))
+			return m.confirm.open(fmt.Sprintf("Clear all %d marks?", len(m.marks.items)), "clear")
 		}
 	}
 	return nil
@@ -765,7 +765,7 @@ func (m *AppModel) handleFavoritesKey(key string) tea.Cmd {
 			p := m.places.pinned[m.places.cursor]
 			m.pendingUnfavorite = p.path
 			m.confirmAction = confirmUnfavorite
-			return m.confirm.open("Unfavorite " + p.label + "?")
+			return m.confirm.open("Unfavorite "+p.label+"?", "unfavorite")
 		}
 	}
 	return nil

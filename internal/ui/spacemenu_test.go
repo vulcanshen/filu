@@ -51,9 +51,39 @@ func TestSpaceMenuRender(t *testing.T) {
 	m.setSize(100)
 	m.setItems([]menuItem{{label: "Carry", key: "C", hint: "add to bucket"}}, "README.md")
 	plain := ansi.Strip(m.renderFull())
-	for _, want := range []string{"README.md", "[C]arry", "add to bucket", "Space close"} {
+	for _, want := range []string{"README.md", "[C]arry", "add to bucket", "Enter run", "Esc close"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("popup missing %q:\n%s", want, plain)
+		}
+	}
+}
+
+// tdp K5: Space closes only the Space menu it opened. Every other spaceMenu
+// instance is a picker opened by Enter or a hotkey, where Space does nothing.
+func TestSpaceClosesOnlyTheSpaceMenu(t *testing.T) {
+	space := tea.KeyMsg{Type: tea.KeySpace, Runes: []rune(" ")}
+	for _, tc := range []struct {
+		name   string
+		menu   spaceMenu
+		closes bool
+	}{
+		{"Space menu", newSpaceMenu(), true},
+		{"sort picker", newSortMenu(), false},
+		{"goto picker", newGotoMenu(), false},
+		{"search chooser", newSearchMenu(), false},
+		{"quit picker", newQuitMenu(), false},
+		{"open-with picker", newOpenWithMenu(), false},
+		{"open-in picker", newOpenInMenu(), false},
+	} {
+		m := tc.menu
+		m.setItems([]menuItem{{label: "Carry", key: "C"}}, "x")
+		m.anim.state = popupOpen
+		_, key, cmd := m.update(space)
+		if key != "" {
+			t.Errorf("%s: Space committed %q", tc.name, key)
+		}
+		if closed := cmd != nil; closed != tc.closes {
+			t.Errorf("%s: Space closed = %v, want %v", tc.name, closed, tc.closes)
 		}
 	}
 }

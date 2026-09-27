@@ -47,10 +47,14 @@ type spaceMenu struct {
 	// picker's launch icon / tab numeral), not an action description whose
 	// left-aligned column reads better — so it is off for the normal Space menu.
 	hintRight bool
+	// spaceToggle marks the real Space menu: Space closes it again (tdp K5). Every
+	// other spaceMenu instance is a picker opened by Enter or a hotkey, where Space
+	// does nothing and only Esc (or its own flow) closes it.
+	spaceToggle bool
 }
 
 func newSpaceMenu() spaceMenu {
-	return spaceMenu{anim: newPopupAnimator("spacemenu", popupLayerColor(1))}
+	return spaceMenu{anim: newPopupAnimator("spacemenu", popupLayerColor(1)), spaceToggle: true}
 }
 
 // newSortMenu is a second spaceMenu instance reused as the sort picker; the
@@ -130,8 +134,12 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string, tea.Cmd) {
 		if it := m.at(m.cursor); it != nil {
 			return m, it.key, nil
 		}
-	case "esc", " ":
+	case "esc":
 		return m, "", m.anim.close()
+	case " ":
+		if m.spaceToggle {
+			return m, "", m.anim.close()
+		}
 	default:
 		for _, it := range m.items {
 			if !it.separator && !it.header && it.key == msg.String() {
@@ -225,7 +233,7 @@ func (m spaceMenu) renderFull() string {
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
 
 	title := " " + m.title
-	hint := " j/k move   Space close "
+	hint := " j/k move · Enter run · Esc close "
 
 	const maxHintW = 44 // a longer hint wraps onto continuation lines, not widens the box
 	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)

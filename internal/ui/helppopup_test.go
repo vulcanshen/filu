@@ -45,17 +45,16 @@ func TestHelpPopupDismiss(t *testing.T) {
 	m := newHelpPopup()
 	m.open()
 	m.anim.state = popupOpen
-	for _, k := range []string{"esc", "?", " "} {
-		mm := m
-		if _, cmd := mm.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}); k != "esc" && cmd == nil {
-			t.Errorf("%q should close the help popup", k)
-		}
+	if _, cmd := m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")}); cmd == nil {
+		t.Error("? should close the help popup (tdp K6)")
 	}
 	if _, cmd := m.update(tea.KeyMsg{Type: tea.KeyEsc}); cmd == nil {
 		t.Error("esc should close the help popup")
 	}
-	// tdp K9: q is the leave flow, not a help key.
-	if _, cmd := m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")}); cmd != nil {
-		t.Error("q should not close the help popup")
+	// q is the leave flow (tdp K9) and Space only toggles the Space menu (K5).
+	for _, key := range []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("q")}, {Type: tea.KeySpace, Runes: []rune(" ")}} {
+		if _, cmd := m.update(key); cmd != nil {
+			t.Errorf("%q should not close the help popup", key.String())
+		}
 	}
 }
