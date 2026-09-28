@@ -41,7 +41,7 @@ func TestK6PanelKeyRefListsMenuKeys(t *testing.T) {
 // it; the popup stays beneath, and Esc returns to it.
 func TestK6QuestionOnEveryPopup(t *testing.T) {
 	titles := map[string]string{
-		"detailYank": "Preview viewport keys", "meta": "File information keys", "modeList": "Selection key list keys", "search": "Finder keys", "breadcrumb": "Breadcrumb keys",
+		"detailYank": "Preview viewport keys", "meta": "File information keys", "search": "Finder keys", "breadcrumb": "Breadcrumb keys",
 		"confirm": "Confirm keys", "spaceMenu": "Space menu keys", "globalMenu": "Global operation keys",
 		"sortMenu": "Sort keys", "sortDirMenu": "Sort direction keys", "gotoMenu": "Goto keys", "gotoFavMenu": "Favorites keys", "openInMenu": "Open in keys",
 		"searchMenu": "Search keys", "openWithMenu": "Open with keys",

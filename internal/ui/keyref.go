@@ -15,8 +15,6 @@ func (m AppModel) keyRef() (string, []helpRow) {
 		return "Finder keys", finderKeyRef()
 	case m.meta.owns():
 		return "File information keys", metaKeyRef()
-	case m.modeList.owns():
-		return "Selection key list keys", modeListKeyRef()
 	case m.detailYank.owns() && m.detailYank.visual: // the selection mode's help (tdp K11)
 		return "Selection keys", selectHelpRows()
 	case m.detailYank.owns():
@@ -202,21 +200,10 @@ func yankKeyRef() []helpRow {
 		}
 	}
 	return append(rows,
-		helpRow{key: "v", desc: "start selecting (then Space lists its keys)"},
+		helpRow{key: "v", desc: "start selecting (then ? lists its keys)"},
 		helpRow{key: "y", desc: "copy everything"},
 		helpRow{key: "Esc", desc: "close"},
 		helpRow{key: "?", desc: "these keys"})
-}
-
-// modeListKeyRef is the key reference of the selection key list itself.
-func modeListKeyRef() []helpRow {
-	return []helpRow{
-		{key: "↑ ↓", desc: "move (the letters run their rows)"},
-		{key: "Enter", desc: "run the highlighted row"},
-		{key: "a row's key", desc: "run that row"},
-		{key: "Space Esc", desc: "close the list"},
-		{key: "?", desc: "these keys"},
-	}
 }
 
 func metaKeyRef() []helpRow {

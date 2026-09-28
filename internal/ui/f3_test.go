@@ -66,7 +66,6 @@ var keyedPopups = []struct {
 }{
 	{"detailYank", func(m *AppModel, s popupAnimState) { m.detailYank.anim.state = s }},
 	{"meta", func(m *AppModel, s popupAnimState) { m.meta.anim.state = s }},
-	{"modeList", func(m *AppModel, s popupAnimState) { m.modeList.anim.state = s }},
 	{"search", func(m *AppModel, s popupAnimState) { m.search.anim.state = s }},
 	{"breadcrumb", func(m *AppModel, s popupAnimState) { m.breadcrumb.anim.state = s }},
 	{"help", func(m *AppModel, s popupAnimState) { m.help.anim.state = s }},
