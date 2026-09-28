@@ -118,8 +118,8 @@ Three panels:
 
 - `m` marks a file. Marks stay put while you move around, so you can gather from several directories and tabs.
 - Go where the files belong and press `c` to copy or `v` to move them there. Copying keeps your marks, so you can land them in more than one place.
-- In the **Marks** tab: `p` picks just some of them to land, `m` unmarks one, `C` clears them all, and `Z` packs your picks into a zip that you then land with `c` / `v`.
-- Copies and moves run in the background; the **Tasks** tab shows a plain-language log. A task cut short by quitting comes back next time.
+- In the **Marks** tab: `Enter` shows the file in `[1]` (in the tab already at its directory, or a new one), `p` picks just some of them to land, `m` unmarks one, `C` clears them all, and `Z` packs your picks into a zip that you then land with `c` / `v`.
+- Copies and moves run in the background; the **Tasks** tab shows a plain-language log; `Enter` on an entry takes you to where it landed. A task cut short by quitting comes back next time.
 
 ### Find
 
@@ -130,12 +130,12 @@ Three panels:
 ### Favorites
 
 - `f` stars the directory under the cursor; `F` stars the one you're in. Starred directories are marked in the list.
-- The **Favorites** tab lists them: `o` opens one in a new or existing tab, `D` removes it. Goto → Favorites jumps there too.
+- The **Favorites** tab lists them: `Enter` goes there (its tab, or a new one), `o` lets you choose the tab, `D` removes it. Goto → Favorites jumps there too.
 
 ### Preview and copy
 
 - The preview shows text with syntax highlighting and line numbers, directory trees, archive contents, PDFs, images, SVG source, and hex for binaries.
-- `y` in the preview opens it in a scrollable view: `v` starts a selection, `y` copies it (or everything, if nothing is selected). While selecting, `Space` lists the selection keys and runs the one you pick.
+- `y` (or `Enter`) in the preview opens it in a scrollable view: `v` starts a selection, `y` copies it (or everything, if nothing is selected). While selecting, `Space` lists the selection keys and runs the one you pick.
 - `y` on a file copies its full path. Copying works through tmux and SSH.
 
 ### Open, edit, and everything else

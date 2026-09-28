@@ -118,17 +118,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 （以下第 19–22 條：2026-09-28 修完第 1–18 條後，拿 tdp v0.1.7 `rules-zh_TW.md` 全文逐條再對一次時找到。）
 
-## 21. `[2]`、`[3]` 上的 `Enter` 不做事 —— K3（2026-09-28 user 裁定）
-
-- **現況**：`handleDetailKey()`（`[2]` Preview）與 `handleMarksKey()`（`[3]` Marks / Tasks / Favorites）都沒有 `enter`，按了沒反應。
-- **規則**：K3：`Enter` 對 focus 項目做最直觀的那個動作，同一種項目永遠同一個動作（第 17 條已對 `[1]` 的檔案列裁定）。
-- **裁定**：
-  - `[2]` Preview：`Enter` 打開可捲動的檢視（yank viewport，同 `y`）。
-  - `[3]` Marks：在 `[1]` 找已經開著該檔所在目錄的分頁，有就切過去，沒有就開新分頁；分頁已達上限時跳 toast 提示。
-  - `[3]` Favorites：同 Marks（目錄本身就是要去的地方）。
-  - `[3]` Tasks：把 `[1]` 的當前分頁帶到該任務的目的地。
-  - 實作補充（未另問）：Marks 切過去 / 新開後游標停在那個檔案上；三者完成後 focus 回 `[1]`。
-
 ## 22. Open with 的 Default 不 confirm，`o` 卻會 —— F6（待確認）
 
 - **現況**：`o` 用 OS 預設 app 開啟前先 confirm（`confirmOpen`）；`O` 的 picker 選 `Default`（`openwith.go` `runOpenWith()`
