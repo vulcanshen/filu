@@ -113,7 +113,7 @@ filu/
 ├── internal/
 │   ├── ui/             3 面板、popup、finder、preview、marks / tasks / favorites、PTY、splash
 │   └── version/        版本字串(goreleaser 以 ldflags 注入,本機 build 是 dev)
-└── docs/               dev-remarks.md、filu-terminu-fix.md、icon.svg、social-preview.png、demo-basics.gif
+└── docs/               dev-remarks.md、icon.svg、social-preview.png、demo-basics.gif
 ```
 
 ## 設計決定
@@ -204,13 +204,47 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   - 每列錯誤 `!` 前綴:broken symlink / 無權限 / 上次操作失敗(目前僅面板層 error note)。
   - zoxide 式磁碟快取索引(給 Goto 真 recency,只在串流不夠時做)。
   - chmod / extract、真圖(kitty / sixel)、sort filter、續傳。
-- **尚未符合 tdp 的地方**:逐條列在 [`filu-terminu-fix.md`](filu-terminu-fix.md)。
+- **tdp**:2026-09-28 對照 v0.1.7 全文修完，除了下一節的偏離都符合。之後發現沒寫理由的
+  違反，列進 `docs/filu-terminu-fix.md`(目前沒有這個檔)。
 
 ## 偏離 tdp
 
 - **Zoom 不是 `Esc` 會退出的模式(K4)。** `z` 把 focus 的面板展開佔滿全畫面,再按一次
   `z` 才還原;zoom 中 `Esc` 仍是「回上一層目錄」。zoom 是版面、不是任務模式 —— 使用者
   在 zoom 的多欄裡照樣瀏覽,`Esc` 若拿去退出 zoom,就在同一個畫面裡兼了兩種意義(P4)。
+
+## 對照 tdp 時確認過的
+
+2026-09-28 修 `filu-terminu-fix.md`(已刪)時留下的：下次對照不必重查的，以及當時由 user
+逐題裁定的。
+
+**已經符合、不用修的**(對照 v0.1.7)
+
+- **K2、K8(多行文字寫入狀態的 `Tab` 是縮排)**:filu 沒有多行文字輸入。input popup 與
+  finder 的輸入列都是單行;能寫多行的只有 `[s]hell` 的 PTY,按鍵屬於子程序(K10)。
+- **K2(單一輸入框有灰字提議時 `Tab` 接受提議)**:filu 沒有灰字提議。Rename 預填原名、Zip
+  預填 `suggestZipName()`,兩者都是可以直接編輯的**值**,不是灰字;Add 是空的。input popup
+  裡 `Tab` 不作用;finder 輸入列同樣沒有提議,`Tab` 在輸入列與結果清單之間切換。
+- **K10(至少一個出口鍵)**:filu 的 PTY 只有一格 shell,只需要出口鍵 `Alt+Esc`。
+- **M3 與 P3「同一個動作在兩區」**:沒有熱鍵同時出現在兩個區。全域動作只有離開;切分頁、
+  Goto、Search、Shell、Sort 都作用在 `[1]`,是 `[1]` 的 panel operation。
+- **K5 在其他 popup**:只有真正的 Space menu 讓 `Space` 關閉(`spaceToggle`);input popup 與
+  finder 輸入態的 `Space` 是字元(K8)。
+- **M2 vs M6(`Favorite` 只在目錄列出現)**:檔案**永遠**不能收藏，不是「現在不能」,是動作
+  對這個項目不成立，照 M2 不列;M6 的變暗只給狀態一變就能做的動作(例如分頁已滿的 `Tab`)。
+- **F6(`O` 的 picker 不 confirm,`o` 會)**:見「設計決定」的 confirm 那條。
+- **S3、S4**:splash 在按鍵路由第一站;`V` 只在主 switch,popup、輸入態、PTY 都叫不出來。
+
+**user 裁定的**(2026-09-28)
+
+- 檔案列上 `Enter` 不做事 → 不符合 K3,改成開 metadata popup(`metaPopup`)。`[2]`、`[3]`
+  的 `Enter` 見「設計決定」的 `Enter` 那條。
+- `Favorite` 只在目錄上列出 → 維持(見上)。
+- breadcrumb popup 的 `b` 兼關閉 → 拿掉，只留 `Esc`(其他熱鍵開的 popup 都只認 `Esc`)。
+- `[1]` 的 Space menu 標題 → `[1] <cursor 項目名>`(空目錄 `[1] CWD`):照 D4 的 `[N]`,又保留
+  item operation 作用在哪個檔案。
+- PTY 出口鍵 → `Alt+Esc`,按下直接結束 shell。
+- `O` 的 picker 要不要 confirm → 不要(見「設計決定」)。
 
 ## 設計文件導讀
 
@@ -219,7 +253,6 @@ tdp 本身在 [terminu](https://github.com/vulcanshen/terminu/tree/v0.1.7/princi
 
 | 檔案 | 內容 |
 |---|---|
-| [`filu-terminu-fix.md`](filu-terminu-fix.md) | 尚未符合 tdp 的地方,逐條待修 |
 | [`icon.svg`](icon.svg) | 圖示;`V` 的 splash 照它畫 |
 | [`social-preview.png`](social-preview.png) | GitHub 的 social preview |
 
