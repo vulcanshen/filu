@@ -24,11 +24,17 @@ func newToast() toastModel {
 }
 
 // show displays message and schedules its auto-dismiss.
-func (m *toastModel) show(message string) tea.Cmd {
+func (m *toastModel) show(message string) tea.Cmd { return m.showFor(message, 1500*time.Millisecond) }
+
+// showError displays a failure long enough to read (tdp F5); Esc still closes
+// it at once, and it never blocks the app.
+func (m *toastModel) showError(message string) tea.Cmd { return m.showFor(message, 4*time.Second) }
+
+func (m *toastModel) showFor(message string, d time.Duration) tea.Cmd {
 	m.message = message
 	m.id++
 	id := m.id
-	dismiss := tea.Tick(1500*time.Millisecond, func(time.Time) tea.Msg { return toastDismissMsg{id: id} })
+	dismiss := tea.Tick(d, func(time.Time) tea.Msg { return toastDismissMsg{id: id} })
 	return tea.Batch(m.anim.open(), dismiss)
 }
 

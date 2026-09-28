@@ -214,6 +214,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.waitWatch()
 	case clipboardCopiedMsg:
 		return m, m.toast.show(msg.note)
+	case opFailedMsg: // an open / open-with launch that failed off the UI goroutine (tdp F5)
+		return m, m.toast.showError(msg.text)
 	case clipboardFailedMsg:
 		return m, m.toast.show("Clipboard unavailable")
 	case toastDismissMsg:
@@ -389,7 +391,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if ok {
 				switch m.confirmAction {
 				case confirmDelete:
-					_ = moveToTrash(m.pendingDelete)
+					if err := moveToTrash(m.pendingDelete); err != nil {
+						cmd = tea.Batch(cmd, m.toast.showError(opFailedText("move "+filepath.Base(m.pendingDelete)+" to the trash", err)))
+					}
 					m.pendingDelete = ""
 					m.cur().reload()
 					m.cur().ensureVisible(m.listRows())
@@ -1036,18 +1040,22 @@ func (m *AppModel) performInput() tea.Cmd {
 		return m.startZip(m.marks.landItems(), zipFileName(name))
 	}
 	l := m.cur()
+	var err error
+	var what string
 	switch kind {
 	case inputRename:
 		if target != "" {
-			_ = os.Rename(filepath.Join(l.dir, target), filepath.Join(l.dir, name))
+			what = "rename " + target
+			err = os.Rename(filepath.Join(l.dir, target), filepath.Join(l.dir, name))
 		}
 	case inputAdd:
 		full := filepath.Join(l.dir, name)
+		what = "create " + name
 		if strings.HasSuffix(name, "/") {
-			_ = os.MkdirAll(full, 0o755)
-		} else {
-			_ = os.MkdirAll(filepath.Dir(full), 0o755)
-			if f, err := os.OpenFile(full, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644); err == nil {
+			err = os.MkdirAll(full, 0o755)
+		} else if err = os.MkdirAll(filepath.Dir(full), 0o755); err == nil {
+			var f *os.File
+			if f, err = os.OpenFile(full, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644); err == nil {
 				_ = f.Close()
 			}
 		}
@@ -1055,6 +1063,9 @@ func (m *AppModel) performInput() tea.Cmd {
 	l.reload()
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
+	if err != nil { // tdp F5: a failure shows at once, as a toast
+		return m.toast.showError(opFailedText(what, err))
+	}
 	return nil
 }
 
