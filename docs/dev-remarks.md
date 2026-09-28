@@ -128,6 +128,12 @@ filu/
   Unfavorite(Favorites)、`o` Open、`s` Shell、`C` Clear(Marks)。`Open` 要問,是因為
   交給外部 app 之後 filu 就管不到了;`Clear` 要問,是因為 bucket 是慢慢累積的、一鍵
   歸零沒有 undo。`m` mark / `p` pick / `f` favorite 是可逆的一鍵 toggle,不 confirm。
+- **input popup 在 `Enter` 當下驗證，不過就不送出。** Rename / Add / Zip 開框時掛上
+  `nameCheck()`:空白、Rename 名稱含 `/` 或撞到現有名稱(改回原名放行)、Add 是 `.` / `..`
+  或已存在，都留在框裡、在輸入列下方紅字說原因，打字就清掉(tdp K3)。Rename 以前會
+  `os.Rename` 直接蓋掉同名檔，現在在送出前就擋下。框寬在開框時定一次(`openWidth()`,
+  至少 40 欄),錯誤訊息在框內折行、值太長從左邊截，框不跟著浮動(tdp L2)。
+  驗證過了仍可能在寫入時失敗(權限等),那個錯誤走 toast(tdp F5)。
 - **Zip 打到 temp,再走既有的落地路徑。** 輸出位置固定是 `os.MkdirTemp("", "filu-zip-")`,
   因為使用情境是「打包完再搬去某個 `[1]` 的目錄」,輸出位置不等於目的地。打完的 zip
   成為唯一 pick,接既有 `c` / `v`,不另造「送到哪裡」的機制;打包範圍就是

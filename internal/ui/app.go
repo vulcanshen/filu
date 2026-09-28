@@ -635,10 +635,10 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		}
 	case "r": // rename cursor item (input popup: name as the description, pre-filled)
 		if it := l.cursorItem(); it.name != "" {
-			cmd = m.inputPopup.open(inputRename, "Rename", it.name, it)
+			cmd = m.openInput(inputRename, "Rename", it.name, it)
 		}
 	case "a": // add file/dir — lazyvim style: trailing / = dir (input popup)
-		cmd = m.inputPopup.open(inputAdd, "New (trailing / = dir)", "", fileItem{})
+		cmd = m.openInput(inputAdd, "New (trailing / = dir)", "", fileItem{})
 	case "y": // yank: copy the item's full path to the clipboard
 		if it := l.cursorItem(); it.name != "" {
 			cmd = copyToClipboardCmd(filepath.Join(l.dir, it.name), "Copied path to clipboard")
@@ -755,7 +755,7 @@ func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 		}
 	case "Z": // zip: pack the land subset into a temp archive, named here
 		if items := m.marks.landItems(); len(items) > 0 {
-			return m.inputPopup.open(inputZip, zipPrompt(len(items)), suggestZipName(items), fileItem{})
+			return m.openInput(inputZip, zipPrompt(len(items)), suggestZipName(items), fileItem{})
 		}
 	case "C": // clear: empty the bucket (marks + picks) — confirm first
 		if len(m.marks.items) > 0 {
@@ -1028,14 +1028,52 @@ func (m AppModel) previewWidth() int {
 	return 1
 }
 
+// openInput opens the input popup with the check its Enter runs first (tdp K3).
+func (m *AppModel) openInput(kind inputKind, prompt, buffer string, item fileItem) tea.Cmd {
+	cmd := m.inputPopup.open(kind, prompt, buffer, item)
+	m.inputPopup.check = nameCheck(kind, m.cur().dir, item.name)
+	return cmd
+}
+
+// nameCheck is the input popup's validation for kind, run on Enter before the
+// popup closes: it returns why the name can't be used, or "" when it can. An
+// empty name is caught here too — with Enter always submitting, "nothing
+// typed" is a failed check, not a silent no-op.
+func nameCheck(kind inputKind, dir, target string) func(string) string {
+	return func(name string) string {
+		if name == "" {
+			return "Type a name first"
+		}
+		switch kind {
+		case inputRename:
+			if strings.Contains(name, "/") {
+				return "A name can't contain /"
+			}
+			if name == target {
+				return "" // unchanged: nothing to rename, nothing to refuse
+			}
+			if _, err := os.Lstat(filepath.Join(dir, name)); err == nil {
+				return name + " already exists here"
+			}
+		case inputAdd:
+			base := strings.TrimSuffix(name, "/")
+			if base == "" || base == "." || base == ".." {
+				return "Not a name for a file or directory"
+			}
+			if _, err := os.Lstat(filepath.Join(dir, base)); err == nil {
+				return base + " already exists here"
+			}
+		}
+		return ""
+	}
+}
+
 // performInput applies the committed input popup (rename / add to the CWD, or a
-// Zip of the marks bucket — that one runs async, hence the command).
+// Zip of the marks bucket — that one runs async, hence the command). The name
+// has already passed nameCheck.
 func (m *AppModel) performInput() tea.Cmd {
 	name := strings.TrimSpace(m.inputPopup.buffer)
 	kind, target := m.inputPopup.kind, m.inputPopup.item.name
-	if name == "" {
-		return nil
-	}
 	if kind == inputZip { // packs into a temp dir — the CWD is untouched
 		return m.startZip(m.marks.landItems(), zipFileName(name))
 	}

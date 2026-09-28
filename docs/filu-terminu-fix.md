@@ -79,7 +79,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 **輸入**
 
 - **（sshu）K3 改成一律送出以後，驗證要把「有沒有填」一起問**：以前「沒填就不會送出」替驗證擋掉了必填檢查；
-  `Enter` 一定送出之後，空白要由驗證本身抓到（第 10 條）。
+  `Enter` 一定送出之後，空白要由驗證本身抓到（filu 的 `nameCheck()`，原第 10 條已修）。
 - **（webu 第二輪）將來要做 input group 時，沿用現有的 input popup**：原本的欄位當第 0 欄，多一個其餘欄位的清單與
   目前欄位，單欄的框不用改。filu 目前沒有 input group。
 - **（sshu、locku）灰字不一定是提議，「單一輸入框還是 input group」看同一個框裡有幾個欄位。** filu 的 Rename、Zip
@@ -148,22 +148,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   的做法）。加上捲動（`j/k` 或方向鍵捲、沒有游標）。寬度計算（:79–:85）已經依最長說明，保留，但多留一欄、不比下框
   hint 窄（locku）。README 兩份「開始使用」表格裡 `?` 的說明（`Help — every app-wide action in one list`）與「按鍵一覽」的
   `?  Help` 改成 key reference 的說法（例：`Keys — what you can press here`）。
-
-## 10. input popup 的 `Enter` 不驗證、送不出去也不說 —— K3、L2
-
-- **現況**：`inputpopup.go` `update()` 的 `case tea.KeyEnter`（:78–79）一律關閉並回報 committed；
-  `app.go` `performInput()`（:926–956）再處理：名字是空白就直接 `return nil`（popup 已經關了，什麼都沒
-  發生）；Rename 用 `os.Rename`，目標名稱已存在時會直接覆蓋同名檔案；Add 用 `O_EXCL`，已存在就靜靜失敗。
-  框寬在每次 render 時依標題、hint、說明與目前的值重算（`renderFull()` :114–:116）。
-- **規則**：`Enter` 一定是 submit。submit 前檢查欄位，全部合格才送出；有不合格就**不送出**：focus 停在（跳到）
-  **第一個不合格的欄位**，並揭露錯誤（哪個欄位、為什麼）。filu 的 input popup 只有一個欄位，所以失敗時 popup
-  留著、focus 留在那一欄、說出原因。`Enter` 不代替 `Tab` 換欄位。框的寬度不隨內容浮動（L2）。
-- **怎麼改**：驗證搬到 `Enter` 當下、關閉之前：空白名字（「沒填」也是一種不合格，要由驗證本身抓到，不再靠
-  `performInput()` 靜靜 return）、名字含 `/`（Rename）、目標已存在（Rename、Add）、Zip 名字為空都不送出，popup
-  留著並揭露原因（例如框標題尾綴或輸入列下方一行紅字）；再按一次 `Enter` 仍停在那裡。只有驗證通過才關閉並執行。
-  下框 hint `enter confirm   esc cancel`（`inputpopup.go` :97）照 D3 改成 `Enter <動詞> · Esc cancel`。加上錯誤揭露
-  以後，框寬改成在 `open()` 時算一次（標題、說明、預填的值、最寬的 hint 與錯誤訊息），之後不變；值更長就照現在的
-  做法從左邊截、尾端留在畫面上（webu 第三輪）。
 
 ## 14. 程式碼註解仍引用 VTP 的 § 編號、ZLC 與 u-family —— 文件對齊
 

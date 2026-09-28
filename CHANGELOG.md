@@ -41,6 +41,11 @@
   item stays reachable in a small terminal. Section dividers are drawn dim.
 
 ### Fixed
+- Renaming onto a name that already exists no longer overwrites that file.
+  Rename, New and Zip now check the name when you press `Enter`: an empty
+  name, a name that is taken, or (for Rename) one with a `/` keeps the box
+  open with the reason under the field. The box no longer changes width as
+  you type, and its hint names what `Enter` does.
 - A failed file operation now tells you: moving to the trash, renaming,
   creating a file or directory, opening with the default app or launching an
   Open-with app shows "Cannot … : reason" instead of silently doing nothing.
