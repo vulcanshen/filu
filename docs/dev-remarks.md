@@ -1,7 +1,7 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.10/principle)（tdp）；
+[terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.12/principle)（tdp）；
 使用者要知道的在 README,這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
@@ -225,7 +225,7 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   - chmod / extract、真圖(kitty / sixel)、sort filter、續傳。
 - **tdp**:2026-09-28 對照 v0.1.7 全文修完，同日再跟上 v0.1.8–v0.1.10(F1 六類、F7 尺寸、
   F8 dim、K11 模式沒有按鍵清單),除了下一節的偏離都符合。之後發現沒寫理由的違反，列進
-  `docs/filu-terminu-fix.md`(目前沒有這個檔)。
+  `docs/filu-terminu-fix.md`。
 
 ## 偏離 tdp
 
@@ -279,7 +279,7 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 ## 設計文件導讀
 
 filu 沒有另外的設計文件;功能與決定的原始清單在 `.forge/meta/IDEA.md`(本機、不進版控)。
-tdp 本身在 [terminu](https://github.com/vulcanshen/terminu/tree/v0.1.10/principle)。
+tdp 本身在 [terminu](https://github.com/vulcanshen/terminu/tree/v0.1.12/principle)。
 
 | 檔案 | 內容 |
 |---|---|

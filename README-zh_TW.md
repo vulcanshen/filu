@@ -227,7 +227,7 @@ open_with:
 
 ## terminu family
 
-filu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.10/principle)：跟家族其他成員一樣的按鍵、一樣的 menu —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）與 [locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
+filu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.12/principle)：跟家族其他成員一樣的按鍵、一樣的 menu —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）與 [locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
 
 ## License
 
