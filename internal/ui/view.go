@@ -87,6 +87,9 @@ func (m AppModel) View() string {
 	if m.detailYank.isActive() { // yank viewport over the panels
 		out = overlay.Composite(m.detailYank.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.modeList.isActive() { // the selection key list, over the viewport
+		out = overlay.Composite(m.modeList.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.meta.isActive() { // file information box
 		out = overlay.Composite(m.meta.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -470,7 +473,7 @@ func shortPath(p string) string {
 func (m *AppModel) stackOrder() []*popupAnimator {
 	return []*popupAnimator{
 		&m.spaceMenu.anim, &m.globalMenu.anim, &m.sortMenu.anim, &m.gotoMenu.anim, &m.openInMenu.anim, &m.searchMenu.anim,
-		&m.openWithMenu.anim, &m.confirm.anim, &m.inputPopup.anim, &m.breadcrumb.anim, &m.detailYank.anim, &m.meta.anim,
+		&m.openWithMenu.anim, &m.confirm.anim, &m.inputPopup.anim, &m.breadcrumb.anim, &m.detailYank.anim, &m.modeList.anim, &m.meta.anim,
 		&m.search.anim, &m.help.anim, &m.quitMenu.anim, &m.quitHelp.anim,
 	}
 }

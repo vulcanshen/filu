@@ -55,6 +55,11 @@
 - **Preview yank viewport** — `[2]` 的 `y` 開一個覆蓋 preview 的 viewport(`detailyank.go`):
   vim cursor + `v` 字元級選取,行號 gutter 不進剪貼簿;preview 為了塞進面板寬折斷的
   續行(`previewModel.cont`)複製時**不補**換行,否則貼出來的 base64 / 長 URL 會斷掉。
+  選取是 tdp K11 的「模式」:鍵表只有一張(`selectKeys`),選取中 `Space` 開的按鍵清單
+  (`modeList`,疊在 viewport 上)、`?` 的模式 help、viewport 本身 key reference 的移動列都由
+  它產生。模式的鍵跟導覽鍵重疊(`h j k l`、`g G`、`u d`),所以清單只用方向鍵移動，其餘鍵
+  一律執行那一列，執行後清單關掉。選取中 `Tab` 暫停但回一個 toast;選取外 `Space` 不作用
+  (K5)。下框 hint 分選取內外兩種，框寬跟著螢幕、不跟 hint 變(L2)。
 - **Yank** — 走 OSC 52,所以能穿 tmux / SSH。
 - **刪除** — 移到 OS 垃圾桶:macOS 用 `osascript`(不需 cgo)、Linux 寫 XDG
   `.trashinfo`。

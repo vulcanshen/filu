@@ -21,7 +21,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   程式的 commit 跟本檔分開。
 - **（webu）動手前先把 fix 清單互相對一遍。** 清單裡的條目可能互相衝突。
 - **（webu 第二輪）對照新版 tdp 時，逐條讀 `rules.md` 全文，不只看 CHANGELOG。** webu 有三處是規則沒改、app 早就不符合、
-  上一輪沒抓到的。filu 這次也是：第 15 條（yank viewport 的選取是 K11 的模式）的規則從 v0.1.1 就在。
+  上一輪沒抓到的。filu 這次也是：原第 15 條（yank viewport 的選取是 K11 的模式，已修）的規則從 v0.1.1 就在。
 - **（webu 第二輪）條文讀不通時，可能是 tdp 的缺口，不是 app 的違反。** 寫下來回報 terminu（webu 多行輸入的 `Tab`，
   tdp v0.1.5 補上），app 不改程式、也不寫成偏離。
 - **（sshu）清單的「現況」要拿程式碼核對過才算數。** 照抄別的 app 的清單會修一半。
@@ -73,7 +73,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **（webu）label 已寫出鍵的列不要再括一次**（D4）：`[/] Search` 不能變成 `[/] [/] Search`。
 - **（webu）每個 panel 的 Space menu 都接上 global 區之後，原本只有一區的 menu 要補上區塊標題**（M2）。
 - **（webu 第二輪、sshu）模式的 help 與按鍵清單讀同一張鍵表**，按鍵清單只用方向鍵移動（K11，模式的鍵跟導覽鍵重疊時）。
-  filu 的 yank viewport 選取就是這種模式（第 15 條）。
+  filu 的 yank viewport 選取就是這種模式（`selectKeys`，原第 15 條已修）。
 - **（webu）改完一條就回頭檢查其他畫面的提示。** `Space` 不再關 popup 之後，下框的 `Space close` 要跟著改。
 
 **輸入**
@@ -147,31 +147,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 |---|---|---|
 | `.goreleaser.yaml:32` | `the rest of the u-family (kbu)` | `the rest of the terminu family (kbu)` |
 | `.goreleaser.yaml:41` | `description: "ZLC terminal file manager (kbu u-family) — …"`（Homebrew formula 的說明，使用者看得到） | 例如 `"Terminal file manager — content search, split preview, marks"`，不帶 ZLC / u-family |
-
-## 15. yank viewport 的選取是模式，但 core key 在裡面沒有作用 —— K11、M3、K6
-
-（新增，2026-09-27 對照 v0.1.6 時逐條讀全文發現；規則從 v0.1.1 就在，tdp 術語「模式」的例子就是「filu yank viewport
-裡的選取」。）
-
-- **現況**：`detailyank.go` `update()`（:125–:212）：`v` 切換 `visual`（選取），選取中 `Esc` 先離開選取（:131–:134），
-  這點已經符合。選取中按 `Space`、`?`、`Tab` 都沒有 case，按了沒反應（`q`、`Ctrl-C` 已在路由最前面進入離開流程，原第 1、2 條已修）。模式裡能按的
-  鍵是 `h j k l` / 方向鍵、`0` `$`、`gg` `G`、`u` `d`、`v`、`y`（選取中是複製選取、否則複製全部）、`Esc`，但下框 hint
-  不分狀態都只寫 `v:visual   y:copy   Esc:close`（:307），移動鍵哪裡都沒列。footer（`view.go` `footerBar()` :438）在
-  viewport 底下仍露出 `space menu   ? help`（框高 `height-4`、置中），M1 這點符合。
-- **規則**：focus 在模式裡時，`Space` 開 / 關**這個模式的按鍵清單**（列出模式裡能按的鍵，每一列按那個鍵或 `Enter`
-  直接執行，執行後清單關掉）；`?` 是這個模式的 help（唯讀）；`Esc` 離開模式；`q`、`Ctrl-C` 照 K9 進入離開流程；
-  `Tab` 可以暫停，但按了要有回應，說明先 `Esc` 離開模式。模式的鍵跟導覽鍵重疊時（filu 正是 `h j k l`、`u d`、`g G`），
-  按鍵清單只用方向鍵移動，其餘鍵一律是「執行那一列」。模式自己的鍵必須出現在模式的按鍵清單裡。選取以外，viewport
-  本身是 popup：`Space` 不作用（K5），`?` 是 viewport 的 key reference（原第 4 條已修：`keyRef()` 加一個 case）。
-- **怎麼改**：
-  - 把模式的鍵寫成一張結構化的鍵表（鍵、說明），模式的按鍵清單與模式的 help 都從它產生（webu 的 `selectKeys`、sshu
-    的選取模式）；viewport 的 key reference（原第 4 條已修：`keyRef()` 加一個 case）也可以從同一張表取非選取狀態的那幾列。
-  - 選取中 `Space` 開按鍵清單（新 popup，疊在 viewport 上，方向鍵移動，`Enter` 或按該鍵執行後關掉清單），再按 `Space`
-    關掉；`?` 開模式的 help；`q` / `Ctrl-C` 已走離開流程（原第 1、2 條）；`Tab` 跳 toast（例：`Esc leaves the selection first`）。
-  - 下框 hint 分兩種狀態寫（例：選取外 `v select · y copy all · Esc close`，選取中 `y copy · Esc leave · Space keys`），
-    框寬在打開時照最寬的 hint 定下來，切換狀態時不變（L2）。
-  - 新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試；測試要守「選取中 `Space` 開清單、選取外 `Space` 不作用」
-    兩個方向，並逐處 mutation。
 
 
 ---
