@@ -216,3 +216,25 @@ func TestF7MenuDoesNotGrowWhileOpen(t *testing.T) {
 		t.Errorf("the menu went from %d to %d rows when rows were added", before, after)
 	}
 }
+
+// tdp F7: the preview viewport is as tall as its content, up to the screen less
+// its margins, where it scrolls — a three-line file is not a full-screen box.
+func TestF7ViewportHeightFollowsContent(t *testing.T) {
+	short := newDetailYank()
+	short.setSize(100, 40)
+	short.open("a", []string{"one", "two", "three"}, false, nil)
+	if got := boxRows(short.renderFull()); got != 3+2 { // three lines and two borders
+		t.Errorf("a three-line viewport is %d rows tall, want 5", got)
+	}
+
+	lines := make([]string, 100)
+	for i := range lines {
+		lines[i] = "x"
+	}
+	long := newDetailYank()
+	long.setSize(100, 40)
+	long.open("b", lines, false, nil)
+	if got := boxRows(long.renderFull()); got != 40-6+2 {
+		t.Errorf("a 100-line viewport is %d rows tall, want the screen cap %d", got, 40-6+2)
+	}
+}

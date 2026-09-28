@@ -87,7 +87,9 @@ func (m *detailYank) handleTick(msg AnimTickMsg) tea.Cmd {
 	return m.anim.tick()
 }
 
-func (m detailYank) contentRows() int { return max(m.height-6, 3) }
+// contentRows is the box height in lines (tdp F7): the content, fixed when it
+// opens, up to the screen less its margins; past that it scrolls.
+func (m detailYank) contentRows() int { return max(min(len(m.lines), m.height-6), 1) }
 func (m detailYank) innerW() int      { return popupInnerWidth(m.width) } // the family width (tdp F7)
 
 func (m detailYank) lastLine() int { return max(len(m.plain)-1, 0) }
