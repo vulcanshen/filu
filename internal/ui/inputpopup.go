@@ -161,11 +161,11 @@ func (m inputPopup) renderFull() string {
 		rows = append(rows, d)
 	}
 	rows = append(rows, field, divider)
-	if m.errMsg != "" { // why Enter did not go through, wrapped to the fixed width
+	// An input whose submit can fail reserves one error row from the start, blank
+	// until Enter is refused, so the box keeps its height (tdp F7, K3).
+	if m.check != nil {
 		red := lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8"))
-		for _, l := range wrapWords(m.errMsg, innerW-2) {
-			rows = append(rows, red.Render(" "+l))
-		}
+		rows = append(rows, red.Render(" "+truncate(m.errMsg, innerW-2)))
 	}
 	return drawPopupBoxPad(bc, title, m.hint(), rows, innerW, false)
 }
