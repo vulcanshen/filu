@@ -116,38 +116,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 ---
 
-## 14. 程式碼註解仍引用 VTP 的 § 編號、ZLC 與 u-family —— 文件對齊
-
-- **現況**：`internal/ui` 等處的註解用 VTP 的 § 編號、舊名 ZLC 與「u-family」，以及已退場的
-  `filu-implementation.md` 的 §8（panel chrome）（不影響行為）。只換這些；提到 kbu 的地方（`kbu form`、
-  `ported from kbu`）是指 kbu 的程式碼，不動；`app.go:2`、`persist.go:12` 的 `IDEA.md` 不動。第 4、5、6 條已改完，
-  `?` 相關的註解順著新行為寫（下表已照 v0.1.6 的名稱）。2026-09-27 依內容重新核對，下表就是全部（測試檔沒有）。
-- **怎麼改**：照 [terminu `vtp/README.md` 的對照表](https://github.com/vulcanshen/terminu/blob/v0.1.7/vtp/README.md) 換成 tdp 編號；
-  依內容比對，不要照行號：
-
-| 檔案:行 | 現在 | 換成 |
-|---|---|---|
-| `cmd/filu/main.go:1` | `a ZLC terminal file manager (kbu u-family)` | `a terminal file manager (terminu family)` |
-| `internal/ui/app.go:68` | `§A.1 contextual popup` | `Space menu (tdp K5, M2)` |
-| `internal/ui/app.go:88` | `§A.2 global help cheatsheet` | `? key reference (tdp K6, M4)` |
-| `internal/ui/app.go:470` | `§A.2 global help cheatsheet` | `? key reference (tdp K6, M4)` |
-| `internal/ui/app.go:472` | `the u-family logo` | `the filu mark (terminu family)` |
-| `internal/ui/app.go:799` | `ZLC §A.1 completeness` | `tdp M3` |
-| `internal/ui/spacemenu.go:37` | `the §A.1 contextual popup` | `the Space menu (tdp K5, M2)` |
-| `internal/ui/helppopup.go:10` | `the §A.2 non-contextual entry` | `the ? key reference (tdp K6, M4)` |
-| `internal/ui/view.go:11` | `kbu colour hierarchy (§2 / §B)` | `colour hierarchy (tdp D2, P4)` |
-| `internal/ui/view.go:25` | `§8.0/§8.2 powerline caps`（已退場的 implementation 文件） | `panel chip powerline caps (tdp D1)` |
-| `internal/ui/marks.go:133` | `§B: one element, one semantic` | `tdp P4: one element, one meaning` |
-| `internal/ui/chrome.go:16` | `§8.1`（已退場的 implementation 文件） | `tdp D1` |
-| `internal/ui/chrome.go:33`、`:64` | `§8.2`（已退場的 implementation 文件） | `tdp D1` |
-
-非 Go、但不在這次文件修改範圍內的設定檔：
-
-| 檔案:行 | 現在 | 換成 |
-|---|---|---|
-| `.goreleaser.yaml:32` | `the rest of the u-family (kbu)` | `the rest of the terminu family (kbu)` |
-| `.goreleaser.yaml:41` | `description: "ZLC terminal file manager (kbu u-family) — …"`（Homebrew formula 的說明，使用者看得到） | 例如 `"Terminal file manager — content search, split preview, marks"`，不帶 ZLC / u-family |
-
 
 ---
 

@@ -42,7 +42,7 @@ type menuItem struct {
 // header text, so it reads as present but out of reach (tdp M6).
 const disabledColor = lipgloss.Color("#585b70") // surface2
 
-// spaceMenu is the §A.1 contextual popup, following kbu's form (animation,
+// spaceMenu is the Space menu (tdp K5, M2), following kbu's form (animation,
 // layout, colour layer).
 type spaceMenu struct {
 	anim    popupAnimator

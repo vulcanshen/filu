@@ -8,7 +8,7 @@ import (
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 )
 
-// kbu colour hierarchy (§2 / §B): three reserved tiers.
+// colour hierarchy (tdp D2, P4): three reserved tiers.
 var (
 	// structural (system) — panel chrome + focus; never user state.
 	focusColor = lipgloss.Color("#89b4fa") // blue    : focused border/chrome
@@ -22,7 +22,7 @@ var (
 	// popup layer scale (lavenphire25→sapphire) comes when popups land.
 )
 
-// §8.0/§8.2 powerline caps (rune values so no glyph sits in source). Only the
+// panel chip powerline caps (tdp D1) (rune values so no glyph sits in source). Only the
 // tab bars are chips now — the breadcrumb is plain text with "/" separators —
 // so these all belong to the tab-bar vocabulary.
 var (

@@ -1,4 +1,4 @@
-// Command filu is a ZLC terminal file manager (kbu u-family).
+// Command filu is a terminal file manager (terminu family).
 package main
 
 import (

@@ -130,7 +130,7 @@ func centeredNote(w, rows int, text string) string {
 // markGlyph marks a list file that sits in the marks bucket. markPickGlyph marks
 // a Marks-panel item that is picked into the land subset — a distinct glyph from
 // the bucket mark so the two "picked" states never read as the same thing
-// (§B: one element, one semantic).
+// (tdp P4: one element, one meaning).
 var (
 	markGlyph     = string(rune(0xf0b14)) // marked (list mark column, nf-md U+F0B14)
 	markFavGlyph  = string(rune(0xf0a74)) // marked AND favorited — the combined single-cell glyph
