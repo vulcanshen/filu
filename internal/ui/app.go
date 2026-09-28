@@ -762,7 +762,7 @@ func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 		m.detailScroll = 0
 	case "G":
 		m.detailScroll = len(m.detailLines())
-	case "y":
+	case "y", "enter": // Enter opens the scrollable view too (tdp K3)
 		return m.openDetailYank()
 	case "z":
 		m.toggleZoom(panelDetail)
@@ -820,6 +820,11 @@ func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 		m.marks.cursor = 0
 	case "G":
 		m.marks.moveCursor(len(m.marks.items))
+	case "enter": // show the marked file in [1] (tdp K3)
+		if m.marks.cursor >= 0 && m.marks.cursor < len(m.marks.items) {
+			p := m.marks.items[m.marks.cursor]
+			return m.showInTabs(filepath.Dir(p), filepath.Base(p))
+		}
 	case "p": // pick: toggle this item in the land subset
 		m.marks.togglePick()
 	case "m": // unmark: drop this item from the bucket (not the file)
@@ -858,6 +863,11 @@ func (m *AppModel) handleTasksKey(key string) tea.Cmd {
 	case "G":
 		m.taskCursor = len(m.tasks) - 1
 		m.clampTaskCursor()
+	case "enter": // take the active tab to where this task landed (tdp K3)
+		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
+			m.navigateTo(m.tasks[m.taskCursor].destPath)
+			m.syncWatches()
+		}
 	case "D": // delete: drop this task from the log
 		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
 			m.tasks = append(m.tasks[:m.taskCursor], m.tasks[m.taskCursor+1:]...)
@@ -881,6 +891,10 @@ func (m *AppModel) handleFavoritesKey(key string) tea.Cmd {
 		m.places.cursor = 0
 	case "G":
 		m.places.moveCursor(len(m.places.pinned))
+	case "enter": // the tab already there, else a new one (tdp K3)
+		if m.places.cursor >= 0 && m.places.cursor < len(m.places.pinned) {
+			return m.showInTabs(m.places.pinned[m.places.cursor].path, "")
+		}
 	case "o": // open this favorite's dir in a tab (New tab / an existing tab)
 		return m.openOpenInMenu()
 	case "D": // unfavorite the highlighted directory — confirm first

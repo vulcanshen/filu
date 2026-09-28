@@ -126,6 +126,9 @@ filu/
   判法)、大小(人話 + bytes)、Modified / Accessed / Created(Linux 是 Changed)、`rwx` +
   八進位、owner:group。值過長就折行、全部揭露，框寬開框時定下、太高就捲動，讀不到的欄位
   在框裡寫原因(F5)。
+  其他 panel 的 `Enter`(同日裁定):`[2]` 開可捲動的檢視(同 `y`);`[3]` Marks / Favorites
+  在 `[1]` 找已經開著那個目錄的分頁、沒有就開新分頁(`showInTabs()`,Marks 游標停在該檔;
+  分頁滿了跳 toast,不擠掉別的分頁);Tasks 把當前分頁帶到任務的目的地。完成後 focus 回 `[1]`。
 - **quit 是 picker、不是 confirm。** 「離開時 shell 要 `cd` 去哪」是個選擇、不是一次確認
   (`quit.go quitMenu`):列出啟動目錄 + 各分頁的當前目錄,去重;有任務在跑時頂端插
   一條紅字 warning header。這是 tdp K9 的「離開流程由 app 決定」。`q` 與 `Ctrl-C` 都打開

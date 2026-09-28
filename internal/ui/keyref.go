@@ -59,9 +59,7 @@ func (m AppModel) panelKeyRef() (string, []helpRow) {
 		helpRow{key: "j k", desc: "move down / up"},
 		helpRow{key: "g G", desc: "top / bottom"},
 		helpRow{key: "u d", desc: "half a page up / down"})
-	if m.focus == panelList {
-		rows = append(rows, helpRow{key: "Enter", desc: "go into the directory"})
-	}
+	rows = append(rows, helpRow{key: "Enter", desc: m.enterDesc()})
 	rows = append(rows,
 		helpRow{key: "Esc", desc: backDesc(m.focus)},
 		helpRow{key: "Space", desc: "the menu of what you can do here"},
@@ -69,6 +67,21 @@ func (m AppModel) panelKeyRef() (string, []helpRow) {
 		helpRow{key: "q", desc: "quit — pick a directory to cd to"},
 		helpRow{key: "Ctrl+C", desc: "same as q, even while typing"})
 	return title + " keys", rows
+}
+
+// enterDesc is what Enter does on the focused panel (tdp K3).
+func (m AppModel) enterDesc() string {
+	switch {
+	case m.focus == panelDetail:
+		return "open the scrollable view (same as y)"
+	case m.focus == panelMarks && m.marksTab == 1:
+		return "take this tab to where the task landed"
+	case m.focus == panelMarks && m.marksTab == 2:
+		return "show the directory in [1], in its tab or a new one"
+	case m.focus == panelMarks:
+		return "show the file in [1], in its tab or a new one"
+	}
+	return "go into a directory; on a file, its details"
 }
 
 // backDesc is what Esc does on a panel.

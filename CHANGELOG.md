@@ -14,6 +14,11 @@
   path — and where a link points — type, size in units and in bytes, modified /
   accessed / created (changed on Linux) times, permissions as `rwx` and octal,
   and owner. Long values wrap so nothing is cut; `Esc` closes it.
+- `Enter` now does something on the other panels too: on the preview it opens
+  the scrollable view (like `y`); on a mark it shows that file in `[1]`, and on
+  a favorite it goes to that directory — in the tab already there, else a new
+  one (with all five tabs in use it tells you); on a task it takes the current
+  tab to where the task landed.
 - `Alt+Esc` leaves the shell opened with `s` from anywhere in it — even with a
   full-screen program running or the shell stuck. It ends the shell, like
   typing `exit`. The shell's frame now says so.
