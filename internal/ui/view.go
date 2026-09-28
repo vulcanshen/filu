@@ -54,70 +54,67 @@ func (m AppModel) View() string {
 	// stack order Update routes keys by, top-first (tdp D3); assignLayers gives
 	// each open popup its depth colour (D2).
 	m.assignLayers()
-	if m.spaceMenu.isActive() {
-		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	layers := m.popupLayers()
+	top := -1
+	for i, l := range layers {
+		if l.on {
+			top = i
+		}
 	}
-	if m.globalMenu.isActive() {
-		out = overlay.Composite(m.globalMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.sortMenu.isActive() {
-		out = overlay.Composite(m.sortMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.sortDirMenu.isActive() {
-		out = overlay.Composite(m.sortDirMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.gotoMenu.isActive() {
-		out = overlay.Composite(m.gotoMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.gotoFavMenu.isActive() {
-		out = overlay.Composite(m.gotoFavMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.openInMenu.isActive() {
-		out = overlay.Composite(m.openInMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.searchMenu.isActive() {
-		out = overlay.Composite(m.searchMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.openWithMenu.isActive() {
-		out = overlay.Composite(m.openWithMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.confirm.isActive() {
-		out = overlay.Composite(m.confirm.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.inputPopup.isActive() {
-		out = overlay.Composite(m.inputPopup.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.breadcrumb.isActive() { // ancestor-jump popup over the panels
-		out = overlay.Composite(m.breadcrumb.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.detailYank.isActive() { // yank viewport over the panels
-		out = overlay.Composite(m.detailYank.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.modeList.isActive() { // the selection key list, over the viewport
-		out = overlay.Composite(m.modeList.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.meta.isActive() { // file information box
-		out = overlay.Composite(m.meta.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.search.isActive() { // fuzzy finder over the panels
-		out = overlay.Composite(m.search.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.help.isActive() { // key reference over whatever it describes
-		out = overlay.Composite(m.help.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.pty.isRendered() { // shell popup: full width, pinned below header+status, down to the bottom
-		out = overlay.Composite(m.pty.renderPopup(), out, overlay.Left, overlay.Top, 0, ptyChromeRows)
-	}
-	if m.quitMenu.isActive() { // the leave flow sits over the whole stack (tdp D3)
-		out = overlay.Composite(m.quitMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.quitHelp.isActive() { // the quit picker's key reference, over it
-		out = overlay.Composite(m.quitHelp.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	for i, l := range layers {
+		if !l.on {
+			continue
+		}
+		if i == top { // only the top popup is bright: everything under it dims (tdp F8)
+			out = dimANSI(out)
+		}
+		out = overlay.Composite(l.draw(), out, l.x, l.y, 0, l.dy)
 	}
 	if m.toast.isActive() { // transient, always on top, at the bottom above the footer (tdp F7)
 		out = overlay.Composite(m.toast.renderPopup(), out, overlay.Center, overlay.Bottom, 0, -2)
 	}
 	return out
+}
+
+// popupLayer is one popup as View draws it: whether it is up, how to draw it
+// and where.
+type popupLayer struct {
+	on   bool
+	draw func() string
+	x, y overlay.Position
+	dy   int
+}
+
+// popupLayers lists the popups bottom-first, in the stack order Update routes
+// keys by (stackOrder), with the shell between the key reference and the leave
+// flow. The toast is not a layer (it holds no keys, tdp F8) and is drawn after.
+func (m AppModel) popupLayers() []popupLayer {
+	c := func(on bool, draw func() string) popupLayer {
+		return popupLayer{on: on, draw: draw, x: overlay.Center, y: overlay.Center}
+	}
+	return []popupLayer{
+		c(m.spaceMenu.isActive(), m.spaceMenu.renderPopup),
+		c(m.globalMenu.isActive(), m.globalMenu.renderPopup),
+		c(m.sortMenu.isActive(), m.sortMenu.renderPopup),
+		c(m.sortDirMenu.isActive(), m.sortDirMenu.renderPopup),
+		c(m.gotoMenu.isActive(), m.gotoMenu.renderPopup),
+		c(m.gotoFavMenu.isActive(), m.gotoFavMenu.renderPopup),
+		c(m.openInMenu.isActive(), m.openInMenu.renderPopup),
+		c(m.searchMenu.isActive(), m.searchMenu.renderPopup),
+		c(m.openWithMenu.isActive(), m.openWithMenu.renderPopup),
+		c(m.confirm.isActive(), m.confirm.renderPopup),
+		c(m.inputPopup.isActive(), m.inputPopup.renderPopup),
+		c(m.breadcrumb.isActive(), m.breadcrumb.renderPopup), // ancestor-jump popup over the panels
+		c(m.detailYank.isActive(), m.detailYank.renderPopup), // yank viewport over the panels
+		c(m.modeList.isActive(), m.modeList.renderPopup),     // the selection key list, over the viewport
+		c(m.meta.isActive(), m.meta.renderPopup),             // file information box
+		c(m.search.isActive(), m.search.renderPopup),         // fuzzy finder over the panels
+		c(m.help.isActive(), m.help.renderPopup),             // key reference over whatever it describes
+		// shell popup: full width, from the top down to the bottom
+		{on: m.pty.isRendered(), draw: m.pty.renderPopup, x: overlay.Left, y: overlay.Top, dy: ptyChromeRows},
+		c(m.quitMenu.isActive(), m.quitMenu.renderPopup), // the leave flow sits over the whole stack (tdp D3)
+		c(m.quitHelp.isActive(), m.quitHelp.renderPopup), // the quit picker's key reference, over it
+	}
 }
 
 // splitN divides w into n columns, the last absorbing the remainder so they

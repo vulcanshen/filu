@@ -36,6 +36,10 @@
 - A menu keeps the height it opened with: unfavoriting in Goto → Favorites
   leaves the box as tall, and the sort menu shows Reset from the start —
   dimmed until there is a sort to reset — so adding a sort does not grow it.
+- With a popup open, everything beneath it — the panels and any popup under
+  it — is drawn dimmed, so only the box you are using is bright. A popup
+  underneath keeps a dimmed version of its own border colour, so you can still
+  tell the layers apart. A notification does not dim anything.
 - `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
   (with its warning when a copy or move is still running). Press `Ctrl+C` again
   on the picker to leave at once.
