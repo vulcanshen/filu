@@ -110,6 +110,12 @@
   Space menu 的列若開出了框(`boxOverSpaceMenu()`),menu 留在底下;完成動作時(confirm
   接受、input 送出、breadcrumb 跳轉、open-in / open-with、finder 選定)`clearStack()` 整疊
   一起收掉(tdp F4、T1)。正在關閉的框不收鍵(`owns()`),下一個 `Esc` 直接關底下那層(F3)。
+- **最上層以外全部 dim** — 有 popup 開著時，`View` 在合成最上層那個 popup 之前，先把整張已經
+  畫好的畫面(base 與底下的 popup)過一次 `dimANSI()`:每個 SGR 前景 / 背景色往 base
+  `#1e1e2e` 混(`dimKeep` = 0.45),沒設顏色的文字補上 dim 過的預設色。所以底下 popup 的邊框
+  是自己層色的 dim 版本、還看得出第幾層，串流內容與警示色一起 dim(tdp F8,T2 的例外)。
+  toast 不握鍵盤、不算一層，畫在 dim 之後也不觸發 dim。popup 的合成順序在
+  `popupLayers()`,跟 `stackOrder()` 同序。
 - **`?` key reference** — 唯讀、可捲動、沒有游標(`helpPopup`)。按鍵路由在 quit 之後、所有
   popup 之前攔 `?`(輸入態除外，那裡 `?` 是字元),`keyRef()` 照疊層由上往下找最前面的
   surface:popup 各給自己的鍵;沒有 popup 時是 focus panel,由 `buildSpaceMenu()` 的 item /

@@ -5,8 +5,6 @@ filu 已符合 tdp v0.1.7(見 `dev-remarks.md`「對照 tdp 時確認過的」)�
 
 ## 待修
 
-6. **F8 dim**:有 popup 開著時,底下的 popup 與 base 畫面都照常亮度畫。規則是最上層以外全部 dim;
-   底下 popup 的邊框畫成自己層色的 dim 版本;toast 不觸發 dim。
 7. **F1 finder 打字時的 `Enter`**:finder 打字時按 `Enter` 目前是把 focus 交給結果清單(跟 `Tab` 一樣)。
    user 裁定(2026-09-28):打字階段是 input,`Enter` 就是 submit,直接選取清單目前那一筆(預設第一筆);
    打字時方向鍵在候選之間移動;`Tab` 把 focus 交給清單,清單裡用 `j/k` 選。
