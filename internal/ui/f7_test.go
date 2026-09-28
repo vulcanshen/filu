@@ -141,3 +141,78 @@ func TestF7InputReservesTheErrorRow(t *testing.T) {
 		t.Errorf("the reason should be on the reserved row, got %q", after[errRow])
 	}
 }
+
+// boxRows is a rendered popup height.
+func boxRows(s string) int { return strings.Count(s, "\n") + 1 }
+
+// tdp F7: a menu keeps the height it opened with. Unfavoriting in Goto's
+// Favorites list rebuilds the list shorter, and the box stays as tall.
+func TestF7FavoritesListKeepsItsHeight(t *testing.T) {
+	m := f4Model(t)
+	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
+	m = model.(AppModel)
+	m.places.pinned = []place{
+		{label: "a", path: t.TempDir(), icon: iconPin},
+		{label: "b", path: t.TempDir(), icon: iconPin},
+		{label: "c", path: t.TempDir(), icon: iconPin},
+	}
+	m.openGotoMenu()
+	m.gotoMenu.anim.state = popupOpen
+	m = press(t, m, runes("f"))
+	before := boxRows(m.gotoFavMenu.renderFull())
+
+	m = press(t, m, runes("f")) // unfavorite the highlighted one
+	if len(m.places.pinned) != 2 {
+		t.Fatalf("f should unfavorite one, %d left", len(m.places.pinned))
+	}
+	if after := boxRows(m.gotoFavMenu.renderFull()); after != before {
+		t.Errorf("the Favorites list went from %d to %d rows after unfavoriting", before, after)
+	}
+}
+
+// tdp F7: the sort column picker keeps its height as a sort is added: Reset is
+// there from the start, dimmed until there is a sort to reset (M6).
+func TestF7SortColumnsKeepTheirHeight(t *testing.T) {
+	sortByDir = map[string][]sortRule{}
+	defer func() { sortByDir = map[string][]sortRule{} }()
+	statePathOverride = t.TempDir() + "/state.yaml"
+	defer func() { statePathOverride = "" }()
+
+	m := f4Model(t)
+	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
+	m = model.(AppModel)
+	m.openSortColumnPicker()
+	m.sortMenu.anim.state = popupOpen
+	before := boxRows(m.sortMenu.renderFull())
+	reset := m.sortMenu.items[len(m.sortMenu.items)-1]
+	if reset.label != "Reset" || !reset.disabled {
+		t.Errorf("Reset should be there, dimmed, before any sort: %+v", reset)
+	}
+
+	m = press(t, m, runes("m"))
+	m = press(t, m, runes("d")) // Modified, descending: now there is a sort
+	if after := boxRows(m.sortMenu.renderFull()); after != before {
+		t.Errorf("the column picker went from %d to %d rows once a sort existed", before, after)
+	}
+	if reset := m.sortMenu.items[len(m.sortMenu.items)-1]; reset.disabled {
+		t.Error("Reset should be live once there is a sort")
+	}
+}
+
+// tdp F7: rows added to an open menu scroll inside the height it opened with
+// rather than growing the box.
+func TestF7MenuDoesNotGrowWhileOpen(t *testing.T) {
+	menu := newSpaceMenu()
+	menu.setSize(100, 40)
+	menu.setItems([]menuItem{{label: "One", key: "1"}, {label: "Two", key: "2"}}, "t")
+	menu.open()
+	before := boxRows(menu.renderFull())
+	if before != 2+4 { // two rows, two borders, two padding rows: the content sets the height
+		t.Fatalf("a two-row menu opened %d rows tall, want 6", before)
+	}
+	menu.setItems([]menuItem{{label: "One", key: "1"}, {label: "Two", key: "2"},
+		{label: "Three", key: "3"}, {label: "Four", key: "4"}}, "t")
+	if after := boxRows(menu.renderFull()); after != before {
+		t.Errorf("the menu went from %d to %d rows when rows were added", before, after)
+	}
+}

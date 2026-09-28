@@ -214,18 +214,17 @@ func (m *AppModel) openSortColumnPicker() tea.Cmd {
 }
 
 // setSortColumnItems (re)populates the column picker with the sortable columns
-// plus a Reset entry when a sort is active. The badges reflect the sort of the
-// active tab's directory (the one being edited).
+// plus Reset, dimmed while there is no sort to reset (tdp M6) — always there,
+// so the box keeps the height it opened with as a sort is added (F7). The
+// badges reflect the sort of the active tab's directory (the one being edited).
 func (m *AppModel) setSortColumnItems() {
 	rules := sortRulesFor(m.cur().dir)
-	items := make([]menuItem, 0, len(sortCols)+3)
+	items := make([]menuItem, 0, len(sortCols)+2)
 	for _, d := range sortCols {
 		items = append(items, menuItem{label: d.title, key: d.key, hint: sortBadgeText(rules, d.col)})
 	}
-	if len(rules) > 0 {
-		items = append(items, menuItem{separator: true})
-		items = append(items, menuItem{label: "Reset", key: "r", hint: "default order"})
-	}
+	items = append(items, menuItem{separator: true})
+	items = append(items, menuItem{label: "Reset", key: "r", hint: "default order", disabled: len(rules) == 0})
 	m.sortMenu.setItems(items, "Sort by…")
 }
 

@@ -33,6 +33,9 @@
 - Sorting and Goto's Favorites now open each step in its own box over the one
   before: picking a column opens the direction in a second box, and Goto →
   Favorites opens the list over the Goto menu. `Esc` steps back one box.
+- A menu keeps the height it opened with: unfavoriting in Goto → Favorites
+  leaves the box as tall, and the sort menu shows Reset from the start —
+  dimmed until there is a sort to reset — so adding a sort does not grow it.
 - `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
   (with its warning when a copy or move is still running). Press `Ctrl+C` again
   on the picker to leave at once.

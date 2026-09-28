@@ -5,8 +5,6 @@ filu 已符合 tdp v0.1.7(見 `dev-remarks.md`「對照 tdp 時確認過的」)�
 
 ## 待修
 
-4. **F7 高度打開時定好**:goto 的 Favorites 清單按 `f` 取消收藏後在原地重建,框跟著變矮。
-   規則是高度在打開時定好,之後不跟著內容伸縮。
 6. **F8 dim**:有 popup 開著時,底下的 popup 與 base 畫面都照常亮度畫。規則是最上層以外全部 dim;
    底下 popup 的邊框畫成自己層色的 dim 版本;toast 不觸發 dim。
 7. **F1 finder 打字時的 `Enter`**:finder 打字時按 `Enter` 目前是把 focus 交給結果清單(跟 `Tab` 一樣)。

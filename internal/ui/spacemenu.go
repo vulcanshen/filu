@@ -54,6 +54,10 @@ type spaceMenu struct {
 	// top is the first row shown when the menu is taller than the screen: the
 	// window follows the cursor (tdp L1 - every row stays reachable at 80 x 40).
 	top int
+	// openRows is how many item rows the box shows, fixed when it opens (tdp F7):
+	// rows removed while it is open leave blank rows, rows added scroll. 0 until
+	// the first open.
+	openRows int
 	// hintRight right-aligns each row's hint to the box's right edge instead of
 	// left-aligning it to a shared column. Suits a single trailing glyph (the quit
 	// picker's launch icon / tab numeral), not an action description whose
@@ -143,13 +147,18 @@ func (m *spaceMenu) setSize(w, h int) {
 // rows, and a row of screen above and below so the box never touches the edge.
 const menuChrome = 6
 
-// visible is how many item rows fit on screen (all of them when the height is
-// not known yet).
+// visible is how many item rows the box shows: what fits on screen (all of
+// them when the height is not known yet), and no more than it had when it
+// opened (tdp F7).
 func (m spaceMenu) visible() int {
-	if m.screenH <= 0 {
-		return max(len(m.items), 1)
+	fit := max(len(m.items), 1)
+	if m.screenH > 0 {
+		fit = max(m.screenH-menuChrome, 3)
 	}
-	return max(m.screenH-menuChrome, 3)
+	if m.openRows > 0 {
+		return min(fit, m.openRows)
+	}
+	return fit
 }
 
 // scroll moves the window just enough to keep the cursor row in it.
@@ -166,7 +175,15 @@ func (m *spaceMenu) scroll() {
 		m.top = 0 // at the first stop, show the region header above it too
 	}
 }
-func (m *spaceMenu) open() tea.Cmd      { return m.anim.open() }
+
+// open fixes the box height at the rows it shows now (tdp F7) and opens it.
+func (m *spaceMenu) open() tea.Cmd {
+	m.openRows = 0
+	m.openRows = min(max(len(m.items), 1), m.visible())
+	m.scroll()
+	return m.anim.open()
+}
+
 func (m *spaceMenu) close() tea.Cmd     { return m.anim.close() }
 func (m spaceMenu) isActive() bool      { return m.anim.isActive() }
 func (m spaceMenu) owns() bool          { return m.anim.owns() }
@@ -362,10 +379,15 @@ func (m spaceMenu) renderFull() string {
 		}
 	}
 
-	// Taller than the screen: show the window that holds the cursor (scroll).
-	if vis := m.visible(); len(rows) > vis {
+	// Taller than the box: show the window that holds the cursor (scroll).
+	// Shorter than the height it opened with: blank rows keep the height (F7).
+	vis := m.visible()
+	if len(rows) > vis {
 		top := max(0, min(m.top, len(rows)-vis))
 		rows = rows[top : top+vis]
+	}
+	for m.openRows > 0 && len(rows) < vis {
+		rows = append(rows, "")
 	}
 	return drawPopupBox(bc, title, hint, rows, innerW)
 }
