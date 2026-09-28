@@ -6,6 +6,10 @@
 - Every panel's `Space` menu now ends with **Global operation**, which opens a
   menu of app-wide actions — for now, Quit (the same quit picker as `q`).
 - Panel `[1]`'s `Space` menu has a **Switch tab** row (`l`), like panel `[3]`.
+- `Enter` on a file (it used to do nothing) shows the file's details: full
+  path — and where a link points — type, size in units and in bytes, modified /
+  accessed / created (changed on Linux) times, permissions as `rwx` and octal,
+  and owner. Long values wrap so nothing is cut; `Esc` closes it.
 - `Alt+Esc` leaves the shell opened with `s` from anywhere in it — even with a
   full-screen program running or the shell stuck. It ends the shell, like
   typing `exit`. The shell's frame now says so.

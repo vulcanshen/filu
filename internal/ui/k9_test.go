@@ -95,6 +95,8 @@ func stillOpen(m AppModel, name string) bool {
 	switch name {
 	case "detailYank":
 		return m.detailYank.owns()
+	case "meta":
+		return m.meta.owns()
 	case "search":
 		return m.search.owns()
 	case "breadcrumb":

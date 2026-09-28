@@ -13,6 +13,8 @@ func (m AppModel) keyRef() (string, []helpRow) {
 	switch {
 	case m.search.owns():
 		return "Finder keys", finderKeyRef()
+	case m.meta.owns():
+		return "File information keys", metaKeyRef()
 	case m.detailYank.owns():
 		return "Preview viewport keys", yankKeyRef()
 	case m.breadcrumb.owns():
@@ -179,6 +181,15 @@ func yankKeyRef() []helpRow {
 		{key: "u d", desc: "half a page up / down"},
 		{key: "v", desc: "start selecting"},
 		{key: "y", desc: "copy everything"},
+		{key: "Esc", desc: "close"},
+		{key: "?", desc: "these keys"},
+	}
+}
+
+func metaKeyRef() []helpRow {
+	return []helpRow{
+		{key: "j k", desc: "scroll down / up"},
+		{key: "g G", desc: "top / bottom"},
 		{key: "Esc", desc: "close"},
 		{key: "?", desc: "these keys"},
 	}

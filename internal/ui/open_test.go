@@ -16,7 +16,10 @@ func cursorOn(m *AppModel, name string) {
 	}
 }
 
-func TestEnterDescendsDirNotOpenFile(t *testing.T) {
+// TestEnterDescendsDirShowsFileInfo: Enter does the one obvious thing per row
+// (tdp K3, 2026-09-28 decision) — into a directory; on a file, its information
+// box. Either way nothing is handed to an outside app (that stays [o]pen's job).
+func TestEnterDescendsDirShowsFileInfo(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "doc.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
@@ -30,15 +33,15 @@ func TestEnterDescendsDirNotOpenFile(t *testing.T) {
 	openFile = func(p string) error { opened = p; return nil }
 	defer func() { openFile = old }()
 
-	m := AppModel{focus: panelList, taskCh: make(chan landMsg, 1)}
+	m := AppModel{focus: panelList, taskCh: make(chan landMsg, 1), meta: newMetaPopup()}
 	m.tabs = []listModel{newList(dir)}
 
-	// Enter on a file → no-op: it is not "open a file" in filu (that is [o]pen's
-	// job). Nothing opens and the directory is unchanged.
+	// Enter on a file → its information box; nothing opens, the directory stays.
 	cursorOn(&m, "doc.txt")
-	if cmd := m.handleListKey("enter"); cmd != nil {
-		t.Error("enter on a file should be a no-op, got a cmd")
+	if cmd := m.handleListKey("enter"); cmd == nil || !m.meta.owns() || m.meta.title != "doc.txt" {
+		t.Errorf("enter on a file should open its information box: owns %v, title %q", m.meta.owns(), m.meta.title)
 	}
+	m.meta = newMetaPopup()
 	if opened != "" {
 		t.Errorf("enter on a file must not open anything, opened %q", opened)
 	}

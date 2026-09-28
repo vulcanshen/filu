@@ -173,21 +173,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   - 新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試；測試要守「選取中 `Space` 開清單、選取外 `Space` 不作用」
     兩個方向，並逐處 mutation。
 
-## 17. 檔案列上的 `Enter` 不做事 —— K3（2026-09-28 user 裁定，見「已定案」第 1 題）
-
-- **現況**：`handleListKey()` 的 `case "enter"`（`app.go` :525–530）只進目錄，檔案列上是 no-op；
-  `dev-remarks.md`「設計決定」第一條記的是這個行為與 P4 的理由。
-- **裁定**：檔案列上的 `Enter` 打開**這個檔案的 metadata popup**；目錄列的 `Enter` 維持進目錄。
-- **怎麼改**：
-  - 新增一類 popup（F1：唯讀資訊框，不兼 menu、不兼 viewport）：沒有游標、不能執行，`Esc` 關閉，`?` 是它的 key
-    reference（原第 4 條已修：`keyRef()` 加一個 case），`Space` 不作用（原第 3 條的規則，新 popup 不處理 `" "` 即可），`q` / `Ctrl-C` 已走離開流程（原第 1、2 條，路由在所有 popup 之前）。
-  - 欄位：完整絕對路徑（symlink 多一列指向的目標）、類型（沿用 preview 的 magic bytes 判型）、精確大小（人話單位 +
-    bytes）、Modified / Accessed / Changed（macOS 為 Created）完整日期時間、權限（`rwx` + 八進位）、`owner:group`。
-  - **文字 word-wrap、能折行，所有資訊都完整揭露在 popup 裡**（長路徑折行，不截斷）。框寬在打開時定一次（L2），
-    內容高過畫面時才捲動（沒有游標）。
-  - 取不到的欄位（例如 stat 失敗）照 F5 在 popup 裡寫出原因，不留空白。
-  - 新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試。
-  - `dev-remarks.md`「設計決定」的 `Enter` 那條改寫成新行為；README 兩份的五鍵表 `Enter` 說明、「瀏覽」一節一起改。
 
 ---
 
@@ -219,7 +204,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 ## 已定案（原「待確認」，2026-09-28 user 逐題裁定）
 
 1. **（已定案，2026-09-28）`Enter` 對檔案列不做事，算不算符合 K3？** → 不算。檔案列上的 `Enter` 改成打開該檔案的
-   metadata popup（唯讀、文字折行、資訊全部揭露在框裡），見第 17 條。
+   metadata popup（唯讀、文字折行、資訊全部揭露在框裡）；原第 17 條，已修（`metaPopup`）。
 2. **（已定案，2026-09-28）`Favorite`（`f`）只在 cursor 是目錄時才列（`app.go` :819）。** → 維持不列，已移到
    「已經符合」。
 3. **（已定案，2026-09-28）`b` 也能關掉 breadcrumb popup（`breadcrumbpopup.go` :71）。** → 拿掉 `b`，只留 `Esc`，
