@@ -112,3 +112,32 @@ func TestF7EveryPopupHasTheFamilyWidth(t *testing.T) {
 		}
 	}
 }
+
+// tdp F7 / K3: an input whose submit can fail opens with its error row already
+// there, blank; a refused Enter writes the reason on that row and the box keeps
+// its height.
+func TestF7InputReservesTheErrorRow(t *testing.T) {
+	m := f4Model(t)
+	model, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
+	m = model.(AppModel)
+	m.handleListKey("a") // Add: an empty name is refused
+	m.inputPopup.anim.state = popupOpen
+
+	before := strings.Split(ansi.Strip(m.inputPopup.renderFull()), "\n")
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if m.inputPopup.errMsg == "" {
+		t.Fatal("Enter on an empty name should be refused")
+	}
+	after := strings.Split(ansi.Strip(m.inputPopup.renderFull()), "\n")
+
+	if len(after) != len(before) {
+		t.Errorf("the box went from %d to %d rows when the error appeared", len(before), len(after))
+	}
+	errRow := len(after) - 2 // the row just above the bottom border
+	if strings.TrimSpace(strings.Trim(before[errRow], "│")) != "" {
+		t.Errorf("the error row should be blank before a refused Enter, got %q", before[errRow])
+	}
+	if !strings.Contains(after[errRow], m.inputPopup.errMsg) {
+		t.Errorf("the reason should be on the reserved row, got %q", after[errRow])
+	}
+}
