@@ -99,6 +99,9 @@ func (m AppModel) View() string {
 	if m.quitMenu.isActive() { // the leave flow sits over the whole stack (tdp D3)
 		out = overlay.Composite(m.quitMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.quitHelp.isActive() { // the quit picker's key reference, over it
+		out = overlay.Composite(m.quitHelp.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.toast.isActive() { // transient, always on top
 		out = overlay.Composite(m.toast.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -443,7 +446,7 @@ func colorOwner(s string) string {
 
 func (m AppModel) footerBar(w int) string {
 	return padDisp(keyLegend([][2]string{
-		{"space", "menu"}, {"?", "help"}, {"tab/1-3", "panels"}, {"q", "quit"},
+		{"space", "menu"}, {"?", "keys"}, {"tab/1-3", "panels"}, {"q", "quit"},
 	}), w)
 }
 
@@ -465,7 +468,7 @@ func (m *AppModel) stackOrder() []*popupAnimator {
 	return []*popupAnimator{
 		&m.spaceMenu.anim, &m.globalMenu.anim, &m.sortMenu.anim, &m.gotoMenu.anim, &m.openInMenu.anim, &m.searchMenu.anim,
 		&m.openWithMenu.anim, &m.confirm.anim, &m.inputPopup.anim, &m.breadcrumb.anim, &m.detailYank.anim,
-		&m.search.anim, &m.help.anim, &m.quitMenu.anim,
+		&m.search.anim, &m.help.anim, &m.quitMenu.anim, &m.quitHelp.anim,
 	}
 }
 

@@ -116,44 +116,11 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 ---
 
-## 4. `?` 在 popup 上沒有反應 —— K6、M4、D3
-
-- **現況**：`?` 只在 `app.go` 主 switch（:470）處理，打開全 app 的 help。Space menu 與各 picker、confirm、
-  breadcrumb、yank viewport、finder 清單態開著時按 `?` 都沒有反應。confirm 的 `y` / `n`、Goto 收藏清單的
-  `f`（取消收藏，只寫在標題 `Favorites · f unfavorite`，`goto.go` :64）、yank viewport 的 `v` / `y` / `0` / `$` 等
-  popup 自己的鍵，只有下框 hint 或標題寫了一部分。
-- **規則**：`?` 在任何 surface 都有回應；focus 在 popup 上時（Space menu 與 global operation popup 也是 popup），
-  `?` 打開**這個 popup** 的 key reference：唯讀、可以捲動、沒有游標、不能執行，只列這個框裡能按的鍵。再按 `?`
-  或 `Esc` 關掉，回到底下的 popup（F4）。
-- **怎麼改**：每個 popup 給一份自己的 key reference（menu / picker：`j/k`、`g/G`、`Enter`、熱鍵或數字、`Esc`；
-  confirm：`Enter` / `y` 接受、`Esc` / `n` 取消；breadcrumb：`j/k`、`Enter` 跳過去、`Esc`；yank viewport：
-  移動鍵、`v`、`y`、`Esc`（選取中的 `?` 是模式的 help，見第 15 條）；finder 清單態：移動鍵、`Enter`、`Tab` 回輸入列、
-  `Esc`；Goto 收藏清單加上 `f`；quit picker：數字、`Enter`、`Esc`、再按 `Ctrl-C` 立刻離開）。key reference 疊在該 popup 上，
-  路由與繪製都在最上層（D3）：目前 `m.help.isActive()` 的路由排在 detailYank、finder、breadcrumb 之後（:303），`view.go`
-  也在它們之前畫 help（:81），兩處都要改。quit picker 的 `?` 另開一個 help popup（`quitHelp`），排在 `quitMenu` 之上，
-  見「先看」；`quitMenu` 已在路由與繪製的最上層（原第 1 條），`quitHelp` 排在它之上。finder 輸入態的 `?` 是字元（K8），不打開。新 popup 照「先看」的清單接上動畫、尺寸、繪製與測試。
-
-## 5. panel 上的 `?` 是全 app 共用的一份，沒列這個 panel 的鍵 —— K6、M4、D4
-
-- **現況**：`helppopup.go` 的 `helpPopup` 在三個 panel 上都顯示同一份 `helpRows`（:24–:40）：panels / move / do
-  三組，只有 core key、導覽鍵與 `z`；panel `[1]` 的 `o`、`O`、`m`、`y`、`r`、`D`、`f`、`F`、`c`、`v`、`/`、`go`、
-  `b`、`t`、`w`、`a`、`S`、`s`、`.`，panel `[2]` 的 `y`，panel `[3]` 的 `p`、`m`、`y`、`Z`、`C`、`D`、`o` 都不在上面。
-  它把所有列一次畫完（`drawPopupBox`），沒有捲動。唯讀、不能執行這點已經符合。
-- **規則**：panel 上的 `?` 打開這個 panel 的 key reference：至少列出這個 panel 能按的鍵與 core key；唯讀、可以捲動，
-  沒有游標、不能執行，不是 menu。寬度依最長的說明計算（D4）。能執行的全域動作不在這裡，在 global operation popup
-  （`globalActions`，原第 6 條已修）。
-- **怎麼改**：key reference 由 focus panel 的 Space menu 列產生（`buildSpaceMenu()` 的 item / panel 區，只收按得出來
-  的鍵：單一字元、`go` 和絃；`Global operation` 這種 menu-only 的列不列、空的區塊標題拿掉），再接 core key 與導覽鍵
-  （`Tab`、`1 2 3`、`h l`、`j k`、`g G`、`u d`、`Enter`、`Esc`、`Space`、`?`、`q`），兩邊就不會不一致（sshu、webu、locku
-  的做法）。加上捲動（`j/k` 或方向鍵捲、沒有游標）。寬度計算（:79–:85）已經依最長說明，保留，但多留一欄、不比下框
-  hint 窄（locku）。README 兩份「開始使用」表格裡 `?` 的說明（`Help — every app-wide action in one list`）與「按鍵一覽」的
-  `?  Help` 改成 key reference 的說法（例：`Keys — what you can press here`）。
-
 ## 14. 程式碼註解仍引用 VTP 的 § 編號、ZLC 與 u-family —— 文件對齊
 
 - **現況**：`internal/ui` 等處的註解用 VTP 的 § 編號、舊名 ZLC 與「u-family」，以及已退場的
   `filu-implementation.md` 的 §8（panel chrome）（不影響行為）。只換這些；提到 kbu 的地方（`kbu form`、
-  `ported from kbu`）是指 kbu 的程式碼，不動；`app.go:2`、`persist.go:12` 的 `IDEA.md` 不動。第 4、5、6 條改完後，
+  `ported from kbu`）是指 kbu 的程式碼，不動；`app.go:2`、`persist.go:12` 的 `IDEA.md` 不動。第 4、5、6 條已改完，
   `?` 相關的註解順著新行為寫（下表已照 v0.1.6 的名稱）。2026-09-27 依內容重新核對，下表就是全部（測試檔沒有）。
 - **怎麼改**：照 [terminu `vtp/README.md` 的對照表](https://github.com/vulcanshen/terminu/blob/v0.1.7/vtp/README.md) 換成 tdp 編號；
   依內容比對，不要照行號：
@@ -195,10 +162,10 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   直接執行，執行後清單關掉）；`?` 是這個模式的 help（唯讀）；`Esc` 離開模式；`q`、`Ctrl-C` 照 K9 進入離開流程；
   `Tab` 可以暫停，但按了要有回應，說明先 `Esc` 離開模式。模式的鍵跟導覽鍵重疊時（filu 正是 `h j k l`、`u d`、`g G`），
   按鍵清單只用方向鍵移動，其餘鍵一律是「執行那一列」。模式自己的鍵必須出現在模式的按鍵清單裡。選取以外，viewport
-  本身是 popup：`Space` 不作用（K5），`?` 是 viewport 的 key reference（第 4 條）。
+  本身是 popup：`Space` 不作用（K5），`?` 是 viewport 的 key reference（原第 4 條已修：`keyRef()` 加一個 case）。
 - **怎麼改**：
   - 把模式的鍵寫成一張結構化的鍵表（鍵、說明），模式的按鍵清單與模式的 help 都從它產生（webu 的 `selectKeys`、sshu
-    的選取模式）；viewport 的 key reference（第 4 條）也可以從同一張表取非選取狀態的那幾列。
+    的選取模式）；viewport 的 key reference（原第 4 條已修：`keyRef()` 加一個 case）也可以從同一張表取非選取狀態的那幾列。
   - 選取中 `Space` 開按鍵清單（新 popup，疊在 viewport 上，方向鍵移動，`Enter` 或按該鍵執行後關掉清單），再按 `Space`
     關掉；`?` 開模式的 help；`q` / `Ctrl-C` 已走離開流程（原第 1、2 條）；`Tab` 跳 toast（例：`Esc leaves the selection first`）。
   - 下框 hint 分兩種狀態寫（例：選取外 `v select · y copy all · Esc close`，選取中 `y copy · Esc leave · Space keys`），
@@ -213,7 +180,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 - **裁定**：檔案列上的 `Enter` 打開**這個檔案的 metadata popup**；目錄列的 `Enter` 維持進目錄。
 - **怎麼改**：
   - 新增一類 popup（F1：唯讀資訊框，不兼 menu、不兼 viewport）：沒有游標、不能執行，`Esc` 關閉，`?` 是它的 key
-    reference（第 4 條），`Space` 不作用（原第 3 條的規則，新 popup 不處理 `" "` 即可），`q` / `Ctrl-C` 已走離開流程（原第 1、2 條，路由在所有 popup 之前）。
+    reference（原第 4 條已修：`keyRef()` 加一個 case），`Space` 不作用（原第 3 條的規則，新 popup 不處理 `" "` 即可），`q` / `Ctrl-C` 已走離開流程（原第 1、2 條，路由在所有 popup 之前）。
   - 欄位：完整絕對路徑（symlink 多一列指向的目標）、類型（沿用 preview 的 magic bytes 判型）、精確大小（人話單位 +
     bytes）、Modified / Accessed / Changed（macOS 為 Created）完整日期時間、權限（`rwx` + 八進位）、`owner:group`。
   - **文字 word-wrap、能折行，所有資訊都完整揭露在 popup 裡**（長路徑折行，不截斷）。框寬在打開時定一次（L2），
