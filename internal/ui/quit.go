@@ -71,7 +71,7 @@ func (m *AppModel) openQuitMenu() tea.Cmd {
 		})
 	}
 	m.quitMenu.setItems(items, "Quit — cd to…")
-	m.quitMenu.setSize(m.width)
+	m.quitMenu.setSize(m.width, m.height)
 	return m.quitMenu.open()
 }
 

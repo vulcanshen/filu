@@ -42,6 +42,7 @@ func (m *breadcrumbPopup) open(dir string) tea.Cmd {
 func (m *breadcrumbPopup) close() tea.Cmd     { return m.anim.close() }
 func (m *breadcrumbPopup) setSize(w int)      { m.screenW = w }
 func (m breadcrumbPopup) isActive() bool      { return m.anim.isActive() }
+func (m breadcrumbPopup) owns() bool          { return m.anim.owns() }
 func (m breadcrumbPopup) isInteractive() bool { return m.anim.isInteractive() }
 
 func (m *breadcrumbPopup) handleTick(msg AnimTickMsg) tea.Cmd {
@@ -68,7 +69,7 @@ func (m breadcrumbPopup) update(msg tea.KeyMsg) (breadcrumbPopup, string, tea.Cm
 		m.cursor = len(m.levels) - 1
 	case "enter":
 		return m, m.levels[m.cursor].path, m.anim.close()
-	case "esc", "b", " ":
+	case "esc":
 		return m, "", m.anim.close()
 	}
 	return m, "", nil
@@ -77,7 +78,7 @@ func (m breadcrumbPopup) update(msg tea.KeyMsg) (breadcrumbPopup, string, tea.Cm
 func (m breadcrumbPopup) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
 func (m breadcrumbPopup) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
 	hereStyle := lipgloss.NewStyle().Foreground(userColor) // current level, lavender = you-are-here
 

@@ -23,13 +23,23 @@ func TestListNavHintFocusGated(t *testing.T) {
 	}
 }
 
-// TestMarksHint: the Marks panel legend names the marks-workflow keys.
+// TestMarksHint: the Marks panel legend names the keys that act on this panel
+// (tdp M9) — not the list's m / c / v, which here would unmark or do nothing —
+// and stays empty when the bucket is.
 func TestMarksHint(t *testing.T) {
-	plain := ansi.Strip(marksHint())
-	for _, want := range []string{"m mark", "c copy", "v move"} {
+	plain := ansi.Strip(marksHint(true))
+	for _, want := range []string{"p pick", "m unmark", "Z zip", "C clear"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("marks hint missing %q, got %q", want, plain)
 		}
+	}
+	for _, not := range []string{"m mark", "c copy", "v move"} {
+		if strings.Contains(plain, not) {
+			t.Errorf("marks hint names %q, a key of another panel", not)
+		}
+	}
+	if got := marksHint(false); got != "" {
+		t.Errorf("an empty bucket should leave the edge clean, got %q", got)
 	}
 }
 

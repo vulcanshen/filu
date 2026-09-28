@@ -9,49 +9,60 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// TestHelpPanelDigitsMatchPanels pins the help popup's panel-digit hint to the
-// panels that actually exist. The row read "1 2 3 4" for several releases after
-// the 3-panel redesign, promising a panel the app has no key for.
+// panel1KeyRef is panel [1]'s key reference with one file under the cursor.
+func panel1KeyRef() (string, []helpRow) {
+	m := AppModel{focus: panelList}
+	m.tabs = []listModel{{dir: "/tmp", items: []fileItem{{name: "foo.txt"}}}}
+	return m.panelKeyRef()
+}
+
+// TestHelpPanelDigitsMatchPanels pins the key reference's panel-digit row to
+// the panels that actually exist. The row read "1 2 3 4" for several releases
+// after the 3-panel redesign, promising a panel the app has no key for.
 func TestHelpPanelDigitsMatchPanels(t *testing.T) {
 	var digits []string
 	for p := panelList; p <= panelMarks; p++ {
 		digits = append(digits, strconv.Itoa(int(p)))
 	}
 	want := strings.Join(digits, " ")
-	for _, r := range helpRows {
+	_, rows := panel1KeyRef()
+	for _, r := range rows {
 		if r.desc == "focus a panel directly" {
 			if r.key != want {
-				t.Errorf("help lists panel keys %q, but the panels are %q", r.key, want)
+				t.Errorf("key reference lists panel keys %q, but the panels are %q", r.key, want)
 			}
 			return
 		}
 	}
-	t.Fatal("help popup has no panel-digit row")
+	t.Fatal("key reference has no panel-digit row")
 }
 
 func TestHelpPopupRender(t *testing.T) {
 	m := newHelpPopup()
-	m.setSize(100)
-	m.open()
+	m.setSize(100, 60)
+	m.open(panel1KeyRef())
 	plain := ansi.Strip(m.renderFull())
-	for _, want := range []string{"Help", "Tab", "Space", "quit", "esc close"} {
+	for _, want := range []string{"[1] foo.txt keys", "Tab", "Space", "quit", "? or Esc close"} {
 		if !strings.Contains(plain, want) {
-			t.Errorf("help popup missing %q:\n%s", want, plain)
+			t.Errorf("key reference missing %q:\n%s", want, plain)
 		}
 	}
 }
 
 func TestHelpPopupDismiss(t *testing.T) {
 	m := newHelpPopup()
-	m.open()
+	m.open("x keys", []helpRow{{key: "a", desc: "b"}})
 	m.anim.state = popupOpen
-	for _, k := range []string{"esc", "?", " ", "q"} {
-		mm := m
-		if _, cmd := mm.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}); k != "esc" && cmd == nil {
-			t.Errorf("%q should close the help popup", k)
-		}
+	if _, cmd := m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")}); cmd == nil {
+		t.Error("? should close the key reference (tdp K6)")
 	}
 	if _, cmd := m.update(tea.KeyMsg{Type: tea.KeyEsc}); cmd == nil {
-		t.Error("esc should close the help popup")
+		t.Error("esc should close the key reference")
+	}
+	// q is the leave flow (tdp K9) and Space only toggles the Space menu (K5).
+	for _, key := range []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("q")}, {Type: tea.KeySpace, Runes: []rune(" ")}} {
+		if _, cmd := m.update(key); cmd != nil {
+			t.Errorf("%q should not close the key reference", key.String())
+		}
 	}
 }

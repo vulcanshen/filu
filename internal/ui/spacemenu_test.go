@@ -48,12 +48,43 @@ func TestSpaceMenuCommit(t *testing.T) {
 
 func TestSpaceMenuRender(t *testing.T) {
 	m := newSpaceMenu()
-	m.setSize(100)
+	m.setSize(100, 40)
 	m.setItems([]menuItem{{label: "Carry", key: "C", hint: "add to bucket"}}, "README.md")
 	plain := ansi.Strip(m.renderFull())
-	for _, want := range []string{"README.md", "[C]arry", "add to bucket", "Space close"} {
+	for _, want := range []string{"README.md", "[C]arry", "add to bucket", "Enter run", "Esc close"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("popup missing %q:\n%s", want, plain)
+		}
+	}
+}
+
+// tdp K5: Space closes only the Space menu it opened. Every other spaceMenu
+// instance is a picker opened by Enter or a hotkey, where Space does nothing.
+func TestSpaceClosesOnlyTheSpaceMenu(t *testing.T) {
+	space := tea.KeyMsg{Type: tea.KeySpace, Runes: []rune(" ")}
+	for _, tc := range []struct {
+		name   string
+		menu   spaceMenu
+		closes bool
+	}{
+		{"Space menu", newSpaceMenu(), true},
+		{"global operation popup", newGlobalMenu(), false},
+		{"sort picker", newSortMenu(), false},
+		{"goto picker", newGotoMenu(), false},
+		{"search chooser", newSearchMenu(), false},
+		{"quit picker", newQuitMenu(), false},
+		{"open-with picker", newOpenWithMenu(), false},
+		{"open-in picker", newOpenInMenu(), false},
+	} {
+		m := tc.menu
+		m.setItems([]menuItem{{label: "Carry", key: "C"}}, "x")
+		m.anim.state = popupOpen
+		_, key, cmd := m.update(space)
+		if key != "" {
+			t.Errorf("%s: Space committed %q", tc.name, key)
+		}
+		if closed := cmd != nil; closed != tc.closes {
+			t.Errorf("%s: Space closed = %v, want %v", tc.name, closed, tc.closes)
 		}
 	}
 }
@@ -63,7 +94,7 @@ func TestQuitMenuSingleGlyphAlign(t *testing.T) {
 	// numeral), right-aligned. Rows with very different path widths must still
 	// render to the same width, so the glyphs sit in one clean column on the right.
 	m := newQuitMenu()
-	m.setSize(120)
+	m.setSize(120, 40)
 	m.setItems([]menuItem{
 		{label: "~/Documents/sideproj/filu", key: "1", hint: iconCWD + " "},
 		{label: "~/Downloads", key: "2", hint: tabMark(1) + " "},
@@ -84,8 +115,8 @@ func TestBuildSpaceMenuList(t *testing.T) {
 	m := AppModel{focus: panelList}
 	m.tabs = []listModel{{dir: "/tmp", items: []fileItem{{name: "foo.txt"}}}}
 	items, title := m.buildSpaceMenu()
-	if title != "foo.txt" {
-		t.Errorf("title = %q, want foo.txt", title)
+	if title != "[1] foo.txt" { // tdp D4 "[N] label", label = the cursor item
+		t.Errorf("title = %q, want [1] foo.txt", title)
 	}
 	keys := map[string]bool{}
 	headers := map[string]bool{}
@@ -104,8 +135,8 @@ func TestBuildSpaceMenuList(t *testing.T) {
 	if keys["f"] {
 		t.Error("Favorite should be hidden for a non-dir cursor item")
 	}
-	if !headers["item operation"] || !headers["panel operation"] {
-		t.Errorf("panel [2] menu should label both regions: %v", headers)
+	if !headers["item operation"] || !headers["panel operation"] || headers["global operation"] {
+		t.Errorf("panel [1] menu should label the item and panel regions, not the global row (tdp M2): %v", headers)
 	}
 }
 
@@ -126,10 +157,20 @@ func TestGroupedMenu(t *testing.T) {
 		t.Error("two-region menu needs a separator and a panel-operation header")
 	}
 
-	flat := groupedMenu(nil, panelOps)
-	for _, it := range flat {
-		if it.header || it.separator {
-			t.Errorf("single-region menu should stay flat: %+v", it)
+	// tdp M2 (v0.1.7): the menu always ends with a rule and one Global operation
+	// row, no header over it. With no item operations the panel region keeps
+	// its header even though it is the only region left.
+	last := both[len(both)-1]
+	if last.label != "Global operation" || last.key != globalOpKey || !both[len(both)-2].separator {
+		t.Errorf("menu should end with a rule + the Global operation row: %+v", both[len(both)-2:])
+	}
+	noItem := groupedMenu(nil, panelOps)
+	if !noItem[0].header || noItem[0].label != "panel operation" {
+		t.Errorf("without item operations the panel region should still carry its header: %+v", noItem[0])
+	}
+	for _, it := range noItem {
+		if it.header && it.label == "item operation" {
+			t.Error("an empty item region must not show its header")
 		}
 	}
 }
@@ -174,5 +215,87 @@ func TestZoomFocusSwitch(t *testing.T) {
 	m3.setFocus(panelList)
 	if m3.zoom != 0 {
 		t.Error("switching away from [3]-zoom should exit zoom")
+	}
+}
+
+// panel1Menu is the Space menu for a file row on panel [1], at the given size.
+func panel1Menu(w, h int) spaceMenu {
+	am := AppModel{focus: panelList}
+	am.tabs = []listModel{{dir: "/tmp", items: []fileItem{{name: "foo.txt"}}}}
+	items, title := am.buildSpaceMenu()
+	m := newSpaceMenu()
+	m.setSize(w, h)
+	m.setItems(items, title)
+	m.anim.state = popupOpen
+	return m
+}
+
+// tdp L1: at the family minimum of 80 x 40 the whole [1] menu fits on screen,
+// one line per row (no hint wraps under its label).
+func TestL1SpaceMenuFitsAt80x40(t *testing.T) {
+	m := panel1Menu(80, 40)
+	lines := strings.Split(ansi.Strip(m.renderFull()), "\n")
+	if len(lines) > 40-2 {
+		t.Errorf("menu is %d rows tall at 80x40:\n%s", len(lines), strings.Join(lines, "\n"))
+	}
+	if want := len(m.items) + 4; len(lines) != want { // items + 2 borders + 2 padding
+		t.Errorf("every item should take one line: %d lines for %d items", len(lines), len(m.items))
+	}
+}
+
+// tdp L1: a menu taller than the screen scrolls — the window follows the
+// cursor, so every row can be reached and the box never outgrows the screen.
+func TestSpaceMenuScrollsWithCursor(t *testing.T) {
+	m := panel1Menu(80, 16)
+	for step := 0; step < len(m.items); step++ {
+		out := ansi.Strip(m.renderFull())
+		if lines := strings.Split(out, "\n"); len(lines) > 16-2 {
+			t.Fatalf("step %d: box is %d rows on a 16-row screen", step, len(lines))
+		}
+		cur := bracketHotkey(m.items[m.cursor].label, m.items[m.cursor].key)
+		if !strings.Contains(out, cur) {
+			t.Fatalf("step %d: the cursor row %q scrolled out of view:\n%s", step, cur, out)
+		}
+		m, _, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	}
+	m, _, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")})
+	if out := ansi.Strip(m.renderFull()); !strings.Contains(out, "Global operation") {
+		t.Errorf("G should scroll to the last row:\n%s", out)
+	}
+	m, _, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("g")})
+	if out := ansi.Strip(m.renderFull()); !strings.Contains(out, "item operation") {
+		t.Errorf("g should scroll back to the top, header included:\n%s", out)
+	}
+}
+
+// With room on screen the box widens to the longest hint rather than cutting
+// it: on a wide screen every hint shows in full.
+func TestSpaceMenuWidensForHints(t *testing.T) {
+	m := panel1Menu(160, 50)
+	out := ansi.Strip(m.renderFull())
+	for _, it := range m.items {
+		if !it.header && !it.separator && !strings.Contains(out, it.hint) {
+			t.Errorf("hint %q should show in full on a wide screen:\n%s", it.hint, out)
+		}
+	}
+}
+
+// The rule between regions stops one cell short of each side of the box, so
+// it reads as a divider inside the menu rather than a second border.
+func TestSpaceMenuRuleIsInset(t *testing.T) {
+	m := panel1Menu(100, 40)
+	lines := strings.Split(ansi.Strip(m.renderFull()), "\n")
+	found := false
+	for _, l := range lines {
+		inner := strings.TrimSuffix(strings.TrimPrefix(l, "│"), "│")
+		if strings.Trim(inner, " ") != "" && strings.Trim(strings.TrimSpace(inner), "─") == "" {
+			found = true
+			if !strings.HasPrefix(inner, " ─") || !strings.HasSuffix(inner, "─ ") {
+				t.Errorf("the region rule should have one space each side: %q", inner)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no region rule in the [1] menu")
 	}
 }

@@ -14,23 +14,9 @@
 
 ## Demo
 
-### Getting around filu
-![basics](docs/demo-basics.gif)
+![demo](docs/demo-basics.gif)
 
-### Marks — copy / move across tabs
-![marks](docs/demo-marks.gif)
-
-### Streaming finders — fuzzy name & ripgrep content
-![finders](docs/demo-finders.gif)
-
-### Favorites — star directories, manage them in the [3] Favorites tab
-![favorites](docs/demo-favorites.gif)
-
-### Preview, then yank to the clipboard
-![preview](docs/demo-preview.gif)
-
-### A shell in the active tab's directory
-![shell](docs/demo-shell.gif)
+Getting around filu: panels, tabs, the `Space` menu and the path you can always see.
 
 ## Why filu
 
@@ -44,7 +30,11 @@
 
 ## Install
 
-> filu runs on **macOS and Linux**. On Windows, use it inside WSL.
+### Requirements
+
+- **A Nerd Font** in your terminal — filu's icons are Nerd Font glyphs. CJK Nerd Fonts (e.g. Maple Mono NF CN) work too.
+- **ripgrep** for content search, and **fd** for fast finders (the quick installer and Homebrew handle both).
+- **macOS or Linux** — or WSL on Windows.
 
 ### Quick install
 
@@ -89,10 +79,10 @@ filu opens with the file list focused. Five keys cover the rest:
 | Key | What it does |
 |---|---|
 | **`Tab`** | Move to the next panel (or press `1`–`3` to jump) |
-| **`Enter`** | Go into a directory / confirm a choice |
+| **`Enter`** | Go into a directory, see a file's details, or confirm a choice |
 | **`Space`** | *What can I do here?* — the menu for wherever you are |
 | **`Esc`** | Back out — up one directory, or close a popup |
-| **`?`** | Help — every app-wide action in one list |
+| **`?`** | Keys — what you can press right here (in a popup, that popup's keys) |
 
 ### Let `q` change your shell's directory
 
@@ -118,7 +108,7 @@ Three panels:
 
 ### Browse
 
-- `Enter` goes in, `Esc` goes up; `j` / `k`, `u` / `d` for half a page, `gg` / `G` for top and bottom.
+- `Enter` goes into a directory — on a file it shows the details: full path, type, size, times, permissions, owner. `Esc` goes up; `j` / `k`, `u` / `d` for half a page, `gg` / `G` for top and bottom.
 - `b` jumps up to any parent directory. `.` shows or hides hidden files.
 - `S` sorts by name, modified time, owner, permissions or size — stack several for tie-breaks. The sort sticks to that directory only.
 - `t` opens a new tab (same directory, a favorite, or a search), `w` closes it.
@@ -128,8 +118,8 @@ Three panels:
 
 - `m` marks a file. Marks stay put while you move around, so you can gather from several directories and tabs.
 - Go where the files belong and press `c` to copy or `v` to move them there. Copying keeps your marks, so you can land them in more than one place.
-- In the **Marks** tab: `p` picks just some of them to land, `m` unmarks one, `C` clears them all, and `Z` packs your picks into a zip that you then land with `c` / `v`.
-- Copies and moves run in the background; the **Tasks** tab shows a plain-language log. A task cut short by quitting comes back next time.
+- In the **Marks** tab: `Enter` shows the file in `[1]` (in the tab already at its directory, or a new one), `p` picks just some of them to land, `m` unmarks one, `C` clears them all, and `Z` packs your picks into a zip that you then land with `c` / `v`.
+- Copies and moves run in the background; the **Tasks** tab shows a plain-language log; `Enter` on an entry takes you to where it landed. A task cut short by quitting comes back next time.
 
 ### Find
 
@@ -140,19 +130,19 @@ Three panels:
 ### Favorites
 
 - `f` stars the directory under the cursor; `F` stars the one you're in. Starred directories are marked in the list.
-- The **Favorites** tab lists them: `o` opens one in a new or existing tab, `D` removes it. Goto → Favorites jumps there too.
+- The **Favorites** tab lists them: `Enter` goes there (its tab, or a new one), `o` lets you choose the tab, `D` removes it. Goto → Favorites jumps there too.
 
 ### Preview and copy
 
 - The preview shows text with syntax highlighting and line numbers, directory trees, archive contents, PDFs, images, SVG source, and hex for binaries.
-- `y` in the preview opens it in a scrollable view: `v` starts a selection, `y` copies it (or everything, if nothing is selected).
+- `y` (or `Enter`) in the preview opens it in a scrollable view: `v` starts a selection, `y` copies it (or everything, if nothing is selected). While selecting, `Space` lists the selection keys and runs the one you pick.
 - `y` on a file copies its full path. Copying works through tmux and SSH.
 
 ### Open, edit, and everything else
 
 - `o` opens a file or directory with its default app. `O` lets you choose the app — add your own (VSCode, IntelliJ IDEA, …) in the config.
-- `s` drops you into your shell in the current directory; type `exit` to come back.
-- `r` renames, `a` creates a file (end the name with `/` for a directory), `D` moves to the trash — with a confirmation first.
+- `s` drops you into your shell in the current directory; type `exit` or press `Alt+Esc` to come back (`Alt+Esc` ends the shell, whatever is running in it).
+- `r` renames, `a` creates a file (end the name with `/` for a directory), `D` moves to the trash after asking. A name that is empty or already taken is refused on the spot — the box stays open and says why.
 
 ## Key reference
 
@@ -166,15 +156,15 @@ Three panels:
 
 | Key | Anywhere |
 |---|---|
-| `?` | Help |
-| `q` | Quit, choosing where your shell ends up |
-| `Ctrl+C` | Quit now (stops any copy or move in progress) |
+| `?` | The keys you can press here; `?` or `Esc` closes the list |
+| `q` | Quit, choosing where your shell ends up (while typing, `q` is just a letter) |
+| `Ctrl+C` | Same as `q`, even while typing; press it again on the quit picker to leave at once |
 
-Every panel's `Space` menu:
+Every panel's `Space` menu lists what you can do to the item under the cursor, then to the panel, and ends with **Global operation**, which opens a menu of app-wide actions (for now: Quit `q`). A row that can't run right now — say, Close tab with only one tab open — is shown dimmed.
 
 | Focus | Menu items |
 |---|---|
-| **`[1]` Files** | Open `o`, Open with `O`, Mark `m`, Yank `y`, Rename `r`, Delete `D`, Favorite `f` · Copy `c`, Move `v`, Search `/`, Goto `go`, Favorite dir `F`, Breadcrumb `b`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Shell `s`, Hidden `.`, Zoom `z` |
+| **`[1]` Files** | Open `o`, Open with `O`, Mark `m`, Yank `y`, Rename `r`, Delete `D`, Favorite `f` · Copy `c`, Move `v`, Search `/`, Goto `go`, Favorite dir `F`, Breadcrumb `b`, Switch tab `l`, Tab `t`, Close tab `w`, Add `a`, Sort `S`, Shell `s`, Hidden `.`, Zoom `z` |
 | **`[2]` Preview** | Yank `y`, Zoom `z` |
 | **`[3]` Marks** | Pick `p`, Yank `y`, Unmark `m` · Zip `Z`, Clear `C`, Switch tab `l`, Zoom `z` |
 | **`[3]` Tasks** | Delete `D` · Switch tab `l`, Zoom `z` |
@@ -225,17 +215,21 @@ open_with:
     cmd: idea
 ```
 
-## Requirements
+## Limits
 
-- **A Nerd Font** in your terminal — filu's icons are Nerd Font glyphs. CJK Nerd Fonts (e.g. Maple Mono NF CN) work too.
-- **ripgrep** for content search, and **fd** for fast finders (the quick installer and Homebrew handle both).
-- **macOS or Linux** — or WSL on Windows.
+Not there, on purpose:
+- **native Windows** — filu runs on macOS and Linux; on Windows, run it inside WSL
+- **the mouse** — everything is on the keyboard
+- **directory sizes** — a directory's size shows as `-`; filu never adds up a whole tree
 
-## More
+## Links
 
-- filu shares its design with [kbu](https://github.com/vulcanshen/kbu), a Kubernetes TUI — both follow [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md).
-- Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea). cd-on-quit follows [superfile](https://github.com/yorukot/superfile); the finders take after [LazyVim](https://github.com/LazyVim/LazyVim)'s search.
-- Building from source, platform decisions and implementation notes: [`docs/dev-remarks.md`](docs/dev-remarks.md).
+- [CHANGELOG.md](CHANGELOG.md) — what each release changed
+- [`docs/dev-remarks.md`](docs/dev-remarks.md) — the developer's notes: how it works, why, building from source, releasing
+
+## terminu family
+
+filu follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.7/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [sshu](https://github.com/vulcanshen/sshu) (ssh), [webu](https://github.com/vulcanshen/webu) (the web) and [locku](https://github.com/vulcanshen/locku) (screen lock).
 
 ## License
 

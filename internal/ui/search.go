@@ -128,7 +128,7 @@ func (m *AppModel) openSearchMenu() tea.Cmd {
 		{label: "filename", key: "f", hint: "fuzzy match on file names (fd)"},
 		{label: "content", key: "c", hint: "grep inside files (rg), with preview"},
 	}, "Search…")
-	m.searchMenu.setSize(m.width)
+	m.searchMenu.setSize(m.width, m.height)
 	return m.searchMenu.open()
 }
 
@@ -141,8 +141,17 @@ func (m *AppModel) openSearch() tea.Cmd {
 // openFind opens the by-content finder over the active tab's directory (the
 // Search chooser's `content` pick).
 func (m *AppModel) openFind() tea.Cmd {
+	// Content search is ripgrep; without it every query would read "(no
+	// matches)". Say why instead (tdp F5), and leave the chooser up so the
+	// filename search is one key away.
+	if _, err := lookPath("rg"); err != nil {
+		return m.toast.showError("Cannot search file contents: ripgrep (rg) is not installed")
+	}
 	return m.search.open(m.cur().dir, m.width, m.height, true, false, m.searchCh)
 }
+
+// lookPath finds a helper binary; a var so tests can pretend it is missing.
+var lookPath = exec.LookPath
 
 // openGoto opens the finder over $HOME listing only directories (fuzzy on the
 // path), so Enter teleports the active tab to any directory under home. Typing a
@@ -206,6 +215,7 @@ func blinkTickCmd(gen int) tea.Cmd {
 
 func (m *searchModel) setSize(w, h int)   { m.width, m.height = w, h }
 func (m searchModel) isActive() bool      { return m.anim.isActive() }
+func (m searchModel) owns() bool          { return m.anim.owns() }
 func (m searchModel) isInteractive() bool { return m.anim.isInteractive() }
 
 func (m *searchModel) handleTick(msg AnimTickMsg) tea.Cmd {
@@ -272,7 +282,7 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyEsc:
 			return m, m.anim.close()
-		case tea.KeyEnter:
+		case tea.KeyEnter, tea.KeyTab: // submit the query / Tab to the result list (tdp K2)
 			if len(m.files) > 0 { // hand focus to the list
 				m.mode = searchNav
 			}
@@ -296,7 +306,7 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 	switch msg.String() {
 	case "esc": // leave the finder, like every other popup in the app
 		return m, m.anim.close()
-	case "q": // back to the input to refine the query
+	case "tab": // back to the input to refine the query (tdp K2; q is the leave flow)
 		m.mode = searchInput
 	case "enter": // confirm → reveal in the active tab, then close
 		if p := m.selectedAbs(); p != "" {
@@ -627,7 +637,7 @@ func (m searchModel) renderPopup() string { return m.anim.renderFrame(m.renderFu
 // (wide) or stacked (narrow). Find previews the file's content, Search the file
 // from the top, Goto the selected directory's tree.
 func (m searchModel) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	side, sW, sRows, pW, pRows := m.geometry()
 	title := " Search"
 	switch {
@@ -757,7 +767,7 @@ func (m searchModel) inputBar(w int) string {
 
 func (m searchModel) hint() string {
 	if m.mode == searchNav {
-		return " j/k/u/d · Enter=go · q=input · Esc=close "
+		return " j/k/u/d · Enter=go · Tab=input · Esc=close "
 	}
 	return " Enter=list · Esc=close "
 }

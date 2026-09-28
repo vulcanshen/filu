@@ -32,9 +32,17 @@ type menuItem struct {
 	separator bool   // non-selectable horizontal rule
 	header    bool   // non-selectable region label (dim, or red when warn)
 	warn      bool   // header rendered as a red warning line
+	// disabled: the target exists but the action can't run right now (tdp M6).
+	// The row is drawn dim with its usual hint; the cursor can rest on it, but
+	// neither Enter nor its hotkey does anything.
+	disabled bool
 }
 
-// spaceMenu is the §A.1 contextual popup, following kbu's form (animation,
+// disabledColor draws a row that can't run right now: dimmer than the hint and
+// header text, so it reads as present but out of reach (tdp M6).
+const disabledColor = lipgloss.Color("#585b70") // surface2
+
+// spaceMenu is the Space menu (tdp K5, M2), following kbu's form (animation,
 // layout, colour layer).
 type spaceMenu struct {
 	anim    popupAnimator
@@ -42,15 +50,30 @@ type spaceMenu struct {
 	cursor  int
 	title   string
 	screenW int
+	screenH int
+	// top is the first row shown when the menu is taller than the screen: the
+	// window follows the cursor (tdp L1 - every row stays reachable at 80 x 40).
+	top int
 	// hintRight right-aligns each row's hint to the box's right edge instead of
 	// left-aligning it to a shared column. Suits a single trailing glyph (the quit
 	// picker's launch icon / tab numeral), not an action description whose
 	// left-aligned column reads better — so it is off for the normal Space menu.
 	hintRight bool
+	// spaceToggle marks the real Space menu: Space closes it again (tdp K5). Every
+	// other spaceMenu instance is a picker opened by Enter or a hotkey, where Space
+	// does nothing and only Esc (or its own flow) closes it.
+	spaceToggle bool
 }
 
 func newSpaceMenu() spaceMenu {
-	return spaceMenu{anim: newPopupAnimator("spacemenu", popupLayerColor(1))}
+	return spaceMenu{anim: newPopupAnimator("spacemenu", popupLayerColor(1)), spaceToggle: true}
+}
+
+// newGlobalMenu is the spaceMenu instance used as the global operation popup: a
+// menu of globalActions opened from the Space menu's last row. Space does not
+// close it (it is not the Space menu); Esc returns to the Space menu.
+func newGlobalMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("globalmenu", popupLayerColor(1))}
 }
 
 // newSortMenu is a second spaceMenu instance reused as the sort picker; the
@@ -95,12 +118,46 @@ func (m *spaceMenu) setItems(items []menuItem, title string) {
 	m.items = items
 	m.title = title
 	m.cursor = m.firstSelectable()
+	m.top = 0
+	m.scroll()
 }
 
-func (m *spaceMenu) setSize(w int)      { m.screenW = w }
+func (m *spaceMenu) setSize(w, h int) {
+	m.screenW, m.screenH = w, h
+	m.scroll()
+}
+
+// menuChrome is the rows around the menu's items: two borders, two padding
+// rows, and a row of screen above and below so the box never touches the edge.
+const menuChrome = 6
+
+// visible is how many item rows fit on screen (all of them when the height is
+// not known yet).
+func (m spaceMenu) visible() int {
+	if m.screenH <= 0 {
+		return max(len(m.items), 1)
+	}
+	return max(m.screenH-menuChrome, 3)
+}
+
+// scroll moves the window just enough to keep the cursor row in it.
+func (m *spaceMenu) scroll() {
+	vis := m.visible()
+	if m.cursor < m.top {
+		m.top = m.cursor
+	}
+	if m.cursor >= m.top+vis {
+		m.top = m.cursor - vis + 1
+	}
+	m.top = max(0, min(m.top, max(0, len(m.items)-vis)))
+	if m.top > 0 && m.top <= len(m.items) && m.cursor == m.firstSelectable() {
+		m.top = 0 // at the first stop, show the region header above it too
+	}
+}
 func (m *spaceMenu) open() tea.Cmd      { return m.anim.open() }
 func (m *spaceMenu) close() tea.Cmd     { return m.anim.close() }
 func (m spaceMenu) isActive() bool      { return m.anim.isActive() }
+func (m spaceMenu) owns() bool          { return m.anim.owns() }
 func (m spaceMenu) isInteractive() bool { return m.anim.isInteractive() }
 func (m *spaceMenu) handleTick(msg AnimTickMsg) tea.Cmd {
 	if msg.Target != m.anim.target {
@@ -119,21 +176,33 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
 		m.cursor = m.nextSelectable(m.cursor)
+		m.scroll()
 	case "k", "up":
 		m.cursor = m.prevSelectable(m.cursor)
+		m.scroll()
 	case "g":
 		m.cursor = m.firstSelectable()
+		m.scroll()
 	case "G":
 		m.cursor = m.lastSelectable()
+		m.top = len(m.items) // bottom out, so the rows after the last stop show too
+		m.scroll()
 	case "enter":
-		if it := m.at(m.cursor); it != nil {
+		if it := m.at(m.cursor); it != nil && !it.disabled {
 			return m, it.key, nil
 		}
-	case "esc", " ":
+	case "esc":
 		return m, "", m.anim.close()
+	case " ":
+		if m.spaceToggle {
+			return m, "", m.anim.close()
+		}
 	default:
 		for _, it := range m.items {
 			if !it.separator && !it.header && it.key == msg.String() {
+				if it.disabled { // the hotkey of a dimmed row does nothing (tdp M6)
+					return m, "", nil
+				}
 				return m, it.key, nil
 			}
 		}
@@ -219,37 +288,36 @@ func bracketHotkey(label, key string) string {
 // title embedded in the top border, hint in the bottom border, rows of
 // "[K]label   hint", cursor row reverse-highlighted.
 func (m spaceMenu) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f849c"))
+	dimStyle := lipgloss.NewStyle().Foreground(dimColor)
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
 
 	title := " " + m.title
-	hint := " j/k move   Space close "
+	hint := " j/k move · Enter run · Esc close "
 
-	const maxHintW = 44 // a longer hint wraps onto continuation lines, not widens the box
-	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
+	// One line per row (the family form): labels in a column as wide as the
+	// widest label, each hint on the same line after it. The box widens to fit
+	// the longest hint up to the screen cap; only past that is a hint cut.
+	const gutter = "  "
+	labelW, hintW := 0, 0
 	for _, it := range m.items {
-		if it.separator {
+		if it.separator || it.header {
 			continue
 		}
-		labelW := lipgloss.Width(bracketHotkey(it.label, it.key))
-		var w int
-		switch {
-		case it.header: // full-width label, no hint column
-			w = 1 + 2 + labelW + 1
-		case m.hintRight: // label + ≥2 gap + hint, hint flush to the right edge
-			w = 1 + 2 + labelW + 2 + lipgloss.Width(it.hint) + 1
-		default: // label padded to a 16-wide column, then the (wrappable) hint
-			w = 1 + 2 + labelW + max(2, 16-labelW) + min(lipgloss.Width(it.hint), maxHintW) + 1
-		}
-		if w > innerW {
-			innerW = w
+		labelW = max(labelW, lipgloss.Width(bracketHotkey(it.label, it.key)))
+		hintW = max(hintW, lipgloss.Width(it.hint))
+	}
+	labelCol := labelW + 2
+	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4, 1+len(gutter)+labelCol+hintW+1)
+	for _, it := range m.items {
+		if it.header {
+			innerW = max(innerW, 1+len(gutter)+lipgloss.Width(it.label)+1)
 		}
 	}
 	innerW = min(innerW, maxInnerWidth(m.screenW))
 
-	const gutter = "  "
-	var rows []string
+	rows := make([]string, 0, len(m.items))
 	for i, it := range m.items {
 		switch {
 		case it.header:
@@ -257,73 +325,42 @@ func (m spaceMenu) renderFull() string {
 			if it.warn {
 				style = lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8")).Bold(true) // red
 			}
-			rows = append(rows, " "+gutter+style.Render(it.label))
+			rows = append(rows, " "+gutter+style.Render(truncate(it.label, innerW-1-len(gutter))))
 			continue
-		case it.separator:
-			rows = append(rows, lipgloss.NewStyle().Foreground(bc).Render(strings.Repeat("─", innerW)))
+		case it.separator: // a dim rule between regions (tdp M2), inset one cell from each side
+			rows = append(rows, " "+dimStyle.Render(strings.Repeat("─", max(innerW-2, 0)))+" ")
 			continue
 		}
 		labelDisplay := bracketHotkey(it.label, it.key)
+		rowLabel, rowHint, rowCursor := lipgloss.NewStyle(), hintStyle, cursorStyle
+		if it.disabled { // label and hint both dim; the cursor bar greys out too
+			rowLabel = lipgloss.NewStyle().Foreground(disabledColor)
+			rowHint = rowLabel
+			rowCursor = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(disabledColor).Bold(true)
+		}
 
+		lead := " " + gutter + labelDisplay
+		var gap string
 		if m.hintRight {
-			// Single trailing glyph right-aligned to the inner edge (the quit
-			// picker). Front-pad so the glyph ends flush at innerW-1 whatever the
-			// label's width, so the glyphs line up in a column on the right.
-			lead := " " + gutter + labelDisplay
-			line := lead + strings.Repeat(" ", max(2, innerW-1-lipgloss.Width(lead)-lipgloss.Width(it.hint)))
-			if i == m.cursor {
-				rows = append(rows, cursorStyle.Render(line+it.hint))
-			} else {
-				rows = append(rows, line+hintStyle.Render(it.hint))
-			}
-			continue
+			// A single trailing glyph right-aligned to the inner edge (the quit
+			// picker), so the glyphs line up in a column whatever the labels.
+			gap = strings.Repeat(" ", max(2, innerW-1-lipgloss.Width(lead)-lipgloss.Width(it.hint)))
+		} else {
+			gap = strings.Repeat(" ", max(2, labelCol-lipgloss.Width(labelDisplay)))
 		}
+		h := truncate(it.hint, max(innerW-1-lipgloss.Width(lead)-len(gap), 1))
+		pad := strings.Repeat(" ", max(0, innerW-lipgloss.Width(lead)-len(gap)-lipgloss.Width(h)))
+		if i == m.cursor {
+			rows = append(rows, rowCursor.Render(lead+gap+h+pad))
+		} else {
+			rows = append(rows, rowLabel.Render(lead)+gap+rowHint.Render(h)+pad)
+		}
+	}
 
-		gap := strings.Repeat(" ", max(2, 16-lipgloss.Width(labelDisplay)))
-		hintCol := 1 + len(gutter) + lipgloss.Width(labelDisplay) + lipgloss.Width(gap)
-		hintW := max(innerW-1-hintCol, 8)
-		indent := strings.Repeat(" ", hintCol)
-		for j, hl := range wrapText(it.hint, hintW) { // long hints wrap under the label
-			lead := indent
-			if j == 0 {
-				lead = " " + gutter + labelDisplay + gap
-			}
-			padW := max(0, innerW-1-lipgloss.Width(lead)-lipgloss.Width(hl))
-			if i == m.cursor {
-				rows = append(rows, cursorStyle.Render(lead+hl+strings.Repeat(" ", padW)))
-			} else {
-				rows = append(rows, lead+hintStyle.Render(hl)+strings.Repeat(" ", padW))
-			}
-		}
+	// Taller than the screen: show the window that holds the cursor (scroll).
+	if vis := m.visible(); len(rows) > vis {
+		top := max(0, min(m.top, len(rows)-vis))
+		rows = rows[top : top+vis]
 	}
 	return drawPopupBox(bc, title, hint, rows, innerW)
-}
-
-// wrapText word-wraps s to width, hard-cutting any single word that alone
-// overruns it so a row can never overflow the box.
-func wrapText(s string, width int) []string {
-	if width < 1 {
-		width = 1
-	}
-	words := strings.Fields(s)
-	if len(words) == 0 {
-		return []string{""}
-	}
-	var lines []string
-	cur := ""
-	for _, w := range words {
-		if lipgloss.Width(w) > width {
-			w = truncate(w, width)
-		}
-		switch {
-		case cur == "":
-			cur = w
-		case lipgloss.Width(cur)+1+lipgloss.Width(w) <= width:
-			cur += " " + w
-		default:
-			lines = append(lines, cur)
-			cur = w
-		}
-	}
-	return append(lines, cur)
 }

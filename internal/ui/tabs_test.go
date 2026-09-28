@@ -83,9 +83,9 @@ func TestTabMenuNewTab(t *testing.T) {
 	}
 }
 
-// TestTabLimitToast: at maxTabs, t is blocked with a toast — the new-tab menu
-// does not open and no tab is added.
-func TestTabLimitToast(t *testing.T) {
+// TestTabLimitDoesNothing: at maxTabs, t does nothing (tdp M6: the menu row is
+// dimmed, not toasted) — the new-tab menu does not open and no tab is added.
+func TestTabLimitDoesNothing(t *testing.T) {
 	m := minModel()
 	m.search, m.toast = newSearch(), newToast()
 	m.tabs = []listModel{newList(t.TempDir())}
@@ -96,8 +96,8 @@ func TestTabLimitToast(t *testing.T) {
 		t.Fatalf("setup: want %d tabs, got %d", maxTabs, len(m.tabs))
 	}
 
-	if cmd := m.handleListKey("t"); cmd == nil { // t at the cap → toast
-		t.Error("t at the cap should return a toast cmd")
+	if cmd := m.handleListKey("t"); cmd != nil { // t at the cap → nothing, no toast
+		t.Error("t at the cap should do nothing, not toast")
 	}
 	if m.gotoMenu.isActive() {
 		t.Error("t at the cap must not open the new-tab menu")

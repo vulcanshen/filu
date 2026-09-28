@@ -65,7 +65,8 @@ type AppModel struct {
 	places            placesModel
 	marks             marksModel
 	marksTab          int               // panel [3] active tab: 0 Marks / 1 Tasks / 2 Favorites
-	spaceMenu         spaceMenu         // §A.1 contextual popup (kbu form)
+	spaceMenu         spaceMenu         // Space menu (tdp K5, M2), kbu form
+	globalMenu        spaceMenu         // the global operation popup, opened from the Space menu's last row (tdp M4)
 	sortMenu          spaceMenu         // sort picker (column→direction chain, kbu form)
 	sortStep          sortStep          // which step the sort picker is on
 	sortFlowCol       sortCol           // column carried from the column step to direction
@@ -85,7 +86,10 @@ type AppModel struct {
 	pendingDelete     string            // path awaiting delete confirmation
 	pendingUnfavorite string            // favorite path awaiting unfavorite confirmation
 	inputPopup        inputPopup        // text prompt (rename / add)
-	help              helpPopup         // §A.2 global help cheatsheet
+	help              helpPopup         // ? key reference of the frontmost surface (tdp K6, M4)
+	quitHelp          helpPopup         // ? key reference of the quit picker, over it
+	meta              metaPopup         // file information box, Enter on a file row (tdp K3)
+	modeList          modeList          // the yank viewport selection mode key list, Space while selecting (tdp K11)
 	splash            splashModel       // hidden easter-egg logo (V)
 	toast             toastModel        // transient notification (yank feedback)
 	detailYank        detailYank        // panel [2] yank viewport (cursor + visual selection)
@@ -102,6 +106,7 @@ type AppModel struct {
 	watcher           *fsnotify.Watcher // live directory watch (nil if unavailable)
 	watchCh           chan watchMsg     // watcher goroutine → UI
 	watched           map[string]bool   // dirs currently registered with the watcher
+	startupErr        string            // a problem found while starting up (a bad config.yaml), shown once Init runs (tdp F5)
 }
 
 // maxTabs caps panel [1]'s directory tabs. It opens with one (at the CWD); the
@@ -113,7 +118,7 @@ const maxTabs = 5
 // focusName is set (the `filu <file>` case) the cursor lands on that entry.
 // Extra tabs the user created last session are restored by applyState.
 func New(startDir, focusName string) AppModel {
-	loadConfig() // apply config.yaml (finder cap) before any finder can open
+	configErr := loadConfig() // apply config.yaml (finder cap) before any finder can open
 	dir := startDir
 	if dir == "" {
 		wd, err := os.Getwd()
@@ -122,12 +127,15 @@ func New(startDir, focusName string) AppModel {
 		}
 		dir = wd
 	}
-	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), quitHelp: newQuitHelp(), meta: newMetaPopup(), modeList: newModeList(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	first := newList(dir)
 	if focusName != "" && !first.focusEntry(focusName) { // `filu <file>`: land on the passed file
 		first.showHidden = true // not listed — it's a dotfile; reveal hidden and retry
 		first.reload()
 		first.focusEntry(focusName)
+	}
+	if configErr != nil {
+		m.startupErr = opFailedText("read config.yaml", configErr) + " (using the defaults)"
 	}
 	m.tabs = []listModel{first}
 	if st, ok := loadState(); ok { // restore last session
@@ -144,11 +152,48 @@ func New(startDir, focusName string) AppModel {
 
 // shutdown persists the session, stops the watcher, and quits.
 func (m *AppModel) shutdown() tea.Cmd {
-	saveState(m.snapshotState()) // restore this session on next launch
+	_ = saveState(m.snapshotState()) // restore this session on next launch (quitting: no screen left to report on)
 	if m.watcher != nil {
 		m.watcher.Close()
 	}
 	return tea.Quit
+}
+
+// clearStack closes every popup still in the stack: once an action is done, the
+// menus and pickers that led to it have nothing left to offer (tdp T1, D3).
+func (m *AppModel) clearStack() tea.Cmd {
+	var cmds []tea.Cmd
+	for _, a := range m.stackOrder() {
+		if a.owns() {
+			cmds = append(cmds, a.close())
+		}
+	}
+	return tea.Batch(cmds...)
+}
+
+// boxOverSpaceMenu reports whether a popup (or the shell) now holds the keyboard
+// above the Space menu — the quit picker included, which a row can open too.
+func (m *AppModel) boxOverSpaceMenu() bool {
+	for _, a := range m.stackOrder() {
+		if a != &m.spaceMenu.anim && a.owns() {
+			return true
+		}
+	}
+	return m.pty.isActive()
+}
+
+// persist saves the session; a failed save shows at once (tdp F5).
+func (m *AppModel) persist() tea.Cmd {
+	if err := saveState(m.snapshotState()); err != nil {
+		return m.toast.showError(opFailedText("save the session", err))
+	}
+	return nil
+}
+
+// typing reports whether keys are text entry right now (tdp K8): the input
+// popup, or the finder's query line. Letter keys, q included, are characters.
+func (m AppModel) typing() bool {
+	return m.inputPopup.owns() || (m.search.owns() && m.search.mode == searchInput)
 }
 
 // cur returns a pointer to the active directory tab.
@@ -161,16 +206,16 @@ func (m *AppModel) addTab(dir string) {
 	m.tab = len(m.tabs) - 1
 }
 
-// tabLimitToast is the message shown when t would exceed maxTabs.
-func tabLimitToast() string {
-	return "Tab limit reached (" + strconv.Itoa(maxTabs) + ") — close one with w"
-}
-
 // active returns the active tab by value (read-only paths).
 func (m AppModel) active() listModel { return m.tabs[m.tab] }
 
 func (m AppModel) Init() tea.Cmd { // persistent readers: land results, live-refresh, finder stream
-	return tea.Batch(m.waitLand(), m.waitWatch(), m.waitSearch())
+	cmds := []tea.Cmd{m.waitLand(), m.waitWatch(), m.waitSearch()}
+	if m.startupErr != "" {
+		text := m.startupErr
+		cmds = append(cmds, func() tea.Msg { return opFailedMsg{text} })
+	}
+	return tea.Batch(cmds...)
 }
 
 // waitSearch reads one batch of the finder's streamed file listing.
@@ -182,13 +227,14 @@ func (m AppModel) waitSearch() tea.Cmd {
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case landMsg:
-		m.handleLandMsg(msg)
-		return m, m.waitLand()
+		return m, tea.Batch(m.handleLandMsg(msg), m.waitLand())
 	case watchMsg:
 		m.handleWatchMsg(msg)
 		return m, m.waitWatch()
 	case clipboardCopiedMsg:
 		return m, m.toast.show(msg.note)
+	case opFailedMsg: // an open / open-with launch that failed off the UI goroutine (tdp F5)
+		return m, m.toast.showError(msg.text)
 	case clipboardFailedMsg:
 		return m, m.toast.show("Clipboard unavailable")
 	case toastDismissMsg:
@@ -226,7 +272,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.syncWatches() // the tab may have moved to a new dir
 		m.refreshPreview()
-		return m, nil
+		return m, m.clearStack() // the pick is made: the chooser / Goto picker and Space menu go too (T1)
 	case spinnerTickMsg:
 		m.spinnerFrame++
 		if m.anyRunning() {
@@ -237,15 +283,19 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
-		m.spaceMenu.setSize(msg.Width)
-		m.sortMenu.setSize(msg.Width)
-		m.quitMenu.setSize(msg.Width)
-		m.openWithMenu.setSize(msg.Width)
-		m.gotoMenu.setSize(msg.Width)
-		m.openInMenu.setSize(msg.Width)
+		m.spaceMenu.setSize(msg.Width, msg.Height)
+		m.globalMenu.setSize(msg.Width, msg.Height)
+		m.sortMenu.setSize(msg.Width, msg.Height)
+		m.quitMenu.setSize(msg.Width, msg.Height)
+		m.openWithMenu.setSize(msg.Width, msg.Height)
+		m.gotoMenu.setSize(msg.Width, msg.Height)
+		m.openInMenu.setSize(msg.Width, msg.Height)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
-		m.help.setSize(msg.Width)
+		m.help.setSize(msg.Width, msg.Height)
+		m.quitHelp.setSize(msg.Width, msg.Height)
+		m.meta.setSize(msg.Width, msg.Height)
+		m.modeList.setSize(msg.Width)
 		m.toast.setSize(msg.Width)
 		m.detailYank.setSize(msg.Width, msg.Height)
 		m.pty.setSize(msg.Width, msg.Height)
@@ -256,7 +306,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.quitHelp.handleTick(msg), m.meta.handleTick(msg), m.modeList.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)
@@ -267,40 +317,64 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.splash, cmd = m.splash.update(msg)
 			return m, cmd
 		}
-		if m.pty.isActive() { // the embedded editor owns every keystroke
+		if m.pty.isActive() { // the shell owns every keystroke but the exit key (tdp K10)
+			if isExitKey(msg) {
+				return m, m.pty.exit()
+			}
 			return m, m.pty.update(msg)
 		}
-		if m.detailYank.isActive() { // yank viewport owns the keyboard while open
-			if !m.detailYank.isInteractive() {
+		if m.toast.owns() && msg.String() == "esc" { // tdp F3: Esc closes the toast before anything beneath it
+			return m, m.toast.closeNow()
+		}
+		// tdp K9: q and Ctrl-C lead into the leave flow (the cd-on-quit picker)
+		// from any surface. The picker stacks on top of whatever is open, so Esc
+		// on it returns there (D3); Ctrl-C on the picker leaves at once. Ctrl-C
+		// works while typing too (K8); q is a character there.
+		if m.quitHelp.owns() { // the quit picker's key reference, over the picker
+			if msg.String() == "ctrl+c" { // the leave flow is up: Ctrl-C leaves at once
+				return m, m.shutdown()
+			}
+			if !m.quitHelp.isInteractive() {
 				return m, nil
 			}
 			var cmd tea.Cmd
-			m.detailYank, cmd = m.detailYank.update(msg)
+			m.quitHelp, cmd = m.quitHelp.update(msg)
 			return m, cmd
 		}
-		if m.search.isActive() { // fuzzy finder owns the keyboard while open
-			if !m.search.isInteractive() {
+		if m.quitMenu.owns() {
+			if msg.String() == "ctrl+c" {
+				return m, m.shutdown()
+			}
+			if !m.quitMenu.isInteractive() {
 				return m, nil
 			}
-			var cmd tea.Cmd
-			m.search, cmd = m.search.update(msg)
-			return m, cmd
-		}
-		if m.breadcrumb.isActive() { // ancestor-jump popup owns the keyboard while open
-			if !m.breadcrumb.isInteractive() {
-				return m, nil
+			if msg.String() == "?" { // its own key reference, stacked over it (tdp K6, D3)
+				return m, m.quitHelp.open("Quit keys", quitKeyRef(len(m.quitTargets())))
 			}
-			var path string
+			var key string
 			var cmd tea.Cmd
-			m.breadcrumb, path, cmd = m.breadcrumb.update(msg)
-			if path != "" { // Enter on a level: jump the active tab there
-				m.revealPath(path)
-				m.cur().ensureVisible(m.listRows())
-				m.refreshPreview()
+			m.quitMenu, key, cmd = m.quitMenu.update(msg)
+			if idx, err := strconv.Atoi(key); err == nil { // a number → that distinct dir
+				if targets := m.quitTargets(); idx >= 1 && idx <= len(targets) {
+					return m, m.quitTo(targets[idx-1].dir)
+				}
 			}
 			return m, cmd
 		}
-		if m.help.isActive() { // modal cheatsheet
+		if k := msg.String(); k == "ctrl+c" || (k == "q" && !m.typing()) {
+			return m, m.openQuitMenu()
+		}
+		// tdp K6: ? answers on every surface with the key reference of whatever is
+		// frontmost — the popup on top, or the focused panel. While typing it is a
+		// character (K8); on the key reference itself it closes it.
+		if msg.String() == "?" && !m.typing() && !m.help.owns() {
+			title, rows := m.keyRef()
+			m.help.setSize(m.width, m.height)
+			return m, m.help.open(title, rows)
+		}
+		// Popups, top of the stack first (the reverse of View's draw order,
+		// stackOrder): the popup on top takes the key (tdp D3).
+		if m.help.owns() { // modal cheatsheet
 			if !m.help.isInteractive() {
 				return m, nil
 			}
@@ -308,7 +382,70 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help, cmd = m.help.update(msg)
 			return m, cmd
 		}
-		if m.inputPopup.isActive() { // text entry owns the keyboard while open
+		if m.search.owns() { // fuzzy finder owns the keyboard while open
+			if !m.search.isInteractive() {
+				return m, nil
+			}
+			var cmd tea.Cmd
+			m.search, cmd = m.search.update(msg)
+			return m, cmd
+		}
+		if m.meta.owns() { // file information box: read only, scrolls
+			if !m.meta.isInteractive() {
+				return m, nil
+			}
+			var cmd tea.Cmd
+			m.meta, cmd = m.meta.update(msg)
+			return m, cmd
+		}
+		if m.modeList.owns() { // the selection mode's key list, over the viewport
+			if !m.modeList.isInteractive() {
+				return m, nil
+			}
+			var run []string
+			var cmd tea.Cmd
+			m.modeList, run, cmd = m.modeList.update(msg)
+			cmds := []tea.Cmd{cmd}
+			for _, k := range run { // the row runs on the viewport as if its keys were pressed
+				var c tea.Cmd
+				m.detailYank, c = m.detailYank.update(keyMsgFor(k))
+				cmds = append(cmds, c)
+			}
+			return m, tea.Batch(cmds...)
+		}
+		if m.detailYank.owns() { // yank viewport owns the keyboard while open
+			if !m.detailYank.isInteractive() {
+				return m, nil
+			}
+			if m.detailYank.visual { // selecting is a mode (tdp K11)
+				switch msg.String() {
+				case " ": // Space lists the mode's keys
+					m.modeList.setSize(m.width)
+					return m, m.modeList.open()
+				case "tab": // Tab is suspended here, but answers
+					return m, m.toast.show("Esc leaves the selection first")
+				}
+			}
+			var cmd tea.Cmd
+			m.detailYank, cmd = m.detailYank.update(msg)
+			return m, cmd
+		}
+		if m.breadcrumb.owns() { // ancestor-jump popup owns the keyboard while open
+			if !m.breadcrumb.isInteractive() {
+				return m, nil
+			}
+			var path string
+			var cmd tea.Cmd
+			m.breadcrumb, path, cmd = m.breadcrumb.update(msg)
+			if path != "" { // Enter on a level: jump the active tab there
+				cmd = tea.Batch(cmd, m.clearStack())
+				m.revealPath(path)
+				m.cur().ensureVisible(m.listRows())
+				m.refreshPreview()
+			}
+			return m, cmd
+		}
+		if m.inputPopup.owns() { // text entry owns the keyboard while open
 			if !m.inputPopup.isInteractive() {
 				return m, nil
 			}
@@ -316,11 +453,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.inputPopup, ok, cmd = m.inputPopup.update(msg)
 			if ok {
-				cmd = tea.Batch(cmd, m.performInput())
+				cmd = tea.Batch(cmd, m.performInput(), m.clearStack())
 			}
 			return m, cmd
 		}
-		if m.confirm.isActive() { // modal: owns the keyboard while open
+		if m.confirm.owns() { // modal: owns the keyboard while open
 			if !m.confirm.isInteractive() {
 				return m, nil
 			}
@@ -330,7 +467,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if ok {
 				switch m.confirmAction {
 				case confirmDelete:
-					_ = moveToTrash(m.pendingDelete)
+					if err := moveToTrash(m.pendingDelete); err != nil {
+						cmd = tea.Batch(cmd, m.toast.showError(opFailedText("move "+filepath.Base(m.pendingDelete)+" to the trash", err)))
+					}
 					m.pendingDelete = ""
 					m.cur().reload()
 					m.cur().ensureVisible(m.listRows())
@@ -343,41 +482,59 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.places.unpin(m.pendingUnfavorite)
 					m.pendingUnfavorite = ""
 					m.places.clampCursor()
-					saveState(m.snapshotState())
+					cmd = tea.Batch(cmd, m.persist())
 				case confirmClearMarks:
 					m.marks.clear()
 					m.cur().reload() // the list's mark column follows the bucket
-					saveState(m.snapshotState())
+					cmd = tea.Batch(cmd, m.persist())
 				}
 				m.confirmAction = confirmNone
+				cmd = tea.Batch(cmd, m.clearStack()) // the action is done: the menus that led here go too (T1)
 			}
 			return m, cmd
 		}
-		if m.spaceMenu.isActive() { // popup owns the keyboard while open
-			if !m.spaceMenu.isInteractive() {
-				return m, nil // swallow keys mid-animation
-			}
-			var key string
-			var cmd tea.Cmd
-			m.spaceMenu, key, cmd = m.spaceMenu.update(msg)
-			if key != "" { // committed: fire on the focused panel, then close
-				cmd = tea.Batch(cmd, m.dispatchFocusKey(key), m.spaceMenu.close())
-			}
-			return m, cmd
-		}
-		if m.sortMenu.isActive() { // sort picker owns the keyboard; commits drive the chain flow
-			if !m.sortMenu.isInteractive() {
+		if m.openWithMenu.owns() { // [o]pen picker; a commit launches the app
+			if !m.openWithMenu.isInteractive() {
 				return m, nil
 			}
 			var key string
 			var cmd tea.Cmd
-			m.sortMenu, key, cmd = m.sortMenu.update(msg)
-			if key != "" { // stays open, swapping to the next step / looping back
-				cmd = tea.Batch(cmd, m.advanceSortFlow(key))
+			m.openWithMenu, key, cmd = m.openWithMenu.update(msg)
+			if idx, err := strconv.Atoi(key); err == nil { // a number → that app (1 = Default)
+				if run := m.runOpenWith(idx); run != nil {
+					return m, tea.Batch(run, m.clearStack())
+				}
 			}
 			return m, cmd
 		}
-		if m.gotoMenu.isActive() { // Goto picker: Favorites drill-down or Search finder
+		if m.searchMenu.owns() { // Search chooser: filename vs content, then open the finder
+			if !m.searchMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.searchMenu, key, cmd = m.searchMenu.update(msg)
+			switch key { // the chooser stays beneath the finder, so Esc there comes back (tdp F4)
+			case "f": // filename → the by-name (fd) finder
+				return m, m.openSearch()
+			case "c": // content → the by-content (rg) finder
+				return m, m.openFind()
+			}
+			return m, cmd
+		}
+		if m.openInMenu.owns() { // Favorites "Open dir in…" picker
+			if !m.openInMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.openInMenu, key, cmd = m.openInMenu.update(msg)
+			if key != "" {
+				cmd = tea.Batch(cmd, m.advanceOpenIn(key), m.clearStack())
+			}
+			return m, cmd
+		}
+		if m.gotoMenu.owns() { // Goto picker: Favorites drill-down or Search finder
 			if !m.gotoMenu.isInteractive() {
 				return m, nil
 			}
@@ -392,57 +549,46 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.openInMenu.isActive() { // Favorites "Open dir in…" picker
-			if !m.openInMenu.isInteractive() {
+		if m.sortMenu.owns() { // sort picker owns the keyboard; commits drive the chain flow
+			if !m.sortMenu.isInteractive() {
 				return m, nil
 			}
 			var key string
 			var cmd tea.Cmd
-			m.openInMenu, key, cmd = m.openInMenu.update(msg)
+			m.sortMenu, key, cmd = m.sortMenu.update(msg)
+			if key != "" { // stays open, swapping to the next step / looping back
+				cmd = tea.Batch(cmd, m.advanceSortFlow(key))
+			}
+			return m, cmd
+		}
+		if m.globalMenu.owns() { // global operation popup, over the Space menu
+			if !m.globalMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.globalMenu, key, cmd = m.globalMenu.update(msg)
 			if key != "" {
-				cmd = tea.Batch(cmd, m.advanceOpenIn(key))
+				cmd = tea.Batch(cmd, m.runGlobalAction(key))
 			}
 			return m, cmd
 		}
-		if m.searchMenu.isActive() { // Search chooser: filename vs content, then open the finder
-			if !m.searchMenu.isInteractive() {
-				return m, nil
+		if m.spaceMenu.owns() { // popup owns the keyboard while open
+			if !m.spaceMenu.isInteractive() {
+				return m, nil // swallow keys mid-animation
 			}
 			var key string
 			var cmd tea.Cmd
-			m.searchMenu, key, cmd = m.searchMenu.update(msg)
-			switch key {
-			case "f": // filename → the by-name (fd) finder
-				return m, tea.Batch(m.searchMenu.close(), m.openSearch())
-			case "c": // content → the by-content (rg) finder
-				return m, tea.Batch(m.searchMenu.close(), m.openFind())
+			m.spaceMenu, key, cmd = m.spaceMenu.update(msg)
+			if key == globalOpKey { // the global row opens its popup over the menu (tdp M4, F4)
+				return m, tea.Batch(cmd, m.openGlobalMenu())
 			}
-			return m, cmd
-		}
-		if m.quitMenu.isActive() { // cd-on-quit picker; a commit cds and quits
-			if !m.quitMenu.isInteractive() {
-				return m, nil
-			}
-			var key string
-			var cmd tea.Cmd
-			m.quitMenu, key, cmd = m.quitMenu.update(msg)
-			if idx, err := strconv.Atoi(key); err == nil { // a number → that distinct dir
-				if targets := m.quitTargets(); idx >= 1 && idx <= len(targets) {
-					return m, m.quitTo(targets[idx-1].dir)
-				}
-			}
-			return m, cmd
-		}
-		if m.openWithMenu.isActive() { // [o]pen picker; a commit launches the app
-			if !m.openWithMenu.isInteractive() {
-				return m, nil
-			}
-			var key string
-			var cmd tea.Cmd
-			m.openWithMenu, key, cmd = m.openWithMenu.update(msg)
-			if idx, err := strconv.Atoi(key); err == nil { // a number → that app (1 = Default)
-				if run := m.runOpenWith(idx); run != nil {
-					return m, tea.Batch(run, m.openWithMenu.close())
+			if key != "" { // committed: fire on the focused panel
+				cmd = tea.Batch(cmd, m.dispatchFocusKey(key))
+				// A row that opened a popup keeps the menu beneath it, so Esc there
+				// comes back (tdp F4); a row that just ran closes the menu.
+				if !m.boxOverSpaceMenu() {
+					cmd = tea.Batch(cmd, m.spaceMenu.close())
 				}
 			}
 			return m, cmd
@@ -463,19 +609,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		switch msg.String() {
-		case "ctrl+c": // hard quit — abandon any running task, no cd-on-quit
-			return m, m.shutdown()
-		case "q": // pick where to leave the shell, then quit (cd-on-quit)
-			return m, m.openQuitMenu()
-		case "?": // §A.2 global help cheatsheet
-			return m, m.help.open()
-		case "V": // hidden easter-egg: the u-family logo
+		case "V": // hidden easter-egg: the filu mark (terminu family)
 			return m, m.splash.show()
 		case " ": // Space opens the contextual menu for the focused panel
-			items, title := m.buildSpaceMenu()
-			if len(items) == 0 {
-				return m, nil // nothing contextual here
-			}
+			items, title := m.buildSpaceMenu() // never empty: the global row is always there (tdp M7)
 			m.spaceMenu.setItems(items, title)
 			return m, m.spaceMenu.open()
 		case "tab":
@@ -523,10 +660,13 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "d", "ctrl+d":
 		l.move(m.listRows() / 2)
 	case "enter":
-		// Enter navigates into directories only — in filu it is not "open a file".
-		// Opening a file is [o]pen's job (open-with); a file row Enter is a no-op.
+		// Enter does the one obvious thing for the row (tdp K3): into a directory,
+		// and on a file its information box. Opening a file stays [o]pen's job.
 		if it := l.cursorItem(); it.isDir {
 			l.enter()
+		} else if it.name != "" {
+			m.meta.setSize(m.width, m.height)
+			cmd = m.meta.open(filepath.Join(l.dir, it.name))
 		}
 	case "esc":
 		l.parent()
@@ -535,10 +675,8 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "h", "left":
 		m.tab = (m.tab + len(m.tabs) - 1) % len(m.tabs)
 	case "t": // new tab: open the Same / Favorites / Search picker (up to maxTabs)
-		if len(m.tabs) < maxTabs {
+		if len(m.tabs) < maxTabs { // at the limit t does nothing; the menu row is dimmed (tdp M6)
 			cmd = m.openTabMenu()
-		} else {
-			cmd = m.toast.show(tabLimitToast())
 		}
 	case "w": // close the active tab (always keep at least one)
 		if len(m.tabs) > 1 {
@@ -570,14 +708,14 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 		if it := l.cursorItem(); it.name != "" {
 			m.pendingDelete = filepath.Join(l.dir, it.name)
 			m.confirmAction = confirmDelete
-			cmd = m.confirm.open("Move " + it.name + " to the trash?")
+			cmd = m.confirm.open("Move "+it.name+" to the trash?", "trash")
 		}
 	case "r": // rename cursor item (input popup: name as the description, pre-filled)
 		if it := l.cursorItem(); it.name != "" {
-			cmd = m.inputPopup.open(inputRename, "Rename", it.name, it)
+			cmd = m.openInput(inputRename, "Rename", it.name, it)
 		}
 	case "a": // add file/dir — lazyvim style: trailing / = dir (input popup)
-		cmd = m.inputPopup.open(inputAdd, "New (trailing / = dir)", "", fileItem{})
+		cmd = m.openInput(inputAdd, "New (trailing / = dir)", "", fileItem{})
 	case "y": // yank: copy the item's full path to the clipboard
 		if it := l.cursorItem(); it.name != "" {
 			cmd = copyToClipboardCmd(filepath.Join(l.dir, it.name), "Copied path to clipboard")
@@ -585,13 +723,13 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "o": // open with the OS default app — confirm first (O opens the picker)
 		if it := l.cursorItem(); it.name != "" {
 			m.confirmAction = confirmOpen
-			cmd = m.confirm.open("Open " + it.name + " with the default app?")
+			cmd = m.confirm.open("Open "+it.name+" with the default app?", "open")
 		}
 	case "O": // Open with: pick an app (Default OS open, or a configured one)
 		cmd = m.openOpenWith()
 	case "s": // shell: confirm the directory first, then drop into $SHELL there
 		m.confirmAction = confirmShell
-		cmd = m.confirm.open("Open a shell in " + shortPath(l.dir) + "?")
+		cmd = m.confirm.open("Open a shell in "+shortPath(l.dir)+"?", "open")
 	case "S": // Sort: pick a column → direction; the column-header row shows the active sort
 		cmd = m.openSortColumnPicker()
 	case "/": // Search: choose filename (fd) or content (rg), then reveal the pick here
@@ -624,7 +762,7 @@ func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 		m.detailScroll = 0
 	case "G":
 		m.detailScroll = len(m.detailLines())
-	case "y":
+	case "y", "enter": // Enter opens the scrollable view too (tdp K3)
 		return m.openDetailYank()
 	case "z":
 		m.toggleZoom(panelDetail)
@@ -682,6 +820,11 @@ func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 		m.marks.cursor = 0
 	case "G":
 		m.marks.moveCursor(len(m.marks.items))
+	case "enter": // show the marked file in [1] (tdp K3)
+		if m.marks.cursor >= 0 && m.marks.cursor < len(m.marks.items) {
+			p := m.marks.items[m.marks.cursor]
+			return m.showInTabs(filepath.Dir(p), filepath.Base(p))
+		}
 	case "p": // pick: toggle this item in the land subset
 		m.marks.togglePick()
 	case "m": // unmark: drop this item from the bucket (not the file)
@@ -694,12 +837,12 @@ func (m *AppModel) handleMarksKey(key string) tea.Cmd {
 		}
 	case "Z": // zip: pack the land subset into a temp archive, named here
 		if items := m.marks.landItems(); len(items) > 0 {
-			return m.inputPopup.open(inputZip, zipPrompt(len(items)), suggestZipName(items), fileItem{})
+			return m.openInput(inputZip, zipPrompt(len(items)), suggestZipName(items), fileItem{})
 		}
 	case "C": // clear: empty the bucket (marks + picks) — confirm first
 		if len(m.marks.items) > 0 {
 			m.confirmAction = confirmClearMarks
-			return m.confirm.open(fmt.Sprintf("Clear all %d marks?", len(m.marks.items)))
+			return m.confirm.open(fmt.Sprintf("Clear all %d marks?", len(m.marks.items)), "clear")
 		}
 	}
 	return nil
@@ -720,11 +863,16 @@ func (m *AppModel) handleTasksKey(key string) tea.Cmd {
 	case "G":
 		m.taskCursor = len(m.tasks) - 1
 		m.clampTaskCursor()
+	case "enter": // take the active tab to where this task landed (tdp K3)
+		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
+			m.navigateTo(m.tasks[m.taskCursor].destPath)
+			m.syncWatches()
+		}
 	case "D": // delete: drop this task from the log
 		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
 			m.tasks = append(m.tasks[:m.taskCursor], m.tasks[m.taskCursor+1:]...)
 			m.clampTaskCursor()
-			saveState(m.snapshotState())
+			return m.persist()
 		}
 	}
 	return nil
@@ -743,6 +891,10 @@ func (m *AppModel) handleFavoritesKey(key string) tea.Cmd {
 		m.places.cursor = 0
 	case "G":
 		m.places.moveCursor(len(m.places.pinned))
+	case "enter": // the tab already there, else a new one (tdp K3)
+		if m.places.cursor >= 0 && m.places.cursor < len(m.places.pinned) {
+			return m.showInTabs(m.places.pinned[m.places.cursor].path, "")
+		}
 	case "o": // open this favorite's dir in a tab (New tab / an existing tab)
 		return m.openOpenInMenu()
 	case "D": // unfavorite the highlighted directory — confirm first
@@ -750,7 +902,7 @@ func (m *AppModel) handleFavoritesKey(key string) tea.Cmd {
 			p := m.places.pinned[m.places.cursor]
 			m.pendingUnfavorite = p.path
 			m.confirmAction = confirmUnfavorite
-			return m.confirm.open("Unfavorite " + p.label + "?")
+			return m.confirm.open("Unfavorite "+p.label+"?", "unfavorite")
 		}
 	}
 	return nil
@@ -796,15 +948,17 @@ func (m *AppModel) dispatchFocusKey(key string) tea.Cmd {
 }
 
 // buildSpaceMenu returns the contextual menu items + title for the focused
-// panel. Every implemented contextual letter hotkey appears here (ZLC §A.1
-// completeness); items are gated by what actually applies to the cursor state.
+// panel. Every implemented contextual letter hotkey appears here (tdp M3);
+// items are gated by what actually applies to the cursor state.
 func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 	switch m.focus {
 	case panelList:
 		it := m.active().cursorItem()
-		title := "CWD"
+		// tdp D4's "[N] label", with the cursor item as the label so the item
+		// operations say which file they act on (2026-09-28 decision).
+		title := "[1] CWD"
 		if it.name != "" {
-			title = it.name
+			title = "[1] " + it.name
 		}
 		var itemOps, panelOps []menuItem
 		if it.name != "" {
@@ -829,15 +983,12 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			menuItem{label: "Goto", key: "go", hint: "jump to a pinned dir, or search under home"},
 			menuItem{label: "Favorite", key: "F", hint: "favorite this tab's current directory"},
 			menuItem{label: "Breadcrumb", key: "b", hint: "jump this tab up to an ancestor directory"})
-		if len(m.tabs) < maxTabs {
-			panelOps = append(panelOps,
-				menuItem{label: "Tab", key: "t", hint: "create a new tab"})
-		}
-		if len(m.tabs) > 1 {
-			panelOps = append(panelOps,
-				menuItem{label: "Close tab", key: "w", hint: "close the active tab"})
-		}
+		// The tab rows are always listed; one that can't run right now (a single
+		// tab, or the maxTabs limit) is dimmed instead of hidden (tdp M6).
 		panelOps = append(panelOps,
+			menuItem{label: "Switch tab", key: "l", hint: "next tab (h/l)", disabled: len(m.tabs) < 2},
+			menuItem{label: "Tab", key: "t", hint: "create a new tab", disabled: len(m.tabs) >= maxTabs},
+			menuItem{label: "Close tab", key: "w", hint: "close the active tab", disabled: len(m.tabs) < 2},
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
 			menuItem{label: "Sort", key: "S", hint: "order by a column (name / modified / perms / owner / size)"},
 			menuItem{label: "Shell", key: "s", hint: "drop into $SHELL here (exit to return)"},
@@ -847,7 +998,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 	case panelDetail:
 		return groupedMenu(
 			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview"}},
-			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "Preview"
+			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "[2] Preview"
 	case panelMarks:
 		zoom := menuItem{label: "Zoom", key: "z", hint: "expand this panel full-screen"}
 		tab := menuItem{label: "Switch tab", key: "l", hint: "Marks / Tasks / Favorites (h/l)"}
@@ -857,7 +1008,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			if len(m.tasks) > 0 {
 				itemOps = []menuItem{{label: "Delete", key: "D", hint: "remove this task from the log"}}
 			}
-			return groupedMenu(itemOps, []menuItem{tab, zoom}), "Tasks"
+			return groupedMenu(itemOps, []menuItem{tab, zoom}), "[3] Tasks"
 		case 2: // Favorites tab
 			var itemOps []menuItem
 			if len(m.places.pinned) > 0 {
@@ -866,7 +1017,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 					{label: "Delete", key: "D", hint: "unfavorite this directory"},
 				}
 			}
-			return groupedMenu(itemOps, []menuItem{tab, zoom}), "Favorites"
+			return groupedMenu(itemOps, []menuItem{tab, zoom}), "[3] Favorites"
 		}
 		var itemOps []menuItem
 		if len(m.marks.items) > 0 {
@@ -883,25 +1034,72 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 				{label: "Clear", key: "C", hint: "drop every mark and pick (files untouched)"},
 			}, panelOps...)
 		}
-		return groupedMenu(itemOps, panelOps), "Marks"
+		return groupedMenu(itemOps, panelOps), "[3] Marks"
 	}
 	return nil, ""
 }
 
-// groupedMenu assembles a Space menu from item-level and panel-level actions.
-// With both groups present it labels each region (kbu's "item operation" /
-// "panel operation" headers, split by a rule); a single region stays flat and
-// header-less so the menu doesn't shout when there's nothing to disambiguate.
+// groupedMenu assembles a panel's Space menu in tdp M2's fixed order: the item
+// operation and panel operation regions, each under its header (even when only
+// one of them is left — the global row is always there, so the menu always
+// holds more than one kind of thing), then a rule and the single Global
+// operation row, which carries no header of its own (tdp v0.1.7: a "global
+// operation" header over one "Global operation" row only said it twice). A
+// region with nothing in it is left out, header and all.
 func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
-	if len(itemOps) == 0 {
-		return panelOps
+	var out []menuItem
+	for _, r := range []struct {
+		title string
+		items []menuItem
+	}{
+		{"item operation", itemOps},
+		{"panel operation", panelOps},
+	} {
+		if len(r.items) == 0 {
+			continue
+		}
+		if len(out) > 0 {
+			out = append(out, menuItem{separator: true})
+		}
+		out = append(out, menuItem{header: true, label: r.title})
+		out = append(out, r.items...)
 	}
-	if len(panelOps) == 0 {
-		return itemOps
+	if len(out) > 0 {
+		out = append(out, menuItem{separator: true})
 	}
-	out := append([]menuItem{{header: true, label: "item operation"}}, itemOps...)
-	out = append(out, menuItem{separator: true}, menuItem{header: true, label: "panel operation"})
-	return append(out, panelOps...)
+	return append(out, globalOpRow)
+}
+
+// globalOpKey is the Global operation row's commit key. The row has no hotkey,
+// so the key is one no keypress produces, and it is not a substring of the
+// label (bracketHotkey would otherwise bracket it in place).
+const globalOpKey = "\x00global"
+
+// globalOpRow ends every panel's Space menu (tdp M2); Enter on it opens the
+// global operation popup over the menu (M4).
+var globalOpRow = menuItem{label: "Global operation", key: globalOpKey, hint: "actions for the whole app"}
+
+// globalActions is the one source of the global operation popup: everything
+// that acts on filu as a whole rather than on a panel or the cursor. Leaving is
+// the only one (tdp K9 requires it here).
+var globalActions = []menuItem{
+	{label: "Quit", key: "q", hint: "pick a dir to cd to, then leave"},
+}
+
+// openGlobalMenu opens the global operation popup over the Space menu.
+func (m *AppModel) openGlobalMenu() tea.Cmd {
+	m.globalMenu.setItems(globalActions, "Global operation")
+	m.globalMenu.setSize(m.width, m.height)
+	return m.globalMenu.open()
+}
+
+// runGlobalAction runs a committed global operation.
+func (m *AppModel) runGlobalAction(key string) tea.Cmd {
+	switch key {
+	case "q": // the leave flow, stacked over this popup (tdp F4)
+		return m.openQuitMenu()
+	}
+	return nil
 }
 
 // refreshPreview reloads panel [2]'s preview for the current cursor item.
@@ -921,30 +1119,72 @@ func (m AppModel) previewWidth() int {
 	return 1
 }
 
+// openInput opens the input popup with the check its Enter runs first (tdp K3).
+func (m *AppModel) openInput(kind inputKind, prompt, buffer string, item fileItem) tea.Cmd {
+	cmd := m.inputPopup.open(kind, prompt, buffer, item)
+	m.inputPopup.check = nameCheck(kind, m.cur().dir, item.name)
+	return cmd
+}
+
+// nameCheck is the input popup's validation for kind, run on Enter before the
+// popup closes: it returns why the name can't be used, or "" when it can. An
+// empty name is caught here too — with Enter always submitting, "nothing
+// typed" is a failed check, not a silent no-op.
+func nameCheck(kind inputKind, dir, target string) func(string) string {
+	return func(name string) string {
+		if name == "" {
+			return "Type a name first"
+		}
+		switch kind {
+		case inputRename:
+			if strings.Contains(name, "/") {
+				return "A name can't contain /"
+			}
+			if name == target {
+				return "" // unchanged: nothing to rename, nothing to refuse
+			}
+			if _, err := os.Lstat(filepath.Join(dir, name)); err == nil {
+				return name + " already exists here"
+			}
+		case inputAdd:
+			base := strings.TrimSuffix(name, "/")
+			if base == "" || base == "." || base == ".." {
+				return "Not a name for a file or directory"
+			}
+			if _, err := os.Lstat(filepath.Join(dir, base)); err == nil {
+				return base + " already exists here"
+			}
+		}
+		return ""
+	}
+}
+
 // performInput applies the committed input popup (rename / add to the CWD, or a
-// Zip of the marks bucket — that one runs async, hence the command).
+// Zip of the marks bucket — that one runs async, hence the command). The name
+// has already passed nameCheck.
 func (m *AppModel) performInput() tea.Cmd {
 	name := strings.TrimSpace(m.inputPopup.buffer)
 	kind, target := m.inputPopup.kind, m.inputPopup.item.name
-	if name == "" {
-		return nil
-	}
 	if kind == inputZip { // packs into a temp dir — the CWD is untouched
 		return m.startZip(m.marks.landItems(), zipFileName(name))
 	}
 	l := m.cur()
+	var err error
+	var what string
 	switch kind {
 	case inputRename:
 		if target != "" {
-			_ = os.Rename(filepath.Join(l.dir, target), filepath.Join(l.dir, name))
+			what = "rename " + target
+			err = os.Rename(filepath.Join(l.dir, target), filepath.Join(l.dir, name))
 		}
 	case inputAdd:
 		full := filepath.Join(l.dir, name)
+		what = "create " + name
 		if strings.HasSuffix(name, "/") {
-			_ = os.MkdirAll(full, 0o755)
-		} else {
-			_ = os.MkdirAll(filepath.Dir(full), 0o755)
-			if f, err := os.OpenFile(full, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644); err == nil {
+			err = os.MkdirAll(full, 0o755)
+		} else if err = os.MkdirAll(filepath.Dir(full), 0o755); err == nil {
+			var f *os.File
+			if f, err = os.OpenFile(full, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644); err == nil {
 				_ = f.Close()
 			}
 		}
@@ -952,6 +1192,9 @@ func (m *AppModel) performInput() tea.Cmd {
 	l.reload()
 	m.cur().ensureVisible(m.listRows())
 	m.refreshPreview()
+	if err != nil { // tdp F5: a failure shows at once, as a toast
+		return m.toast.showError(opFailedText(what, err))
+	}
 	return nil
 }
 

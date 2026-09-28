@@ -8,7 +8,7 @@ import (
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 )
 
-// kbu colour hierarchy (§2 / §B): three reserved tiers.
+// colour hierarchy (tdp D2, P4): three reserved tiers.
 var (
 	// structural (system) — panel chrome + focus; never user state.
 	focusColor = lipgloss.Color("#89b4fa") // blue    : focused border/chrome
@@ -22,7 +22,7 @@ var (
 	// popup layer scale (lavenphire25→sapphire) comes when popups land.
 )
 
-// §8.0/§8.2 powerline caps (rune values so no glyph sits in source). Only the
+// panel chip powerline caps (tdp D1) (rune values so no glyph sits in source). Only the
 // tab bars are chips now — the breadcrumb is plain text with "/" separators —
 // so these all belong to the tab-bar vocabulary.
 var (
@@ -50,9 +50,15 @@ func (m AppModel) View() string {
 	}
 
 	out := joinV(m.middleView(w, midH), m.footerBar(w))
-	// Compose-don't-Replace: overlay popups onto the canvas (last = on top).
+	// Compose-don't-Replace: overlay popups onto the canvas (last = on top), in the
+	// stack order Update routes keys by, top-first (tdp D3); assignLayers gives
+	// each open popup its depth colour (D2).
+	m.assignLayers()
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.globalMenu.isActive() {
+		out = overlay.Composite(m.globalMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.sortMenu.isActive() {
 		out = overlay.Composite(m.sortMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
@@ -66,9 +72,6 @@ func (m AppModel) View() string {
 	if m.searchMenu.isActive() {
 		out = overlay.Composite(m.searchMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
-	if m.quitMenu.isActive() {
-		out = overlay.Composite(m.quitMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
-	}
 	if m.openWithMenu.isActive() {
 		out = overlay.Composite(m.openWithMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -78,20 +81,32 @@ func (m AppModel) View() string {
 	if m.inputPopup.isActive() {
 		out = overlay.Composite(m.inputPopup.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
-	if m.help.isActive() {
-		out = overlay.Composite(m.help.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	if m.breadcrumb.isActive() { // ancestor-jump popup over the panels
+		out = overlay.Composite(m.breadcrumb.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.detailYank.isActive() { // yank viewport over the panels
 		out = overlay.Composite(m.detailYank.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.modeList.isActive() { // the selection key list, over the viewport
+		out = overlay.Composite(m.modeList.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.meta.isActive() { // file information box
+		out = overlay.Composite(m.meta.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.search.isActive() { // fuzzy finder over the panels
 		out = overlay.Composite(m.search.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
-	if m.breadcrumb.isActive() { // ancestor-jump popup over the panels
-		out = overlay.Composite(m.breadcrumb.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	if m.help.isActive() { // key reference over whatever it describes
+		out = overlay.Composite(m.help.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.pty.isRendered() { // shell popup: full width, pinned below header+status, down to the bottom
 		out = overlay.Composite(m.pty.renderPopup(), out, overlay.Left, overlay.Top, 0, ptyChromeRows)
+	}
+	if m.quitMenu.isActive() { // the leave flow sits over the whole stack (tdp D3)
+		out = overlay.Composite(m.quitMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.quitHelp.isActive() { // the quit picker's key reference, over it
+		out = overlay.Composite(m.quitHelp.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.toast.isActive() { // transient, always on top
 		out = overlay.Composite(m.toast.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
@@ -162,7 +177,7 @@ func (m AppModel) marksTitle() string {
 	return tabBar("[3]", []string{"Marks", "Tasks", "Favorites"}, m.marksTab, m.focus == panelMarks)
 }
 
-// marksBody renders panel [3]'s active tab — the Marks bucket (with the marks
+// marksBody renders panel [3]'s active tab — the Marks bucket (with its own
 // workflow hint), the Tasks land log, or the Favorites list.
 func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
 	switch m.marksTab {
@@ -171,7 +186,7 @@ func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
 	case 2:
 		return m.places.view(w, rows, focused), favoritesHint()
 	}
-	return m.marks.view(w, rows, focused), marksHint()
+	return m.marks.view(w, rows, focused), marksHint(len(m.marks.items) > 0)
 }
 
 // zoomListView (panel [1] zoom): the directory tabs expanded full-screen, one
@@ -352,12 +367,15 @@ func listNavHint(focused bool) string {
 	}, "  ")
 }
 
-// marksHint is the always-shown key legend on the Marks panel's bottom border: the
-// marks workflow — mark a file, then copy/move the set here. These keys fire on the
-// LIST panel; the legend lives on Marks as a reference so it is visible while you
-// mark from the list.
-func marksHint() string {
-	return keyLegend([][2]string{{"m", "mark"}, {"c", "copy"}, {"v", "move"}})
+// marksHint is the Marks tab's bottom-border legend: the keys that act here, on
+// the bucket. It used to name the list's m / c / v, but on this panel m unmarks
+// and c / v do nothing — a legend must show what pressing the key here does
+// (tdp M9). With an empty bucket none of them apply, so the edge stays clean.
+func marksHint(hasItems bool) string {
+	if !hasItems {
+		return ""
+	}
+	return keyLegend([][2]string{{"p", "pick"}, {"m", "unmark"}, {"Z", "zip"}, {"C", "clear"}})
 }
 
 // favoritesHint is the Favorites tab's bottom-border legend: o opens the
@@ -447,4 +465,31 @@ func shortPath(p string) string {
 		return "~" + strings.TrimPrefix(p, home)
 	}
 	return p
+}
+
+// stackOrder is the popup stack bottom-first: the one order View draws in and
+// Update routes keys by (walked top-first), so the popup on top is the one that
+// takes the keys (tdp D3). The Space menu is always the source at the bottom; a
+// picker, confirm or input it opens sits above it; the finder sits above the
+// chooser or Goto picker that opened it; the key reference and the leave flow
+// sit above everything.
+func (m *AppModel) stackOrder() []*popupAnimator {
+	return []*popupAnimator{
+		&m.spaceMenu.anim, &m.globalMenu.anim, &m.sortMenu.anim, &m.gotoMenu.anim, &m.openInMenu.anim, &m.searchMenu.anim,
+		&m.openWithMenu.anim, &m.confirm.anim, &m.inputPopup.anim, &m.breadcrumb.anim, &m.detailYank.anim, &m.modeList.anim, &m.meta.anim,
+		&m.search.anim, &m.help.anim, &m.quitMenu.anim, &m.quitHelp.anim,
+	}
+}
+
+// assignLayers numbers the open popups by their depth in the stack so each one
+// takes its layer colour: the deeper it sits on top, the further along the
+// lavenphire→sapphire scale (tdp D2).
+func (m *AppModel) assignLayers() {
+	layer := 0
+	for _, a := range m.stackOrder() {
+		if a.isActive() {
+			layer++
+			a.setLayer(layer)
+		}
+	}
 }
