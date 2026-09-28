@@ -89,6 +89,7 @@ type AppModel struct {
 	help              helpPopup         // ? key reference of the frontmost surface (tdp K6, M4)
 	quitHelp          helpPopup         // ? key reference of the quit picker, over it
 	meta              metaPopup         // file information box, Enter on a file row (tdp K3)
+	modeList          modeList          // the yank viewport selection mode key list, Space while selecting (tdp K11)
 	splash            splashModel       // hidden easter-egg logo (V)
 	toast             toastModel        // transient notification (yank feedback)
 	detailYank        detailYank        // panel [2] yank viewport (cursor + visual selection)
@@ -125,7 +126,7 @@ func New(startDir, focusName string) AppModel {
 		}
 		dir = wd
 	}
-	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), quitHelp: newQuitHelp(), meta: newMetaPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), quitHelp: newQuitHelp(), meta: newMetaPopup(), modeList: newModeList(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	first := newList(dir)
 	if focusName != "" && !first.focusEntry(focusName) { // `filu <file>`: land on the passed file
 		first.showHidden = true // not listed — it's a dotfile; reveal hidden and retry
@@ -278,6 +279,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.help.setSize(msg.Width, msg.Height)
 		m.quitHelp.setSize(msg.Width, msg.Height)
 		m.meta.setSize(msg.Width, msg.Height)
+		m.modeList.setSize(msg.Width)
 		m.toast.setSize(msg.Width)
 		m.detailYank.setSize(msg.Width, msg.Height)
 		m.pty.setSize(msg.Width, msg.Height)
@@ -288,7 +290,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.quitHelp.handleTick(msg), m.meta.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.quitHelp.handleTick(msg), m.meta.handleTick(msg), m.modeList.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)
@@ -380,9 +382,33 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.meta, cmd = m.meta.update(msg)
 			return m, cmd
 		}
+		if m.modeList.owns() { // the selection mode's key list, over the viewport
+			if !m.modeList.isInteractive() {
+				return m, nil
+			}
+			var run []string
+			var cmd tea.Cmd
+			m.modeList, run, cmd = m.modeList.update(msg)
+			cmds := []tea.Cmd{cmd}
+			for _, k := range run { // the row runs on the viewport as if its keys were pressed
+				var c tea.Cmd
+				m.detailYank, c = m.detailYank.update(keyMsgFor(k))
+				cmds = append(cmds, c)
+			}
+			return m, tea.Batch(cmds...)
+		}
 		if m.detailYank.owns() { // yank viewport owns the keyboard while open
 			if !m.detailYank.isInteractive() {
 				return m, nil
+			}
+			if m.detailYank.visual { // selecting is a mode (tdp K11)
+				switch msg.String() {
+				case " ": // Space lists the mode's keys
+					m.modeList.setSize(m.width)
+					return m, m.modeList.open()
+				case "tab": // Tab is suspended here, but answers
+					return m, m.toast.show("Esc leaves the selection first")
+				}
 			}
 			var cmd tea.Cmd
 			m.detailYank, cmd = m.detailYank.update(msg)

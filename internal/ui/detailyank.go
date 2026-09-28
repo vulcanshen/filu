@@ -305,7 +305,7 @@ func (m detailYank) renderFull() string {
 	}
 	// pad=false: content hugs the top border like kbu's YAML popup — no leading
 	// blank row, and the gutter is just the line number (no "│" separator).
-	return drawPopupBoxPad(bc, " "+m.title, " v:visual   y:copy   Esc:close ", out, innerW, false)
+	return drawPopupBoxPad(bc, " "+m.title, m.hint(), out, innerW, false)
 }
 
 // overlaySelectionOnStyledLine keeps the styled line intact outside the
@@ -358,4 +358,14 @@ func overlayCursorOnStyledLine(styled, plain string, cursorCol int, cursorStyle 
 	before := ansi.Cut(styled, 0, cursorCol)
 	after := ansi.Cut(styled, cursorCol+1, big)
 	return before + cursorStyle.Render(string(pr[cursorCol])) + after
+}
+
+// hint is the bottom border, per state: selecting is a mode (tdp K11) with
+// its own keys. The box width is the screen's, so it holds when the hint
+// changes (L2).
+func (m detailYank) hint() string {
+	if m.visual {
+		return " y copy · Esc leave · Space keys "
+	}
+	return " v select · y copy all · Esc close "
 }
