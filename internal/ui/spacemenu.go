@@ -327,8 +327,8 @@ func (m spaceMenu) renderFull() string {
 			}
 			rows = append(rows, " "+gutter+style.Render(truncate(it.label, innerW-1-len(gutter))))
 			continue
-		case it.separator: // a dim rule between regions (tdp M2), not the border colour
-			rows = append(rows, dimStyle.Render(strings.Repeat("─", innerW)))
+		case it.separator: // a dim rule between regions (tdp M2), inset one cell from each side
+			rows = append(rows, " "+dimStyle.Render(strings.Repeat("─", max(innerW-2, 0)))+" ")
 			continue
 		}
 		labelDisplay := bracketHotkey(it.label, it.key)
