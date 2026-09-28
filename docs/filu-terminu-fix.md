@@ -118,12 +118,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 （以下第 19–22 條：2026-09-28 修完第 1–18 條後，拿 tdp v0.1.7 `rules-zh_TW.md` 全文逐條再對一次時找到。）
 
-## 22. Open with 的 Default 不 confirm，`o` 卻會 —— F6（待確認）
-
-- **現況**：`o` 用 OS 預設 app 開啟前先 confirm（`confirmOpen`）；`O` 的 picker 選 `Default`（`openwith.go` `runOpenWith()`
-  idx 1）直接 `openFileCmd`，同一個動作不 confirm。其他 open-with app 也不 confirm。
-- **規則**：F6：一個動作一旦決定要 confirm，每次都 confirm。
-- **待 user 裁定**：picker 裡的選擇算不算已經確認過。
 
 ---
 
@@ -145,6 +139,8 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   原第 3 條列的四處已修（`spaceToggle`，confirm、breadcrumb、help 拿掉 `" "`）。
 - **M2 vs M6（`Favorite` 只在目錄列出現）**：檔案**永遠**不能收藏，不是「現在不能」，所以是動作對這個項目不成立，
   照 M2 不列；M6 的變暗只給狀態一變就能做的動作（例如分頁已滿的 `Tab`，原第 7 條已修）。2026-09-28 user 裁定。
+- **F6（`O` 的 picker 不 confirm，`o` 會）**：picker 裡挑 app 本身就是一次明確確認，`o` 是一鍵直達才擋誤觸，
+  所以「交給外部 app」每次都經過確認。2026-09-28 user 裁定；理由寫在 `dev-remarks.md`「設計決定」。
 - **S3、S4**：splash 在路由第一站（`app.go` :265）；`V` 只在主 switch（:472），popup、輸入態、PTY 都叫不出來。
 
 ---

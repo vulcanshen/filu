@@ -144,6 +144,9 @@ filu/
   Unfavorite(Favorites)、`o` Open、`s` Shell、`C` Clear(Marks)。`Open` 要問,是因為
   交給外部 app 之後 filu 就管不到了;`Clear` 要問,是因為 bucket 是慢慢累積的、一鍵
   歸零沒有 undo。`m` mark / `p` pick / `f` favorite 是可逆的一鍵 toggle,不 confirm。
+  `O` Open with 的 picker 不再另跳 confirm,連選 `Default`(跟 `o` 同一個結果)也一樣:
+  在 picker 裡挑一個 app 本身就是一次明確的選擇，等於確認過了;`o` 是一鍵直達，才需要
+  confirm 擋誤觸。所以「交給外部 app」每次都經過一次確認，符合 tdp F6(2026-09-28 user 裁定)。
 - **input popup 在 `Enter` 當下驗證，不過就不送出。** Rename / Add / Zip 開框時掛上
   `nameCheck()`:空白、Rename 名稱含 `/` 或撞到現有名稱(改回原名放行)、Add 是 `.` / `..`
   或已存在，都留在框裡、在輸入列下方紅字說原因，打字就清掉(tdp K3)。Rename 以前會
