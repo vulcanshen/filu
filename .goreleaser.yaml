@@ -29,7 +29,7 @@ changelog:
   disable: true
 
 # A formula, not a cask: filu is a CLI/TUI, so it belongs in a formula like the
-# rest of the u-family (kbu). Homebrew stamps com.apple.quarantine on cask
+# rest of the terminu family (kbu). Homebrew stamps com.apple.quarantine on cask
 # artifacts by default, which trips macOS Gatekeeper on an unsigned binary;
 # formula binaries are never quarantined, so `brew install` runs clean.
 brews:
@@ -38,7 +38,7 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.ACTION_TOKEN }}"
     homepage: "https://github.com/vulcanshen/filu"
-    description: "ZLC terminal file manager (kbu u-family) — content search, split preview, carry-bucket"
+    description: "Terminal file manager — content search, split preview, marks"
     # Search (/) uses ripgrep for the content filter and fd for the file list;
     # declaring them as deps means `brew install filu` pulls them in too.
     dependencies:

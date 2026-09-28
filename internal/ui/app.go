@@ -65,7 +65,7 @@ type AppModel struct {
 	places            placesModel
 	marks             marksModel
 	marksTab          int               // panel [3] active tab: 0 Marks / 1 Tasks / 2 Favorites
-	spaceMenu         spaceMenu         // §A.1 contextual popup (kbu form)
+	spaceMenu         spaceMenu         // Space menu (tdp K5, M2), kbu form
 	globalMenu        spaceMenu         // the global operation popup, opened from the Space menu's last row (tdp M4)
 	sortMenu          spaceMenu         // sort picker (column→direction chain, kbu form)
 	sortStep          sortStep          // which step the sort picker is on
@@ -593,7 +593,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		switch msg.String() {
-		case "V": // hidden easter-egg: the u-family logo
+		case "V": // hidden easter-egg: the filu mark (terminu family)
 			return m, m.splash.show()
 		case " ": // Space opens the contextual menu for the focused panel
 			items, title := m.buildSpaceMenu() // never empty: the global row is always there (tdp M7)
@@ -918,8 +918,8 @@ func (m *AppModel) dispatchFocusKey(key string) tea.Cmd {
 }
 
 // buildSpaceMenu returns the contextual menu items + title for the focused
-// panel. Every implemented contextual letter hotkey appears here (ZLC §A.1
-// completeness); items are gated by what actually applies to the cursor state.
+// panel. Every implemented contextual letter hotkey appears here (tdp M3);
+// items are gated by what actually applies to the cursor state.
 func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 	switch m.focus {
 	case panelList:
