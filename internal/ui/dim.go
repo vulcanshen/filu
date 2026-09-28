@@ -18,11 +18,13 @@ var dimBase = [3]int{0x1e, 0x1e, 0x2e}
 // terminal's default foreground, taken as catppuccin text).
 var dimText = dimRGB([3]int{0xcd, 0xd6, 0xf4})
 
-// dimRGB fades c toward dimBase.
+// dimRGB fades c toward dimBase. Dimming never lightens (tdp D2): a channel
+// darker than the base would rise toward it, so each keeps the smaller of the
+// original and the faded value.
 func dimRGB(c [3]int) [3]int {
 	var out [3]int
 	for i := range c {
-		out[i] = int(float64(c[i])*dimKeep + float64(dimBase[i])*(1-dimKeep) + 0.5)
+		out[i] = min(c[i], int(float64(c[i])*dimKeep+float64(dimBase[i])*(1-dimKeep)+0.5))
 	}
 	return out
 }

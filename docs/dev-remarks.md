@@ -113,7 +113,8 @@
   一起收掉(tdp F4、T1)。正在關閉的框不收鍵(`owns()`),下一個 `Esc` 直接關底下那層(F3)。
 - **最上層以外全部 dim** — 有 popup 開著時，`View` 在合成最上層那個 popup 之前，先把整張已經
   畫好的畫面(base 與底下的 popup)過一次 `dimANSI()`:每個 SGR 前景 / 背景色往 base
-  `#1e1e2e` 混(`dimKeep` = 0.45),沒設顏色的文字補上 dim 過的預設色。所以底下 popup 的邊框
+  `#1e1e2e` 混(`dimKeep` = 0.45),每個通道取原值與混後較小的那個(比 base 暗的顏色不會被
+  「淡化」成變亮，tdp D2),沒設顏色的文字補上 dim 過的預設色。這份是 tdp D2 引用的參考實作。所以底下 popup 的邊框
   是自己層色的 dim 版本、還看得出第幾層，串流內容與警示色一起 dim(tdp F8,T2 的例外)。
   toast 不握鍵盤、不算一層，畫在 dim 之後也不觸發 dim。popup 的合成順序在
   `popupLayers()`,跟 `stackOrder()` 同序。

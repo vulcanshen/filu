@@ -38,7 +38,8 @@
 - With a popup open, everything beneath it — the panels and any popup under
   it — is drawn dimmed, so only the box you are using is bright. A popup
   underneath keeps a dimmed version of its own border colour, so you can still
-  tell the layers apart. A notification does not dim anything.
+  tell the layers apart. Colours already darker than the background stay as
+  they are rather than turning lighter. A notification does not dim anything.
 - In the finders, `Enter` while typing opens the highlighted result right
   away (it used to only move into the list), and `↑` / `↓` pick among the
   results as you type. `Tab` still moves into the list, where `j` / `k` move.

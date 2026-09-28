@@ -207,3 +207,20 @@ func TestDimSGR(t *testing.T) {
 		}
 	}
 }
+
+// tdp D2: dimming never lightens. Each channel keeps the smaller of the original
+// and the faded value, so a colour darker than the base (#1e1e2e) stays as it
+// is, and one partly darker keeps those channels. Expected values written out
+// from c × 0.45 + base × 0.55.
+func TestD2DimNeverLightens(t *testing.T) {
+	for _, tc := range []struct{ in, want [3]int }{
+		{[3]int{0, 0, 0}, [3]int{0, 0, 0}},               // black: fading would lift it to (17,17,25)
+		{[3]int{0x11, 0x11, 0x1b}, [3]int{17, 17, 27}},   // crust, darker than the base: unchanged
+		{[3]int{200, 10, 50}, [3]int{107, 10, 48}},       // mixed: the dark green channel stays
+		{[3]int{0xa4, 0xc0, 0xfa}, [3]int{90, 103, 138}}, // Lavenphire25: faded as before
+	} {
+		if got := dimRGB(tc.in); got != tc.want {
+			t.Errorf("dimRGB(%v) = %v, want %v", tc.in, got, tc.want)
+		}
+	}
+}
