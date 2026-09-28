@@ -365,7 +365,7 @@ func overlayCursorOnStyledLine(styled, plain string, cursorCol int, cursorStyle 
 // changes (L2).
 func (m detailYank) hint() string {
 	if m.visual {
-		return " y copy · Esc leave · Space keys "
+		return " y copy · Esc leave · ? keys "
 	}
 	return " v select · y copy all · Esc close "
 }

@@ -106,7 +106,6 @@ func (m AppModel) popupLayers() []popupLayer {
 		c(m.inputPopup.isActive(), m.inputPopup.renderPopup),
 		c(m.breadcrumb.isActive(), m.breadcrumb.renderPopup), // ancestor-jump popup over the panels
 		c(m.detailYank.isActive(), m.detailYank.renderPopup), // yank viewport over the panels
-		c(m.modeList.isActive(), m.modeList.renderPopup),     // the selection key list, over the viewport
 		c(m.meta.isActive(), m.meta.renderPopup),             // file information box
 		c(m.search.isActive(), m.search.renderPopup),         // fuzzy finder over the panels
 		c(m.help.isActive(), m.help.renderPopup),             // key reference over whatever it describes
@@ -479,7 +478,7 @@ func shortPath(p string) string {
 func (m *AppModel) stackOrder() []*popupAnimator {
 	return []*popupAnimator{
 		&m.spaceMenu.anim, &m.globalMenu.anim, &m.sortMenu.anim, &m.sortDirMenu.anim, &m.gotoMenu.anim, &m.gotoFavMenu.anim, &m.openInMenu.anim, &m.searchMenu.anim,
-		&m.openWithMenu.anim, &m.confirm.anim, &m.inputPopup.anim, &m.breadcrumb.anim, &m.detailYank.anim, &m.modeList.anim, &m.meta.anim,
+		&m.openWithMenu.anim, &m.confirm.anim, &m.inputPopup.anim, &m.breadcrumb.anim, &m.detailYank.anim, &m.meta.anim,
 		&m.search.anim, &m.help.anim, &m.quitMenu.anim, &m.quitHelp.anim,
 	}
 }

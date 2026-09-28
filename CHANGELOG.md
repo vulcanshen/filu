@@ -6,9 +6,8 @@
 - Every panel's `Space` menu now ends with **Global operation**, which opens a
   menu of app-wide actions — for now, Quit (the same quit picker as `q`).
 - Panel `[1]`'s `Space` menu has a **Switch tab** row (`l`), like panel `[3]`.
-- While selecting in the preview viewport, `Space` lists the selection keys
-  (move, jump, copy, leave) — pick one with `Enter` or its own key to run it —
-  and `?` shows them as help. `Tab` there says to press `Esc` first. The
+- While selecting in the preview viewport, `?` lists the selection keys
+  (move, jump, copy, leave); `Space` does nothing there. `Tab` there says to press `Esc` first. The
   viewport's bottom line now shows the keys for the state you are in.
 - `Enter` on a file (it used to do nothing) shows the file's details: full
   path — and where a link points — type, size in units and in bytes, modified /
