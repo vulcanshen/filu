@@ -33,6 +33,7 @@ Getting around filu: panels, tabs, the `Space` menu and the path you can always 
 ### Requirements
 
 - **A Nerd Font** in your terminal — filu's icons are Nerd Font glyphs. CJK Nerd Fonts (e.g. Maple Mono NF CN) work too.
+- **A truecolor (24-bit) terminal** — filu's colours and the dimming under popups need it; with 256 colours the shades blur together.
 - **ripgrep** for content search, and **fd** for fast finders (the quick installer and Homebrew handle both).
 - **macOS or Linux** — or WSL on Windows.
 

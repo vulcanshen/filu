@@ -33,6 +33,7 @@
 ### 系統需求
 
 - 終端機要用 **Nerd Font** —— filu 的 icon 都是 Nerd Font glyph。CJK Nerd Font(如 Maple Mono NF CN)也沒問題。
+- 終端機要支援 **truecolor(24-bit 色)** —— filu 的配色與 popup 底下的變暗都需要它;256 色下深淺會糊在一起。
 - **ripgrep** 用於內容搜尋,**fd** 讓 finder 更快(快速安裝與 Homebrew 都會幫你裝好)。
 - **macOS 或 Linux** —— Windows 請用 WSL。
 
