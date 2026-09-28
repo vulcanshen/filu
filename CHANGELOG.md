@@ -30,6 +30,9 @@
   shows. Long descriptions are cut and long messages wrap inside it.
 - Notifications ("Copied", errors) now pop up at the bottom of the screen,
   just above the key hints, instead of in the middle.
+- Sorting and Goto's Favorites now open each step in its own box over the one
+  before: picking a column opens the direction in a second box, and Goto →
+  Favorites opens the list over the Goto menu. `Esc` steps back one box.
 - `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
   (with its warning when a copy or move is still running). Press `Ctrl+C` again
   on the picker to leave at once.

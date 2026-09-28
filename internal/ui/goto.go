@@ -6,16 +6,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// gotoStep tracks where the Goto picker is: the root {Favorites, Search} choice,
-// or the drilled-in Favorites list. Mirrors the sort picker's column→direction
-// chain. (gotoStepPinned keeps its legacy name; "pinned" == the favorites set.)
-type gotoStep int
-
-const (
-	gotoStepRoot gotoStep = iota
-	gotoStepPinned
-)
-
 // openGotoMenu opens the Goto picker (moves the active tab): the `go` chord and
 // the Space menu's Goto route here. openTabMenu opens the same picker in new-tab
 // mode — Same / Pinned / Search open the result in a new tab. Callers guard the
@@ -25,7 +15,6 @@ func (m *AppModel) openTabMenu() tea.Cmd  { return m.openNavMenu(true, "New tab�
 
 func (m *AppModel) openNavMenu(newTab bool, title string) tea.Cmd {
 	m.gotoNewTab = newTab
-	m.gotoStep = gotoStepRoot
 	m.setGotoRootItems(title)
 	m.gotoMenu.setSize(m.width, m.height)
 	return m.gotoMenu.open()
@@ -45,13 +34,12 @@ func (m *AppModel) setGotoRootItems(title string) {
 	m.gotoMenu.setItems(items, title)
 }
 
-// setGotoPinnedItems (re)populates the drilled-in Favorites list: one row per
-// favorited dir (Enter or its number opens that dir — jump or new tab, per the
-// mode; f unfavorites), or a hint line when nothing is favorited. The menu stays
-// open on the swap.
+// setGotoPinnedItems (re)populates the Favorites list: one row per favorited
+// dir (Enter or its number opens that dir — jump or new tab, per the mode; f
+// unfavorites), or a hint line when nothing is favorited.
 func (m *AppModel) setGotoPinnedItems() {
 	if len(m.places.pinned) == 0 {
-		m.gotoMenu.setItems([]menuItem{
+		m.gotoFavMenu.setItems([]menuItem{
 			{header: true, label: "Nothing favorited — press f on a directory to favorite it"},
 		}, "Favorites")
 		return
@@ -61,53 +49,56 @@ func (m *AppModel) setGotoPinnedItems() {
 	for i, p := range m.places.pinned {
 		items = append(items, menuItem{label: fitPath(p.path, budget), key: strconv.Itoa(i + 1)})
 	}
-	m.gotoMenu.setItems(items, "Favorites · f unfavorite")
+	m.gotoFavMenu.setItems(items, "Favorites · f unfavorite")
 }
 
-// advanceGotoFlow handles a committed picker key. At root: Same opens a new tab
-// here (new-tab mode), Search opens the finder, Favorites drills in. At the
-// favorites step a number picks that dir — jumping the active tab or opening a new
-// one per the mode. A terminal action clears the stack (T1); a drill or the finder keeps it.
+// advanceGotoFlow handles a key committed on the Goto picker: Same opens a new
+// tab here (new-tab mode), Search opens the finder over the picker, Favorites
+// opens the Favorites list over it — each step its own popup (tdp F1, F4). A
+// terminal action clears the stack (T1).
 func (m *AppModel) advanceGotoFlow(key string) tea.Cmd {
-	switch m.gotoStep {
-	case gotoStepRoot:
-		switch key {
-		case "s": // Same → a new tab in the current dir (new-tab mode only)
-			if m.gotoNewTab {
-				m.addTab(m.cur().dir)
-				return m.clearStack()
-			}
-		case "/": // Search → the $HOME dirs-only finder, over this picker (tdp F4)
-			if m.gotoNewTab {
-				return m.openGotoNewTab()
-			}
-			return m.openGoto()
-		case "f": // Favorites → drill into the list
-			m.gotoStep = gotoStepPinned
-			m.setGotoPinnedItems()
-		}
-		return nil
-	case gotoStepPinned:
-		if idx, err := strconv.Atoi(key); err == nil && idx >= 1 && idx <= len(m.places.pinned) {
-			dir := m.places.pinned[idx-1].path
-			if m.gotoNewTab {
-				m.addTab(dir)
-			} else {
-				m.navigateTo(dir)
-			}
-			m.syncWatches()
+	switch key {
+	case "s": // Same → a new tab in the current dir (new-tab mode only)
+		if m.gotoNewTab {
+			m.addTab(m.cur().dir)
 			return m.clearStack()
 		}
-		return nil
+	case "/": // Search → the $HOME dirs-only finder, over this picker (tdp F4)
+		if m.gotoNewTab {
+			return m.openGotoNewTab()
+		}
+		return m.openGoto()
+	case "f": // Favorites → the list, over this picker
+		m.setGotoPinnedItems()
+		m.gotoFavMenu.setSize(m.width, m.height)
+		return m.gotoFavMenu.open()
 	}
 	return nil
+}
+
+// openGotoFavorite handles a key committed on the Favorites list: a number picks
+// that dir — jumping the active tab or opening a new one per the mode — and the
+// whole stack closes (T1).
+func (m *AppModel) openGotoFavorite(key string) tea.Cmd {
+	idx, err := strconv.Atoi(key)
+	if err != nil || idx < 1 || idx > len(m.places.pinned) {
+		return nil
+	}
+	dir := m.places.pinned[idx-1].path
+	if m.gotoNewTab {
+		m.addTab(dir)
+	} else {
+		m.navigateTo(dir)
+	}
+	m.syncWatches()
+	return m.clearStack()
 }
 
 // unpinAtGotoCursor removes the highlighted favorited dir while the Favorites
 // list is open, then rebuilds the list in place. With the Places sidebar removed,
 // this picker is the home for unfavorite (was the Places sidebar's P).
 func (m *AppModel) unpinAtGotoCursor() tea.Cmd {
-	if idx := m.gotoMenu.cursor; idx >= 0 && idx < len(m.places.pinned) {
+	if idx := m.gotoFavMenu.cursor; idx >= 0 && idx < len(m.places.pinned) {
 		m.places.unpin(m.places.pinned[idx].path)
 	}
 	m.setGotoPinnedItems()

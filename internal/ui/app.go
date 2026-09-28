@@ -44,14 +44,6 @@ const (
 	confirmClearMarks
 )
 
-// sortStep tracks where the sort picker is in its column→direction flow.
-type sortStep int
-
-const (
-	sortStepColumn sortStep = iota
-	sortStepDirection
-)
-
 // AppModel is filu's root model.
 type AppModel struct {
 	width             int
@@ -67,14 +59,14 @@ type AppModel struct {
 	marksTab          int               // panel [3] active tab: 0 Marks / 1 Tasks / 2 Favorites
 	spaceMenu         spaceMenu         // Space menu (tdp K5, M2), kbu form
 	globalMenu        spaceMenu         // the global operation popup, opened from the Space menu's last row (tdp M4)
-	sortMenu          spaceMenu         // sort picker (column→direction chain, kbu form)
-	sortStep          sortStep          // which step the sort picker is on
+	sortMenu          spaceMenu         // sort picker, column step (kbu form)
+	sortDirMenu       spaceMenu         // sort picker, direction step: its own popup over the column step (tdp F1)
 	sortFlowCol       sortCol           // column carried from the column step to direction
 	quitMenu          spaceMenu         // cd-on-quit picker (launch dir + distinct tab dirs)
 	openWithMenu      spaceMenu         // [o]pen picker (Default + config.yaml open_with apps)
 	openWithPath      string            // path the open-with picker acts on (captured when it opens)
-	gotoMenu          spaceMenu         // Goto / new-tab picker: {Same?, Favorites, Search} → favorites drill-down
-	gotoStep          gotoStep          // which step the Goto picker is on
+	gotoMenu          spaceMenu         // Goto / new-tab picker: {Same?, Favorites, Search}
+	gotoFavMenu       spaceMenu         // Goto's Favorites list: its own popup over the Goto picker (tdp F1)
 	searchMenu        spaceMenu         // Search chooser: {filename, content} → opens the finder in that mode
 	openInMenu        spaceMenu         // Favorites "Open dir in…" picker: New tab / an existing panel [1] tab
 	openInPath        string            // the favorite dir the openInMenu is acting on
@@ -127,7 +119,7 @@ func New(startDir, focusName string) AppModel {
 		}
 		dir = wd
 	}
-	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), quitHelp: newQuitHelp(), meta: newMetaPopup(), modeList: newModeList(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), sortDirMenu: newSortDirMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), gotoFavMenu: newGotoFavMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), quitHelp: newQuitHelp(), meta: newMetaPopup(), modeList: newModeList(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	first := newList(dir)
 	if focusName != "" && !first.focusEntry(focusName) { // `filu <file>`: land on the passed file
 		first.showHidden = true // not listed — it's a dotfile; reveal hidden and retry
@@ -286,9 +278,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spaceMenu.setSize(msg.Width, msg.Height)
 		m.globalMenu.setSize(msg.Width, msg.Height)
 		m.sortMenu.setSize(msg.Width, msg.Height)
+		m.sortDirMenu.setSize(msg.Width, msg.Height)
 		m.quitMenu.setSize(msg.Width, msg.Height)
 		m.openWithMenu.setSize(msg.Width, msg.Height)
 		m.gotoMenu.setSize(msg.Width, msg.Height)
+		m.gotoFavMenu.setSize(msg.Width, msg.Height)
 		m.openInMenu.setSize(msg.Width, msg.Height)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
@@ -306,7 +300,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.quitHelp.handleTick(msg), m.meta.handleTick(msg), m.modeList.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.sortDirMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.gotoFavMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.quitHelp.handleTick(msg), m.meta.handleTick(msg), m.modeList.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)
@@ -534,29 +528,53 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, cmd
 		}
-		if m.gotoMenu.owns() { // Goto picker: Favorites drill-down or Search finder
-			if !m.gotoMenu.isInteractive() {
+		if m.gotoFavMenu.owns() { // Goto's Favorites list, over the Goto picker
+			if !m.gotoFavMenu.isInteractive() {
 				return m, nil
 			}
-			if m.gotoStep == gotoStepPinned && msg.String() == "f" { // unfavorite the highlighted dir, stay open
+			if msg.String() == "f" { // unfavorite the highlighted dir, stay open
 				return m, m.unpinAtGotoCursor()
 			}
 			var key string
 			var cmd tea.Cmd
+			m.gotoFavMenu, key, cmd = m.gotoFavMenu.update(msg)
+			if key != "" {
+				cmd = tea.Batch(cmd, m.openGotoFavorite(key))
+			}
+			return m, cmd
+		}
+		if m.gotoMenu.owns() { // Goto picker: opens the Favorites list or the Search finder over it
+			if !m.gotoMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
 			m.gotoMenu, key, cmd = m.gotoMenu.update(msg)
-			if key != "" { // stays open on a drill, closes on a terminal jump/search
+			if key != "" {
 				cmd = tea.Batch(cmd, m.advanceGotoFlow(key))
 			}
 			return m, cmd
 		}
-		if m.sortMenu.owns() { // sort picker owns the keyboard; commits drive the chain flow
+		if m.sortDirMenu.owns() { // sort direction, over the column picker
+			if !m.sortDirMenu.isInteractive() {
+				return m, nil
+			}
+			var key string
+			var cmd tea.Cmd
+			m.sortDirMenu, key, cmd = m.sortDirMenu.update(msg)
+			if key != "" {
+				cmd = tea.Batch(cmd, m.applySortDirection(key))
+			}
+			return m, cmd
+		}
+		if m.sortMenu.owns() { // sort picker, column step; a column opens the direction step over it
 			if !m.sortMenu.isInteractive() {
 				return m, nil
 			}
 			var key string
 			var cmd tea.Cmd
 			m.sortMenu, key, cmd = m.sortMenu.update(msg)
-			if key != "" { // stays open, swapping to the next step / looping back
+			if key != "" {
 				cmd = tea.Batch(cmd, m.advanceSortFlow(key))
 			}
 			return m, cmd

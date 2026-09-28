@@ -31,12 +31,16 @@ func (m AppModel) keyRef() (string, []helpRow) {
 		return "Search keys", menuKeyRef(m.searchMenu, nil)
 	case m.openInMenu.owns():
 		return "Open in keys", menuKeyRef(m.openInMenu, nil)
-	case m.gotoMenu.owns():
+	case m.gotoFavMenu.owns():
 		var extra []helpRow
-		if m.gotoStep == gotoStepPinned && len(m.places.pinned) > 0 {
+		if len(m.places.pinned) > 0 {
 			extra = []helpRow{{key: "f", desc: "unfavorite the highlighted directory"}}
 		}
-		return "Goto keys", menuKeyRef(m.gotoMenu, extra)
+		return "Favorites keys", menuKeyRef(m.gotoFavMenu, extra)
+	case m.gotoMenu.owns():
+		return "Goto keys", menuKeyRef(m.gotoMenu, nil)
+	case m.sortDirMenu.owns():
+		return "Sort direction keys", menuKeyRef(m.sortDirMenu, nil)
 	case m.sortMenu.owns():
 		return "Sort keys", menuKeyRef(m.sortMenu, nil)
 	case m.globalMenu.owns():

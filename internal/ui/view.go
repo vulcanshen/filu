@@ -63,8 +63,14 @@ func (m AppModel) View() string {
 	if m.sortMenu.isActive() {
 		out = overlay.Composite(m.sortMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.sortDirMenu.isActive() {
+		out = overlay.Composite(m.sortDirMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.gotoMenu.isActive() {
 		out = overlay.Composite(m.gotoMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.gotoFavMenu.isActive() {
+		out = overlay.Composite(m.gotoFavMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.openInMenu.isActive() {
 		out = overlay.Composite(m.openInMenu.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
@@ -475,7 +481,7 @@ func shortPath(p string) string {
 // sit above everything.
 func (m *AppModel) stackOrder() []*popupAnimator {
 	return []*popupAnimator{
-		&m.spaceMenu.anim, &m.globalMenu.anim, &m.sortMenu.anim, &m.gotoMenu.anim, &m.openInMenu.anim, &m.searchMenu.anim,
+		&m.spaceMenu.anim, &m.globalMenu.anim, &m.sortMenu.anim, &m.sortDirMenu.anim, &m.gotoMenu.anim, &m.gotoFavMenu.anim, &m.openInMenu.anim, &m.searchMenu.anim,
 		&m.openWithMenu.anim, &m.confirm.anim, &m.inputPopup.anim, &m.breadcrumb.anim, &m.detailYank.anim, &m.modeList.anim, &m.meta.anim,
 		&m.search.anim, &m.help.anim, &m.quitMenu.anim, &m.quitHelp.anim,
 	}
