@@ -116,6 +116,42 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 ---
 
+（以下第 19–22 條：2026-09-28 修完第 1–18 條後，拿 tdp v0.1.7 `rules-zh_TW.md` 全文逐條再對一次時找到。）
+
+## 19. `[3]` Marks 下框顯示的是 `[1]` 的鍵 —— M9
+
+- **現況**：`view.go` `marksHint()` 在 Marks 分頁下框常駐 `m mark · c copy · v move`（註解寫「These keys fire on the
+  LIST panel」）。focus 在 `[3]` 時按 `m` 是 Unmark、`c` / `v` 不作用 —— 指示寫的跟按下去發生的不一樣。
+- **規則**：M9：同一個鍵有兩處指示時，要一眼看出在當前 focus 按下去會觸發哪一個；家族做法是會觸發的亮、不會的暗（D2）。
+- **怎麼改**：Marks 下框改列 Marks 分頁自己的鍵（`p` pick、`m` unmark、`Z` zip、`C` clear），跟 Favorites 分頁
+  （`o` open in、`D` remove）一樣只寫自己的鍵。
+
+## 20. 還有四處錯誤看不到 —— F5
+
+- **現況**：
+  - `pty_unix.go` `start()`：`pty.StartWithSize` 失敗時直接回 `ptyExitMsg`，shell popup 不開也沒有訊息。
+  - `config.go` `loadConfig()`：`yaml.Unmarshal` 失敗時整份設定被靜靜略過（`finder_cap`、`ignore_dirs`、`open_with` 都不生效）。
+  - `search.go` `rgMatches()`：沒裝 `rg` 時回空清單，內容搜尋只顯示 `(no matches)`，看不出是沒裝工具。
+  - `persist.go` `saveState()`：寫不進 `state.yaml` 時什麼都不說（分頁、marks、最愛、排序下次都不在）。
+- **規則**：F5：錯誤必須立刻出現（toast 或 popup），`Esc` 可關，不能阻塞 app。
+- **怎麼改**：四處都把 error 帶回來，照第 11 條用 `opFailedText()` + `toast.showError()`；設定檔的錯誤在啟動後顯示一次，
+  並說明「用預設值」；沒裝 `rg` 時 finder 清單寫出原因而不是 `(no matches)`。
+
+## 21. `[2]`、`[3]` 上的 `Enter` 不做事 —— K3（待確認）
+
+- **現況**：`handleDetailKey()`（`[2]` Preview）與 `handleMarksKey()`（`[3]` Marks / Tasks / Favorites）都沒有 `enter`，按了沒反應。
+- **規則**：K3：`Enter` 對 focus 項目做最直觀的那個動作，同一種項目永遠同一個動作（第 17 條已對 `[1]` 的檔案列裁定）。
+- **待 user 裁定**：各處的「最直觀的動作」是什麼。
+
+## 22. Open with 的 Default 不 confirm，`o` 卻會 —— F6（待確認）
+
+- **現況**：`o` 用 OS 預設 app 開啟前先 confirm（`confirmOpen`）；`O` 的 picker 選 `Default`（`openwith.go` `runOpenWith()`
+  idx 1）直接 `openFileCmd`，同一個動作不 confirm。其他 open-with app 也不 confirm。
+- **規則**：F6：一個動作一旦決定要 confirm，每次都 confirm。
+- **待 user 裁定**：picker 裡的選擇算不算已經確認過。
+
+---
+
 ## 已經符合、不用修的（對照 v0.1.6）
 
 下次對照時不必重查：
