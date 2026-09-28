@@ -1,6 +1,6 @@
 # filu — terminu fix
 
-filu 尚未符合 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.6/principle)（tdp v0.1.6）的地方，逐條待修。
+filu 尚未符合 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.7/principle)（tdp v0.1.7）的地方，逐條待修。
 修好一條就刪掉一條，並同步 README（兩份）與 `dev-remarks.md` 裡描述該行為的段落。有意不修的，改寫成
 `dev-remarks.md`「偏離 tdp」的一條並附理由。
 
@@ -195,7 +195,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   `filu-implementation.md` 的 §8（panel chrome）（不影響行為）。只換這些；提到 kbu 的地方（`kbu form`、
   `ported from kbu`）是指 kbu 的程式碼，不動；`app.go:2`、`persist.go:12` 的 `IDEA.md` 不動。第 4、5、6 條改完後，
   `?` 相關的註解順著新行為寫（下表已照 v0.1.6 的名稱）。2026-09-27 依內容重新核對，下表就是全部（測試檔沒有）。
-- **怎麼改**：照 [terminu `vtp/README.md` 的對照表](https://github.com/vulcanshen/terminu/blob/v0.1.6/vtp/README.md) 換成 tdp 編號；
+- **怎麼改**：照 [terminu `vtp/README.md` 的對照表](https://github.com/vulcanshen/terminu/blob/v0.1.7/vtp/README.md) 換成 tdp 編號；
   依內容比對，不要照行號：
 
 | 檔案:行 | 現在 | 換成 |
@@ -264,13 +264,17 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 ---
 
-## 回報 tdp、等結論的
+## 18. Space menu 的 global 列上面還掛著 `global operation` 標題 —— M2（tdp v0.1.7）
 
-- **M2 / M4：global 區只有一列 `Global operation`**（2026-09-28）。filu 已照 v0.1.6 做成 sshu、locku、webu 的樣子：
-  Space menu 最後一區標題 `global operation`，底下固定一列 `Global operation`，`Enter` 開 global operation popup
-  （`groupedMenu()`、`globalOpRow`、`globalMenu`、`globalActions`）。user 實機看了認為「一個區塊裡只有一個項目」的
-  設計太詭異，帶回 terminu session 討論 M2 / M4 怎麼修。**tdp 出結論前不動這部分**；結論出來後照新版改 filu，
-  README 兩份的 Space menu 說明、`m2_test.go` 一起改。
+- **現況**：`internal/ui/app.go` `groupedMenu()` 把 `{"global operation", []menuItem{globalOpRow}}` 當成一區（約 957 行），
+  每一區都加 `menuItem{header: true, label: r.title}`（約 965 行），所以 `Global operation` 那一列上面有 `global operation` 標題。
+  （原本記在「回報 tdp、等結論的」：filu 實機看到「一個區塊只有一個項目」太奇怪，帶回 terminu 討論。）
+- **規則**：tdp v0.1.7 M2：Space menu 的 global 那一列**不加區塊標題** —— `global operation` 標題底下只有一列
+  `Global operation`，是同一句話講兩次（user 2026-09-28：「一個 global operation 的 section 只有一個 Global operation 的項目」
+  太奇怪）。它跟上面的區塊之間照樣用分隔線隔開；item 與 panel 兩區在 panel 的 Space menu 上照舊一律加標題（即使只剩其中一區）。
+- **怎麼改**：`groupedMenu()` 只組 item / panel 兩區（照舊一律加標題），最後自己接分隔線（前面有東西時）與 `globalOpRow`，
+  不加標題。`m2_test.go` 量形狀的斷言改寫；README 兩份的 Space menu 說明一起改。
+- 連結：README 兩份、`dev-remarks.md`、`.claude/rules/project-rules.md` 與本檔的 tdp 連結已改釘 `v0.1.7`（未 commit）。
 
 ---
 
