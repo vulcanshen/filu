@@ -119,6 +119,11 @@ filu/
   它(`Ctrl-C` 在輸入態也有效，`q` 在輸入態是字母),在 picker 上再按 `Ctrl-C` 立即離開。
   picker 疊在當下整疊 popup 的最上面、不關底下的框，所以 `Esc` 回到原本的框;按鍵路由
   在 splash、PTY、toast 的 `Esc` 之後第一個處理它，繪製時也只有 toast 畫在它上面。
+- **PTY 的出口鍵是 `Alt+Esc`,按下直接結束 shell。** PTY 裡每個鍵都屬於 shell(包括 `Esc`、
+  `Ctrl-C`、`q`),只有 `Alt+Esc` 被 filu 攔下(`isExitKey()`、`ptyPopup.exit()`),常駐寫在
+  PTY 下框(`ptyExitHint`)。跟 sshu 同一個鍵(tdp K10 的例子)。filu 的 `[s]hell` 是
+  用完就走的子 shell,沒有「離開後再接回」的 session,所以出口鍵等同打 `exit`:殺掉 shell、
+  播關閉動畫、reload 該目錄，回到 panel(2026-09-28 user 裁定)。
 - **會改變磁碟或把控制權交出去的動作一律先 confirm**:`D` Delete(list)、`D`
   Unfavorite(Favorites)、`o` Open、`s` Shell、`C` Clear(Marks)。`Open` 要問,是因為
   交給外部 app 之後 filu 就管不到了;`Clear` 要問,是因為 bucket 是慢慢累積的、一鍵

@@ -172,3 +172,51 @@ func TestPtyLifecycle(t *testing.T) {
 		t.Error("the pty should be stopped once the close animation settles")
 	}
 }
+
+// ptyApp is an AppModel with a live shell-like process in the PTY popup.
+func ptyApp(t *testing.T) AppModel {
+	t.Helper()
+	m := minModel()
+	m.pty.start(exec.Command("sleep", "30"), "Shell", "/tmp", 80, 24)
+	t.Cleanup(m.pty.stop)
+	m.pty.anim.state = popupOpen
+	return m
+}
+
+// tdp K10: Alt+Esc is the app key inside the PTY — it ends the shell (like
+// typing exit) and closes the popup, back to the panel.
+func TestPtyAltEscExits(t *testing.T) {
+	m := ptyApp(t)
+	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc, Alt: true})
+	got := model.(AppModel)
+	if cmd == nil || !got.pty.stopPending || got.pty.anim.owns() {
+		t.Fatalf("Alt+Esc should start closing the shell popup: stopPending %v, owns %v", got.pty.stopPending, got.pty.anim.owns())
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for !got.pty.done.Load() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !got.pty.done.Load() {
+		t.Error("Alt+Esc should end the shell process, not leave it running")
+	}
+}
+
+// tdp K10: every other key, plain Esc and Ctrl-C included, belongs to the shell.
+func TestPtyKeysBelongToShell(t *testing.T) {
+	for _, k := range []tea.KeyMsg{{Type: tea.KeyEsc}, {Type: tea.KeyCtrlC}, {Type: tea.KeyRunes, Runes: []rune("q")}} {
+		m := ptyApp(t)
+		model, _ := m.Update(k)
+		got := model.(AppModel)
+		if got.pty.stopPending || got.quitMenu.owns() {
+			t.Errorf("%q inside the PTY should go to the shell, not close it or open the quit picker", k.String())
+		}
+	}
+}
+
+// tdp K10 / M1: the exit key is on show in the PTY frame the whole time.
+func TestPtyFrameShowsExitKey(t *testing.T) {
+	m := ptyApp(t)
+	if out := m.pty.renderPopup(); !strings.Contains(out, "Alt+Esc") {
+		t.Errorf("the PTY frame should name the exit key:\n%s", out)
+	}
+}

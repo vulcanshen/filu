@@ -136,6 +136,30 @@ func (p *ptyPopup) stop() {
 	p.mu.Unlock()
 }
 
+// ptyExitHint sits in the PTY's bottom border for as long as it is open: the
+// app's one key inside the PTY is always on show (tdp K10, M1).
+const ptyExitHint = " exit or Alt+Esc to close "
+
+// exit is the PTY's exit key (tdp K10): it ends the shell now — the same as
+// typing exit, since filu keeps no PTY session to come back to — and closes
+// the popup, focus landing back on the panel. The hard stop still waits for the
+// close animation, as after a normal exit.
+func (p *ptyPopup) exit() tea.Cmd {
+	if p == nil || !p.active || p.stopPending {
+		return nil
+	}
+	if p.cmd != nil && p.cmd.Process != nil && p.done != nil && !p.done.Load() {
+		_ = p.cmd.Process.Kill()
+	}
+	p.stopPending = true
+	dir := p.dir
+	return tea.Batch(p.anim.close(), func() tea.Msg { return ptyExitMsg{dir: dir} })
+}
+
+// isExitKey reports whether msg is the PTY's exit key, Alt+Esc — a chord a
+// shell or a full-screen program inside it has next to no use for.
+func isExitKey(msg tea.KeyMsg) bool { return msg.Type == tea.KeyEsc && msg.Alt }
+
 // handleTick advances the open/close animation and runs the deferred hard
 // cleanup once the close animation settles.
 func (p *ptyPopup) handleTick(msg AnimTickMsg) tea.Cmd {
@@ -260,7 +284,7 @@ func (p *ptyPopup) renderPopup() string {
 	for _, line := range lines {
 		out.WriteString(vbar + line + vbar + "\n")
 	}
-	out.WriteString(bs.Render("╰─") + ts.Render(" type exit to close ") + bs.Render(strings.Repeat("─", max(cols-len(" type exit to close ")-1, 0))+"╯"))
+	out.WriteString(bs.Render("╰─") + ts.Render(ptyExitHint) + bs.Render(strings.Repeat("─", max(cols-lipgloss.Width(ptyExitHint)-1, 0))+"╯"))
 	return p.anim.renderFrame(out.String())
 }
 
