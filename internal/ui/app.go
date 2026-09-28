@@ -941,11 +941,13 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 	return nil, ""
 }
 
-// groupedMenu assembles a panel's Space menu in tdp M2's fixed order: item
-// operation, panel operation, then the global operation region, which is always
-// the single Global operation row. Every region gets its header (the global one
-// is always there, so there are always at least two); a region with nothing in
-// it is left out, header and all. Regions are split by a rule.
+// groupedMenu assembles a panel's Space menu in tdp M2's fixed order: the item
+// operation and panel operation regions, each under its header (even when only
+// one of them is left — the global row is always there, so the menu always
+// holds more than one kind of thing), then a rule and the single Global
+// operation row, which carries no header of its own (tdp v0.1.7: a "global
+// operation" header over one "Global operation" row only said it twice). A
+// region with nothing in it is left out, header and all.
 func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
 	var out []menuItem
 	for _, r := range []struct {
@@ -954,7 +956,6 @@ func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
 	}{
 		{"item operation", itemOps},
 		{"panel operation", panelOps},
-		{"global operation", []menuItem{globalOpRow}},
 	} {
 		if len(r.items) == 0 {
 			continue
@@ -965,7 +966,10 @@ func groupedMenu(itemOps, panelOps []menuItem) []menuItem {
 		out = append(out, menuItem{header: true, label: r.title})
 		out = append(out, r.items...)
 	}
-	return out
+	if len(out) > 0 {
+		out = append(out, menuItem{separator: true})
+	}
+	return append(out, globalOpRow)
 }
 
 // globalOpKey is the Global operation row's commit key. The row has no hotkey,
