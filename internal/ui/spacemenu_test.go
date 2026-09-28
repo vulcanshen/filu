@@ -279,3 +279,23 @@ func TestSpaceMenuWidensForHints(t *testing.T) {
 		}
 	}
 }
+
+// The rule between regions stops one cell short of each side of the box, so
+// it reads as a divider inside the menu rather than a second border.
+func TestSpaceMenuRuleIsInset(t *testing.T) {
+	m := panel1Menu(100, 40)
+	lines := strings.Split(ansi.Strip(m.renderFull()), "\n")
+	found := false
+	for _, l := range lines {
+		inner := strings.TrimSuffix(strings.TrimPrefix(l, "│"), "│")
+		if strings.Trim(inner, " ") != "" && strings.Trim(strings.TrimSpace(inner), "─") == "" {
+			found = true
+			if !strings.HasPrefix(inner, " ─") || !strings.HasSuffix(inner, "─ ") {
+				t.Errorf("the region rule should have one space each side: %q", inner)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no region rule in the [1] menu")
+	}
+}

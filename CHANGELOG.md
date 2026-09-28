@@ -52,7 +52,8 @@
   nothing instead of showing a message.
 - Menus keep each item on one line (the box widens to fit the descriptions)
   and scroll with the cursor when they are taller than the screen, so every
-  item stays reachable in a small terminal. Section dividers are drawn dim.
+  item stays reachable in a small terminal. Section dividers are drawn dim,
+  with a space on each side.
 
 ### Fixed
 - Renaming onto a name that already exists no longer overwrites that file.
