@@ -75,6 +75,7 @@ func (m detailYank) joinAll() string {
 
 func (m *detailYank) setSize(w, h int) { m.width, m.height = w, h }
 func (m detailYank) isActive() bool    { return m.anim.isActive() }
+func (m detailYank) owns() bool        { return m.anim.owns() }
 func (m detailYank) isInteractive() bool {
 	return m.anim.isInteractive()
 }
@@ -264,7 +265,7 @@ func (m detailYank) selectionText() string {
 func (m detailYank) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
 func (m detailYank) renderFull() string {
-	bc := popupLayerColor(1)
+	bc := popupLayerColor(m.anim.layer)
 	innerW, rows := m.innerW(), m.contentRows()
 	selStyle := lipgloss.NewStyle().Background(userColor).Foreground(lipgloss.Color(baseHex)).Bold(true)
 	curStyle := lipgloss.NewStyle().Reverse(true)
@@ -304,7 +305,7 @@ func (m detailYank) renderFull() string {
 	}
 	// pad=false: content hugs the top border like kbu's YAML popup — no leading
 	// blank row, and the gutter is just the line number (no "│" separator).
-	return drawPopupBoxPad(bc, " "+m.title, " v:visual   y:copy   Esc:close ", out, innerW, false)
+	return drawPopupBoxPad(bc, " "+m.title, m.hint(), out, innerW, false)
 }
 
 // overlaySelectionOnStyledLine keeps the styled line intact outside the
@@ -357,4 +358,14 @@ func overlayCursorOnStyledLine(styled, plain string, cursorCol int, cursorStyle 
 	before := ansi.Cut(styled, 0, cursorCol)
 	after := ansi.Cut(styled, cursorCol+1, big)
 	return before + cursorStyle.Render(string(pr[cursorCol])) + after
+}
+
+// hint is the bottom border, per state: selecting is a mode (tdp K11) with
+// its own keys. The box width is the screen's, so it holds when the hint
+// changes (L2).
+func (m detailYank) hint() string {
+	if m.visual {
+		return " y copy · Esc leave · Space keys "
+	}
+	return " v select · y copy all · Esc close "
 }

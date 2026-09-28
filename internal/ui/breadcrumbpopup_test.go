@@ -74,12 +74,16 @@ func TestBreadcrumbPopupFlow(t *testing.T) {
 		t.Errorf("G cursor = %d, want 3", m.cursor)
 	}
 
-	// Esc / b close without a jump.
-	for _, key := range []tea.KeyMsg{{Type: tea.KeyEsc}, {Type: tea.KeyRunes, Runes: []rune("b")}} {
+	// Esc closes without a jump.
+	m = open()
+	if _, path, cmd = m.update(tea.KeyMsg{Type: tea.KeyEsc}); path != "" || cmd == nil {
+		t.Errorf("Esc should close without a jump: path=%q cmd=%v", path, cmd)
+	}
+	// Only Esc: b (the hotkey that opened it) and Space (tdp K5) do nothing here.
+	for _, key := range []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("b")}, {Type: tea.KeySpace, Runes: []rune(" ")}} {
 		m = open()
-		_, path, cmd = m.update(key)
-		if path != "" || cmd == nil {
-			t.Errorf("%v should close without a jump: path=%q cmd=%v", key, path, cmd)
+		if _, path, cmd = m.update(key); path != "" || cmd != nil {
+			t.Errorf("%q should not close the breadcrumb popup: path=%q cmd=%v", key.String(), path, cmd)
 		}
 	}
 }

@@ -126,12 +126,12 @@ func (m *AppModel) startLandItems(items []string, destDir string, move bool) tea
 	})
 	m.capTasks()
 	go runLand(m.nextTaskID, items, destDir, move, m.taskCh)
-	saveState(m.snapshotState())
+	saved := m.persist()
 	if !m.spinning {
 		m.spinning = true
-		return spinnerTick()
+		return tea.Batch(saved, spinnerTick())
 	}
-	return nil
+	return saved
 }
 
 func (m *AppModel) clampTaskCursor() {
@@ -149,15 +149,16 @@ func (m *AppModel) capTasks() {
 	}
 }
 
-// handleLandMsg applies a land goroutine's progress/finish to the model.
-func (m *AppModel) handleLandMsg(msg landMsg) {
+// handleLandMsg applies a land goroutine's progress/finish to the model; the
+// returned cmd reports a failed session save (tdp F5).
+func (m *AppModel) handleLandMsg(msg landMsg) tea.Cmd {
 	for i := range m.tasks {
 		if m.tasks[i].id != msg.taskID {
 			continue
 		}
 		m.tasks[i].done = msg.done
 		if !msg.finished {
-			return
+			return nil
 		}
 		m.tasks[i].failed = msg.failed
 		if msg.failed > 0 {
@@ -180,9 +181,9 @@ func (m *AppModel) handleLandMsg(msg landMsg) {
 			}
 		}
 		m.refreshPreview()
-		saveState(m.snapshotState()) // persist done / error
-		return
+		return m.persist() // persist done / error
 	}
+	return nil
 }
 
 // tasksView renders the merged Tasks tab (running + done + pending + error),

@@ -97,21 +97,22 @@ func loadState() (sessionState, bool) {
 	return st, true
 }
 
-// saveState writes best-effort; failures are silent (persistence is a nicety,
-// not a guarantee).
-func saveState(st sessionState) {
+// saveState writes the session and reports a failure, so the caller can show it
+// (tdp F5): a save that silently fails loses tabs, marks, favorites and sorts.
+// No state path (no home dir) is not a failure — there is nowhere to save to.
+func saveState(st sessionState) error {
 	path, ok := stateFilePath()
 	if !ok {
-		return
+		return nil
 	}
-	if os.MkdirAll(filepath.Dir(path), 0o755) != nil {
-		return
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
 	}
 	data, err := yaml.Marshal(st)
 	if err != nil {
-		return
+		return err
 	}
-	_ = os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o644)
 }
 
 // snapshotState captures the current model for persistence.

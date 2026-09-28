@@ -99,10 +99,16 @@ func TestQuitMenuWarnsWhenTaskRunning(t *testing.T) {
 	}
 }
 
-func TestCtrlCForceQuits(t *testing.T) {
+// tdp K9: Ctrl-C is the same leave flow as q (the cd-on-quit picker); a second
+// Ctrl-C on the picker is what quits at once.
+func TestCtrlCOpensLeaveFlowThenQuits(t *testing.T) {
 	m := minModel()
-	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC}); !isQuitCmd(cmd) {
-		t.Error("ctrl+c should quit immediately")
+	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if isQuitCmd(cmd) {
+		t.Fatal("the first ctrl+c should open the quit picker, not quit")
+	}
+	if _, cmd := model.(AppModel).Update(tea.KeyMsg{Type: tea.KeyCtrlC}); !isQuitCmd(cmd) {
+		t.Error("ctrl+c on the quit picker should quit immediately")
 	}
 }
 

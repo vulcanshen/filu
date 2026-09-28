@@ -14,23 +14,9 @@
 
 ## Demo
 
-### 上手操作
-![basics](docs/demo-basics.gif)
+![demo](docs/demo-basics.gif)
 
-### Marks — 跨 tab 收集後複製 / 搬移
-![marks](docs/demo-marks.gif)
-
-### 串流 finder — 模糊檔名 & ripgrep 內容
-![finders](docs/demo-finders.gif)
-
-### Favorites — 標記目錄,在 [3] Favorites 分頁管理
-![favorites](docs/demo-favorites.gif)
-
-### 預覽,再 yank 到剪貼簿
-![preview](docs/demo-preview.gif)
-
-### 當前 tab 目錄的 shell
-![shell](docs/demo-shell.gif)
+在 filu 裡走動：面板、分頁、`Space` menu，還有一直看得到的路徑。
 
 ## 為什麼用 filu
 
@@ -44,7 +30,11 @@
 
 ## 安裝
 
-> filu 支援 **macOS 與 Linux**。Windows 請在 WSL 裡使用。
+### 系統需求
+
+- 終端機要用 **Nerd Font** —— filu 的 icon 都是 Nerd Font glyph。CJK Nerd Font(如 Maple Mono NF CN)也沒問題。
+- **ripgrep** 用於內容搜尋,**fd** 讓 finder 更快(快速安裝與 Homebrew 都會幫你裝好)。
+- **macOS 或 Linux** —— Windows 請用 WSL。
 
 ### 快速安裝
 
@@ -89,10 +79,10 @@ filu 開啟時 focus 在檔案清單。剩下的交給五個鍵:
 | 鍵 | 作用 |
 |---|---|
 | **`Tab`** | 移到下一個面板(或按 `1`–`3` 直達) |
-| **`Enter`** | 進入目錄 / 確認選擇 |
+| **`Enter`** | 進入目錄、看檔案的詳細資訊，或確認選擇 |
 | **`Space`** | *這裡能做什麼?* —— 當下所在位置的選單 |
 | **`Esc`** | 退出 —— 回上層目錄,或關掉 popup |
-| **`?`** | 說明 —— 所有全域動作一次列出 |
+| **`?`** | 按鍵 —— 現在這裡能按的鍵(在 popup 上就是那個 popup 的鍵) |
 
 ### 讓 `q` 切換 shell 的目錄
 
@@ -118,7 +108,7 @@ eval "$(filu shell)"
 
 ### 瀏覽
 
-- `Enter` 進入、`Esc` 回上層;`j` / `k`、`u` / `d` 捲半頁、`gg` / `G` 到頂到底。
+- `Enter` 進入目錄 —— 在檔案上則顯示詳細資訊：完整路徑、類型、大小、時間、權限、擁有者。`Esc` 回上層;`j` / `k`、`u` / `d` 捲半頁、`gg` / `G` 到頂到底。
 - `b` 跳到任一層上層目錄。`.` 顯示或隱藏隱藏檔。
 - `S` 依名稱、修改時間、擁有者、權限或大小排序 —— 可疊多層決定平手時的順序。排序只套用在那個目錄。
 - `t` 開新分頁(同目錄、某個最愛,或搜尋),`w` 關掉。
@@ -128,8 +118,8 @@ eval "$(filu shell)"
 
 - `m` mark 一個檔案。四處移動時 marks 都會留著,可以從好幾個目錄、分頁收集。
 - 走到檔案該去的地方,按 `c` 複製、`v` 搬移過去。複製後 marks 還在,可以再放到別的地方。
-- 在 **Marks** 分頁:`p` 只挑其中一部分落地、`m` 取消某個 mark、`C` 全部清空、`Z` 把挑中的打包成 zip,再用 `c` / `v` 放過去。
-- 複製與搬移在背景進行;**Tasks** 分頁用白話紀錄進度。離開時沒跑完的任務,下次開啟會回來。
+- 在 **Marks** 分頁:`Enter` 在 `[1]` 顯示那個檔案(已開著它目錄的分頁或新分頁)、`p` 只挑其中一部分落地、`m` 取消某個 mark、`C` 全部清空、`Z` 把挑中的打包成 zip,再用 `c` / `v` 放過去。
+- 複製與搬移在背景進行;**Tasks** 分頁用白話紀錄進度，在一筆紀錄上按 `Enter` 會帶你到它落地的地方。離開時沒跑完的任務,下次開啟會回來。
 
 ### 尋找
 
@@ -140,19 +130,19 @@ eval "$(filu shell)"
 ### 最愛
 
 - `f` 把游標上的目錄加星號;`F` 把你所在的目錄加星號。加星的目錄在清單上會標出來。
-- **Favorites** 分頁列出所有最愛:`o` 開在新的或既有的分頁、`D` 移除。也可以用 Goto → Favorites 跳過去。
+- **Favorites** 分頁列出所有最愛:`Enter` 過去(已開著的分頁或新分頁)、`o` 自己挑分頁、`D` 移除。也可以用 Goto → Favorites 跳過去。
 
 ### 預覽與複製
 
 - 預覽支援:語法高亮加行號的文字、目錄樹、壓縮檔內容、PDF、圖片、SVG 原始碼、二進位檔的 hex。
-- 在預覽按 `y` 開啟可捲動的檢視:`v` 開始選取、`y` 複製(沒選取就複製全部)。
+- 在預覽按 `y`(或 `Enter`)開啟可捲動的檢視:`v` 開始選取、`y` 複製(沒選取就複製全部)。選取中按 `Space` 會列出選取模式的按鍵，挑一個就執行。
 - 在檔案上按 `y` 複製它的完整路徑。複製可以穿過 tmux 與 SSH。
 
 ### 開啟、編輯,以及其他
 
 - `o` 用預設 app 開啟檔案或目錄。`O` 讓你挑 app —— 可以在設定裡加上自己的(VSCode、IntelliJ IDEA…)。
-- `s` 在當前目錄開你的 shell;打 `exit` 回來。
-- `r` 改名、`a` 新增檔案(名稱以 `/` 結尾就是目錄)、`D` 移到垃圾桶 —— 都會先確認。
+- `s` 在當前目錄開你的 shell;打 `exit` 或按 `Alt+Esc` 回來(`Alt+Esc` 會直接結束 shell,不管裡面在跑什麼)。
+- `r` 改名、`a` 新增檔案(名稱以 `/` 結尾就是目錄)、`D` 先確認再移到垃圾桶。名稱是空的或已經有同名的，會當場擋下 —— 輸入框留著、告訴你原因。
 
 ## 按鍵一覽
 
@@ -166,15 +156,15 @@ eval "$(filu shell)"
 
 | 鍵 | 任何地方 |
 |---|---|
-| `?` | 說明 |
-| `q` | 離開,並選擇 shell 要停在哪裡 |
-| `Ctrl+C` | 立即離開(會中止進行中的複製或搬移) |
+| `?` | 這裡能按的鍵;再按 `?` 或 `Esc` 關掉 |
+| `q` | 離開,並選擇 shell 要停在哪裡(打字時 `q` 就是一個字母) |
+| `Ctrl+C` | 同 `q`,打字時也有效;在離開畫面上再按一次就立即離開 |
 
-各面板的 `Space` 選單:
+各面板的 `Space` 選單依序列出：對游標項目能做的事、對整個面板能做的事，最後一列是 **Global operation**,打開全 app 的動作選單(目前只有 Quit `q`)。暫時不能做的項目(例如只開一個分頁時的 Close tab)會變暗顯示。
 
 | Focus | 選單項目 |
 |---|---|
-| **`[1]` Files** | Open `o`、Open with `O`、Mark `m`、Yank `y`、Rename `r`、Delete `D`、Favorite `f` · Copy `c`、Move `v`、Search `/`、Goto `go`、Favorite dir `F`、Breadcrumb `b`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Shell `s`、Hidden `.`、Zoom `z` |
+| **`[1]` Files** | Open `o`、Open with `O`、Mark `m`、Yank `y`、Rename `r`、Delete `D`、Favorite `f` · Copy `c`、Move `v`、Search `/`、Goto `go`、Favorite dir `F`、Breadcrumb `b`、Switch tab `l`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Shell `s`、Hidden `.`、Zoom `z` |
 | **`[2]` Preview** | Yank `y`、Zoom `z` |
 | **`[3]` Marks** | Pick `p`、Yank `y`、Unmark `m` · Zip `Z`、Clear `C`、Switch tab `l`、Zoom `z` |
 | **`[3]` Tasks** | Delete `D` · Switch tab `l`、Zoom `z` |
@@ -223,17 +213,21 @@ open_with:
     cmd: idea
 ```
 
-## 系統需求
+## 限制
 
-- 終端機要用 **Nerd Font** —— filu 的 icon 都是 Nerd Font glyph。CJK Nerd Font(如 Maple Mono NF CN)也沒問題。
-- **ripgrep** 用於內容搜尋,**fd** 讓 finder 更快(快速安裝與 Homebrew 都會幫你裝好)。
-- **macOS 或 Linux** —— Windows 請用 WSL。
+刻意不做的：
+- **原生 Windows** —— filu 支援 macOS 與 Linux；Windows 請在 WSL 裡使用
+- **滑鼠** —— 所有操作都在鍵盤上
+- **目錄大小** —— 目錄的大小欄顯示 `-`，filu 不會把整棵樹加總
 
-## 更多
+## 相關連結
 
-- filu 與 Kubernetes TUI [kbu](https://github.com/vulcanshen/kbu) 共用同一套設計 —— 兩者都遵循 [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md)。
-- 以 Go 與 [Bubble Tea](https://github.com/charmbracelet/bubbletea) 打造。cd-on-quit 對標 [superfile](https://github.com/yorukot/superfile),finder 取法 [LazyVim](https://github.com/LazyVim/LazyVim) 的 search。
-- 從原始碼建置、平台決策、實作備註:[`docs/dev-remarks.md`](docs/dev-remarks.md)。
+- [CHANGELOG.md](CHANGELOG.md) —— 每個版本改了什麼
+- [`docs/dev-remarks.md`](docs/dev-remarks.md) —— 開發者備忘：運作方式、設計理由、從原始碼建置、發布
+
+## terminu family
+
+filu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.7/principle)：跟家族其他成員一樣的按鍵、一樣的 menu —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）與 [locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
 
 ## License
 

@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -88,21 +90,25 @@ func configFilePath() (string, bool) {
 
 // loadConfig applies config.yaml over the defaults. On first run (no file) it
 // drops a commented template so the knobs are discoverable and editable; a file
-// that exists is never overwritten. It never fails startup — any I/O or parse
-// error just leaves the defaults in place.
-func loadConfig() {
+// that exists is never overwritten. It never fails startup — an unreadable or
+// malformed file leaves the defaults in place — but it returns that error so
+// the app can say so (tdp F5) instead of silently ignoring the user's settings.
+func loadConfig() error {
 	path, ok := configFilePath()
 	if !ok {
-		return
+		return nil
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		writeDefaultConfig(path) // first run / unreadable → leave a template behind
-		return
+		if errors.Is(err, fs.ErrNotExist) {
+			writeDefaultConfig(path) // first run → leave a template behind
+			return nil
+		}
+		return err
 	}
 	var c fileConfig
-	if yaml.Unmarshal(data, &c) != nil {
-		return
+	if err := yaml.Unmarshal(data, &c); err != nil {
+		return err
 	}
 	if c.FinderCap > 0 {
 		finderCap = c.FinderCap
@@ -111,6 +117,7 @@ func loadConfig() {
 		finderIgnoreDirs = *c.IgnoreDirs
 	}
 	openWithApps = c.OpenWith
+	return nil
 }
 
 // configHeader is the top-of-file comment; the keys themselves are marshalled

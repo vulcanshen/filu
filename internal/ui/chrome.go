@@ -13,7 +13,7 @@ func borderColor(focused bool) lipgloss.Color {
 	return borderDim
 }
 
-// singleChip is a panel's border title as one powerline chip (§8.1):
+// singleChip is a panel's border title as one powerline chip (tdp D1):
 // round-left cap + dark-on-border-colour body + round-right cap.
 func singleChip(title string, focused bool) string {
 	bc := borderColor(focused)
@@ -30,7 +30,7 @@ func firstRune(s string) string {
 	return ""
 }
 
-// tabBar renders a starship powerline chip chain (§8.2): a bright [N] chip, then
+// tabBar renders a starship powerline chip chain (tdp D1): a bright [N] chip, then
 // one chip per tab — active bright (border colour), inactive recessed on crust.
 // Text labels get the classic spacing: no leading space after a cap, a trailing
 // space per segment, one space on a bright↔bright merge.
@@ -61,7 +61,7 @@ func tabBarPad(num string, labels []string, active int, focused bool, pad bool) 
 
 	for i, lab := range labels {
 		cur := i == active
-		lead := "" // after a cap, the cap itself separates — no leading space (§8.2)
+		lead := "" // after a cap, the cap itself separates — no leading space (tdp D1)
 		switch {
 		case prevBright && cur:
 			lead = " " // merge: no cap, one space separates from the previous chip

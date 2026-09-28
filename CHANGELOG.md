@@ -2,6 +2,85 @@
 
 ## [Unreleased]
 
+### Added
+- Every panel's `Space` menu now ends with **Global operation**, which opens a
+  menu of app-wide actions — for now, Quit (the same quit picker as `q`).
+- Panel `[1]`'s `Space` menu has a **Switch tab** row (`l`), like panel `[3]`.
+- While selecting in the preview viewport, `Space` lists the selection keys
+  (move, jump, copy, leave) — pick one with `Enter` or its own key to run it —
+  and `?` shows them as help. `Tab` there says to press `Esc` first. The
+  viewport's bottom line now shows the keys for the state you are in.
+- `Enter` on a file (it used to do nothing) shows the file's details: full
+  path — and where a link points — type, size in units and in bytes, modified /
+  accessed / created (changed on Linux) times, permissions as `rwx` and octal,
+  and owner. Long values wrap so nothing is cut; `Esc` closes it.
+- `Enter` now does something on the other panels too: on the preview it opens
+  the scrollable view (like `y`); on a mark it shows that file in `[1]`, and on
+  a favorite it goes to that directory — in the tab already there, else a new
+  one (with all five tabs in use it tells you); on a task it takes the current
+  tab to where the task landed.
+- `Alt+Esc` leaves the shell opened with `s` from anywhere in it — even with a
+  full-screen program running or the shell stuck. It ends the shell, like
+  typing `exit`. The shell's frame now says so.
+
+### Changed
+- `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
+  (with its warning when a copy or move is still running). Press `Ctrl+C` again
+  on the picker to leave at once.
+- `q` and `Ctrl+C` now reach the quit picker from anywhere — over a menu, a
+  confirmation, the help, a preview or the finder's results — and `Esc` on the
+  picker returns to where you were. While typing, `q` is just a letter.
+- In the finder's result list, `Tab` (not `q`) goes back to the query line;
+  `Tab` on the query line jumps to the results.
+- `?` now lists the keys of wherever you are: on a panel, that panel's own
+  keys (everything in its `Space` menu, plus the keys that work everywhere);
+  on a menu, confirmation, finder, breadcrumb or preview viewport, that
+  popup's keys — including ones only a hint mentioned before, like `y`/`n` on
+  a confirmation. The list scrolls on a small screen; `?` or `Esc` closes it
+  and returns to what you had open.
+- The Marks tab's bottom line lists the keys that work on it (pick, unmark,
+  zip, clear) instead of the file list's mark / copy / move, which do
+  something else — or nothing — there.
+- `q` no longer closes the key list; `Esc` or `?` does.
+- `Space` now only opens and closes the `Space` menu. On the pickers (sort,
+  Goto, Search, Open with, quit…), confirmations, the help and the breadcrumb
+  it does nothing; `Esc` closes them. `b` no longer closes the breadcrumb popup.
+- Confirmations name what `Enter` will do (`Enter trash`, `Enter clear`, …).
+- Popups now stack. A `Space`-menu item that opens a confirmation, a text
+  field or a picker leaves the menu underneath, so `Esc` goes back to it; the
+  Search chooser and the Goto picker stay under the finder they open. Finishing
+  the action closes the whole stack. Each deeper popup takes a slightly
+  different border colour, so you can see which one is on top.
+- `Space` menus always show their "item operation" and "panel operation"
+  headings (Global operation sits alone under a divider), and their titles name the
+  panel: `[1] report.pdf`, `[2] Preview`, `[3] Marks`.
+- Menu rows that can't run right now are shown dimmed instead of being left
+  out: Switch tab and Close tab with a single tab, Tab and the Favorites
+  "Open in" New tab at the five-tab limit. Pressing `t` at the limit now does
+  nothing instead of showing a message.
+- Menus keep each item on one line (the box widens to fit the descriptions)
+  and scroll with the cursor when they are taller than the screen, so every
+  item stays reachable in a small terminal. Section dividers are drawn dim,
+  with a space on each side.
+
+### Fixed
+- Renaming onto a name that already exists no longer overwrites that file.
+  Rename, New and Zip now check the name when you press `Enter`: an empty
+  name, a name that is taken, or (for Rename) one with a `/` keeps the box
+  open with the reason under the field. The box no longer changes width as
+  you type, and its hint names what `Enter` does.
+- A failed file operation now tells you: moving to the trash, renaming,
+  creating a file or directory, opening with the default app or launching an
+  Open-with app shows "Cannot … : reason" instead of silently doing nothing.
+  The same now goes for a shell that cannot start, a `config.yaml` filu cannot
+  read (it says so once and runs on the defaults), content search without
+  ripgrep installed (it says so instead of finding nothing), and a session that
+  cannot be saved.
+- `Esc` now closes a toast notification straight away instead of reaching the
+  panel underneath (where it went up a directory).
+- A popup that is already closing no longer swallows the next key: pressing
+  `Esc` again closes the layer beneath it right away.
+
 ## [0.3.2] — 2026-09-01
 
 ### Changed

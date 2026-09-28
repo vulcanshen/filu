@@ -36,7 +36,7 @@ func (m *AppModel) openOpenWith() tea.Cmd {
 		items = append(items, menuItem{label: a.Name, key: strconv.Itoa(i + 2), hint: a.Cmd})
 	}
 	m.openWithMenu.setItems(items, "Open with…")
-	m.openWithMenu.setSize(m.width)
+	m.openWithMenu.setSize(m.width, m.height)
 	return m.openWithMenu.open()
 }
 

@@ -10,7 +10,7 @@ import (
 
 func TestConfirmPopup(t *testing.T) {
 	m := newConfirmPopup()
-	m.open("Delete foo?")
+	m.open("Delete foo?", "trash")
 	m.anim.state = popupOpen // skip the open animation
 
 	if _, ok, _ := m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")}); !ok {
@@ -22,14 +22,19 @@ func TestConfirmPopup(t *testing.T) {
 	if _, ok, _ := m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")}); ok {
 		t.Error("n should not confirm")
 	}
+	// tdp K5: Space belongs to the Space menu; on a confirm it does nothing.
+	if _, ok, cmd := m.update(tea.KeyMsg{Type: tea.KeySpace, Runes: []rune(" ")}); ok || cmd != nil {
+		t.Errorf("Space should neither confirm nor close a confirm: ok=%v cmd=%v", ok, cmd)
+	}
 }
 
 func TestConfirmRender(t *testing.T) {
 	m := newConfirmPopup()
 	m.setSize(100)
-	m.open("Move README.md to the trash?")
+	m.open("Move README.md to the trash?", "trash")
 	plain := ansi.Strip(m.renderFull())
-	for _, want := range []string{"Confirm", "README.md", "trash", "confirm", "cancel"} {
+	// tdp D3 (family default): the hint names what Enter does.
+	for _, want := range []string{"Confirm", "README.md", "Enter trash", "Esc cancel"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("confirm popup missing %q:\n%s", want, plain)
 		}
