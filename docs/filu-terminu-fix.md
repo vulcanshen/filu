@@ -118,17 +118,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 （以下第 19–22 條：2026-09-28 修完第 1–18 條後，拿 tdp v0.1.7 `rules-zh_TW.md` 全文逐條再對一次時找到。）
 
-## 20. 還有四處錯誤看不到 —— F5
-
-- **現況**：
-  - `pty_unix.go` `start()`：`pty.StartWithSize` 失敗時直接回 `ptyExitMsg`，shell popup 不開也沒有訊息。
-  - `config.go` `loadConfig()`：`yaml.Unmarshal` 失敗時整份設定被靜靜略過（`finder_cap`、`ignore_dirs`、`open_with` 都不生效）。
-  - `search.go` `rgMatches()`：沒裝 `rg` 時回空清單，內容搜尋只顯示 `(no matches)`，看不出是沒裝工具。
-  - `persist.go` `saveState()`：寫不進 `state.yaml` 時什麼都不說（分頁、marks、最愛、排序下次都不在）。
-- **規則**：F5：錯誤必須立刻出現（toast 或 popup），`Esc` 可關，不能阻塞 app。
-- **怎麼改**：四處都把 error 帶回來，照第 11 條用 `opFailedText()` + `toast.showError()`；設定檔的錯誤在啟動後顯示一次，
-  並說明「用預設值」；沒裝 `rg` 時 finder 清單寫出原因而不是 `(no matches)`。
-
 ## 21. `[2]`、`[3]` 上的 `Enter` 不做事 —— K3（待確認）
 
 - **現況**：`handleDetailKey()`（`[2]` Preview）與 `handleMarksKey()`（`[3]` Marks / Tasks / Favorites）都沒有 `enter`，按了沒反應。

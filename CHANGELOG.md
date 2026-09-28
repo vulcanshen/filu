@@ -67,6 +67,10 @@
 - A failed file operation now tells you: moving to the trash, renaming,
   creating a file or directory, opening with the default app or launching an
   Open-with app shows "Cannot … : reason" instead of silently doing nothing.
+  The same now goes for a shell that cannot start, a `config.yaml` filu cannot
+  read (it says so once and runs on the defaults), content search without
+  ripgrep installed (it says so instead of finding nothing), and a session that
+  cannot be saved.
 - `Esc` now closes a toast notification straight away instead of reaching the
   panel underneath (where it went up a directory).
 - A popup that is already closing no longer swallows the next key: pressing

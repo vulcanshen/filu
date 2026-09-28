@@ -106,6 +106,7 @@ type AppModel struct {
 	watcher           *fsnotify.Watcher // live directory watch (nil if unavailable)
 	watchCh           chan watchMsg     // watcher goroutine → UI
 	watched           map[string]bool   // dirs currently registered with the watcher
+	startupErr        string            // a problem found while starting up (a bad config.yaml), shown once Init runs (tdp F5)
 }
 
 // maxTabs caps panel [1]'s directory tabs. It opens with one (at the CWD); the
@@ -117,7 +118,7 @@ const maxTabs = 5
 // focusName is set (the `filu <file>` case) the cursor lands on that entry.
 // Extra tabs the user created last session are restored by applyState.
 func New(startDir, focusName string) AppModel {
-	loadConfig() // apply config.yaml (finder cap) before any finder can open
+	configErr := loadConfig() // apply config.yaml (finder cap) before any finder can open
 	dir := startDir
 	if dir == "" {
 		wd, err := os.Getwd()
@@ -132,6 +133,9 @@ func New(startDir, focusName string) AppModel {
 		first.showHidden = true // not listed — it's a dotfile; reveal hidden and retry
 		first.reload()
 		first.focusEntry(focusName)
+	}
+	if configErr != nil {
+		m.startupErr = opFailedText("read config.yaml", configErr) + " (using the defaults)"
 	}
 	m.tabs = []listModel{first}
 	if st, ok := loadState(); ok { // restore last session
@@ -148,7 +152,7 @@ func New(startDir, focusName string) AppModel {
 
 // shutdown persists the session, stops the watcher, and quits.
 func (m *AppModel) shutdown() tea.Cmd {
-	saveState(m.snapshotState()) // restore this session on next launch
+	_ = saveState(m.snapshotState()) // restore this session on next launch (quitting: no screen left to report on)
 	if m.watcher != nil {
 		m.watcher.Close()
 	}
@@ -178,6 +182,14 @@ func (m *AppModel) boxOverSpaceMenu() bool {
 	return m.pty.isActive()
 }
 
+// persist saves the session; a failed save shows at once (tdp F5).
+func (m *AppModel) persist() tea.Cmd {
+	if err := saveState(m.snapshotState()); err != nil {
+		return m.toast.showError(opFailedText("save the session", err))
+	}
+	return nil
+}
+
 // typing reports whether keys are text entry right now (tdp K8): the input
 // popup, or the finder's query line. Letter keys, q included, are characters.
 func (m AppModel) typing() bool {
@@ -198,7 +210,12 @@ func (m *AppModel) addTab(dir string) {
 func (m AppModel) active() listModel { return m.tabs[m.tab] }
 
 func (m AppModel) Init() tea.Cmd { // persistent readers: land results, live-refresh, finder stream
-	return tea.Batch(m.waitLand(), m.waitWatch(), m.waitSearch())
+	cmds := []tea.Cmd{m.waitLand(), m.waitWatch(), m.waitSearch()}
+	if m.startupErr != "" {
+		text := m.startupErr
+		cmds = append(cmds, func() tea.Msg { return opFailedMsg{text} })
+	}
+	return tea.Batch(cmds...)
 }
 
 // waitSearch reads one batch of the finder's streamed file listing.
@@ -210,8 +227,7 @@ func (m AppModel) waitSearch() tea.Cmd {
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case landMsg:
-		m.handleLandMsg(msg)
-		return m, m.waitLand()
+		return m, tea.Batch(m.handleLandMsg(msg), m.waitLand())
 	case watchMsg:
 		m.handleWatchMsg(msg)
 		return m, m.waitWatch()
@@ -466,11 +482,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.places.unpin(m.pendingUnfavorite)
 					m.pendingUnfavorite = ""
 					m.places.clampCursor()
-					saveState(m.snapshotState())
+					cmd = tea.Batch(cmd, m.persist())
 				case confirmClearMarks:
 					m.marks.clear()
 					m.cur().reload() // the list's mark column follows the bucket
-					saveState(m.snapshotState())
+					cmd = tea.Batch(cmd, m.persist())
 				}
 				m.confirmAction = confirmNone
 				cmd = tea.Batch(cmd, m.clearStack()) // the action is done: the menus that led here go too (T1)
@@ -846,7 +862,7 @@ func (m *AppModel) handleTasksKey(key string) tea.Cmd {
 		if m.taskCursor >= 0 && m.taskCursor < len(m.tasks) {
 			m.tasks = append(m.tasks[:m.taskCursor], m.tasks[m.taskCursor+1:]...)
 			m.clampTaskCursor()
-			saveState(m.snapshotState())
+			return m.persist()
 		}
 	}
 	return nil

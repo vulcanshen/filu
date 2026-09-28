@@ -141,8 +141,17 @@ func (m *AppModel) openSearch() tea.Cmd {
 // openFind opens the by-content finder over the active tab's directory (the
 // Search chooser's `content` pick).
 func (m *AppModel) openFind() tea.Cmd {
+	// Content search is ripgrep; without it every query would read "(no
+	// matches)". Say why instead (tdp F5), and leave the chooser up so the
+	// filename search is one key away.
+	if _, err := lookPath("rg"); err != nil {
+		return m.toast.showError("Cannot search file contents: ripgrep (rg) is not installed")
+	}
 	return m.search.open(m.cur().dir, m.width, m.height, true, false, m.searchCh)
 }
+
+// lookPath finds a helper binary; a var so tests can pretend it is missing.
+var lookPath = exec.LookPath
 
 // openGoto opens the finder over $HOME listing only directories (fuzzy on the
 // path), so Enter teleports the active tab to any directory under home. Typing a
