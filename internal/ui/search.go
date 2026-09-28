@@ -135,7 +135,8 @@ func (m *AppModel) openSearchMenu() tea.Cmd {
 // openSearch opens the by-name finder over the active tab's directory (the
 // Search chooser's `filename` pick).
 func (m *AppModel) openSearch() tea.Cmd {
-	return m.search.open(m.cur().dir, m.width, m.height, false, false, m.searchCh)
+	cmd := m.search.open(m.cur().dir, m.width, m.height, false, false, m.searchCh)
+	return tea.Batch(cmd, m.keepLoading())
 }
 
 // openFind opens the by-content finder over the active tab's directory (the
@@ -147,7 +148,8 @@ func (m *AppModel) openFind() tea.Cmd {
 	if _, err := lookPath("rg"); err != nil {
 		return m.toast.showError("Cannot search file contents: ripgrep (rg) is not installed")
 	}
-	return m.search.open(m.cur().dir, m.width, m.height, true, false, m.searchCh)
+	cmd := m.search.open(m.cur().dir, m.width, m.height, true, false, m.searchCh)
+	return tea.Batch(cmd, m.keepLoading())
 }
 
 // lookPath finds a helper binary; a var so tests can pretend it is missing.
@@ -164,7 +166,8 @@ func (m *AppModel) openGoto() tea.Cmd {
 	if err != nil || home == "" {
 		home = m.cur().dir // no home known → fall back to the current dir
 	}
-	return m.search.open(home, m.width, m.height, false, true, m.searchCh)
+	cmd := m.search.open(home, m.width, m.height, false, true, m.searchCh)
+	return tea.Batch(cmd, m.keepLoading())
 }
 
 // openGotoNewTab opens the same Goto finder as openGoto (`T`), but its confirm
@@ -224,6 +227,11 @@ func (m *searchModel) handleTick(msg AnimTickMsg) tea.Cmd {
 	}
 	return m.anim.tick()
 }
+
+// isLoading reports results still coming in: the file walk has not finished,
+// or an rg search is running. The title shows the loading icon while it holds
+// (tdp F7).
+func (m searchModel) isLoading() bool { return m.loading || m.searching }
 
 // onStreamBatch appends one streamed chunk (dropping a stale one from a previous
 // open) and re-applies the current view: an empty query shows everything so far,
@@ -658,6 +666,9 @@ func (m searchModel) renderFull() string {
 	case m.byContent:
 		title = " Find"
 	}
+	if m.isLoading() { // loading is always disclosed after the title (tdp F7, D3)
+		title += " " + loadingIcon()
+	}
 	sb := drawPopupBoxPad(bc, title, m.hint(), m.listColumn(sW, sRows), sW, false)
 	pb := drawPopupBoxPad(bc, m.previewTitle(), "", m.previewColumn(pW, pRows), pW, false)
 	if side {
@@ -687,7 +698,7 @@ func (m searchModel) listColumn(w, rows int) []string {
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	switch {
-	case m.loading:
+	case m.loading && len(m.files) == 0: // nothing streamed in yet; the title icon says it is loading
 		out = append(out, dim.Render(" (indexing…)"))
 	case m.searching && len(m.files) == 0:
 		out = append(out, dim.Render(" (searching…)"))

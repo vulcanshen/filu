@@ -91,8 +91,7 @@ type AppModel struct {
 	tasks             []landTask        // land operations (Tasks tab: running + log)
 	taskCh            chan landMsg      // land goroutines → UI
 	nextTaskID        int
-	spinnerFrame      int               // running-task spinner animation
-	spinning          bool              // a spinner tick is in flight
+	loadingTicking    bool              // a loading-icon tick is in flight (tdp D3)
 	taskCursor        int               // cursor over the Tasks tab
 	watcher           *fsnotify.Watcher // live directory watch (nil if unavailable)
 	watchCh           chan watchMsg     // watcher goroutine → UI
@@ -264,13 +263,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.syncWatches() // the tab may have moved to a new dir
 		m.refreshPreview()
 		return m, m.clearStack() // the pick is made: the chooser / Goto picker and Space menu go too (T1)
-	case spinnerTickMsg:
-		m.spinnerFrame++
-		if m.anyRunning() {
-			return m, spinnerTick()
-		}
-		m.spinning = false
-		return m, nil
+	case loadingTickMsg: // redraw the loading icons; re-arm only while something loads (tdp D3)
+		m.loadingTicking = false
+		return m, m.keepLoading()
 	case tea.WindowSizeMsg:
 		oldW := m.previewWidth()
 		m.width, m.height = msg.Width, msg.Height
@@ -380,6 +375,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			m.search, cmd = m.search.update(msg)
+			cmd = tea.Batch(cmd, m.keepLoading()) // a new rg search or rescan loads again
 			return m, cmd
 		}
 		if m.meta.owns() { // file information box: read only, scrolls
