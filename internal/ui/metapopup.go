@@ -21,7 +21,6 @@ type metaPopup struct {
 	anim    popupAnimator
 	title   string
 	rows    []metaRow
-	width   int // inner width, fixed when it opens (tdp L2)
 	top     int // first line shown when the box is taller than the screen
 	screenW int
 	screenH int
@@ -53,7 +52,6 @@ func (m *metaPopup) open(path string) tea.Cmd {
 	m.title = filepath.Base(path)
 	m.rows = fileFacts(path)
 	m.top = 0
-	m.width = m.openWidth()
 	return m.anim.open()
 }
 
@@ -66,15 +64,9 @@ func (m metaPopup) metaLabelW() int {
 	return w + 2
 }
 
-// openWidth fits the longest value on one line when the screen allows, never
-// narrower than the title and hint.
-func (m metaPopup) openWidth() int {
-	w := max(40, lipgloss.Width(" "+m.title)+4, lipgloss.Width(metaHint)+4)
-	for _, r := range m.rows {
-		w = max(w, 2+m.metaLabelW()+lipgloss.Width(r.value)+1)
-	}
-	return min(w, maxInnerWidth(m.screenW))
-}
+// width is the family inner width (tdp F7): the value wraps inside it rather
+// than widening the box.
+func (m metaPopup) width() int { return popupInnerWidth(m.screenW) }
 
 // metaHint is the box's bottom border.
 const metaHint = " j/k scroll · Esc close "
@@ -84,7 +76,7 @@ const metaHint = " j/k scroll · Esc close "
 func (m metaPopup) lines() []string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f849c"))
 	labelW := m.metaLabelW()
-	valueW := max(m.width-2-labelW-1, 8)
+	valueW := max(m.width()-2-labelW-1, 8)
 	var out []string
 	for _, r := range m.rows {
 		for i, part := range wrapHard(r.value, valueW) {
@@ -129,17 +121,12 @@ func (m metaPopup) update(msg tea.KeyMsg) (metaPopup, tea.Cmd) {
 
 func (m metaPopup) renderFull() string {
 	bc := popupLayerColor(m.anim.layer)
-	width := m.width
-	if width <= 0 {
-		width = m.openWidth()
-	}
-	m.width = min(width, maxInnerWidth(m.screenW))
 	rows := m.lines()
 	if vis := m.visible(); len(rows) > vis {
 		top := max(0, min(m.top, len(rows)-vis))
 		rows = rows[top : top+vis]
 	}
-	return drawPopupBox(bc, " "+safeName(m.title), metaHint, rows, m.width)
+	return drawPopupBox(bc, " "+safeName(m.title), metaHint, rows, m.width())
 }
 
 // wrapHard cuts s into pieces at most w cells wide, breaking anywhere — a path

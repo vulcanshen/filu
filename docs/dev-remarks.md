@@ -92,6 +92,10 @@
 - **popup 共用框** — 全部走 `drawPopupBox`(title 嵌上框、hint 嵌下框、內容上下各一列
   padding);yank viewport 與 finder 用 `drawPopupBoxPad(pad=false)` 貼齊邊框。popup
   內容列刻意不放 glyph(`lipgloss.Width` 會低估 ambiguous / PUA 寬度),glyph 只擺在框線上。
+- **popup 一律同寬** — 每個 popup 的外框都是 `min(terminal 寬 − 2, 120)`(`popupInnerWidth()`
+  給扣掉左右邊框的內寬),不看內容:說明太長就截、訊息與值在框內折行(tdp F7,取代 D4 的
+  「key reference 依最長說明算寬」)。finder 的兩個框加中間一欄間隔合起來是這個寬度。
+  PTY 例外:外框貼滿畫面(F7 的 terminal 類)。
 - **popup 疊層** — `stackOrder()` 是整疊由下往上的唯一順序:Space menu 在最底、它開出的
   picker / confirm / input / breadcrumb / yank viewport 在上、finder 在開它的 chooser 或
   Goto picker 之上、key reference 與 quit picker 最上。`View` 照這個順序畫(`assignLayers()`
@@ -124,7 +128,7 @@ filu/
   2026-09-28 裁定不符合 tdp K3(對 focus 項目做最直觀的動作),改成開唯讀的資訊框
   (`metaPopup`,`fileFacts()`):完整路徑(symlink 多一列目標)、類型(跟 preview 同一套
   判法)、大小(人話 + bytes)、Modified / Accessed / Created(Linux 是 Changed)、`rwx` +
-  八進位、owner:group。值過長就折行、全部揭露，框寬開框時定下、太高就捲動，讀不到的欄位
+  八進位、owner:group。值過長就折行、全部揭露，框寬照 F7、太高就捲動，讀不到的欄位
   在框裡寫原因(F5)。
   其他 panel 的 `Enter`(同日裁定):`[2]` 開可捲動的檢視(同 `y`);`[3]` Marks / Favorites
   在 `[1]` 找已經開著那個目錄的分頁、沒有就開新分頁(`showInTabs()`,Marks 游標停在該檔;
@@ -150,8 +154,8 @@ filu/
 - **input popup 在 `Enter` 當下驗證，不過就不送出。** Rename / Add / Zip 開框時掛上
   `nameCheck()`:空白、Rename 名稱含 `/` 或撞到現有名稱(改回原名放行)、Add 是 `.` / `..`
   或已存在，都留在框裡、在輸入列下方紅字說原因，打字就清掉(tdp K3)。Rename 以前會
-  `os.Rename` 直接蓋掉同名檔，現在在送出前就擋下。框寬在開框時定一次(`openWidth()`,
-  至少 40 欄),錯誤訊息在框內折行、值太長從左邊截，框不跟著浮動(tdp L2)。
+  `os.Rename` 直接蓋掉同名檔，現在在送出前就擋下。框寬照 F7 固定(`popupInnerWidth()`),
+  錯誤訊息在框內折行、值太長從左邊截，框不跟著浮動(tdp L2)。
   驗證過了仍可能在寫入時失敗(權限等),那個錯誤走 toast(tdp F5)。
 - **Zip 打到 temp,再走既有的落地路徑。** 輸出位置固定是 `os.MkdirTemp("", "filu-zip-")`,
   因為使用情境是「打包完再搬去某個 `[1]` 的目錄」,輸出位置不等於目的地。打完的 zip

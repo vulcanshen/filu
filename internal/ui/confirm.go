@@ -60,8 +60,7 @@ func (m confirmPopup) renderFull() string {
 	title := " " + string(rune(0xf071)) + " Confirm" // nf-fa-warning
 	hint := " Enter " + m.verb + " · Esc cancel "
 
-	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
-	innerW = min(max(innerW, lipgloss.Width(m.message)+4), maxInnerWidth(m.screenW))
+	innerW := popupInnerWidth(m.screenW) // the family width (tdp F7); the message wraps inside
 
 	msgStyle := lipgloss.NewStyle().Bold(true)
 	var rows []string

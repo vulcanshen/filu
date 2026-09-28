@@ -56,7 +56,7 @@ func (m AppModel) quitTargets() []quitTarget {
 // j/k + Enter), or Esc to stay.
 func (m *AppModel) openQuitMenu() tea.Cmd {
 	targets := m.quitTargets()
-	labelMax := max(maxInnerWidth(m.width)-28, 12)
+	labelMax := max(popupInnerWidth(m.width)-28, 12)
 	items := make([]menuItem, 0, len(targets)+2)
 	if m.anyRunning() { // quitting abandons an in-flight copy/move
 		items = append(items,

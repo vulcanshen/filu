@@ -131,13 +131,12 @@ func (m modeList) renderFull() string {
 	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f849c"))
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
 
-	keyW, descW := 0, 0
+	keyW := 0
 	for _, k := range selectKeys {
 		keyW = max(keyW, lipgloss.Width(k.keys))
-		descW = max(descW, lipgloss.Width(k.desc))
 	}
 	title := " Selection keys"
-	innerW := min(max(lipgloss.Width(title)+4, lipgloss.Width(modeListHint)+4, 2+keyW+2+descW+2), maxInnerWidth(m.screenW))
+	innerW := popupInnerWidth(m.screenW)
 	rows := make([]string, 0, len(selectKeys))
 	for i, k := range selectKeys {
 		key := k.keys + strings.Repeat(" ", keyW-lipgloss.Width(k.keys))

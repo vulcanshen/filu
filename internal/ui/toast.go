@@ -4,7 +4,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // toastModel is a transient notification (kbu form): a small popup that opens on
@@ -67,6 +66,6 @@ func (m toastModel) renderPopup() string { return m.anim.renderFrame(m.renderFul
 func (m toastModel) renderFull() string {
 	bc := popupLayerColor(1)
 	body := " " + m.message + " "
-	innerW := min(max(lipgloss.Width(body), lipgloss.Width(" filu")+2), maxInnerWidth(m.screenW))
+	innerW := popupInnerWidth(m.screenW) // the family width (tdp F7)
 	return drawPopupBox(bc, " filu", " ", []string{truncate(body, innerW)}, innerW)
 }

@@ -56,7 +56,7 @@ func (m *AppModel) setGotoPinnedItems() {
 		}, "Favorites")
 		return
 	}
-	budget := maxInnerWidth(m.width) - 8 // room for the "[N] " prefix + box chrome
+	budget := popupInnerWidth(m.width) - 8 // room for the "[N] " prefix + box chrome
 	items := make([]menuItem, 0, len(m.places.pinned))
 	for i, p := range m.places.pinned {
 		items = append(items, menuItem{label: fitPath(p.path, budget), key: strconv.Itoa(i + 1)})

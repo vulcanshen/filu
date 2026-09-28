@@ -90,13 +90,7 @@ func (m breadcrumbPopup) renderFull() string {
 	// under-counts ambiguous/PUA glyphs. Alignment comes from a plain 2-space
 	// gutter; the current level is flagged by lavender text, not a symbol.
 	const gutter = "  "
-	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4)
-	for _, lv := range m.levels {
-		if w := 1 + len(gutter) + lipgloss.Width(lv.label) + 1; w > innerW { // lead + gutter + label + slack
-			innerW = w
-		}
-	}
-	innerW = min(innerW, maxInnerWidth(m.screenW))
+	innerW := popupInnerWidth(m.screenW) // the family width (tdp F7)
 
 	current := len(m.levels) - 1
 	var rows []string

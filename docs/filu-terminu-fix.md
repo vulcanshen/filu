@@ -5,10 +5,7 @@ filu 已符合 tdp v0.1.7(見 `dev-remarks.md`「對照 tdp 時確認過的」)�
 
 ## 待修
 
-1. **F7 寬度**:每個 popup 依內容決定寬度,上限是畫面的 85%(`maxInnerWidth`)。
-   規則是一律 `min(terminal 寬 − 2, 120)`、水平置中。影響所有 popup(menu、confirm、input、key reference、metadata、
-   finder、viewport、toast)。D4「key reference 依最長說明計算寬度」也一併被 F7 取代。
-2. **F7 toast 位置**:toast 垂直置中;規則是固定在畫面下方,寬度照第 1 條。
+2. **F7 toast 位置**:toast 垂直置中;規則是固定在畫面下方(寬度已照 F7)。
 3. **F7 input 錯誤列**:rename / add / zip 送出失敗時,錯誤才多長出幾列,框變高。規則是打開時就預留一列錯誤列,
    錯誤寫在那一列,框高不變。
 4. **F7 高度打開時定好**:goto 的 Favorites 清單按 `f` 取消收藏後在原地重建,框跟著變矮。

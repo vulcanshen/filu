@@ -34,9 +34,6 @@ type inputPopup struct {
 	check func(string) string
 	// errMsg is the last failed check's reason; typing clears it.
 	errMsg string
-	// width is the box's inner width, fixed when the popup opens so it does not
-	// grow or shrink with the value or the error line (tdp L2).
-	width int
 }
 
 func newInputPopup() inputPopup {
@@ -47,19 +44,7 @@ func (m *inputPopup) open(kind inputKind, prompt, buffer string, item fileItem) 
 	m.kind, m.prompt, m.buffer, m.item = kind, prompt, buffer, item
 	m.check, m.errMsg = nil, ""
 	m.blink, m.blinkGen = true, m.blinkGen+1
-	m.width = m.openWidth()
 	return tea.Batch(m.anim.open(), inputBlinkCmd(m.blinkGen))
-}
-
-// minInputWidth keeps room to type even when the prompt and hint are short.
-const minInputWidth = 40
-
-// openWidth is the box width for this open: the title, the hint, the item
-// description and the prefilled value, with room to type, capped by the screen.
-func (m inputPopup) openWidth() int {
-	w := max(minInputWidth, lipgloss.Width(" "+m.prompt)+4, lipgloss.Width(m.hint())+4,
-		lipgloss.Width(m.desc())+4, lipgloss.Width(inputGlyph+" "+safeName(m.buffer)+"█")+4)
-	return min(w, maxInnerWidth(m.screenW))
 }
 
 // onBlink toggles the cursor and reschedules, as long as this is still the
@@ -161,11 +146,9 @@ func (m inputPopup) renderFull() string {
 	glyph := lipgloss.NewStyle().Foreground(lipgloss.Color("#fab387")).Bold(true).Render(inputGlyph)
 	field := glyph + " " + safeName(m.buffer) + cur
 
-	innerW := m.width
-	if innerW <= 0 { // not opened through open() (tests): size to the content
-		innerW = m.openWidth()
-	}
-	innerW = min(innerW, maxInnerWidth(m.screenW))
+	// The family width (tdp F7): it does not grow or shrink with the value or
+	// the error line (tdp L2).
+	innerW := popupInnerWidth(m.screenW)
 
 	if lipgloss.Width(field) > innerW { // keep the cursor (tail) visible
 		field = ansi.TruncateLeft(field, lipgloss.Width(field)-(innerW-1), "…")
