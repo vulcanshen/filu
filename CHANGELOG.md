@@ -40,6 +40,9 @@
   it — is drawn dimmed, so only the box you are using is bright. A popup
   underneath keeps a dimmed version of its own border colour, so you can still
   tell the layers apart. A notification does not dim anything.
+- In the finders, `Enter` while typing opens the highlighted result right
+  away (it used to only move into the list), and `↑` / `↓` pick among the
+  results as you type. `Tab` still moves into the list, where `j` / `k` move.
 - `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
   (with its warning when a copy or move is still running). Press `Ctrl+C` again
   on the picker to leave at once.

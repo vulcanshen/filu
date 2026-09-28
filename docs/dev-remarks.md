@@ -243,6 +243,9 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 - **K2(單一輸入框有灰字提議時 `Tab` 接受提議)**:filu 沒有灰字提議。Rename 預填原名、Zip
   預填 `suggestZipName()`,兩者都是可以直接編輯的**值**,不是灰字;Add 是空的。input popup
   裡 `Tab` 不作用;finder 輸入列同樣沒有提議,`Tab` 在輸入列與結果清單之間切換。
+  finder 打字時是 input(tdp F1):`Enter` 就是送出，直接選反白的那一筆(預設第一筆);方向鍵
+  在候選之間移動,`j` / `k` 仍是字元(K8);要用 `j` / `k` 就先 `Tab` 進清單(2026-09-28 user
+  裁定，以前打字時的 `Enter` 跟 `Tab` 一樣只是把 focus 交給清單)。
 - **K10(至少一個出口鍵)**:filu 的 PTY 只有一格 shell,只需要出口鍵 `Alt+Esc`。
 - **M3 與 P3「同一個動作在兩區」**:沒有熱鍵同時出現在兩個區。全域動作只有離開;切分頁、
   Goto、Search、Shell、Sort 都作用在 `[1]`,是 `[1]` 的 panel operation。

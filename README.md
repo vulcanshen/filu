@@ -125,7 +125,7 @@ Three panels:
 
 - **`/` Search** — by **filename** (fuzzy, anywhere below the current directory) or by **content** (ripgrep; the preview jumps to the matching line). Start the query with `/` or `~/` to search from that path instead, anywhere on disk.
 - **`go` Goto** — jump to a favorite, or fuzzy-search every directory under your home (hidden ones too). `Enter` takes the tab there.
-- Results appear as they're found — start typing right away.
+- Results appear as they're found — start typing right away. While you type, `↑` / `↓` move among the results and `Enter` opens the highlighted one; `Tab` moves into the list, where `j` / `k` move too.
 
 ### Favorites
 
