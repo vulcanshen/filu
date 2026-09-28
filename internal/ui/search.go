@@ -282,8 +282,19 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyEsc:
 			return m, m.anim.close()
-		case tea.KeyEnter, tea.KeyTab: // submit the query / Tab to the result list (tdp K2)
-			if len(m.files) > 0 { // hand focus to the list
+		case tea.KeyEnter: // typing is an input: Enter submits — the highlighted result (tdp F1, K3)
+			if p := m.selectedAbs(); p != "" {
+				return m, tea.Batch(m.anim.close(), func() tea.Msg { return searchConfirmMsg{path: p, newTab: m.newTab} })
+			}
+			return m, nil
+		case tea.KeyUp: // the arrows move among the results while typing; j/k stay characters (tdp F1, K8)
+			m.moveCursor(-1)
+			return m, nil
+		case tea.KeyDown:
+			m.moveCursor(1)
+			return m, nil
+		case tea.KeyTab: // hand focus to the result list, where j/k move (tdp F1, K2)
+			if len(m.files) > 0 {
 				m.mode = searchNav
 			}
 			return m, nil
@@ -664,11 +675,11 @@ func (m searchModel) listColumn(w, rows int) []string {
 	out = append(out, lipgloss.NewStyle().Foreground(dimColor).Render(strings.Repeat("─", w)))
 
 	listRows := rows - len(out)
-	// While typing (input mode) the highlighted row is just a preselection, so it
-	// wears the neutral hand colour; once Enter hands focus to the list (nav mode)
-	// it turns blue (focusColor, filu's structural focus colour) to signal "you're
-	// now moving this with j/k" — distinct from the lavender used elsewhere for a
-	// remembered, unfocused position.
+	// While typing (input mode) the highlighted row is what Enter would pick, moved
+	// with the arrows; it wears the neutral hand colour. Once Tab hands focus to
+	// the list (nav mode) it turns blue (focusColor, filu's structural focus
+	// colour) to signal "you're now moving this with j/k" — distinct from the
+	// lavender used elsewhere for a remembered, unfocused position.
 	cursorBg := handColor
 	if m.mode == searchNav {
 		cursorBg = focusColor
@@ -770,7 +781,7 @@ func (m searchModel) hint() string {
 	if m.mode == searchNav {
 		return " j/k/u/d · Enter=go · Tab=input · Esc=close "
 	}
-	return " Enter=list · Esc=close "
+	return " ↑/↓ · Enter=go · Tab=list · Esc=close "
 }
 
 // --- fd / ripgrep ---

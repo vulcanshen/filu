@@ -152,9 +152,9 @@ func TestSearchByNameFiltersInMemory(t *testing.T) {
 func TestSearchModalFlow(t *testing.T) {
 	m := openedSearch("/root", "a.go", "b.go")
 
-	m, _ = m.update(tea.KeyMsg{Type: tea.KeyEnter}) // → nav
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyTab}) // → nav
 	if m.mode != searchNav {
-		t.Fatal("Enter should switch to nav mode")
+		t.Fatal("Tab should switch to nav mode")
 	}
 	if m.selectedAbs() != "/root/a.go" {
 		t.Errorf("selectedAbs = %q, want /root/a.go", m.selectedAbs())
@@ -190,9 +190,9 @@ func TestSearchModalFlow(t *testing.T) {
 	if _, cmd := m.update(tea.KeyMsg{Type: tea.KeyEsc}); cmd == nil {
 		t.Error("Esc in input mode should close the finder")
 	}
-	m, _ = m.update(tea.KeyMsg{Type: tea.KeyEnter}) // back to nav
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyTab}) // back to nav
 	if m.mode != searchNav {
-		t.Fatal("Enter should switch back to nav mode")
+		t.Fatal("Tab should switch back to nav mode")
 	}
 	m, cmd := m.update(tea.KeyMsg{Type: tea.KeyEsc})
 	if cmd == nil {

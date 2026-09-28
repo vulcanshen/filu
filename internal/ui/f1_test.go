@@ -75,3 +75,71 @@ func TestF1GotoFavoritesIsASeparatePopup(t *testing.T) {
 			m.gotoFavMenu.owns(), m.gotoMenu.owns())
 	}
 }
+
+// tdp F1: while typing, the finder is an input — Enter submits, which picks the
+// highlighted result at once (the first, unless the arrows moved); the arrows
+// move among the results and j/k stay characters (K8); Tab hands focus to the
+// list, where j/k move.
+func TestF1FinderTypingEnterPicksTheHighlighted(t *testing.T) {
+	m := openedSearch("/root", "a.go", "b.go", "c.go")
+
+	if h := m.hint(); !strings.Contains(h, "Enter=go") || !strings.Contains(h, "Tab=list") {
+		t.Errorf("the hint while typing should say Enter picks and Tab goes to the list: %q", h)
+	}
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyDown})
+	if m.mode != searchInput || m.selectedAbs() != "/root/b.go" {
+		t.Fatalf("Down while typing should move to b.go and keep typing: mode %v, %q", m.mode, m.selectedAbs())
+	}
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyUp})
+	if m.selectedAbs() != "/root/a.go" {
+		t.Errorf("Up while typing should move back to a.go, got %q", m.selectedAbs())
+	}
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyDown})
+
+	if typed, _ := m.update(runes("j")); typed.query != "j" {
+		t.Errorf("j while typing is a character, query = %q", typed.query)
+	}
+
+	m, cmd := m.update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("Enter while typing should submit")
+	}
+	var picked *searchConfirmMsg
+	for _, msg := range batchMsgs(cmd) {
+		if c, ok := msg.(searchConfirmMsg); ok {
+			picked = &c
+		}
+	}
+	if picked == nil || picked.path != "/root/b.go" {
+		t.Errorf("Enter while typing should pick the highlighted b.go, got %+v", picked)
+	}
+	if m.anim.owns() {
+		t.Error("the finder should close on the pick")
+	}
+
+	n := openedSearch("/root", "a.go", "b.go")
+	n, _ = n.update(tea.KeyMsg{Type: tea.KeyTab})
+	if n.mode != searchNav {
+		t.Fatal("Tab while typing should hand focus to the list")
+	}
+	if n, _ = n.update(runes("j")); n.selectedAbs() != "/root/b.go" {
+		t.Errorf("j in the list should move, got %q", n.selectedAbs())
+	}
+}
+
+// batchMsgs runs cmd and, for a batch, each command in it, returning the
+// messages they produce.
+func batchMsgs(cmd tea.Cmd) []tea.Msg {
+	msg := cmd()
+	b, ok := msg.(tea.BatchMsg)
+	if !ok {
+		return []tea.Msg{msg}
+	}
+	var out []tea.Msg
+	for _, c := range b {
+		if c != nil {
+			out = append(out, c())
+		}
+	}
+	return out
+}
