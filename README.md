@@ -141,7 +141,7 @@ Three panels:
 ### Open, edit, and everything else
 
 - `o` opens a file or directory with its default app. `O` lets you choose the app — add your own (VSCode, IntelliJ IDEA, …) in the config.
-- `s` drops you into your shell in the current directory; type `exit` to come back.
+- `s` drops you into your shell in the current directory; type `exit` or press `Alt+Esc` to come back (`Alt+Esc` ends the shell, whatever is running in it).
 - `r` renames, `a` creates a file (end the name with `/` for a directory), `D` moves to the trash — with a confirmation first.
 
 ## Key reference

@@ -293,7 +293,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.splash, cmd = m.splash.update(msg)
 			return m, cmd
 		}
-		if m.pty.isActive() { // the embedded editor owns every keystroke
+		if m.pty.isActive() { // the shell owns every keystroke but the exit key (tdp K10)
+			if isExitKey(msg) {
+				return m, m.pty.exit()
+			}
 			return m, m.pty.update(msg)
 		}
 		if m.toast.owns() && msg.String() == "esc" { // tdp F3: Esc closes the toast before anything beneath it

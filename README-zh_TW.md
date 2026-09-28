@@ -141,7 +141,7 @@ eval "$(filu shell)"
 ### 開啟、編輯,以及其他
 
 - `o` 用預設 app 開啟檔案或目錄。`O` 讓你挑 app —— 可以在設定裡加上自己的(VSCode、IntelliJ IDEA…)。
-- `s` 在當前目錄開你的 shell;打 `exit` 回來。
+- `s` 在當前目錄開你的 shell;打 `exit` 或按 `Alt+Esc` 回來(`Alt+Esc` 會直接結束 shell,不管裡面在跑什麼)。
 - `r` 改名、`a` 新增檔案(名稱以 `/` 結尾就是目錄)、`D` 移到垃圾桶 —— 都會先確認。
 
 ## 按鍵一覽

@@ -6,6 +6,9 @@
 - Every panel's `Space` menu now ends with **Global operation**, which opens a
   menu of app-wide actions — for now, Quit (the same quit picker as `q`).
 - Panel `[1]`'s `Space` menu has a **Switch tab** row (`l`), like panel `[3]`.
+- `Alt+Esc` leaves the shell opened with `s` from anywhere in it — even with a
+  full-screen program running or the shell stuck. It ends the shell, like
+  typing `exit`. The shell's frame now says so.
 
 ### Changed
 - `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
