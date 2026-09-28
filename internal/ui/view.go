@@ -177,7 +177,7 @@ func (m AppModel) marksTitle() string {
 	return tabBar("[3]", []string{"Marks", "Tasks", "Favorites"}, m.marksTab, m.focus == panelMarks)
 }
 
-// marksBody renders panel [3]'s active tab — the Marks bucket (with the marks
+// marksBody renders panel [3]'s active tab — the Marks bucket (with its own
 // workflow hint), the Tasks land log, or the Favorites list.
 func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
 	switch m.marksTab {
@@ -186,7 +186,7 @@ func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
 	case 2:
 		return m.places.view(w, rows, focused), favoritesHint()
 	}
-	return m.marks.view(w, rows, focused), marksHint()
+	return m.marks.view(w, rows, focused), marksHint(len(m.marks.items) > 0)
 }
 
 // zoomListView (panel [1] zoom): the directory tabs expanded full-screen, one
@@ -367,12 +367,15 @@ func listNavHint(focused bool) string {
 	}, "  ")
 }
 
-// marksHint is the always-shown key legend on the Marks panel's bottom border: the
-// marks workflow — mark a file, then copy/move the set here. These keys fire on the
-// LIST panel; the legend lives on Marks as a reference so it is visible while you
-// mark from the list.
-func marksHint() string {
-	return keyLegend([][2]string{{"m", "mark"}, {"c", "copy"}, {"v", "move"}})
+// marksHint is the Marks tab's bottom-border legend: the keys that act here, on
+// the bucket. It used to name the list's m / c / v, but on this panel m unmarks
+// and c / v do nothing — a legend must show what pressing the key here does
+// (tdp M9). With an empty bucket none of them apply, so the edge stays clean.
+func marksHint(hasItems bool) string {
+	if !hasItems {
+		return ""
+	}
+	return keyLegend([][2]string{{"p", "pick"}, {"m", "unmark"}, {"Z", "zip"}, {"C", "clear"}})
 }
 
 // favoritesHint is the Favorites tab's bottom-border legend: o opens the
@@ -452,7 +455,7 @@ func colorOwner(s string) string {
 
 func (m AppModel) footerBar(w int) string {
 	return padDisp(keyLegend([][2]string{
-		{"space", "menu"}, {"?", "keys"}, {"tab/1-3", "panels"}, {"q", "quit"},
+		{"space", "menu"}, {"?", "help"}, {"tab/1-3", "panels"}, {"q", "quit"},
 	}), w)
 }
 

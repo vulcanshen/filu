@@ -118,14 +118,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 （以下第 19–22 條：2026-09-28 修完第 1–18 條後，拿 tdp v0.1.7 `rules-zh_TW.md` 全文逐條再對一次時找到。）
 
-## 19. `[3]` Marks 下框顯示的是 `[1]` 的鍵 —— M9
-
-- **現況**：`view.go` `marksHint()` 在 Marks 分頁下框常駐 `m mark · c copy · v move`（註解寫「These keys fire on the
-  LIST panel」）。focus 在 `[3]` 時按 `m` 是 Unmark、`c` / `v` 不作用 —— 指示寫的跟按下去發生的不一樣。
-- **規則**：M9：同一個鍵有兩處指示時，要一眼看出在當前 focus 按下去會觸發哪一個；家族做法是會觸發的亮、不會的暗（D2）。
-- **怎麼改**：Marks 下框改列 Marks 分頁自己的鍵（`p` pick、`m` unmark、`Z` zip、`C` clear），跟 Favorites 分頁
-  （`o` open in、`D` remove）一樣只寫自己的鍵。
-
 ## 20. 還有四處錯誤看不到 —— F5
 
 - **現況**：

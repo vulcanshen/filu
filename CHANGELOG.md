@@ -32,7 +32,10 @@
   on a menu, confirmation, finder, breadcrumb or preview viewport, that
   popup's keys — including ones only a hint mentioned before, like `y`/`n` on
   a confirmation. The list scrolls on a small screen; `?` or `Esc` closes it
-  and returns to what you had open. The footer calls it `? keys`.
+  and returns to what you had open.
+- The Marks tab's bottom line lists the keys that work on it (pick, unmark,
+  zip, clear) instead of the file list's mark / copy / move, which do
+  something else — or nothing — there.
 - `q` no longer closes the key list; `Esc` or `?` does.
 - `Space` now only opens and closes the `Space` menu. On the pickers (sort,
   Goto, Search, Open with, quit…), confirmations, the help and the breadcrumb
