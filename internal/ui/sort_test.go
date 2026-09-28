@@ -87,35 +87,36 @@ func TestSortPickerFlow(t *testing.T) {
 	statePathOverride = filepath.Join(dir, "state.yaml") // don't pollute the real state
 	defer func() { statePathOverride = "" }()
 	writeFile(t, filepath.Join(dir, "a.txt"))
-	m := AppModel{sortMenu: newSortMenu(), taskCh: make(chan landMsg, 1), watched: map[string]bool{}}
+	m := AppModel{sortMenu: newSortMenu(), sortDirMenu: newSortDirMenu(), taskCh: make(chan landMsg, 1), watched: map[string]bool{}}
 	m.tabs = []listModel{newList(dir)}
 	key := cleanDir(dir)
 
 	m.openSortColumnPicker()
-	if m.sortStep != sortStepColumn {
+	if !m.sortMenu.owns() || m.sortDirMenu.owns() {
 		t.Fatal("picker should open on the column step")
 	}
 
-	m.advanceSortFlow("m") // pick Modified → direction step
-	if m.sortStep != sortStepDirection || m.sortFlowCol != sortMtime {
-		t.Fatalf("after column pick: step=%v col=%v", m.sortStep, m.sortFlowCol)
+	m.advanceSortFlow("m") // pick Modified → the direction step, its own popup over the columns
+	if !m.sortDirMenu.owns() || !m.sortMenu.owns() || m.sortFlowCol != sortMtime {
+		t.Fatalf("after column pick: dir open %v, columns open %v, col %v",
+			m.sortDirMenu.owns(), m.sortMenu.owns(), m.sortFlowCol)
 	}
-	m.advanceSortFlow("d") // Descending → this dir's chain=[mtime desc], loop to column
+	m.applySortDirection("d") // Descending → this dir's chain=[mtime desc], back to the columns
 	if got := sortByDir[key]; len(got) != 1 || got[0].col != sortMtime || got[0].asc {
 		t.Fatalf("chain after mtime desc: %+v", got)
 	}
-	if m.sortStep != sortStepColumn {
-		t.Error("should loop back to the column step")
+	if m.sortDirMenu.owns() || !m.sortMenu.owns() {
+		t.Error("the direction step should close, leaving the column step")
 	}
 
 	m.advanceSortFlow("n") // add Name asc as a second tier
-	m.advanceSortFlow("a")
+	m.applySortDirection("a")
 	if got := sortByDir[key]; len(got) != 2 || got[1].col != sortName || !got[1].asc {
 		t.Fatalf("chain after adding name asc: %+v", got)
 	}
 
 	m.advanceSortFlow("m") // unset Modified
-	m.advanceSortFlow("u")
+	m.applySortDirection("u")
 	if got := sortByDir[key]; len(got) != 1 || got[0].col != sortName {
 		t.Fatalf("chain after unset modified: %+v", got)
 	}

@@ -117,6 +117,10 @@ func stillOpen(m AppModel, name string) bool {
 		return m.sortMenu.owns()
 	case "gotoMenu":
 		return m.gotoMenu.owns()
+	case "gotoFavMenu":
+		return m.gotoFavMenu.owns()
+	case "sortDirMenu":
+		return m.sortDirMenu.owns()
 	case "openInMenu":
 		return m.openInMenu.owns()
 	case "searchMenu":

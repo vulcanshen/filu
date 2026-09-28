@@ -82,10 +82,22 @@ func newSortMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("sortmenu", popupLayerColor(1))}
 }
 
-// newGotoMenu is a spaceMenu instance reused as the Goto picker: a root
-// {Pinned, Search} choice, then (Pinned) a drill-down list of pinned dirs.
+// newSortDirMenu is the sort picker's direction step, its own popup over the
+// column step (tdp F1: each step of a flow is a popup).
+func newSortDirMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("sortdirmenu", popupLayerColor(1))}
+}
+
+// newGotoMenu is a spaceMenu instance reused as the Goto picker: the root
+// {Same?, Favorites, Search} choice.
 func newGotoMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("gotomenu", popupLayerColor(1))}
+}
+
+// newGotoFavMenu is Goto's Favorites list, its own popup over the Goto picker
+// (tdp F1).
+func newGotoFavMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("gotofavmenu", popupLayerColor(1))}
 }
 
 // newSearchMenu is a spaceMenu instance reused as the Search chooser: a flat

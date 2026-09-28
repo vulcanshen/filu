@@ -100,7 +100,10 @@
   跟 webu、locku 同一個位置)。
 - **popup 疊層** — `stackOrder()` 是整疊由下往上的唯一順序:Space menu 在最底、它開出的
   picker / confirm / input / breadcrumb / yank viewport 在上、finder 在開它的 chooser 或
-  Goto picker 之上、key reference 與 quit picker 最上。`View` 照這個順序畫(`assignLayers()`
+  Goto picker 之上、key reference 與 quit picker 最上。多步驟的流程每一步是自己的 popup
+  (tdp F1):sort 的方向(`sortDirMenu`)疊在欄位(`sortMenu`)上、Goto 的 Favorites 清單
+  (`gotoFavMenu`)疊在 Goto picker 上，不在同一個框裡換內容;`Esc` 回上一步，選定方向後
+  方向框關掉、欄位框留著顯示新的排序鏈。`View` 照這個順序畫(`assignLayers()`
   依深度給層色),`Update` 反過來由上往下路由按鍵，所以最上面那個框收鍵、`Esc` 只關它。
   Space menu 的列若開出了框(`boxOverSpaceMenu()`),menu 留在底下;完成動作時(confirm
   接受、input 送出、breadcrumb 跳轉、open-in / open-with、finder 選定)`clearStack()` 整疊

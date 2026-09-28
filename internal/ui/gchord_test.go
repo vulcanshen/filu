@@ -87,8 +87,8 @@ func TestGoChordOpensGoto(t *testing.T) {
 	if m.search.isActive() {
 		t.Error("`go` opens the picker menu, not the finder directly")
 	}
-	if m.gotoStep != gotoStepRoot {
-		t.Errorf("goto picker should start at the root step, got %v", m.gotoStep)
+	if m.gotoFavMenu.isActive() {
+		t.Error("goto picker should start at the root step, not the Favorites list")
 	}
 }
 
@@ -119,10 +119,10 @@ func TestGotoMenuFlow(t *testing.T) {
 	m2.places.pinned = []place{{label: "x", path: dir, icon: iconPin}}
 	m2.openGotoMenu()
 	m2.advanceGotoFlow("f")
-	if m2.gotoStep != gotoStepPinned {
-		t.Fatal("Goto → Favorites should drill into the favorites step")
+	if !m2.gotoFavMenu.isActive() || !m2.gotoMenu.isActive() {
+		t.Fatal("Goto → Favorites should open the Favorites list over the Goto picker")
 	}
-	m2.advanceGotoFlow("1")
+	m2.openGotoFavorite("1")
 	if m2.cur().dir != dir {
 		t.Errorf("Goto Favorites jump: active tab dir = %q, want %q", m2.cur().dir, dir)
 	}
@@ -133,7 +133,7 @@ func TestGotoMenuFlow(t *testing.T) {
 	m3.places.pinned = []place{{label: "x", path: dir, icon: iconPin}}
 	m3.openGotoMenu()
 	m3.advanceGotoFlow("f")
-	m3.gotoMenu.cursor = 0
+	m3.gotoFavMenu.cursor = 0
 	m3.unpinAtGotoCursor()
 	if len(m3.places.pinned) != 0 {
 		t.Errorf("unpinAtGotoCursor should remove the pin, %d left", len(m3.places.pinned))

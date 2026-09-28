@@ -43,7 +43,7 @@ func TestK6QuestionOnEveryPopup(t *testing.T) {
 	titles := map[string]string{
 		"detailYank": "Preview viewport keys", "meta": "File information keys", "modeList": "Selection key list keys", "search": "Finder keys", "breadcrumb": "Breadcrumb keys",
 		"confirm": "Confirm keys", "spaceMenu": "Space menu keys", "globalMenu": "Global operation keys",
-		"sortMenu": "Sort keys", "gotoMenu": "Goto keys", "openInMenu": "Open in keys",
+		"sortMenu": "Sort keys", "sortDirMenu": "Sort direction keys", "gotoMenu": "Goto keys", "gotoFavMenu": "Favorites keys", "openInMenu": "Open in keys",
 		"searchMenu": "Search keys", "openWithMenu": "Open with keys",
 	}
 	for name, want := range titles {
