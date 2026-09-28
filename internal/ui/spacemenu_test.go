@@ -135,8 +135,8 @@ func TestBuildSpaceMenuList(t *testing.T) {
 	if keys["f"] {
 		t.Error("Favorite should be hidden for a non-dir cursor item")
 	}
-	if !headers["item operation"] || !headers["panel operation"] || !headers["global operation"] {
-		t.Errorf("panel [1] menu should label all three regions (tdp M2): %v", headers)
+	if !headers["item operation"] || !headers["panel operation"] || headers["global operation"] {
+		t.Errorf("panel [1] menu should label the item and panel regions, not the global row (tdp M2): %v", headers)
 	}
 }
 
@@ -157,15 +157,16 @@ func TestGroupedMenu(t *testing.T) {
 		t.Error("two-region menu needs a separator and a panel-operation header")
 	}
 
-	// tdp M2: the global region is always last, one Global operation row; with no
-	// item operations the menu still has headers (panel + global), no item header.
+	// tdp M2 (v0.1.7): the menu always ends with a rule and one Global operation
+	// row, no header over it. With no item operations the panel region keeps
+	// its header even though it is the only region left.
 	last := both[len(both)-1]
-	if last.label != "Global operation" || last.key != globalOpKey || both[len(both)-2].label != "global operation" {
-		t.Errorf("menu should end with the global operation header + row: %+v", both[len(both)-2:])
+	if last.label != "Global operation" || last.key != globalOpKey || !both[len(both)-2].separator {
+		t.Errorf("menu should end with a rule + the Global operation row: %+v", both[len(both)-2:])
 	}
 	noItem := groupedMenu(nil, panelOps)
 	if !noItem[0].header || noItem[0].label != "panel operation" {
-		t.Errorf("without item operations the menu should open with the panel header: %+v", noItem[0])
+		t.Errorf("without item operations the panel region should still carry its header: %+v", noItem[0])
 	}
 	for _, it := range noItem {
 		if it.header && it.label == "item operation" {

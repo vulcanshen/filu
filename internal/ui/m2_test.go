@@ -39,8 +39,9 @@ func spaceMenus(t *testing.T) map[string]struct {
 	return out
 }
 
-// tdp M2 / M7: every panel's Space menu ends with the global operation region —
-// its header and one Global operation row — so it is never empty.
+// tdp M2 / M7: every panel's Space menu ends with one Global operation row,
+// set off by a rule and carrying no region header of its own (v0.1.7), so the
+// menu is never empty.
 func TestM2EveryMenuEndsWithGlobalRow(t *testing.T) {
 	for name, sm := range spaceMenus(t) {
 		n := len(sm.items)
@@ -51,8 +52,13 @@ func TestM2EveryMenuEndsWithGlobalRow(t *testing.T) {
 		if row := sm.items[n-1]; row.key != globalOpKey || row.label != "Global operation" {
 			t.Errorf("%s: last row should be Global operation, got %+v", name, row)
 		}
-		if hdr := sm.items[n-2]; !hdr.header || hdr.label != "global operation" {
-			t.Errorf("%s: the global row needs its region header, got %+v", name, hdr)
+		if rule := sm.items[n-2]; !rule.separator {
+			t.Errorf("%s: a rule should set the global row off, got %+v", name, rule)
+		}
+		for _, it := range sm.items {
+			if it.header && it.label == "global operation" {
+				t.Errorf("%s: the global row carries no region header (tdp v0.1.7)", name)
+			}
 		}
 		if !sm.items[0].header {
 			t.Errorf("%s: a panel Space menu always opens with a region header, got %+v", name, sm.items[0])

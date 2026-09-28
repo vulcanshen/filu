@@ -26,7 +26,8 @@
   Search chooser and the Goto picker stay under the finder they open. Finishing
   the action closes the whole stack. Each deeper popup takes a slightly
   different border colour, so you can see which one is on top.
-- `Space` menus always show their section headings, and their titles name the
+- `Space` menus always show their "item operation" and "panel operation"
+  headings (Global operation sits alone under a divider), and their titles name the
   panel: `[1] report.pdf`, `[2] Preview`, `[3] Marks`.
 - Menu rows that can't run right now are shown dimmed instead of being left
   out: Switch tab and Close tab with a single tab, Tab and the Favorites

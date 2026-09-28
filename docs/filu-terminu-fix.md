@@ -264,17 +264,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
 
 ---
 
-## 18. Space menu 的 global 列上面還掛著 `global operation` 標題 —— M2（tdp v0.1.7）
-
-- **現況**：`internal/ui/app.go` `groupedMenu()` 把 `{"global operation", []menuItem{globalOpRow}}` 當成一區（約 957 行），
-  每一區都加 `menuItem{header: true, label: r.title}`（約 965 行），所以 `Global operation` 那一列上面有 `global operation` 標題。
-  （原本記在「回報 tdp、等結論的」：filu 實機看到「一個區塊只有一個項目」太奇怪，帶回 terminu 討論。）
-- **規則**：tdp v0.1.7 M2：Space menu 的 global 那一列**不加區塊標題** —— `global operation` 標題底下只有一列
-  `Global operation`，是同一句話講兩次（user 2026-09-28：「一個 global operation 的 section 只有一個 Global operation 的項目」
-  太奇怪）。它跟上面的區塊之間照樣用分隔線隔開；item 與 panel 兩區在 panel 的 Space menu 上照舊一律加標題（即使只剩其中一區）。
-- **怎麼改**：`groupedMenu()` 只組 item / panel 兩區（照舊一律加標題），最後自己接分隔線（前面有東西時）與 `globalOpRow`，
-  不加標題。`m2_test.go` 量形狀的斷言改寫；README 兩份的 Space menu 說明一起改。
-- 連結：README 兩份、`dev-remarks.md`、`.claude/rules/project-rules.md` 與本檔的 tdp 連結已改釘 `v0.1.7`（未 commit）。
 
 ---
 
