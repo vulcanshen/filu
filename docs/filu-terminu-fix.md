@@ -165,16 +165,6 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   以後，框寬改成在 `open()` 時算一次（標題、說明、預填的值、最寬的 hint 與錯誤訊息），之後不變；值更長就照現在的
   做法從左邊截、尾端留在畫面上（webu 第三輪）。
 
-## 11. 檔案操作的錯誤被丟掉 —— F5
-
-- **現況**：`app.go` `_ = moveToTrash(...)`（:333，Delete）、`_ = os.Rename(...)`（:939，Rename）、
-  `_ = os.MkdirAll(...)`（:944、:946，Add）、Add 的 `os.OpenFile` 失敗不處理（:947）；`open.go`
-  `openFileCmd()` 的 `_ = openFile(path)`（:20，註解 :15 寫「Errors are dropped for now」）與 `openWithCmd()` 的
-  `_ = c.Start()`（:36）。失敗時畫面上什麼都沒有。（copy / move / zip 的錯誤有進 Tasks，不在此列。）
-- **規則**：錯誤必須立刻出現（toast 或 popup），`Esc` 可關，且不能阻塞 app。
-- **怎麼改**：這些路徑把 error 帶回來，失敗時用 toast 顯示（例如 `Cannot move report.pdf to the trash:
-  permission denied`）；`openFileCmd` / `openWithCmd` 回傳一個錯誤 msg，由 `Update()` 轉成 toast。
-
 ## 14. 程式碼註解仍引用 VTP 的 § 編號、ZLC 與 u-family —— 文件對齊
 
 - **現況**：`internal/ui` 等處的註解用 VTP 的 § 編號、舊名 ZLC 與「u-family」，以及已退場的
@@ -264,7 +254,7 @@ locku 照 tdp v0.1.0 修完（v0.1.2、v0.1.3），再對照 v0.1.4 修完，v0.
   Zip 預填的是 `suggestZipName()`（:697），兩者都是可以直接編輯的**值**，不是灰字；Add 是空的。input popup 裡 `Tab`
   沒有 case、不作用，也不會漏到底下去切 panel（input popup 的路由排在主 switch 之前，:311）。finder 輸入列同樣沒有
   提議（`Tab` 已在輸入列與結果清單之間切換，原第 2 條）。
-- **K10（v0.1.4，至少一個出口鍵）**：filu 的 PTY 只有一格 shell，只需要出口鍵（第 12 條）。
+- **K10（v0.1.4，至少一個出口鍵）**：filu 的 PTY 只有一格 shell，只需要出口鍵（`Alt+Esc`，原第 12 條已修）。
 - **M3 與 P3「同一個動作在兩區」**：沒有熱鍵同時出現在兩個區。全域動作只有離開；切分頁、Goto、Search、Shell、Sort
   都作用在 `[1]`，是 `[1]` 的 panel operation（webu 的 `P` / `N` 那種「作用在 panel 的動作放在 global」在 filu 沒有）。
 - **K5 在其他 popup**：yank viewport 與 finder 清單態不理 `Space`；input popup 與 finder 輸入態的 `Space` 是字元（K8）。
