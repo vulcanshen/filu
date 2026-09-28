@@ -110,17 +110,9 @@ func (m helpPopup) renderFull() string {
 			keyW = max(keyW, lipgloss.Width(r.key))
 		}
 	}
-	// Width follows the longest description, one column to spare, and is never
-	// narrower than the title or the hint (tdp D4).
-	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(helpHint)+4)
-	for _, r := range m.rows {
-		w := 1 + lipgloss.Width(r.desc) + 2
-		if !r.header {
-			w = 2 + keyW + 2 + lipgloss.Width(r.desc) + 2
-		}
-		innerW = max(innerW, w)
-	}
-	innerW = min(innerW, maxInnerWidth(m.screenW))
+	// The family width (tdp F7, which replaces D4's "as wide as the longest
+	// description"); a description longer than the room left is cut.
+	innerW := popupInnerWidth(m.screenW)
 
 	rows := make([]string, 0, len(m.rows))
 	for _, r := range m.rows {

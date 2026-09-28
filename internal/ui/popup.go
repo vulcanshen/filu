@@ -49,10 +49,16 @@ func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, inner
 	return b.String()
 }
 
-// maxInnerWidth caps a popup's inner width at 85% of the screen (min 40).
-func maxInnerWidth(screenW int) int {
+// popupMaxWidth is the widest a popup gets on a wide screen (tdp F7).
+const popupMaxWidth = 120
+
+// popupInnerWidth is the inner width every popup has (tdp F7): the box is the
+// terminal less one column on each side, at most popupMaxWidth, whatever its
+// content — so a popup's shape is known before it opens. The inner width is
+// that less the two side borders. Unsized (tests) it is 40.
+func popupInnerWidth(screenW int) int {
 	if screenW <= 0 {
 		return 40
 	}
-	return max(screenW*85/100, 40)
+	return max(min(screenW-2, popupMaxWidth)-2, 20)
 }

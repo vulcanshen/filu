@@ -297,25 +297,18 @@ func (m spaceMenu) renderFull() string {
 	hint := " j/k move · Enter run · Esc close "
 
 	// One line per row (the family form): labels in a column as wide as the
-	// widest label, each hint on the same line after it. The box widens to fit
-	// the longest hint up to the screen cap; only past that is a hint cut.
+	// widest label, each hint on the same line after it. The box is the family
+	// width (tdp F7); a hint longer than the room left is cut.
 	const gutter = "  "
-	labelW, hintW := 0, 0
+	labelW := 0
 	for _, it := range m.items {
 		if it.separator || it.header {
 			continue
 		}
 		labelW = max(labelW, lipgloss.Width(bracketHotkey(it.label, it.key)))
-		hintW = max(hintW, lipgloss.Width(it.hint))
 	}
 	labelCol := labelW + 2
-	innerW := max(lipgloss.Width(title)+4, lipgloss.Width(hint)+4, 1+len(gutter)+labelCol+hintW+1)
-	for _, it := range m.items {
-		if it.header {
-			innerW = max(innerW, 1+len(gutter)+lipgloss.Width(it.label)+1)
-		}
-	}
-	innerW = min(innerW, maxInnerWidth(m.screenW))
+	innerW := popupInnerWidth(m.screenW)
 
 	rows := make([]string, 0, len(m.items))
 	for i, it := range m.items {

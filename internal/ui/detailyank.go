@@ -88,7 +88,7 @@ func (m *detailYank) handleTick(msg AnimTickMsg) tea.Cmd {
 }
 
 func (m detailYank) contentRows() int { return max(m.height-6, 3) }
-func (m detailYank) innerW() int      { return max(m.width-8, 20) }
+func (m detailYank) innerW() int      { return popupInnerWidth(m.width) } // the family width (tdp F7)
 
 func (m detailYank) lastLine() int { return max(len(m.plain)-1, 0) }
 

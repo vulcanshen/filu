@@ -599,21 +599,22 @@ func (m *searchModel) refreshPreview() {
 // preview side by side; a narrow one stacks them. Returns each box's inner width
 // and content-row count (the content hugs the borders — no pad rows).
 func (m searchModel) geometry() (side bool, sW, sRows, pW, pRows int) {
+	// The two boxes and the gap between them together take the family width
+	// (tdp F7).
+	totalW := popupInnerWidth(m.width) + 2
 	if m.width >= 96 { // room for a list box + a useful preview box
 		side = true
-		totalW := min(m.width-2, m.width*19/20)
 		H := min(m.height-2, m.height*9/10)
 		sOuter := max(totalW*2/5, 32)
 		sW = max(sOuter-2, 20)
-		pW = max(totalW-sOuter-2, 20)
+		pW = max(totalW-sOuter-1-2, 20) // less the 1-col gap
 		sRows = max(H-2, 4)
 		pRows = sRows
 		return
 	}
-	W := min(m.width-2, m.width*9/10)
 	H := min(m.height-2, m.height*9/10)
 	sH := max(H*11/20, 8)
-	sW, pW = max(W-2, 20), max(W-2, 20)
+	sW, pW = max(totalW-2, 20), max(totalW-2, 20)
 	sRows = max(sH-2, 4)
 	pRows = max(H-sH-2, 3)
 	return
