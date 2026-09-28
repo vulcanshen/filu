@@ -79,7 +79,7 @@ filu opens with the file list focused. Five keys cover the rest:
 | Key | What it does |
 |---|---|
 | **`Tab`** | Move to the next panel (or press `1`–`3` to jump) |
-| **`Enter`** | Go into a directory / confirm a choice |
+| **`Enter`** | Go into a directory, see a file's details, or confirm a choice |
 | **`Space`** | *What can I do here?* — the menu for wherever you are |
 | **`Esc`** | Back out — up one directory, or close a popup |
 | **`?`** | Keys — what you can press right here (in a popup, that popup's keys) |
@@ -108,7 +108,7 @@ Three panels:
 
 ### Browse
 
-- `Enter` goes in, `Esc` goes up; `j` / `k`, `u` / `d` for half a page, `gg` / `G` for top and bottom.
+- `Enter` goes into a directory — on a file it shows the details: full path, type, size, times, permissions, owner. `Esc` goes up; `j` / `k`, `u` / `d` for half a page, `gg` / `G` for top and bottom.
 - `b` jumps up to any parent directory. `.` shows or hides hidden files.
 - `S` sorts by name, modified time, owner, permissions or size — stack several for tie-breaks. The sort sticks to that directory only.
 - `t` opens a new tab (same directory, a favorite, or a search), `w` closes it.

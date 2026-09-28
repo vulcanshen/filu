@@ -113,11 +113,14 @@ filu/
 
 ## 設計決定
 
-- **`Enter` 只進目錄,對檔案列不做事。** 開檔是 `[o]pen`(OS 預設 app,先 confirm)/
-  `[O]pen with`(挑 app)的職責。理由是 tdp P4 一元素一語意 —— 「進入」與「交給外部
-  程式」是兩件不同代價的事,`Enter` 一鍵兼職會讓使用者在目錄與檔案間移動游標時無法
-  預期後果。(2026-09-28 裁定不符合 tdp K3,檔案列的 `Enter` 將改成開 metadata popup,
-  見 `filu-terminu-fix.md` 第 17 條;修好時改寫本條。)
+- **`Enter` 在目錄上是進入，在檔案上是開資訊框，從不交給外部程式。** 開檔仍是 `[o]pen`
+  (OS 預設 app,先 confirm)/ `[O]pen with`(挑 app)的職責：「進入」與「交給外部程式」
+  是兩件不同代價的事(tdp P4),`Enter` 不兼後者。以前檔案列上的 `Enter` 什麼都不做，
+  2026-09-28 裁定不符合 tdp K3(對 focus 項目做最直觀的動作),改成開唯讀的資訊框
+  (`metaPopup`,`fileFacts()`):完整路徑(symlink 多一列目標)、類型(跟 preview 同一套
+  判法)、大小(人話 + bytes)、Modified / Accessed / Created(Linux 是 Changed)、`rwx` +
+  八進位、owner:group。值過長就折行、全部揭露，框寬開框時定下、太高就捲動，讀不到的欄位
+  在框裡寫原因(F5)。
 - **quit 是 picker、不是 confirm。** 「離開時 shell 要 `cd` 去哪」是個選擇、不是一次確認
   (`quit.go quitMenu`):列出啟動目錄 + 各分頁的當前目錄,去重;有任務在跑時頂端插
   一條紅字 warning header。這是 tdp K9 的「離開流程由 app 決定」。`q` 與 `Ctrl-C` 都打開

@@ -88,6 +88,7 @@ type AppModel struct {
 	inputPopup        inputPopup        // text prompt (rename / add)
 	help              helpPopup         // ? key reference of the frontmost surface (tdp K6, M4)
 	quitHelp          helpPopup         // ? key reference of the quit picker, over it
+	meta              metaPopup         // file information box, Enter on a file row (tdp K3)
 	splash            splashModel       // hidden easter-egg logo (V)
 	toast             toastModel        // transient notification (yank feedback)
 	detailYank        detailYank        // panel [2] yank viewport (cursor + visual selection)
@@ -124,7 +125,7 @@ func New(startDir, focusName string) AppModel {
 		}
 		dir = wd
 	}
-	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), quitHelp: newQuitHelp(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), quitHelp: newQuitHelp(), meta: newMetaPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	first := newList(dir)
 	if focusName != "" && !first.focusEntry(focusName) { // `filu <file>`: land on the passed file
 		first.showHidden = true // not listed — it's a dotfile; reveal hidden and retry
@@ -276,6 +277,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inputPopup.setSize(msg.Width)
 		m.help.setSize(msg.Width, msg.Height)
 		m.quitHelp.setSize(msg.Width, msg.Height)
+		m.meta.setSize(msg.Width, msg.Height)
 		m.toast.setSize(msg.Width)
 		m.detailYank.setSize(msg.Width, msg.Height)
 		m.pty.setSize(msg.Width, msg.Height)
@@ -286,7 +288,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.quitHelp.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.quitHelp.handleTick(msg), m.meta.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)
@@ -368,6 +370,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			m.search, cmd = m.search.update(msg)
+			return m, cmd
+		}
+		if m.meta.owns() { // file information box: read only, scrolls
+			if !m.meta.isInteractive() {
+				return m, nil
+			}
+			var cmd tea.Cmd
+			m.meta, cmd = m.meta.update(msg)
 			return m, cmd
 		}
 		if m.detailYank.owns() { // yank viewport owns the keyboard while open
@@ -608,10 +618,13 @@ func (m *AppModel) handleListKey(key string) tea.Cmd {
 	case "d", "ctrl+d":
 		l.move(m.listRows() / 2)
 	case "enter":
-		// Enter navigates into directories only — in filu it is not "open a file".
-		// Opening a file is [o]pen's job (open-with); a file row Enter is a no-op.
+		// Enter does the one obvious thing for the row (tdp K3): into a directory,
+		// and on a file its information box. Opening a file stays [o]pen's job.
 		if it := l.cursorItem(); it.isDir {
 			l.enter()
+		} else if it.name != "" {
+			m.meta.setSize(m.width, m.height)
+			cmd = m.meta.open(filepath.Join(l.dir, it.name))
 		}
 	case "esc":
 		l.parent()
