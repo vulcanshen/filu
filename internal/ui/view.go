@@ -108,8 +108,8 @@ func (m AppModel) View() string {
 	if m.quitHelp.isActive() { // the quit picker's key reference, over it
 		out = overlay.Composite(m.quitHelp.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
 	}
-	if m.toast.isActive() { // transient, always on top
-		out = overlay.Composite(m.toast.renderPopup(), out, overlay.Center, overlay.Center, 0, 0)
+	if m.toast.isActive() { // transient, always on top, at the bottom above the footer (tdp F7)
+		out = overlay.Composite(m.toast.renderPopup(), out, overlay.Center, overlay.Bottom, 0, -2)
 	}
 	return out
 }

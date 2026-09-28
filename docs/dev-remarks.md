@@ -96,6 +96,8 @@
   給扣掉左右邊框的內寬),不看內容:說明太長就截、訊息與值在框內折行(tdp F7,取代 D4 的
   「key reference 依最長說明算寬」)。finder 的兩個框加中間一欄間隔合起來是這個寬度。
   PTY 例外:外框貼滿畫面(F7 的 terminal 類)。
+  位置都是水平、垂直置中;toast 例外，貼在畫面下方，下框離底兩列、不蓋 footer(F7,
+  跟 webu、locku 同一個位置)。
 - **popup 疊層** — `stackOrder()` 是整疊由下往上的唯一順序:Space menu 在最底、它開出的
   picker / confirm / input / breadcrumb / yank viewport 在上、finder 在開它的 chooser 或
   Goto picker 之上、key reference 與 quit picker 最上。`View` 照這個順序畫(`assignLayers()`
