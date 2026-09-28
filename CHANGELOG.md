@@ -42,6 +42,8 @@
 - In the finders, `Enter` while typing opens the highlighted result right
   away (it used to only move into the list), and `↑` / `↓` pick among the
   results as you type. `Tab` still moves into the list, where `j` / `k` move.
+- The preview's scrollable view is as tall as what it shows, up to the screen:
+  a short file no longer opens a full-screen box.
 - `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
   (with its warning when a copy or move is still running). Press `Ctrl+C` again
   on the picker to leave at once.
