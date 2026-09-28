@@ -111,7 +111,6 @@ F6 的 picker 都是 filu 先做、tdp 再寫進條文的。**只有一條要改
 - **本檔**：
   - 待確認第 2 題（Favorites 取消收藏後維持原高、補空白）照 F7 定案：「允許」不是「要求」，現況符合，不用改。
   - 第 1 條的 icon 照 D3 規格（webu 的圓形切片八格、90ms、由時鐘決定）。
-  - 新增：README 兩份的需求段補「需要 truecolor terminal」。
   - 待確認第 1 題（finder 載入中要不要邊串流邊顯示，程式碼與 dev-remarks 對不上）仍是 filu 自己的決定。
   - **新增:`[3]` Tasks 執行中的轉圈也換成 D3 icon**。上面「已經符合」把它算成「單一項目的資料流、由 app 決定」,
     user 裁定(2026-09-28)仍改成跟 finder 同一個 D3 icon(circle slice、90ms、時鐘驅動),全 app 只有一種轉圈;
