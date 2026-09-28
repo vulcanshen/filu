@@ -50,19 +50,6 @@ type landMsg struct {
 	produced string
 }
 
-// spinnerFrames animates running tasks (braille dots).
-var spinnerFrames = []string{
-	string(rune(0x280b)), string(rune(0x2819)), string(rune(0x2839)), string(rune(0x2838)),
-	string(rune(0x283c)), string(rune(0x2834)), string(rune(0x2826)), string(rune(0x2827)),
-	string(rune(0x2807)), string(rune(0x280f)),
-}
-
-type spinnerTickMsg struct{}
-
-func spinnerTick() tea.Cmd {
-	return tea.Tick(100*time.Millisecond, func(time.Time) tea.Msg { return spinnerTickMsg{} })
-}
-
 // runLand copies/moves items into destDir on a goroutine, streaming progress to
 // ch. It never touches model state — the main loop applies the results.
 func runLand(id int, items []string, destDir string, move bool, ch chan<- landMsg) {
@@ -126,12 +113,7 @@ func (m *AppModel) startLandItems(items []string, destDir string, move bool) tea
 	})
 	m.capTasks()
 	go runLand(m.nextTaskID, items, destDir, move, m.taskCh)
-	saved := m.persist()
-	if !m.spinning {
-		m.spinning = true
-		return tea.Batch(saved, spinnerTick())
-	}
-	return saved
+	return tea.Batch(m.persist(), m.keepLoading())
 }
 
 func (m *AppModel) clampTaskCursor() {
@@ -233,7 +215,6 @@ func (m AppModel) taskLine(t landTask) string {
 	green := lipgloss.NewStyle().Foreground(lipgloss.Color("#a6e3a1"))
 	peach := lipgloss.NewStyle().Foreground(lipgloss.Color("#fab387"))
 	red := lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8"))
-	blue := lipgloss.NewStyle().Foreground(focusColor)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 
 	subject := fmt.Sprintf("%d items", t.total)
@@ -252,8 +233,8 @@ func (m AppModel) taskLine(t landTask) string {
 
 	switch t.status {
 	case taskRunning:
-		spin := spinnerFrames[m.spinnerFrame%len(spinnerFrames)]
-		return stamp + blue.Render(spin) + " " + verbing + " " + subject + to + "  " + dim.Render(fmt.Sprintf("%d/%d", t.done, t.total))
+		// the family loading icon, in the colour of the words beside it (tdp D3)
+		return stamp + loadingIcon() + " " + verbing + " " + subject + to + "  " + dim.Render(fmt.Sprintf("%d/%d", t.done, t.total))
 	case taskDone:
 		return stamp + green.Render(string(rune(0xf00c))) + " " + verbed + " " + subject + to // tick
 	case taskPending:

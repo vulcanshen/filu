@@ -45,10 +45,16 @@
 - **Tasks** — 同磁碟搬移是瞬間 `rename`;跨磁碟 / 複製才顯示進度。log 是帶時間戳的
   人話(`2026-07-28 14:32:07  Copied report.pdf → proj`)。中斷的任務存進
   `state.yaml`、下次啟動還原成 pending。`action` 是自由字串,加一種新任務不必動白名單。
+  執行中那一列轉的是家族的 loading icon(D3,見下一條)。
 - **Finder** — filu 自畫的分割 picker(清單 + 預覽),不是 fzf binary(fzf-in-PTY 試過
   失敗)。每種模式都串流列檔:用 `fd` 的走訪序、不排序,首批近乎立即、載入中就能濾;
   沒有 `fd` 時退回純 Go walk。以 `/` 或 `~/` 開頭的 query 會錨定到該絕對路徑,對整條
   路徑 fuzzy、深度限錨點下數層。Goto 一律掃隱藏目錄,噪音靠 `ignore_dirs` 黑名單擋。
+  走訪還沒結束或 `rg` 還在跑時(`isLoading()`),清單照樣列出已收到的結果，標題後面轉
+  loading icon(tdp F7);一筆都還沒到才寫 `(indexing…)`。icon 是 tdp D3 的規格
+  (`loading.go`:circle slice 八格、90ms 一格、由時鐘 `loadingNow()` 決定哪一格),跟 Tasks
+  共用一個 `loadingTickMsg`,只在 `anyLoading()` 時續排。popup 的上下框用 `dispWidth()` 量
+  標題與 hint,在 CJK icon 字型上 icon 佔兩格時框線跟著縮。
 - **Preview** — 讀 magic bytes 判型別:目錄 → 內層 tree、壓縮包 → 內容清單、圖片 →
   base64 `data:` URI、SVG → 高亮 XML、文字 → Chroma(catppuccin-mocha)高亮 + 行號、
   二進位 → hex + ASCII、PDF → 抽出的文字 + 頁數。
@@ -225,8 +231,9 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   - zoxide 式磁碟快取索引(給 Goto 真 recency,只在串流不夠時做)。
   - chmod / extract、真圖(kitty / sixel)、sort filter、續傳。
 - **tdp**:2026-09-28 對照 v0.1.7 全文修完，同日再跟上 v0.1.8–v0.1.10(F1 六類、F7 尺寸、
-  F8 dim、K11 模式沒有按鍵清單),除了下一節的偏離都符合。之後發現沒寫理由的違反，列進
-  `docs/filu-terminu-fix.md`。
+  F8 dim、K11 模式沒有按鍵清單)與 v0.1.11–v0.1.12(F7 loading icon、D2 淡化不變亮、D6
+  truecolor),除了下一節的偏離都符合。之後發現沒寫理由的違反，列進
+  `docs/filu-terminu-fix.md`(目前沒有這個檔)。
 
 ## 偏離 tdp
 
@@ -236,7 +243,7 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 
 ## 對照 tdp 時確認過的
 
-2026-09-28 兩輪修 `filu-terminu-fix.md`(v0.1.7 一輪、v0.1.10 一輪，清單都已刪)時留下的：
+2026-09-28 三輪修 `filu-terminu-fix.md`(v0.1.7、v0.1.10、v0.1.12 各一輪，清單都已刪)時留下的：
 下次對照不必重查的，以及當時由 user 逐題裁定的。
 
 **已經符合、不用修的**(對照 v0.1.7)
@@ -264,7 +271,20 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 - **F7 terminal 類的尺寸**:「terminal 寬 − 2 × 高 − 2」指內容區(user 2026-09-28 裁定)。
   shell popup 的外框貼滿畫面，內容區正好是 W−2 × H−2。
 - **F7 finder 的高度**:固定是畫面的 90%,不依內容。結果是開框之後才串流進來，開框當下
-  不知道會有幾筆,「打開時定好」只能依畫面定;開框後不再伸縮。
+  不知道會有幾筆,「打開時定好」只能依畫面定;開框後不再伸縮，loading 中也不變(v0.1.11
+  允許 loading 時變，不要求)。
+
+**已經符合、不用修的**(對照 v0.1.12)
+
+- **F8 / D2 的 dim**:`dim.go` 就是 D2 引用的參考實作 —— 前景、背景都淡化，16 / 256 色先換 RGB,
+  一律輸出 24-bit,沒設前景的文字補 `dim(#cdd6f4)`,其他 SGR 不動;v0.1.12 的「絕不變亮」這輪補上。
+- **F7 其他 popup 的 loading**:只有 finder 的內容是開框後才來的;其他 popup 開框時內容都已確定
+  (metadata 開框同步 `stat`、viewport 拿現成的 preview)。
+- **F7 開著時改變高度**:loading 與使用者操作兩種情況都是「可以」不是「必須」。menu 開框定高
+  (`spaceMenu.openRows`,Favorites 取消收藏後補空白列),finder 依畫面定高，都符合。
+- **K3 內容區的 `Enter`**:`[2]` preview 的 `Enter` 開可捲動的檢視，正是條文的例子;Tasks、Marks、
+  Favorites 有 cursor,是 focus 項目。
+- **F6 picker 選定算確認**:`O` 的 picker 選了 app 不再 confirm,條文現在明文允許。
 
 **user 裁定的**(2026-09-28)
 
@@ -276,6 +296,8 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   item operation 作用在哪個檔案。
 - PTY 出口鍵 → `Alt+Esc`,按下直接結束 shell。
 - `O` 的 picker 要不要 confirm → 不要(見「設計決定」)。
+- `[3]` Tasks 執行中的轉圈 → 換成 D3 的 loading icon,全 app 只有一種轉圈(原本是 braille 點)。
+- finder 載入中 → 邊串流邊列出結果(以前要等走訪結束才顯示清單)。
 
 ## 設計文件導讀
 

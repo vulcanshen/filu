@@ -85,12 +85,7 @@ func (m *AppModel) startZip(items []string, name string) tea.Cmd {
 	})
 	m.capTasks()
 	go runZip(m.nextTaskID, items, filepath.Join(dir, name), m.taskCh)
-	saved := m.persist()
-	if !m.spinning {
-		m.spinning = true
-		return tea.Batch(saved, spinnerTick())
-	}
-	return saved
+	return tea.Batch(m.persist(), m.keepLoading())
 }
 
 // runZip writes items into zipPath on a goroutine, streaming progress to ch. It

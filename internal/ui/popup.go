@@ -21,16 +21,18 @@ func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, inner
 	tStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)
 
 	// A title / hint wider than the box would push its border out and, when the
-	// box is joined beside another, open a gap — clip both to fit.
-	if lipgloss.Width(title) > innerW-1 {
+	// box is joined beside another, open a gap — clip both to fit. Measured with
+	// dispWidth: a title glyph (the loading icon, a warning sign) takes two cells
+	// on a CJK icon font, and the border must shorten to match.
+	if dispWidth(title) > innerW-1 {
 		title = truncate(title, innerW-1)
 	}
-	if lipgloss.Width(hint) > innerW-1 {
+	if dispWidth(hint) > innerW-1 {
 		hint = truncate(hint, innerW-1)
 	}
 
 	var b strings.Builder
-	dashesTop := max(0, innerW-1-lipgloss.Width(title))
+	dashesTop := max(0, innerW-1-dispWidth(title))
 	b.WriteString(bStyle.Render("╭─") + tStyle.Render(title) + bStyle.Render(strings.Repeat("─", dashesTop)+"╮") + "\n")
 	left, right := bStyle.Render("│"), bStyle.Render("│")
 	padRow := left + strings.Repeat(" ", innerW) + right + "\n"
@@ -44,7 +46,7 @@ func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, inner
 	if pad {
 		b.WriteString(padRow)
 	}
-	dashesBot := max(0, innerW-lipgloss.Width(hint)-1)
+	dashesBot := max(0, innerW-dispWidth(hint)-1)
 	b.WriteString(bStyle.Render("╰─") + tStyle.Render(hint) + bStyle.Render(strings.Repeat("─", dashesBot)+"╯"))
 	return b.String()
 }

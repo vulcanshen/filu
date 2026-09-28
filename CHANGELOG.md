@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- The finders show a turning icon after their title while results are still
+  coming in (the file walk, or a content search), and it goes when they are
+  done.
 - Every panel's `Space` menu now ends with **Global operation**, which opens a
   menu of app-wide actions — for now, Quit (the same quit picker as `q`).
 - Panel `[1]`'s `Space` menu has a **Switch tab** row (`l`), like panel `[3]`.
@@ -45,6 +48,9 @@
   results as you type. `Tab` still moves into the list, where `j` / `k` move.
 - The preview's scrollable view is as tall as what it shows, up to the screen:
   a short file no longer opens a full-screen box.
+- The finders list results as they arrive instead of waiting for the whole
+  directory walk to finish.
+- Running tasks in the Tasks tab turn the same icon as the finders.
 - `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
   (with its warning when a copy or move is still running). Press `Ctrl+C` again
   on the picker to leave at once.
