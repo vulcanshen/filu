@@ -28,6 +28,8 @@
   the finder, the preview viewport and notifications — now has the same width:
   the terminal less one column on each side, at most 120 columns, whatever it
   shows. Long descriptions are cut and long messages wrap inside it.
+- Notifications ("Copied", errors) now pop up at the bottom of the screen,
+  just above the key hints, instead of in the middle.
 - `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
   (with its warning when a copy or move is still running). Press `Ctrl+C` again
   on the picker to leave at once.

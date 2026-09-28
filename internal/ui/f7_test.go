@@ -4,7 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // boxWidth is the widest line of a rendered popup: its outer width.
@@ -68,6 +70,33 @@ func f7Popups(t *testing.T, w, h int) map[string]string {
 	out["finder"] = fs.renderFull()
 
 	return out
+}
+
+// tdp F7: the toast sits at the bottom of the screen — its bottom border two
+// rows up, clear of the footer (as in webu and locku) — not in the middle.
+func TestF7ToastAtTheBottom(t *testing.T) {
+	const w, h = 100, 40
+	m := f4Model(t)
+	m.toast = newToast()
+	model, _ := m.Update(tea.WindowSizeMsg{Width: w, Height: h})
+	m = model.(AppModel)
+	m.toast.show("filu-toast-probe")
+	m.toast.anim.state = popupOpen
+
+	lines := strings.Split(ansi.Strip(m.View()), "\n")
+	row := -1
+	for i, l := range lines {
+		if strings.Contains(l, "filu-toast-probe") {
+			row = i
+		}
+	}
+	// message, then the pad row, then the bottom border at h-3
+	if want := h - 3 - 2; row != want {
+		t.Errorf("toast message on row %d, want %d (bottom border at row %d)", row, want, h-3)
+	}
+	if !strings.Contains(lines[h-1], "menu") {
+		t.Errorf("the footer should stay visible under the toast, last row = %q", lines[h-1])
+	}
 }
 
 // tdp F7: every popup is min(terminal width − 2, 120) wide, whatever its
