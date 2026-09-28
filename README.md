@@ -82,7 +82,7 @@ filu opens with the file list focused. Five keys cover the rest:
 | **`Enter`** | Go into a directory / confirm a choice |
 | **`Space`** | *What can I do here?* — the menu for wherever you are |
 | **`Esc`** | Back out — up one directory, or close a popup |
-| **`?`** | Help — every app-wide action in one list |
+| **`?`** | Keys — what you can press right here (in a popup, that popup's keys) |
 
 ### Let `q` change your shell's directory
 
@@ -156,7 +156,7 @@ Three panels:
 
 | Key | Anywhere |
 |---|---|
-| `?` | Help |
+| `?` | The keys you can press here; `?` or `Esc` closes the list |
 | `q` | Quit, choosing where your shell ends up (while typing, `q` is just a letter) |
 | `Ctrl+C` | Same as `q`, even while typing; press it again on the quit picker to leave at once |
 

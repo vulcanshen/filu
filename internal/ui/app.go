@@ -86,7 +86,8 @@ type AppModel struct {
 	pendingDelete     string            // path awaiting delete confirmation
 	pendingUnfavorite string            // favorite path awaiting unfavorite confirmation
 	inputPopup        inputPopup        // text prompt (rename / add)
-	help              helpPopup         // §A.2 global help cheatsheet
+	help              helpPopup         // ? key reference of the frontmost surface (tdp K6, M4)
+	quitHelp          helpPopup         // ? key reference of the quit picker, over it
 	splash            splashModel       // hidden easter-egg logo (V)
 	toast             toastModel        // transient notification (yank feedback)
 	detailYank        detailYank        // panel [2] yank viewport (cursor + visual selection)
@@ -123,7 +124,7 @@ func New(startDir, focusName string) AppModel {
 		}
 		dir = wd
 	}
-	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
+	m := AppModel{focus: panelList, launchDir: dir, spaceMenu: newSpaceMenu(), globalMenu: newGlobalMenu(), sortMenu: newSortMenu(), quitMenu: newQuitMenu(), openWithMenu: newOpenWithMenu(), gotoMenu: newGotoMenu(), searchMenu: newSearchMenu(), openInMenu: newOpenInMenu(), confirm: newConfirmPopup(), inputPopup: newInputPopup(), help: newHelpPopup(), quitHelp: newQuitHelp(), splash: newSplashModel(), toast: newToast(), detailYank: newDetailYank(), pty: newPtyPopup(), search: newSearch(), breadcrumb: newBreadcrumbPopup(), taskCh: make(chan landMsg, 64), searchCh: make(chan fileBatchMsg, 16), watched: map[string]bool{}}
 	first := newList(dir)
 	if focusName != "" && !first.focusEntry(focusName) { // `filu <file>`: land on the passed file
 		first.showHidden = true // not listed — it's a dotfile; reveal hidden and retry
@@ -273,7 +274,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openInMenu.setSize(msg.Width, msg.Height)
 		m.confirm.setSize(msg.Width)
 		m.inputPopup.setSize(msg.Width)
-		m.help.setSize(msg.Width)
+		m.help.setSize(msg.Width, msg.Height)
+		m.quitHelp.setSize(msg.Width, msg.Height)
 		m.toast.setSize(msg.Width)
 		m.detailYank.setSize(msg.Width, msg.Height)
 		m.pty.setSize(msg.Width, msg.Height)
@@ -284,7 +286,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshPreview() // ASCII art is sized to the panel width
 		}
 	case AnimTickMsg:
-		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
+		return m, tea.Batch(m.spaceMenu.handleTick(msg), m.globalMenu.handleTick(msg), m.sortMenu.handleTick(msg), m.quitMenu.handleTick(msg), m.openWithMenu.handleTick(msg), m.gotoMenu.handleTick(msg), m.openInMenu.handleTick(msg), m.searchMenu.handleTick(msg), m.confirm.handleTick(msg), m.inputPopup.handleTick(msg), m.help.handleTick(msg), m.quitHelp.handleTick(msg), m.toast.handleTick(msg), m.detailYank.handleTick(msg), m.pty.handleTick(msg), m.search.handleTick(msg), m.breadcrumb.handleTick(msg))
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
 		m.splash, cmd = m.splash.update(msg)
@@ -308,12 +310,26 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// from any surface. The picker stacks on top of whatever is open, so Esc
 		// on it returns there (D3); Ctrl-C on the picker leaves at once. Ctrl-C
 		// works while typing too (K8); q is a character there.
+		if m.quitHelp.owns() { // the quit picker's key reference, over the picker
+			if msg.String() == "ctrl+c" { // the leave flow is up: Ctrl-C leaves at once
+				return m, m.shutdown()
+			}
+			if !m.quitHelp.isInteractive() {
+				return m, nil
+			}
+			var cmd tea.Cmd
+			m.quitHelp, cmd = m.quitHelp.update(msg)
+			return m, cmd
+		}
 		if m.quitMenu.owns() {
 			if msg.String() == "ctrl+c" {
 				return m, m.shutdown()
 			}
 			if !m.quitMenu.isInteractive() {
 				return m, nil
+			}
+			if msg.String() == "?" { // its own key reference, stacked over it (tdp K6, D3)
+				return m, m.quitHelp.open("Quit keys", quitKeyRef(len(m.quitTargets())))
 			}
 			var key string
 			var cmd tea.Cmd
@@ -327,6 +343,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if k := msg.String(); k == "ctrl+c" || (k == "q" && !m.typing()) {
 			return m, m.openQuitMenu()
+		}
+		// tdp K6: ? answers on every surface with the key reference of whatever is
+		// frontmost — the popup on top, or the focused panel. While typing it is a
+		// character (K8); on the key reference itself it closes it.
+		if msg.String() == "?" && !m.typing() && !m.help.owns() {
+			title, rows := m.keyRef()
+			m.help.setSize(m.width, m.height)
+			return m, m.help.open(title, rows)
 		}
 		// Popups, top of the stack first (the reverse of View's draw order,
 		// stackOrder): the popup on top takes the key (tdp D3).
@@ -533,8 +557,6 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		switch msg.String() {
-		case "?": // §A.2 global help cheatsheet
-			return m, m.help.open()
 		case "V": // hidden easter-egg: the u-family logo
 			return m, m.splash.show()
 		case " ": // Space opens the contextual menu for the focused panel

@@ -94,6 +94,11 @@
   Space menu 的列若開出了框(`boxOverSpaceMenu()`),menu 留在底下;完成動作時(confirm
   接受、input 送出、breadcrumb 跳轉、open-in / open-with、finder 選定)`clearStack()` 整疊
   一起收掉(tdp F4、T1)。正在關閉的框不收鍵(`owns()`),下一個 `Esc` 直接關底下那層(F3)。
+- **`?` key reference** — 唯讀、可捲動、沒有游標(`helpPopup`)。按鍵路由在 quit 之後、所有
+  popup 之前攔 `?`(輸入態除外，那裡 `?` 是字元),`keyRef()` 照疊層由上往下找最前面的
+  surface:popup 各給自己的鍵;沒有 popup 時是 focus panel,由 `buildSpaceMenu()` 的 item /
+  panel 列產生(`menuRows()`,跳過沒有鍵的 `Global operation`)再接 core key,所以跟 Space
+  menu 不會對不上(tdp K6、M4)。quit picker 的 `?` 另開 `quitHelp`,疊在 picker 上(D3)。
 
 ### 程式碼目錄
 

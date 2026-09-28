@@ -19,7 +19,13 @@
   picker returns to where you were. While typing, `q` is just a letter.
 - In the finder's result list, `Tab` (not `q`) goes back to the query line;
   `Tab` on the query line jumps to the results.
-- `q` no longer closes the help; `Esc` or `?` does.
+- `?` now lists the keys of wherever you are: on a panel, that panel's own
+  keys (everything in its `Space` menu, plus the keys that work everywhere);
+  on a menu, confirmation, finder, breadcrumb or preview viewport, that
+  popup's keys — including ones only a hint mentioned before, like `y`/`n` on
+  a confirmation. The list scrolls on a small screen; `?` or `Esc` closes it
+  and returns to what you had open. The footer calls it `? keys`.
+- `q` no longer closes the key list; `Esc` or `?` does.
 - `Space` now only opens and closes the `Space` menu. On the pickers (sort,
   Goto, Search, Open with, quit…), confirmations, the help and the breadcrumb
   it does nothing; `Esc` closes them. `b` no longer closes the breadcrumb popup.
