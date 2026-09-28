@@ -72,9 +72,10 @@ func (p *ptyPopup) start(cmd *exec.Cmd, title, dir string, hostW, hostH int) tea
 	p.term = vt10x.New(vt10x.WithSize(cols, rows))
 	cmd.Dir = dir // root the process in the tab's directory (the shell opens here)
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})
-	if err != nil {
+	if err != nil { // the popup never opens; say why instead of doing nothing (tdp F5)
 		p.active = false
-		return func() tea.Msg { return ptyExitMsg{dir: dir} }
+		text := opFailedText("start "+strings.ToLower(title), err)
+		return func() tea.Msg { return opFailedMsg{text} }
 	}
 	p.ptmx = ptmx
 	go p.readLoop()

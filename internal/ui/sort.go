@@ -250,9 +250,8 @@ func (m *AppModel) advanceSortFlow(key string) tea.Cmd {
 		if key == "r" {
 			resetSortFor(dir)
 			m.reloadAllTabs()
-			saveState(m.snapshotState())
 			m.setSortColumnItems()
-			return nil
+			return m.persist()
 		}
 		if col, ok := sortColByKey(key); ok {
 			m.sortFlowCol = col
@@ -270,10 +269,9 @@ func (m *AppModel) advanceSortFlow(key string) tea.Cmd {
 			unsetSortFor(dir, m.sortFlowCol)
 		}
 		m.reloadAllTabs()
-		saveState(m.snapshotState())
 		m.sortStep = sortStepColumn
 		m.setSortColumnItems()
-		return nil
+		return m.persist()
 	}
 	return nil
 }
