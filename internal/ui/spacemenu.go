@@ -338,7 +338,7 @@ func (m spaceMenu) renderFull() string {
 		if it.separator || it.header {
 			continue
 		}
-		labelW = max(labelW, lipgloss.Width(bracketHotkey(it.label, it.key)))
+		labelW = max(labelW, dispWidth(bracketHotkey(it.label, it.key)))
 	}
 	labelCol := labelW + 2
 	innerW := popupInnerWidth(m.screenW)
@@ -370,12 +370,12 @@ func (m spaceMenu) renderFull() string {
 		if m.hintRight {
 			// A single trailing glyph right-aligned to the inner edge (the quit
 			// picker), so the glyphs line up in a column whatever the labels.
-			gap = strings.Repeat(" ", max(2, innerW-1-lipgloss.Width(lead)-lipgloss.Width(it.hint)))
+			gap = strings.Repeat(" ", max(2, innerW-1-dispWidth(lead)-dispWidth(it.hint)))
 		} else {
-			gap = strings.Repeat(" ", max(2, labelCol-lipgloss.Width(labelDisplay)))
+			gap = strings.Repeat(" ", max(2, labelCol-dispWidth(labelDisplay)))
 		}
-		h := truncate(it.hint, max(innerW-1-lipgloss.Width(lead)-len(gap), 1))
-		pad := strings.Repeat(" ", max(0, innerW-lipgloss.Width(lead)-len(gap)-lipgloss.Width(h)))
+		h := truncate(it.hint, max(innerW-1-dispWidth(lead)-len(gap), 1))
+		pad := strings.Repeat(" ", max(0, innerW-dispWidth(lead)-len(gap)-dispWidth(h)))
 		if i == m.cursor {
 			rows = append(rows, rowCursor.Render(lead+gap+h+pad))
 		} else {

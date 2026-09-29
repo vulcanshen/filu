@@ -85,10 +85,9 @@ func (m breadcrumbPopup) renderFull() string {
 	title := " " + string(rune(0xf07c)) + " Breadcrumb" // nf-fa-folder-open
 	hint := keyLegend([][2]string{{"j/k", "move"}, {"Enter", "jump"}, {"Esc", "close"}})
 
-	// Content rows stay glyph-free (filu popup convention): a marker glyph in a
-	// content row would misalign the box on CJK icon fonts, where lipgloss.Width
-	// under-counts ambiguous/PUA glyphs. Alignment comes from a plain 2-space
-	// gutter; the current level is flagged by lavender text, not a symbol.
+	// Alignment comes from a plain 2-space gutter; the current level is flagged by
+	// lavender text, not a symbol. Widths are display widths, so a glyph added
+	// here later would still line up on CJK icon fonts (tdp D6).
 	const gutter = "  "
 	innerW := popupInnerWidth(m.screenW) // the family width (tdp F7)
 
@@ -99,7 +98,7 @@ func (m breadcrumbPopup) renderFull() string {
 		body := gutter + label
 		switch i {
 		case m.cursor:
-			padW := max(0, innerW-1-1-lipgloss.Width(body))
+			padW := max(0, innerW-1-1-dispWidth(body))
 			rows = append(rows, cursorStyle.Render(" "+body+strings.Repeat(" ", padW)))
 		case current:
 			rows = append(rows, " "+gutter+hereStyle.Render(label))

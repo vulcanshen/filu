@@ -781,7 +781,7 @@ func (m searchModel) inputBar(w int) string {
 	avail := w - gW
 	leftW, countW := dispWidth(left), dispWidth(count)
 	if leftW+countW > avail { // query too long: keep the tail (cursor) visible
-		left = ansi.TruncateLeft(left, leftW-(avail-countW-1), "…")
+		left = truncPathLeft(left, avail-countW)
 		leftW = dispWidth(left)
 	}
 	gap := max(avail-leftW-countW, 0)

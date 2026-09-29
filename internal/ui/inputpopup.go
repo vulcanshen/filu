@@ -6,7 +6,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/ansi"
 )
 
 // inputGlyph (nf-fa-chevron_right) marks where the user types — a peach prompt
@@ -144,15 +143,14 @@ func (m inputPopup) renderFull() string {
 		cur = "█"
 	}
 	glyph := lipgloss.NewStyle().Foreground(lipgloss.Color("#fab387")).Bold(true).Render(inputGlyph)
-	field := glyph + " " + safeName(m.buffer) + cur
 
 	// The family width (tdp F7): it does not grow or shrink with the value or
 	// the error line (tdp L2).
 	innerW := popupInnerWidth(m.screenW)
 
-	if lipgloss.Width(field) > innerW { // keep the cursor (tail) visible
-		field = ansi.TruncateLeft(field, lipgloss.Width(field)-(innerW-1), "…")
-	}
+	// A long value keeps its tail (the cursor) in view; only the value is cut,
+	// the glyph stays, and both are measured by display width (tdp D6).
+	field := glyph + truncPathLeft(" "+safeName(m.buffer)+cur, innerW-dispWidth(inputGlyph))
 	// pad=false so the content hugs the top border (no empty top); a grey divider
 	// sits UNDER the input, same as Search — compact.
 	divider := lipgloss.NewStyle().Foreground(dimColor).Render(strings.Repeat("─", innerW))

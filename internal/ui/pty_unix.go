@@ -273,13 +273,13 @@ func (p *ptyPopup) renderPopup() string {
 	bs := lipgloss.NewStyle().Foreground(popupLayerColor(1))
 	ts := bs.Bold(true)
 	title := " " + p.title + " "
-	if lipgloss.Width(title) > cols-2 {
+	if dispWidth(title) > cols-2 {
 		title = " "
 	}
 	// The box interior is cols wide; the top row is ╭ + ─ + title + trail─ + ╮, so
 	// the runs after ╭ (one ─, the title, the trail) must sum to cols → trail =
 	// cols - width(title) - 1. (The bottom row below uses the same arithmetic.)
-	trail := max(cols-lipgloss.Width(title)-1, 0)
+	trail := max(cols-dispWidth(title)-1, 0)
 	top := bs.Render("╭─") + ts.Render(title) + bs.Render(strings.Repeat("─", trail)+"╮")
 	vbar := bs.Render("│")
 
@@ -289,7 +289,7 @@ func (p *ptyPopup) renderPopup() string {
 		out.WriteString(vbar + line + vbar + "\n")
 	}
 	hint := ptyExitHint()
-	out.WriteString(bs.Render("╰─") + hint + bs.Render(strings.Repeat("─", max(cols-lipgloss.Width(hint)-1, 0))+"╯"))
+	out.WriteString(bs.Render("╰─") + hint + bs.Render(strings.Repeat("─", max(cols-dispWidth(hint)-1, 0))+"╯"))
 	return p.anim.renderFrame(out.String())
 }
 

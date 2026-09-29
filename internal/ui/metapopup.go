@@ -59,7 +59,7 @@ func (m *metaPopup) open(path string) tea.Cmd {
 func (m metaPopup) metaLabelW() int {
 	w := 0
 	for _, r := range m.rows {
-		w = max(w, lipgloss.Width(r.label))
+		w = max(w, dispWidth(r.label))
 	}
 	return w + 2
 }
@@ -82,7 +82,7 @@ func (m metaPopup) lines() []string {
 		for i, part := range wrapHard(r.value, valueW) {
 			lead := strings.Repeat(" ", labelW)
 			if i == 0 {
-				lead = labelStyle.Render(r.label) + strings.Repeat(" ", labelW-lipgloss.Width(r.label))
+				lead = labelStyle.Render(r.label) + strings.Repeat(" ", labelW-dispWidth(r.label))
 			}
 			out = append(out, " "+lead+part)
 		}
@@ -132,14 +132,14 @@ func (m metaPopup) renderFull() string {
 // wrapHard cuts s into pieces at most w cells wide, breaking anywhere — a path
 // has no spaces to break at, and every character has to show.
 func wrapHard(s string, w int) []string {
-	if w < 1 || lipgloss.Width(s) <= w {
+	if w < 1 || dispWidth(s) <= w {
 		return []string{s}
 	}
 	var out []string
 	var cur strings.Builder
 	cw := 0
 	for _, r := range s {
-		rw := lipgloss.Width(string(r))
+		rw := dispWidth(string(r))
 		if cw+rw > w {
 			out = append(out, cur.String())
 			cur.Reset()

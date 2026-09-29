@@ -300,7 +300,7 @@ func (m detailYank) renderFull() string {
 		if m.showGutter { // gutter is display-only — the cursor never enters it
 			body = gutStyle.Render(fmt.Sprintf("%*d ", numW, i+1)) + body
 		}
-		out = append(out, ansi.Truncate(body, innerW, ""))
+		out = append(out, dispClip(body, innerW))
 	}
 	for len(out) < rows {
 		out = append(out, "")
