@@ -71,7 +71,7 @@
   query row back.
 - While selecting in the preview's scrollable view, its frame turns yellow
   and **Selection** shows at the top right; leaving the selection puts the
-  frame back.
+  frame back. The selected text is yellow too (it was lavender).
 - The key list (`?`) dims the keys that can't do anything right now, as the
   `Space` menu dims those rows — switching or closing tabs with only one open,
   a new tab with all five in use, Reset with no sort. On an empty preview (an

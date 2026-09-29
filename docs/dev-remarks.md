@@ -72,7 +72,8 @@
   (K5)。下框 hint 分選取內外兩種，框寬跟著螢幕、不跟 hint 變(L2)。選取中框標示自己是模式
   (tdp K11、D2):外框與標題換成模式色 Yellow(`modeColor`),上框右側寫模式名
   `Selection`(`selectModeName`,`?` 的標題 `Selection keys` 用同一個);框太窄時先截標題，
-  模式名留著(`drawPopupBoxMode()`)。離開選取就回到層色。選取的反白仍是 Lavender(`userColor`)。
+  模式名留著(`drawPopupBoxMode()`)。離開選取就回到層色。選取的反白也是 Yellow(`selectColor`,
+  D2 的「選取」;以前是 Lavender,跟黃框不搭，Lavender 回到只當使用者足跡，P4)。
   游標與選取的位置是 rune 序號(複製用 rune 取);畫的時候交給 `ansi.Cut()` 之前先換算成那一段
   在字串裡的格數(`cellsBefore()`,跟 `ansi.Cut()` 同一套量法):中文字一個 rune 佔兩格，不換算
   就會畫在錯的字上、還把字重複畫出來。
@@ -393,6 +394,8 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 - (2026-09-29)menu 與 key reference 說明欄裡提到的鍵算不算句子 → 算，加方括號
   (`next tab [h]/[l]`);tdp v0.1.17 照這個裁定寫進 M5。
 - (2026-09-29)zoom 不讓 `Esc` 退出 → 照 v0.1.14 的術語「模式」已經不是偏離，移到「設計決定」。
+- (2026-09-29)viewport 選取的反白 → 從 Lavender 改成 Yellow(照 D2),跟選取模式的黃框一致
+  (實機看過 Lavender 反白配黃框不搭)。
 
 ## 設計文件導讀
 

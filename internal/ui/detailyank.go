@@ -269,7 +269,7 @@ func (m detailYank) renderPopup() string { return m.anim.renderFrame(m.renderFul
 func (m detailYank) renderFull() string {
 	bc := popupLayerColor(m.anim.layer)
 	innerW, rows := m.innerW(), m.contentRows()
-	selStyle := lipgloss.NewStyle().Background(userColor).Foreground(lipgloss.Color(baseHex)).Bold(true)
+	selStyle := lipgloss.NewStyle().Background(selectColor).Foreground(lipgloss.Color(baseHex)).Bold(true) // Yellow, as the mode frame (tdp D2)
 	curStyle := lipgloss.NewStyle().Reverse(true)
 	gutStyle := lipgloss.NewStyle().Foreground(dimColor)
 	numW := 0

@@ -173,3 +173,15 @@ func TestK11ModeLabelsItself(t *testing.T) {
 		t.Errorf("a narrow box should cut the title and keep the mode name: %q", top)
 	}
 }
+
+// tdp D2: the selection is Yellow, the colour of the mode frame around it
+// (user ruling 2026-09-29: Lavender clashed with the Yellow frame; Lavender
+// stays the user's footprint).
+func TestK11SelectionIsYellow(t *testing.T) {
+	truecolor(t)
+	m := press(t, yankModel(t, true), runes("l")) // two characters selected
+	row := strings.Split(m.detailYank.renderFull(), "\n")[1]
+	if bg, _, ok := firstBG(row); !ok || !near(bg, [3]int{0xf9, 0xe2, 0xaf}) {
+		t.Errorf("the selection is %v, want Yellow #f9e2af: %q", bg, row)
+	}
+}

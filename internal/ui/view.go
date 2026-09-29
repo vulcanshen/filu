@@ -18,8 +18,10 @@ var (
 	handColor = lipgloss.Color("#bac2de") // subtext1: focused cursor ("current hand")
 	// neutral text.
 	dimColor = lipgloss.Color("#6c7086") // overlay0: section headers / dim text
-	// a mode: the frame of the box in one and its name (tdp K11, D2).
-	modeColor = lipgloss.Color("#f9e2af") // yellow
+	// a selection, and a mode — the frame of the box in one and its name — share
+	// Yellow (tdp D2, K11); lavender stays the user's footprint (P4).
+	selectColor = lipgloss.Color("#f9e2af") // yellow
+	modeColor   = selectColor
 	// file-type content colours live in theme.go (eza catppuccin-mocha).
 	// popup layer scale (lavenphire25→sapphire) comes when popups land.
 )
