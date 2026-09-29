@@ -33,6 +33,7 @@ Getting around filu: panels, tabs, the `Space` menu and the path you can always 
 ### Requirements
 
 - **A Nerd Font** in your terminal — filu's icons are Nerd Font glyphs. CJK Nerd Fonts (e.g. Maple Mono NF CN) work too.
+  filu asks the terminal at startup how many cells an icon takes. If borders still come out crooked, `filu iconwidth` shows what it measured, and `FILU__ICON_WIDTH=1` or `2` sets it. `TERMINU__ICON_WIDTH` is the same setting shared by the whole terminu family: set it once and every family app reads it (`FILU__ICON_WIDTH` still wins). Inside a family app's terminal — kbu's Alterm, filu's own shell — the outer app sets it for you, and filu sets it for what runs in its shell.
 - **A truecolor (24-bit) terminal** — filu's colours and the dimming under popups need it; with 256 colours the shades blur together.
 - **ripgrep** for content search, and **fd** for fast finders (the quick installer and Homebrew handle both).
 - **macOS or Linux** — or WSL on Windows.
