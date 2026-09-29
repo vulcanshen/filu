@@ -39,20 +39,6 @@ tdp 連結從 v0.1.13 改成 v0.1.17，只改網址。
   commit、裁定、教訓），並更新那份的「偏離 tdp」與「發布」段。
 
 
-## 6. key reference 跟實際按鍵不符的兩處 —— K6、M4（不是這一輪的改動）
-
-核對第 2、3 條的 key reference 時看到的，v0.1.13 以前就這樣：
-
-- **`g` 其實是 `gg`。** `panelKeyRef()` 寫 `g G`（top / bottom），但 panel 上單按 `g` 只是等下一個鍵（`Update` 的 `pendingG`），要
-  `gg` 才到頂（README 寫的就是 `gg`）。改成 `gg/G`（寫法見第 2 條）。menu、finder、breadcrumb、metadata 框的 `g` 是單鍵，寫 `g/G`
-  沒錯。
-- **`Shift-Tab` 哪裡都沒寫。** panel 上 `Shift-Tab` 反向換 focus（`Update` 的 `case "shift+tab"`），但 key reference、Space menu、
-  README 都沒有它，是只能靠事先知道的鍵（M4：panel 的 key reference 列出這個 panel 能按的鍵）。K2 說反向切換是熱鍵、做不做由 app
-  決定；建議留著，在 `panelKeyRef()` 的 `Tab` 下面補一列 `Shift-Tab`，README 兩份 `Tab` 那一列可以順手提。
-
-測試：`[1]` 的 key reference 有 `gg/G`、沒有單獨的 `g`、有 `Shift-Tab`。
-
-
 ## 已經符合、不用修的（對照 v0.1.13 → v0.1.16 的改動）
 
 - **F1 toast 除了 `Esc` 不收鍵**：`Update` 的 toast 分支只認 `esc`（`m.toast.owns() && msg.String() == "esc"`），其他鍵照常往下路由

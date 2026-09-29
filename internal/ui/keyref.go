@@ -57,6 +57,7 @@ func (m AppModel) panelKeyRef() (string, []helpRow) {
 	rows := menuRows(items)
 	rows = append(rows, helpRow{header: true, desc: "keys"},
 		helpRow{key: "Tab", desc: "focus the next panel"},
+		helpRow{key: "Shift-Tab", desc: "focus the previous panel"},
 		helpRow{key: "1–3", desc: "focus a panel directly"},
 		helpRow{key: "j/k", desc: "move down / up"},
 		helpRow{key: "gg/G", desc: "top / bottom"},

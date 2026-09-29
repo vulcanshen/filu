@@ -57,7 +57,8 @@
   dim; key lists name keys as they are on the keyboard (`Ctrl-C`, `Enter/y`,
   `1–3`) with the key in blue and its description in plain text; a key named in
   a sentence is bracketed (`press [f] on a directory`). The panel key list now
-  says `gg` for the top, which is what the panels take.
+  says `gg` for the top, which is what the panels take, and lists `Shift-Tab`
+  (the previous panel), which it left out.
 - The key list (`?`) dims the keys that can't do anything right now, as the
   `Space` menu dims those rows — switching or closing tabs with only one open,
   a new tab with all five in use, Reset with no sort. On an empty preview (an
