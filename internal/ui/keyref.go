@@ -61,7 +61,8 @@ func (m AppModel) panelKeyRef() (string, []helpRow) {
 		helpRow{key: "j/k", desc: "move down / up"},
 		helpRow{key: "gg/G", desc: "top / bottom"},
 		helpRow{key: "u/d", desc: "half a page up / down"})
-	rows = append(rows, helpRow{key: "Enter", desc: m.enterDesc()})
+	// Enter on an empty preview opens nothing: dim, as its Yank row is (tdp M6).
+	rows = append(rows, helpRow{key: "Enter", desc: m.enterDesc(), disabled: m.focus == panelDetail && !m.previewHasBody()})
 	rows = append(rows,
 		helpRow{key: "Esc", desc: backDesc(m.focus)},
 		helpRow{key: "Space", desc: "the menu of what you can do here"},
@@ -96,7 +97,8 @@ func backDesc(p panelID) string {
 
 // menuRows turns menu items into key-reference rows: each row that has a key
 // the user can press, under the region headers it sits in. Rows with no
-// pressable key (the Global operation row) and regions left empty are dropped.
+// pressable key (the Global operation row) and regions left empty are dropped;
+// a row dimmed in the menu is dimmed here too (tdp M6).
 func menuRows(items []menuItem) []helpRow {
 	var rows []helpRow
 	var pending *helpRow // a header, written only once a row under it is
@@ -122,7 +124,7 @@ func menuRows(items []menuItem) []helpRow {
 		if it.hint != "" && !isGlyphHint(it.hint) {
 			desc += " — " + it.hint
 		}
-		rows = append(rows, helpRow{key: it.key, desc: desc})
+		rows = append(rows, helpRow{key: it.key, desc: desc, disabled: it.disabled})
 	}
 	return rows
 }

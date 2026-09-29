@@ -12,10 +12,10 @@ import (
 
 // TestListNavHintFocusGated: the list's key legend appears only while focused.
 func TestListNavHintFocusGated(t *testing.T) {
-	if got := listNavHint(false); got != "" {
+	if got := listNavHint(false, 2); got != "" {
 		t.Errorf("unfocused list should have no hint, got %q", got)
 	}
-	if got, want := ansi.Strip(listNavHint(true)), " Enter:into Esc:back j/k/u/d:move h/l:switch tab "; got != want {
+	if got, want := ansi.Strip(listNavHint(true, 2)), " Enter:into Esc:back j/k/u/d:move h/l:switch tab "; got != want {
 		t.Errorf("focused list hint = %q, want %q", got, want)
 	}
 }
@@ -45,7 +45,7 @@ func TestPanelBoxHintBottomBorder(t *testing.T) {
 	const w, h = 60, 6
 	title := singleChip("[1]", true)
 
-	box := m.panelBoxHint(true, title, listNavHint(true), w, h, "body")
+	box := m.panelBoxHint(true, title, listNavHint(true, 2), w, h, "body")
 	lines := strings.Split(box, "\n")
 	for i, ln := range lines {
 		if got := dispWidth(ln); got != w {

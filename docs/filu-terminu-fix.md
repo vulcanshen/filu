@@ -39,48 +39,6 @@ tdp 連結從 v0.1.13 改成 v0.1.17，只改網址。
   commit、裁定、教訓），並更新那份的「偏離 tdp」與「發布」段。
 
 
-## 3. `?` 的 key reference 不把現在不能按的鍵變暗 —— M6
-
-**現況**：
-
-- **(a) menu 裡變暗的列，到了 key reference 看起來跟能按的一樣。** `keyref.go` `menuRows()` 把 menu 的列轉成 `helpRow`，但 `helpRow`
-  （`helppopup.go`）沒有「現在不能按」的欄位，`menuItem.disabled` 在這裡丟掉；`helpPopup.renderFull()` 每一列都用同一種顏色。
-  受影響的：
-  - `[1]` panel 的 key reference 與 `[1]` Space menu 的 key reference：`l` Switch tab、`w` Close tab（只有一個分頁時）、`t` Tab
-    （分頁滿 5 個時）—— `buildSpaceMenu()`。
-  - Sort 的 key reference：`r` Reset（這個目錄沒有排序時）—— `setSortColumnItems()`。
-  - Open in 的 key reference：`n` New tab（分頁滿了時）—— `openOpenInMenu()`。
-- **(b) `[2]` Preview 的 `y` 與 `Enter` 有時不作用，menu 與 key reference 卻照常列。** `openDetailYank()` 在 `preview.body` 是空的
-  時候直接 return：cursor 在空目錄上（`treeLines()` 沒有東西）、檔案讀不到（`(unreadable)`）、`[1]` 本身是空目錄（`(no selection)`）。
-  `buildSpaceMenu()` 的 `panelDetail` 分支 `Yank` 列照常列出、不變暗；`panelKeyRef()` 的 `y` 與 `Enter`（`enterDesc()`）也一樣。
-  menu 這半邊 v0.1.14 之前就不符合 M6，這輪逐 surface 核對 key reference 時看到。
-
-**規則**：M6 —— 對象存在、但現在不能執行：列照樣出現、**變暗**，說明不另寫原因；對象不存在就不列。v0.1.14 起 **`?` 的 key
-reference 照同一套**。下框 hint 與 footer 只列現在按得了的鍵也可以，由 app 決定。v0.1.16：key reference 裡另外加標題、說明**別的
-surface** 的一段不算這個 surface 的鍵，照亮顯示（filu 沒有這種段落，見「已經符合」）。
-
-**怎麼改**：
-
-- `helpRow` 加 `disabled`；`menuRows()` 把 `it.disabled` 帶過去；`helpPopup.renderFull()` 對 disabled 列的鍵與說明都畫
-  `disabledColor`（跟 `spaceMenu.renderFull()` 變暗的列同一個顏色；平常的鍵與說明顏色見第 2 條）。key reference 沒有 cursor，不必
-  處理 cursor bar。區塊標題不變暗。
-- `[2]`：`Yank` 列在 `preview.body` 空時 `disabled: true`（熱鍵本來就不作用）；`panelKeyRef()` 的 `Enter` 列在 `[2]` 同樣條件下
-  變暗（`Enter` 是 core key，照 K6 一定要列）。三種空的情況都算「現在不能」：panel `[2]` 一直在，cursor 換一個項目就有內容。
-- 對象不存在的已經不列，不用動：`[1]` 空目錄的 item operation、沒有 mark 時的 Copy / Move here、Marks / Tasks / Favorites 空的時候
-  的 item operation 與 Zip / Clear、sort 方向的 `Unset`、Goto → Favorites 沒有最愛時的 `f`；`Favorite`（`f`）對檔案永遠不能，照前例
-  不列。
-- 下框 hint（app 決定，不強制）：`[1]` 的 `listNavHint()` 在只有一個分頁時照列 `h/l:switch tab`（`h` / `l` 不作用）；Favorites
-  分頁的 `favoritesHint()` 在沒有最愛時照列 `o:open in`、`D:remove`（兩個都不作用）；Marks 分頁的 `marksHint()` 則是 bucket 空時整條
-  留白。條文給的兩種做法（照 key reference 變暗，或只列按得了的）現在這兩處都不是。建議跟 `marksHint()` 一致，只列按得了的
-  （`favoritesHint(hasItems)`、單一分頁時拿掉 `h/l`）。footer 的四個鍵永遠按得了，不用動。
-- 文件：dev-remarks「`?` key reference」那段補一句「menu 裡變暗的列，key reference 也變暗」；README 兩份 `?` 那一列可以順手寫
-  「現在不能按的鍵變暗」（不強制）。
-- 測試（新增 `m6_test.go`，或併進 `k6_test.go`）：開 truecolor（`lipgloss.SetColorProfile(termenv.TrueColor)`，`t.Cleanup` 還原）。
-  一個分頁時 `[1]` key reference 的 `l`、`w` 列是 `disabledColor`、`t` 不是；五個分頁時 `t` 是；Sort 沒有排序時 `r`；Open in 分頁
-  滿時 `n`；`[2]` 沒有內容時 Space menu 的 `Yank` 是 disabled，key reference 的 `y` 與 `Enter` 變暗、有內容時不變暗；區塊標題不變暗。
-  mutation：拿掉 `menuRows()` 帶 `disabled` 那一行、拿掉 `renderFull()` 的變暗、拿掉 `[2]` 的條件，各自要紅。
-
-
 ## 4. zoom 還寫在「偏離 tdp」 —— 術語「模式」（已定案）
 
 **現況**：`docs/dev-remarks.md`「偏離 tdp」只有一條：「Zoom 不是 `Esc` 會退出的模式（K4）」。程式碼的行為：`z` 展開、再按一次

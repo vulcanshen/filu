@@ -157,7 +157,7 @@ Three panels:
 
 | Key | Anywhere |
 |---|---|
-| `?` | The keys you can press here; `?` or `Esc` closes the list |
+| `?` | The keys you can press here — dimmed when they can't do anything right now; `?` or `Esc` closes the list |
 | `q` | Quit, choosing where your shell ends up (while typing, `q` is just a letter) |
 | `Ctrl-C` | Same as `q`, even while typing; press it again on the quit picker to leave at once |
 

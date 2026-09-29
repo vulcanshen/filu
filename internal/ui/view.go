@@ -155,7 +155,7 @@ func (m AppModel) middleView(w, midH int) string {
 func (m AppModel) normalMiddle(w, midH int) string {
 	listFocus := m.focus == panelList
 	if w < 72 { // too narrow for the grid; the list alone (Space menu Zoom is the escape hatch)
-		return m.panelBoxHint(listFocus, m.listTitle(w), listNavHint(listFocus), w, midH, m.listBody(m.tab, w-2, midH-2, listFocus))
+		return m.panelBoxHint(listFocus, m.listTitle(w), listNavHint(listFocus, len(m.tabs)), w, midH, m.listBody(m.tab, w-2, midH-2, listFocus))
 	}
 	topH := midH * 2 / 3
 	botH := midH - topH
@@ -163,7 +163,7 @@ func (m AppModel) normalMiddle(w, midH int) string {
 	// Top row: list | preview, 2:1.
 	listW := w * 2 / 3
 	previewW := w - listW
-	list := m.panelBoxHint(listFocus, m.listTitle(listW), listNavHint(listFocus), listW, topH, m.listBody(m.tab, listW-2, topH-2, listFocus))
+	list := m.panelBoxHint(listFocus, m.listTitle(listW), listNavHint(listFocus, len(m.tabs)), listW, topH, m.listBody(m.tab, listW-2, topH-2, listFocus))
 	preview := m.panelBox(m.focus == panelDetail, m.detailTitle(previewW), previewW, topH, m.detailBody(previewW-2, topH-2))
 	topRow := joinH(list, preview)
 
@@ -188,7 +188,7 @@ func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
 	case 1:
 		return m.tasksView(w, rows, focused), ""
 	case 2:
-		return m.places.view(w, rows, focused), favoritesHint()
+		return m.places.view(w, rows, focused), favoritesHint(len(m.places.pinned) > 0)
 	}
 	return m.marks.view(w, rows, focused), marksHint(len(m.marks.items) > 0)
 }
@@ -357,15 +357,18 @@ func keyLegend(pairs [][2]string) string {
 
 // listNavHint is the key legend shown in the focused list panel's bottom border:
 // the core open-model navigation keys (j/k/u/d folds cursor + paging into one
-// entry, h/l switches the directory tab). "" when the list is unfocused so an
-// idle panel keeps a clean edge.
-func listNavHint(focused bool) string {
+// entry, h/l switches the directory tab — named only when there is another tab
+// to switch to, like the other hints, tdp M6). "" when the list is unfocused so
+// an idle panel keeps a clean edge.
+func listNavHint(focused bool, tabs int) string {
 	if !focused {
 		return ""
 	}
-	return keyLegend([][2]string{
-		{"Enter", "into"}, {"Esc", "back"}, {"j/k/u/d", "move"}, {"h/l", "switch tab"},
-	})
+	pairs := [][2]string{{"Enter", "into"}, {"Esc", "back"}, {"j/k/u/d", "move"}}
+	if tabs > 1 {
+		pairs = append(pairs, [2]string{"h/l", "switch tab"})
+	}
+	return keyLegend(pairs)
 }
 
 // marksHint is the Marks tab's bottom-border legend: the keys that act here, on
@@ -381,8 +384,12 @@ func marksHint(hasItems bool) string {
 
 // favoritesHint is the Favorites tab's bottom-border legend: o opens the
 // highlighted favorite's dir in a tab (New tab / an existing one), D unfavorites
-// it. `f` on the LIST still creates/removes favorites.
-func favoritesHint() string {
+// it. `f` on the LIST still creates/removes favorites. With no favorites neither
+// applies, so the edge stays clean (as marksHint).
+func favoritesHint(hasItems bool) string {
+	if !hasItems {
+		return ""
+	}
 	return keyLegend([][2]string{{"o", "open in"}, {"D", "remove"}})
 }
 

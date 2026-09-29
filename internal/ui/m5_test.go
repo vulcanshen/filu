@@ -70,9 +70,9 @@ func TestM5HintsAndFooter(t *testing.T) {
 		"finder typing":  {typing, " ↑/↓:move Enter:go Tab:list Esc:close "},
 		"finder list":    {fs.hint(), " j/k/u/d:move Enter:go Tab:query Esc:close "},
 		"favorites menu": {bottomHint(m.gotoFavMenu.renderFull()), " j/k:move Enter:run f:unfavorite Esc:close "},
-		"list panel":     {listNavHint(true), " Enter:into Esc:back j/k/u/d:move h/l:switch tab "},
+		"list panel":     {listNavHint(true, 2), " Enter:into Esc:back j/k/u/d:move h/l:switch tab "},
 		"marks panel":    {marksHint(true), " p:pick m:unmark Z:zip C:clear "},
-		"favorites tab":  {favoritesHint(), " o:open in D:remove "},
+		"favorites tab":  {favoritesHint(true), " o:open in D:remove "},
 		"footer":         {strings.TrimRight(m.footerBar(60), " "), " Space:menu ?:help Tab/1–3:panels q:quit"},
 	} {
 		if got := ansi.Strip(c.got); got != c.want {

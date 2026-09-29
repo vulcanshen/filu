@@ -807,13 +807,17 @@ func (m *AppModel) handleDetailKey(key string) tea.Cmd {
 	return nil
 }
 
+// previewHasBody reports whether panel [2] shows anything to open or copy: not
+// on an empty directory, an unreadable file, or an empty [1].
+func (m AppModel) previewHasBody() bool { return len(m.preview.body) > 0 }
+
 // openDetailYank opens the yank viewport over panel [2]'s preview — the file's
 // own content, with a display-only line-number gutter for text/binary.
 func (m *AppModel) openDetailYank() tea.Cmd {
-	lines := m.preview.body
-	if len(lines) == 0 {
+	if !m.previewHasBody() {
 		return nil
 	}
+	lines := m.preview.body
 	showGutter := m.preview.kind == previewText || m.preview.kind == previewBinary
 	m.detailYank.setSize(m.width, m.height)
 	return m.detailYank.open("Yank: Preview", lines, showGutter, m.preview.cont)
@@ -1033,7 +1037,8 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		return groupedMenu(itemOps, panelOps), title
 	case panelDetail:
 		return groupedMenu(
-			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview"}},
+			// nothing to copy on an empty directory or an unreadable file (tdp M6)
+			[]menuItem{{label: "Yank", key: "y", hint: "select & copy the preview", disabled: !m.previewHasBody()}},
 			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "[2] Preview"
 	case panelMarks:
 		zoom := menuItem{label: "Zoom", key: "z", hint: "expand this panel full-screen"}
