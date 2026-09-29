@@ -128,6 +128,8 @@
   right border out, a popup laid over icons in the panels no longer leaves its
   rows a cell short or long, and the quit picker's directory glyph is no
   longer cut to `…`. Text next to an icon is no longer cut a character short.
+- A popup larger than a very small screen is cut at the screen's edge instead
+  of running past it.
 - In the preview's scrollable view, the cursor and the selection land on the
   right characters on lines with Chinese, Japanese or Korean text; they were
   drawn over the wrong ones and repeated some letters (what was copied was
