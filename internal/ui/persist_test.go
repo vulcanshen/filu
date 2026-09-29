@@ -6,21 +6,27 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// FILU_STATE redirects state I/O (used by the demo tapes to isolate state); the
-// test-only override still wins over it.
+// FILU__STATE names a state directory, state.yaml inside it (tdp D6; used by
+// the demo tapes to isolate state); the old FILU_STATE is not read any more,
+// and the test-only override still wins.
 func TestStatePathEnvOverride(t *testing.T) {
 	old := statePathOverride
 	statePathOverride = ""
 	defer func() { statePathOverride = old }()
 
-	t.Setenv("FILU_STATE", "/tmp/filu-demo/state.yaml")
+	t.Setenv("XDG_CONFIG_HOME", "/tmp/xdg")
+	t.Setenv("FILU_STATE", "/tmp/old/state.yaml") // renamed without a fallback
+	if got, _ := stateFilePath(); got != "/tmp/xdg/filu/state.yaml" {
+		t.Errorf("the old FILU_STATE should be ignored, got %q", got)
+	}
+	t.Setenv("FILU__STATE", "/tmp/filu-demo")
 	if got, ok := stateFilePath(); !ok || got != "/tmp/filu-demo/state.yaml" {
-		t.Errorf("FILU_STATE not honoured: got %q ok=%v", got, ok)
+		t.Errorf("FILU__STATE not honoured as a directory: got %q ok=%v", got, ok)
 	}
 
 	statePathOverride = "/tmp/override/state.yaml" // test override beats the env
 	if got, _ := stateFilePath(); got != "/tmp/override/state.yaml" {
-		t.Errorf("statePathOverride should win over FILU_STATE, got %q", got)
+		t.Errorf("statePathOverride should win over FILU__STATE, got %q", got)
 	}
 }
 
