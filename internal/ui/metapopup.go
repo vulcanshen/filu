@@ -69,7 +69,7 @@ func (m metaPopup) metaLabelW() int {
 func (m metaPopup) width() int { return popupInnerWidth(m.screenW) }
 
 // metaHint is the box's bottom border.
-const metaHint = " j/k scroll · Esc close "
+func metaHint() string { return keyLegend([][2]string{{"j/k", "scroll"}, {"Esc", "close"}}) }
 
 // lines lays the facts out at the box width: label column, then the value
 // wrapped under itself so every character shows.
@@ -126,7 +126,7 @@ func (m metaPopup) renderFull() string {
 		top := max(0, min(m.top, len(rows)-vis))
 		rows = rows[top : top+vis]
 	}
-	return drawPopupBox(bc, " "+safeName(m.title), metaHint, rows, m.width())
+	return drawPopupBox(bc, " "+safeName(m.title), metaHint(), rows, m.width())
 }
 
 // wrapHard cuts s into pieces at most w cells wide, breaking anywhere — a path

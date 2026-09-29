@@ -53,7 +53,7 @@ func (m *placesModel) clampCursor() {
 // and the highlighted row following focus.
 func (m placesModel) view(w, rows int, focused bool) string {
 	if len(m.pinned) == 0 {
-		return centeredNote(w, rows, "(no favorites — press f on a directory)")
+		return centeredNote(w, rows, "(no favorites — press [f] on a directory)")
 	}
 	star := lipgloss.NewStyle().Foreground(lipgloss.Color(ezaYellow)) // favorite = yellow star
 	cursorBg := handColor

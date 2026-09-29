@@ -12,7 +12,7 @@ import (
 type confirmPopup struct {
 	anim    popupAnimator
 	message string
-	verb    string // what Enter does, named in the hint ("Enter trash")
+	verb    string // what Enter does, named in the hint ("Enter:trash")
 	screenW int
 }
 
@@ -58,7 +58,7 @@ func (m confirmPopup) renderPopup() string { return m.anim.renderFrame(m.renderF
 func (m confirmPopup) renderFull() string {
 	bc := popupLayerColor(m.anim.layer)
 	title := " " + string(rune(0xf071)) + " Confirm" // nf-fa-warning
-	hint := " Enter " + m.verb + " · Esc cancel "
+	hint := keyLegend([][2]string{{"Enter", m.verb}, {"Esc", "cancel"}})
 
 	innerW := popupInnerWidth(m.screenW) // the family width (tdp F7); the message wraps inside
 

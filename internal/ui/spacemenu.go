@@ -67,6 +67,9 @@ type spaceMenu struct {
 	// other spaceMenu instance is a picker opened by Enter or a hotkey, where Space
 	// does nothing and only Esc (or its own flow) closes it.
 	spaceToggle bool
+	// hintKeys are keys the menu answers to besides its rows, shown in the bottom
+	// border between Enter and Esc (Goto → Favorites' f unfavorite, tdp M3, M5).
+	hintKeys [][2]string
 }
 
 func newSpaceMenu() spaceMenu {
@@ -323,7 +326,8 @@ func (m spaceMenu) renderFull() string {
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
 
 	title := " " + m.title
-	hint := " j/k move · Enter run · Esc close "
+	pairs := append([][2]string{{"j/k", "move"}, {"Enter", "run"}}, m.hintKeys...)
+	hint := keyLegend(append(pairs, [2]string{"Esc", "close"}))
 
 	// One line per row (the family form): labels in a column as wide as the
 	// widest label, each hint on the same line after it. The box is the family

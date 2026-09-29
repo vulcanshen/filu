@@ -138,8 +138,9 @@ func (p *ptyPopup) stop() {
 }
 
 // ptyExitHint sits in the PTY's bottom border for as long as it is open: the
-// app's one key inside the PTY is always on show (tdp K10, M1).
-const ptyExitHint = " exit or Alt+Esc to close "
+// app's one key inside the PTY is always on show (tdp K10, M1). Typing exit
+// works too, but it is a command for the shell, not a key (M5).
+func ptyExitHint() string { return keyLegend([][2]string{{"Alt-Esc", "close"}}) }
 
 // exit is what the PTY's exit key does once its confirm is accepted (tdp K10,
 // D5): it ends the shell now — the same as typing exit, since filu keeps no PTY
@@ -287,7 +288,8 @@ func (p *ptyPopup) renderPopup() string {
 	for _, line := range lines {
 		out.WriteString(vbar + line + vbar + "\n")
 	}
-	out.WriteString(bs.Render("╰─") + ts.Render(ptyExitHint) + bs.Render(strings.Repeat("─", max(cols-lipgloss.Width(ptyExitHint)-1, 0))+"╯"))
+	hint := ptyExitHint()
+	out.WriteString(bs.Render("╰─") + hint + bs.Render(strings.Repeat("─", max(cols-lipgloss.Width(hint)-1, 0))+"╯"))
 	return p.anim.renderFrame(out.String())
 }
 

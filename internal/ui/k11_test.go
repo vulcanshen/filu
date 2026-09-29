@@ -77,7 +77,7 @@ func TestK11QuestionIsModeHelp(t *testing.T) {
 // tdp K11: Tab is suspended in the mode but answers.
 func TestK11TabAnswersWhileSelecting(t *testing.T) {
 	m := press(t, yankModel(t, true), tea.KeyMsg{Type: tea.KeyTab})
-	if !m.toast.owns() || !strings.Contains(m.toast.message, "Esc leaves the selection") {
+	if !m.toast.owns() || !strings.Contains(m.toast.message, "[Esc] leaves the selection") {
 		t.Errorf("Tab while selecting should say how to leave: toast %v %q", m.toast.owns(), m.toast.message)
 	}
 	if !m.detailYank.visual {
@@ -90,12 +90,12 @@ func TestK11HintFollowsStateWidthHolds(t *testing.T) {
 	m := yankModel(t, false)
 	out := ansi.Strip(m.detailYank.renderFull())
 	w := ansi.StringWidth(strings.Split(out, "\n")[0])
-	if !strings.Contains(out, "v select") {
+	if !strings.Contains(out, "v:select") {
 		t.Errorf("outside the selection the hint should offer v:\n%s", out)
 	}
 	m = press(t, m, runes("v"))
 	sel := ansi.Strip(m.detailYank.renderFull())
-	if !strings.Contains(sel, "? keys") || !strings.Contains(sel, "Esc leave") || strings.Contains(sel, "Space") {
+	if !strings.Contains(sel, "?:keys") || !strings.Contains(sel, "Esc:leave") || strings.Contains(sel, "Space") {
 		t.Errorf("while selecting the hint should offer ? and Esc, not Space:\n%s", sel)
 	}
 	if got := ansi.StringWidth(strings.Split(sel, "\n")[0]); got != w {

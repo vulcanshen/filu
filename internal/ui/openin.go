@@ -68,7 +68,7 @@ func (m *AppModel) showInTabs(dir, name string) tea.Cmd {
 	}
 	if at < 0 {
 		if len(m.tabs) >= maxTabs {
-			return m.toast.show(fmt.Sprintf("All %d tabs are in use — close one (w) to open %s", maxTabs, safeName(filepath.Base(dir))))
+			return m.toast.show(fmt.Sprintf("All %d tabs are in use — close one [w] to open %s", maxTabs, safeName(filepath.Base(dir))))
 		}
 		m.addTab(dir)
 		at = m.tab

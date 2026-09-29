@@ -52,10 +52,16 @@
 - The finders list results as they arrive instead of waiting for the whole
   directory walk to finish.
 - Running tasks in the Tasks tab turn the same icon as the finders.
-- `Ctrl+C` no longer quits on the spot: like `q`, it opens the quit picker
-  (with its warning when a copy or move is still running). Press `Ctrl+C` again
+- Keys are written one way everywhere: bottom lines and the footer read
+  `key:what` (`j/k:move Enter:run Esc:close`), with the key in blue and the rest
+  dim; key lists name keys as they are on the keyboard (`Ctrl-C`, `Enter/y`,
+  `1–3`) with the key in blue and its description in plain text; a key named in
+  a sentence is bracketed (`press [f] on a directory`). The panel key list now
+  says `gg` for the top, which is what the panels take.
+- `Ctrl-C` no longer quits on the spot: like `q`, it opens the quit picker
+  (with its warning when a copy or move is still running). Press `Ctrl-C` again
   on the picker to leave at once.
-- `q` and `Ctrl+C` now reach the quit picker from anywhere — over a menu, a
+- `q` and `Ctrl-C` now reach the quit picker from anywhere — over a menu, a
   confirmation, the help, a preview or the finder's results — and `Esc` on the
   picker returns to where you were. While typing, `q` is just a letter.
 - In the finder's result list, `Tab` (not `q`) goes back to the query line;
@@ -73,7 +79,7 @@
 - `Space` now only opens and closes the `Space` menu. On the pickers (sort,
   Goto, Search, Open with, quit…), confirmations, the help and the breadcrumb
   it does nothing; `Esc` closes them. `b` no longer closes the breadcrumb popup.
-- Confirmations name what `Enter` will do (`Enter trash`, `Enter clear`, …).
+- Confirmations name what `Enter` will do (`Enter:trash`, `Enter:clear`, …).
 - Popups now stack. A `Space`-menu item that opens a confirmation, a text
   field or a picker leaves the menu underneath, so `Esc` goes back to it; the
   Search chooser and the Goto picker stay under the finder they open. Finishing

@@ -201,7 +201,7 @@ func (m splashModel) render(width, height int) string {
 		emailText = dim.Render(authorEmail)
 	}
 	if m.hintVisible {
-		hintText = dim.Render("Press Esc to close")
+		hintText = dim.Render("Press [Esc] to close")
 	}
 	caption := "\n\n" +
 		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, identityText) +

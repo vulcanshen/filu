@@ -95,12 +95,17 @@ func (m helpPopup) update(msg tea.KeyMsg) (helpPopup, tea.Cmd) {
 func (m helpPopup) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
 // helpHint is the key reference's bottom border: only how to move and leave.
-const helpHint = " j/k scroll · ? or Esc close "
+func helpHint() string { return keyLegend([][2]string{{"j/k", "scroll"}, {"?/Esc", "close"}}) }
+
+// keyRefDesc is a key reference's description colour, Text (tdp D2); the keys
+// are Blue, like the hints'.
+const keyRefDesc = lipgloss.Color("#cdd6f4")
 
 func (m helpPopup) renderFull() string {
 	bc := popupLayerColor(m.anim.layer)
-	keyStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)
-	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f849c"))
+	keyStyle := lipgloss.NewStyle().Foreground(focusColor).Bold(true)
+	descStyle := lipgloss.NewStyle().Foreground(keyRefDesc)
+	headerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f849c"))
 
 	title := " " + string(rune(0xf059)) + " " + m.title // nf-fa-question-circle
 
@@ -117,7 +122,7 @@ func (m helpPopup) renderFull() string {
 	rows := make([]string, 0, len(m.rows))
 	for _, r := range m.rows {
 		if r.header {
-			rows = append(rows, " "+descStyle.Render(truncate(r.desc, innerW-2)))
+			rows = append(rows, " "+headerStyle.Render(truncate(r.desc, innerW-2)))
 			continue
 		}
 		key := r.key + strings.Repeat(" ", max(0, keyW-lipgloss.Width(r.key)))
@@ -128,5 +133,5 @@ func (m helpPopup) renderFull() string {
 		top := max(0, min(m.top, len(rows)-vis))
 		rows = rows[top : top+vis]
 	}
-	return drawPopupBox(bc, title, helpHint, rows, innerW)
+	return drawPopupBox(bc, title, helpHint(), rows, innerW)
 }

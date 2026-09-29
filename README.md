@@ -148,7 +148,7 @@ Three panels:
 ## Key reference
 
 ```
- cursor    j k        u d         gg G        h l (switch this panel's tab)
+ cursor    j/k        u/d         gg/G        h/l (switch this panel's tab)
  list      o open     O open-with  m mark     c copy    v move    f favorite
            y yank     r rename     a add      s shell   D delete  S sort   . hidden   z zoom
  finders   / search   go goto      b breadcrumb
@@ -159,7 +159,7 @@ Three panels:
 |---|---|
 | `?` | The keys you can press here; `?` or `Esc` closes the list |
 | `q` | Quit, choosing where your shell ends up (while typing, `q` is just a letter) |
-| `Ctrl+C` | Same as `q`, even while typing; press it again on the quit picker to leave at once |
+| `Ctrl-C` | Same as `q`, even while typing; press it again on the quit picker to leave at once |
 
 Every panel's `Space` menu lists what you can do to the item under the cursor, then to the panel, and ends with **Global operation**, which opens a menu of app-wide actions (for now: Quit `q`). A row that can't run right now — say, Close tab with only one tab open — is shown dimmed.
 
@@ -206,7 +206,7 @@ ignore_dirs:
   - .cache
   - .Trash
 
-# Apps for the [O]pen-with picker (press O on a file or directory; plain o just
+# Apps for the [O]pen-with picker (press [O] on a file or directory; plain [o] just
 # opens with the OS default). Each entry is a name + a command; filu runs
 # `<cmd> <path>`. "Default" (the OS default app) is always offered first.
 open_with:

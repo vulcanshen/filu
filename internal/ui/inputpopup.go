@@ -119,7 +119,7 @@ func (m inputPopup) hint() string {
 	case inputZip:
 		verb = "zip"
 	}
-	return " Enter " + verb + " · Esc cancel "
+	return keyLegend([][2]string{{"Enter", verb}, {"Esc", "cancel"}})
 }
 
 // desc is the item exactly as panel [1] shows it — type icon + eza colour — or

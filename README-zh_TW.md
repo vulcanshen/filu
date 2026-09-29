@@ -148,7 +148,7 @@ eval "$(filu shell)"
 ## 按鍵一覽
 
 ```
- 游標      j k        u d         gg G        h l(切本面板分頁)
+ 游標      j/k        u/d         gg/G        h/l(切本面板分頁)
  清單      o open     O open-with  m mark     c copy    v move    f favorite
            y yank     r rename     a add      s shell   D delete  S sort   . hidden   z zoom
  finder    / search   go goto      b breadcrumb
@@ -159,7 +159,7 @@ eval "$(filu shell)"
 |---|---|
 | `?` | 這裡能按的鍵;再按 `?` 或 `Esc` 關掉 |
 | `q` | 離開,並選擇 shell 要停在哪裡(打字時 `q` 就是一個字母) |
-| `Ctrl+C` | 同 `q`,打字時也有效;在離開畫面上再按一次就立即離開 |
+| `Ctrl-C` | 同 `q`,打字時也有效;在離開畫面上再按一次就立即離開 |
 
 各面板的 `Space` 選單依序列出：對游標項目能做的事、對整個面板能做的事，最後一列是 **Global operation**,打開全 app 的動作選單(目前只有 Quit `q`)。暫時不能做的項目(例如只開一個分頁時的 Close tab)會變暗顯示。
 
@@ -205,7 +205,7 @@ ignore_dirs:
   - .cache
   - .Trash
 
-# [O]pen-with picker 的 app(對檔案或目錄按 O;單按 o 就用 OS 預設開)。每個 entry
+# [O]pen-with picker 的 app(對檔案或目錄按 [O];單按 [o] 就用 OS 預設開)。每個 entry
 # 是 name + 一個指令,filu 會跑 `<cmd> <path>`。「Default」(OS 預設 app)永遠排第一。
 open_with:
   - name: VSCode

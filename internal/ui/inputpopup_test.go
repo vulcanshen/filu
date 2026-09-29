@@ -34,7 +34,7 @@ func TestInputPopupRender(t *testing.T) {
 	m.setSize(100)
 	m.open(inputAdd, "New (trailing / = dir)", "hello", fileItem{})
 	plain := ansi.Strip(m.renderFull())
-	for _, want := range []string{"New", "hello", "Enter create", "Esc cancel"} { // the hint names what Enter does (tdp D3)
+	for _, want := range []string{"New", "hello", "Enter:create", "Esc:cancel"} { // the hint names what Enter does (tdp D3)
 		if !strings.Contains(plain, want) {
 			t.Errorf("input popup missing %q:\n%s", want, plain)
 		}
