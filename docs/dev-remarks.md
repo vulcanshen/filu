@@ -65,7 +65,10 @@
   viewport 本身 key reference 的移動列都由它產生。模式裡沒有 Space menu、也沒有可執行的
   按鍵清單，模式的鍵直接按;選取中 `Space` 不作用(tdp v0.1.10 拿掉了 v0.1.2 起那份只用方向鍵
   移動的按鍵清單 `modeList`)。選取中 `Tab` 暫停但回一個 toast;選取外 `Space` 也不作用
-  (K5)。下框 hint 分選取內外兩種，框寬跟著螢幕、不跟 hint 變(L2)。
+  (K5)。下框 hint 分選取內外兩種，框寬跟著螢幕、不跟 hint 變(L2)。選取中框標示自己是模式
+  (tdp K11、D2):外框與標題換成模式色 Yellow(`modeColor`),上框右側寫模式名
+  `Selection`(`selectModeName`,`?` 的標題 `Selection keys` 用同一個);框太窄時先截標題，
+  模式名留著(`drawPopupBoxMode()`)。離開選取就回到層色。選取的反白仍是 Lavender(`userColor`)。
 - **Yank** — 走 OSC 52,所以能穿 tmux / SSH。
 - **刪除** — 移到 OS 垃圾桶:macOS 用 `osascript`(不需 cgo)、Linux 寫 XDG
   `.trashinfo`。

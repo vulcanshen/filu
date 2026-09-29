@@ -16,7 +16,7 @@ func (m AppModel) keyRef() (string, []helpRow) {
 	case m.meta.owns():
 		return "File information keys", metaKeyRef()
 	case m.detailYank.owns() && m.detailYank.visual: // the selection mode's help (tdp K11)
-		return "Selection keys", selectHelpRows()
+		return selectModeName + " keys", selectHelpRows()
 	case m.detailYank.owns():
 		return "Preview viewport keys", yankKeyRef()
 	case m.breadcrumb.owns():

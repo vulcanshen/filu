@@ -307,7 +307,13 @@ func (m detailYank) renderFull() string {
 	}
 	// pad=false: content hugs the top border like kbu's YAML popup — no leading
 	// blank row, and the gutter is just the line number (no "│" separator).
-	return drawPopupBoxPad(bc, " "+m.title, m.hint(innerW-1), out, innerW, false)
+	// Selecting is a mode: the box says so at its top right, and its frame takes
+	// the mode colour until the mode is left (tdp K11).
+	mode := ""
+	if m.visual {
+		bc, mode = modeColor, " "+selectModeName+" "
+	}
+	return drawPopupBoxMode(bc, " "+m.title, mode, m.hint(innerW-1), out, innerW, false)
 }
 
 // overlaySelectionOnStyledLine keeps the styled line intact outside the

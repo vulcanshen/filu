@@ -1,5 +1,9 @@
 package ui
 
+// selectModeName names the selection mode where it shows: at the top right of
+// the viewport while selecting, and in its key reference's title (tdp K11).
+const selectModeName = "Selection"
+
 // modeKey is one key of the yank viewport's selection mode (tdp K11): what to
 // press, what it does, and the keystrokes it is made of.
 type modeKey struct {
