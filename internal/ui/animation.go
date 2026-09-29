@@ -82,6 +82,9 @@ func (a *popupAnimator) close() tea.Cmd {
 	return a.tickCmd()
 }
 
+// closeNow closes the popup at once, with no closing animation.
+func (a *popupAnimator) closeNow() { a.state, a.frame = popupClosed, 0 }
+
 // tick advances the animation by one frame. Returns the next tick cmd or nil.
 func (a *popupAnimator) tick() tea.Cmd {
 	a.frame++

@@ -86,13 +86,17 @@ type popupLayer struct {
 }
 
 // popupLayers lists the popups bottom-first, in the stack order Update routes
-// keys by (stackOrder), with the shell between the key reference and the leave
-// flow. The toast is not a layer (it holds no keys, tdp F8) and is drawn after.
+// keys by (stackOrder), with the shell under all of them: the only popups that
+// open while it is up are its exit confirm, that confirm's key reference and the
+// leave flow (tdp F4). The toast is not a layer (it takes no key but Esc, tdp
+// F8) and is drawn after.
 func (m AppModel) popupLayers() []popupLayer {
 	c := func(on bool, draw func() string) popupLayer {
 		return popupLayer{on: on, draw: draw, x: overlay.Center, y: overlay.Center}
 	}
 	return []popupLayer{
+		// shell popup: full width, from the top down to the bottom
+		{on: m.pty.isRendered(), draw: m.pty.renderPopup, x: overlay.Left, y: overlay.Top, dy: ptyChromeRows},
 		c(m.spaceMenu.isActive(), m.spaceMenu.renderPopup),
 		c(m.globalMenu.isActive(), m.globalMenu.renderPopup),
 		c(m.sortMenu.isActive(), m.sortMenu.renderPopup),
@@ -109,10 +113,8 @@ func (m AppModel) popupLayers() []popupLayer {
 		c(m.meta.isActive(), m.meta.renderPopup),             // file information box
 		c(m.search.isActive(), m.search.renderPopup),         // fuzzy finder over the panels
 		c(m.help.isActive(), m.help.renderPopup),             // key reference over whatever it describes
-		// shell popup: full width, from the top down to the bottom
-		{on: m.pty.isRendered(), draw: m.pty.renderPopup, x: overlay.Left, y: overlay.Top, dy: ptyChromeRows},
-		c(m.quitMenu.isActive(), m.quitMenu.renderPopup), // the leave flow sits over the whole stack (tdp D3)
-		c(m.quitHelp.isActive(), m.quitHelp.renderPopup), // the quit picker's key reference, over it
+		c(m.quitMenu.isActive(), m.quitMenu.renderPopup),     // the leave flow sits over the whole stack (tdp D3)
+		c(m.quitHelp.isActive(), m.quitHelp.renderPopup),     // the quit picker's key reference, over it
 	}
 }
 
@@ -485,9 +487,13 @@ func (m *AppModel) stackOrder() []*popupAnimator {
 
 // assignLayers numbers the open popups by their depth in the stack so each one
 // takes its layer colour: the deeper it sits on top, the further along the
-// lavenphire→sapphire scale (tdp D2).
+// lavenphire→sapphire scale (tdp D2). The shell, when up, is layer 1 under them
+// all (popupLayers); its frame always takes layer 1's colour.
 func (m *AppModel) assignLayers() {
 	layer := 0
+	if m.pty.isRendered() {
+		layer = 1
+	}
 	for _, a := range m.stackOrder() {
 		if a.isActive() {
 			layer++

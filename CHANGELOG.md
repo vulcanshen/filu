@@ -21,9 +21,10 @@
   a favorite it goes to that directory — in the tab already there, else a new
   one (with all five tabs in use it tells you); on a task it takes the current
   tab to where the task landed.
-- `Alt+Esc` leaves the shell opened with `s` from anywhere in it — even with a
-  full-screen program running or the shell stuck. It ends the shell, like
-  typing `exit`. The shell's frame now says so.
+- `Alt-Esc` leaves the shell opened with `s` from anywhere in it — even with a
+  full-screen program running or the shell stuck. It asks first: `Enter` ends
+  the shell, like typing `exit`, and `Esc` goes back to it (two quick `Esc`
+  presses in vim can arrive as `Alt-Esc`). The shell's frame now says so.
 
 ### Changed
 - Every popup — menus, confirmations, inputs, key references, file details,

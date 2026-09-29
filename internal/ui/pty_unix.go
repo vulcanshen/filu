@@ -141,10 +141,11 @@ func (p *ptyPopup) stop() {
 // app's one key inside the PTY is always on show (tdp K10, M1).
 const ptyExitHint = " exit or Alt+Esc to close "
 
-// exit is the PTY's exit key (tdp K10): it ends the shell now — the same as
-// typing exit, since filu keeps no PTY session to come back to — and closes
-// the popup, focus landing back on the panel. The hard stop still waits for the
-// close animation, as after a normal exit.
+// exit is what the PTY's exit key does once its confirm is accepted (tdp K10,
+// D5): it ends the shell now — the same as typing exit, since filu keeps no PTY
+// session to come back to — and closes the popup, focus landing back on the
+// panel. The hard stop still waits for the close animation, as after a normal
+// exit.
 func (p *ptyPopup) exit() tea.Cmd {
 	if p == nil || !p.active || p.stopPending {
 		return nil
@@ -157,8 +158,9 @@ func (p *ptyPopup) exit() tea.Cmd {
 	return tea.Batch(p.anim.close(), func() tea.Msg { return ptyExitMsg{dir: dir} })
 }
 
-// isExitKey reports whether msg is the PTY's exit key, Alt+Esc — a chord a
-// shell or a full-screen program inside it has next to no use for.
+// isExitKey reports whether msg is the PTY's exit key, Alt-Esc — a chord a
+// shell or a full-screen program inside it has next to no use for. Two quick
+// Esc presses send the same bytes, hence the confirm before it ends anything.
 func isExitKey(msg tea.KeyMsg) bool { return msg.Type == tea.KeyEsc && msg.Alt }
 
 // handleTick advances the open/close animation and runs the deferred hard
