@@ -284,8 +284,8 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   F8 dim、K11 模式沒有按鍵清單)與 v0.1.11–v0.1.12(F7 loading icon、D2 淡化不變亮、D6
   truecolor)、v0.1.13(F1 放寬 menu 與 confirm,filu 不必改);2026-09-29 跟上 v0.1.14–v0.1.17
   (PTY 出口鍵先 confirm、按鍵的寫法與顏色、key reference 變暗、zoom 不算模式)與 v0.1.18–
-  v0.1.19(icon 寬度全走顯示寬度、finder 的 focus、模式標示自己、失焦 hint 變暗、hint 整組捨棄),
-  都符合(沒有偏離，見下一節)。之後發現沒寫理由的違反，列進 `docs/filu-terminu-fix.md`(目前
+  v0.1.19(icon 寬度全走顯示寬度、finder 的 focus、模式標示自己、失焦 hint 變暗、hint 整組捨棄)、
+  v0.1.20(模式名夾在框線接頭之間),都符合(沒有偏離，見下一節)。之後發現沒寫理由的違反，列進 `docs/filu-terminu-fix.md`(目前
   沒有這個檔)。
 
 ## 偏離 tdp
@@ -294,8 +294,8 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 
 ## 對照 tdp 時確認過的
 
-2026-09-28 到 09-29 五次修 `filu-terminu-fix.md`(v0.1.7、v0.1.10、v0.1.12、v0.1.17、v0.1.19 各一輪，
-清單都已刪;v0.1.13 只改文件)時留下的：下次對照不必重查的，以及當時由 user 逐題裁定的。
+2026-09-28 到 09-29 六次修 `filu-terminu-fix.md`(v0.1.7、v0.1.10、v0.1.12、v0.1.17、v0.1.19、v0.1.20
+各一輪，清單都已刪;v0.1.13 只改文件)時留下的：下次對照不必重查的，以及當時由 user 逐題裁定的。
 
 **已經符合、不用修的**(對照 v0.1.7)
 
@@ -375,6 +375,15 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 - **K9 PTY 裡 `q`、`Ctrl-C` 屬於子程序**:沒有框疊在 PTY 上時全部送進 shell
   (`TestPtyKeysBelongToShell`);`Alt-Esc` 的 confirm 疊在上面時 focus 已經不在 PTY,`q` /
   `Ctrl-C` 進離開流程。
+
+**已經符合、不用修的**(對照 v0.1.20)
+
+- **D6 的新寫法**:filu 就是參考實作。CPR 量的是游標實際前進幾格(`DetectIconWidth()`),
+  `FILU_ICON_WIDTH` 覆寫、`filu iconwidth` 查看;Windows 的預設不適用(filu 沒有 Windows 版)。
+  驗收的 grep(`lipgloss.Width` 等)在 `internal/ui` 除了 `width.go` 找不到 —— 這輪把 viewport 的
+  `cellsBefore()` 也搬進 `width.go`。
+- **D3 模式名一個詞、先截標題**:`Selection` 一個詞;`drawPopupBoxMode()` 窄時先截標題。
+- **D3 膠囊跟著換色**:filu 的模式在 popup 裡，popup 沒有 `[N] label` 膠囊，不適用。
 
 **user 裁定的**(2026-09-28、2026-09-29)
 
