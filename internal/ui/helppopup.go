@@ -24,6 +24,9 @@ type helpPopup struct {
 type helpRow struct {
 	key, desc string
 	header    bool
+	// disabled: the key's target exists but it can't run right now; the row is
+	// drawn dim, as the menu row it comes from is (tdp M6).
+	disabled bool
 }
 
 func newHelpPopup() helpPopup {
@@ -127,7 +130,12 @@ func (m helpPopup) renderFull() string {
 		}
 		key := r.key + strings.Repeat(" ", max(0, keyW-lipgloss.Width(r.key)))
 		desc := truncate(r.desc, max(innerW-(2+keyW+2)-1, 1))
-		rows = append(rows, "  "+keyStyle.Render(key)+"  "+descStyle.Render(desc))
+		ks, ds := keyStyle, descStyle
+		if r.disabled { // can't run right now: key and description both dim (tdp M6)
+			ks = lipgloss.NewStyle().Foreground(disabledColor)
+			ds = ks
+		}
+		rows = append(rows, "  "+ks.Render(key)+"  "+ds.Render(desc))
 	}
 	if vis := m.visible(); len(rows) > vis {
 		top := max(0, min(m.top, len(rows)-vis))

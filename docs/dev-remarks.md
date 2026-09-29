@@ -132,6 +132,11 @@
   surface:popup 各給自己的鍵;沒有 popup 時是 focus panel,由 `buildSpaceMenu()` 的 item /
   panel 列產生(`menuRows()`,跳過沒有鍵的 `Global operation`)再接 core key,所以跟 Space
   menu 不會對不上(tdp K6、M4)。quit picker 的 `?` 另開 `quitHelp`,疊在 picker 上(D3)。
+  menu 裡變暗的列(`menuItem.disabled`),到了 key reference 也變暗(`helpRow.disabled`,鍵與
+  說明都畫 `disabledColor`,區塊標題不變暗);`[2]` 沒有內容可開(空目錄、讀不到的檔、`[1]`
+  是空的)時,Space menu 的 Yank 與 key reference 的 `y`、`Enter` 一起變暗(tdp M6,v0.1.14)。
+  下框 hint 則只列現在按得了的鍵(條文讓 app 選):`[1]` 只有一個分頁時不列 `h/l`,Marks 與
+  Favorites 分頁空的時候整條留白。
 
 ### 程式碼目錄
 

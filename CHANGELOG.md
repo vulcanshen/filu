@@ -58,6 +58,12 @@
   `1–3`) with the key in blue and its description in plain text; a key named in
   a sentence is bracketed (`press [f] on a directory`). The panel key list now
   says `gg` for the top, which is what the panels take.
+- The key list (`?`) dims the keys that can't do anything right now, as the
+  `Space` menu dims those rows — switching or closing tabs with only one open,
+  a new tab with all five in use, Reset with no sort. On an empty preview (an
+  empty directory, a file that can't be read) Yank is dimmed too, and `y` and
+  `Enter` in its key list. The file list's bottom line leaves out `h/l` when
+  there is only one tab, and the Favorites tab's is empty with no favorites.
 - `Ctrl-C` no longer quits on the spot: like `q`, it opens the quit picker
   (with its warning when a copy or move is still running). Press `Ctrl-C` again
   on the picker to leave at once.
