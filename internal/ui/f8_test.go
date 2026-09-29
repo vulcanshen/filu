@@ -174,7 +174,7 @@ func TestF8LowerPopupBorderKeepsItsLayerColour(t *testing.T) {
 	}
 }
 
-// tdp F8: a toast holds no keys and is not a layer, so it dims nothing.
+// tdp F8: a toast takes no key but Esc and is not a layer, so it dims nothing.
 func TestF8ToastDoesNotDim(t *testing.T) {
 	m := f8Model(t)
 	plain := m.View()
