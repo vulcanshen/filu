@@ -432,7 +432,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case " ": // a mode has no Space menu and no key list: Space does nothing (tdp K11)
 					return m, nil
 				case "tab": // Tab is suspended here, but answers
-					return m, m.toast.show("Esc leaves the selection first")
+					return m, m.toast.show("[Esc] leaves the selection first")
 				}
 			}
 			var cmd tea.Cmd
@@ -1022,7 +1022,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 		// The tab rows are always listed; one that can't run right now (a single
 		// tab, or the maxTabs limit) is dimmed instead of hidden (tdp M6).
 		panelOps = append(panelOps,
-			menuItem{label: "Switch tab", key: "l", hint: "next tab (h/l)", disabled: len(m.tabs) < 2},
+			menuItem{label: "Switch tab", key: "l", hint: "next tab [h]/[l]", disabled: len(m.tabs) < 2},
 			menuItem{label: "Tab", key: "t", hint: "create a new tab", disabled: len(m.tabs) >= maxTabs},
 			menuItem{label: "Close tab", key: "w", hint: "close the active tab", disabled: len(m.tabs) < 2},
 			menuItem{label: "Add", key: "a", hint: "new file / dir (trailing / = dir)"},
@@ -1037,7 +1037,7 @@ func (m AppModel) buildSpaceMenu() ([]menuItem, string) {
 			[]menuItem{{label: "Zoom", key: "z", hint: "expand the preview full-screen"}}), "[2] Preview"
 	case panelMarks:
 		zoom := menuItem{label: "Zoom", key: "z", hint: "expand this panel full-screen"}
-		tab := menuItem{label: "Switch tab", key: "l", hint: "Marks / Tasks / Favorites (h/l)"}
+		tab := menuItem{label: "Switch tab", key: "l", hint: "Marks / Tasks / Favorites [h]/[l]"}
 		switch m.marksTab {
 		case 1: // Tasks tab
 			var itemOps []menuItem

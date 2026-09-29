@@ -15,11 +15,8 @@ func TestListNavHintFocusGated(t *testing.T) {
 	if got := listNavHint(false); got != "" {
 		t.Errorf("unfocused list should have no hint, got %q", got)
 	}
-	plain := ansi.Strip(listNavHint(true))
-	for _, want := range []string{"enter into", "esc back", "jkud move", "hl switch tab"} {
-		if !strings.Contains(plain, want) {
-			t.Errorf("focused list hint missing %q, got %q", want, plain)
-		}
+	if got, want := ansi.Strip(listNavHint(true)), " Enter:into Esc:back j/k/u/d:move h/l:switch tab "; got != want {
+		t.Errorf("focused list hint = %q, want %q", got, want)
 	}
 }
 
@@ -28,12 +25,10 @@ func TestListNavHintFocusGated(t *testing.T) {
 // and stays empty when the bucket is.
 func TestMarksHint(t *testing.T) {
 	plain := ansi.Strip(marksHint(true))
-	for _, want := range []string{"p pick", "m unmark", "Z zip", "C clear"} {
-		if !strings.Contains(plain, want) {
-			t.Errorf("marks hint missing %q, got %q", want, plain)
-		}
+	if want := " p:pick m:unmark Z:zip C:clear "; plain != want {
+		t.Errorf("marks hint = %q, want %q", plain, want)
 	}
-	for _, not := range []string{"m mark", "c copy", "v move"} {
+	for _, not := range []string{"m:mark", "c:copy", "v:move"} {
 		if strings.Contains(plain, not) {
 			t.Errorf("marks hint names %q, a key of another panel", not)
 		}
@@ -58,13 +53,13 @@ func TestPanelBoxHintBottomBorder(t *testing.T) {
 		}
 	}
 	bottom := ansi.Strip(lines[len(lines)-1])
-	if !strings.Contains(bottom, "enter into") {
+	if !strings.Contains(bottom, "Enter:into") {
 		t.Errorf("bottom border should carry the hint, got %q", bottom)
 	}
 
 	plainBox := m.panelBoxHint(true, title, "", w, h, "body")
 	plainBottom := ansi.Strip(strings.Split(plainBox, "\n")[h-1])
-	if strings.Contains(plainBottom, "enter") {
+	if strings.Contains(plainBottom, "Enter") {
 		t.Errorf("no-hint box should have a clean bottom border, got %q", plainBottom)
 	}
 }

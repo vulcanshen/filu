@@ -159,7 +159,7 @@ func TestK6KeyRefScrolls(t *testing.T) {
 	}
 	m, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("G")})
 	last := ansi.Strip(m.renderFull())
-	if first == last || !strings.Contains(last, "Ctrl+C") {
+	if first == last || !strings.Contains(last, "Ctrl-C") {
 		t.Errorf("G should scroll to the last rows:\n%s", last)
 	}
 	m, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("g")})

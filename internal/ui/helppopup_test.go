@@ -18,13 +18,10 @@ func panel1KeyRef() (string, []helpRow) {
 
 // TestHelpPanelDigitsMatchPanels pins the key reference's panel-digit row to
 // the panels that actually exist. The row read "1 2 3 4" for several releases
-// after the 3-panel redesign, promising a panel the app has no key for.
+// after the 3-panel redesign, promising a panel the app has no key for. A range
+// is written first–last with an en dash (tdp M5).
 func TestHelpPanelDigitsMatchPanels(t *testing.T) {
-	var digits []string
-	for p := panelList; p <= panelMarks; p++ {
-		digits = append(digits, strconv.Itoa(int(p)))
-	}
-	want := strings.Join(digits, " ")
+	want := strconv.Itoa(int(panelList)) + "–" + strconv.Itoa(int(panelMarks))
 	_, rows := panel1KeyRef()
 	for _, r := range rows {
 		if r.desc == "focus a panel directly" {
@@ -42,7 +39,7 @@ func TestHelpPopupRender(t *testing.T) {
 	m.setSize(100, 60)
 	m.open(panel1KeyRef())
 	plain := ansi.Strip(m.renderFull())
-	for _, want := range []string{"[1] foo.txt keys", "Tab", "Space", "quit", "? or Esc close"} {
+	for _, want := range []string{"[1] foo.txt keys", "Tab", "Space", "quit", "?/Esc:close"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("key reference missing %q:\n%s", want, plain)
 		}

@@ -150,7 +150,7 @@ func TestSplashCreditRendersAboveHint(t *testing.T) {
 	tagline := strings.Index(frame, "A single-pane terminal file manager")
 	credit := strings.Index(frame, "developed by")
 	email := strings.Index(frame, authorEmail)
-	hint := strings.Index(frame, "Press Esc to close")
+	hint := strings.Index(frame, "Press [Esc] to close")
 	if tagline < 0 || credit < 0 || email < 0 || hint < 0 {
 		t.Fatalf("caption line missing (tagline=%d credit=%d email=%d hint=%d)", tagline, credit, email, hint)
 	}

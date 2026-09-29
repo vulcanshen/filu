@@ -51,7 +51,7 @@ func TestSpaceMenuRender(t *testing.T) {
 	m.setSize(100, 40)
 	m.setItems([]menuItem{{label: "Carry", key: "C", hint: "add to bucket"}}, "README.md")
 	plain := ansi.Strip(m.renderFull())
-	for _, want := range []string{"README.md", "[C]arry", "add to bucket", "Enter run", "Esc close"} {
+	for _, want := range []string{"README.md", "[C]arry", "add to bucket", "Enter:run", "Esc:close"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("popup missing %q:\n%s", want, plain)
 		}

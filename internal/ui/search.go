@@ -790,9 +790,9 @@ func (m searchModel) inputBar(w int) string {
 
 func (m searchModel) hint() string {
 	if m.mode == searchNav {
-		return " j/k/u/d · Enter=go · Tab=input · Esc=close "
+		return keyLegend([][2]string{{"j/k/u/d", "move"}, {"Enter", "go"}, {"Tab", "query"}, {"Esc", "close"}})
 	}
-	return " ↑/↓ · Enter=go · Tab=list · Esc=close "
+	return keyLegend([][2]string{{"↑/↓", "move"}, {"Enter", "go"}, {"Tab", "list"}, {"Esc", "close"}})
 }
 
 // --- fd / ripgrep ---

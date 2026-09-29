@@ -341,34 +341,31 @@ func (m AppModel) panelBoxHint(focused bool, title, hint string, w, h int, body 
 	return b.String()
 }
 
-// keyLegend renders a "key desc   key desc …" hint line — each key in the chrome
-// blue, each description dim — wrapped with a space on both sides. Shared by the
-// list panel's bottom-border hint and the footer.
-func keyLegend(pairs [][2]string) string { return keyLegendGap(pairs, "   ") }
-
-// keyLegendGap is keyLegend with a caller-chosen gap between the pairs — the
-// list panel's five-pair legend uses a tighter one so it stays compact.
-func keyLegendGap(pairs [][2]string, gap string) string {
+// keyLegend renders a "key:desc key:desc" hint line (tdp M5) — each key in Blue,
+// its colon and description in Overlay0 (D2), one space between the pairs and
+// one on each side. Every hint goes through it: the panels' and popups' bottom
+// borders and the footer.
+func keyLegend(pairs [][2]string) string {
 	keyStyle := lipgloss.NewStyle().Foreground(focusColor)
 	descStyle := lipgloss.NewStyle().Foreground(dimColor)
 	parts := make([]string, len(pairs))
 	for i, p := range pairs {
-		parts[i] = keyStyle.Render(p[0]) + " " + descStyle.Render(p[1])
+		parts[i] = keyStyle.Render(p[0]) + descStyle.Render(":"+p[1])
 	}
-	return " " + strings.Join(parts, gap) + " "
+	return " " + strings.Join(parts, " ") + " "
 }
 
 // listNavHint is the key legend shown in the focused list panel's bottom border:
-// the core open-model navigation keys, packed tight (jkud folds cursor + paging
-// into one entry, hl switches the directory tab). "" when the list is unfocused
-// so an idle panel keeps a clean edge.
+// the core open-model navigation keys (j/k/u/d folds cursor + paging into one
+// entry, h/l switches the directory tab). "" when the list is unfocused so an
+// idle panel keeps a clean edge.
 func listNavHint(focused bool) string {
 	if !focused {
 		return ""
 	}
-	return keyLegendGap([][2]string{
-		{"enter", "into"}, {"esc", "back"}, {"jkud", "move"}, {"hl", "switch tab"},
-	}, "  ")
+	return keyLegend([][2]string{
+		{"Enter", "into"}, {"Esc", "back"}, {"j/k/u/d", "move"}, {"h/l", "switch tab"},
+	})
 }
 
 // marksHint is the Marks tab's bottom-border legend: the keys that act here, on
@@ -459,7 +456,7 @@ func colorOwner(s string) string {
 
 func (m AppModel) footerBar(w int) string {
 	return padDisp(keyLegend([][2]string{
-		{"space", "menu"}, {"?", "help"}, {"tab/1-3", "panels"}, {"q", "quit"},
+		{"Space", "menu"}, {"?", "help"}, {"Tab/1–3", "panels"}, {"q", "quit"},
 	}), w)
 }
 

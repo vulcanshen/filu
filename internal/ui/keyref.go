@@ -57,17 +57,17 @@ func (m AppModel) panelKeyRef() (string, []helpRow) {
 	rows := menuRows(items)
 	rows = append(rows, helpRow{header: true, desc: "keys"},
 		helpRow{key: "Tab", desc: "focus the next panel"},
-		helpRow{key: "1 2 3", desc: "focus a panel directly"},
-		helpRow{key: "j k", desc: "move down / up"},
-		helpRow{key: "g G", desc: "top / bottom"},
-		helpRow{key: "u d", desc: "half a page up / down"})
+		helpRow{key: "1–3", desc: "focus a panel directly"},
+		helpRow{key: "j/k", desc: "move down / up"},
+		helpRow{key: "gg/G", desc: "top / bottom"},
+		helpRow{key: "u/d", desc: "half a page up / down"})
 	rows = append(rows, helpRow{key: "Enter", desc: m.enterDesc()})
 	rows = append(rows,
 		helpRow{key: "Esc", desc: backDesc(m.focus)},
 		helpRow{key: "Space", desc: "the menu of what you can do here"},
 		helpRow{key: "?", desc: "these keys"},
 		helpRow{key: "q", desc: "quit — pick a directory to cd to"},
-		helpRow{key: "Ctrl+C", desc: "same as q, even while typing"})
+		helpRow{key: "Ctrl-C", desc: "same as [q], even while typing"})
 	return title + " keys", rows
 }
 
@@ -75,7 +75,7 @@ func (m AppModel) panelKeyRef() (string, []helpRow) {
 func (m AppModel) enterDesc() string {
 	switch {
 	case m.focus == panelDetail:
-		return "open the scrollable view (same as y)"
+		return "open the scrollable view (same as [y])"
 	case m.focus == panelMarks && m.marksTab == 1:
 		return "take this tab to where the task landed"
 	case m.focus == panelMarks && m.marksTab == 2:
@@ -136,8 +136,8 @@ func isGlyphHint(h string) bool { return len([]rune(h)) <= 3 }
 func menuKeyRef(menu spaceMenu, extra []helpRow) []helpRow {
 	rows := append(menuRows(menu.items), extra...)
 	rows = append(rows, helpRow{header: true, desc: "keys"},
-		helpRow{key: "j k", desc: "move down / up"},
-		helpRow{key: "g G", desc: "first / last row"},
+		helpRow{key: "j/k", desc: "move down / up"},
+		helpRow{key: "g/G", desc: "first / last row"},
 		helpRow{key: "Enter", desc: "run the highlighted row"})
 	if menu.spaceToggle {
 		rows = append(rows, helpRow{key: "Space", desc: "close this menu"})
@@ -154,9 +154,9 @@ func quitKeyRef(targets int) []helpRow {
 	}
 	return []helpRow{
 		{key: keys, desc: "leave, with the shell in that directory"},
-		{key: "j k", desc: "move down / up"},
+		{key: "j/k", desc: "move down / up"},
 		{key: "Enter", desc: "leave, with the shell in the highlighted directory"},
-		{key: "Ctrl+C", desc: "leave now"},
+		{key: "Ctrl-C", desc: "leave now"},
 		{key: "Esc", desc: "stay — back to where you were"},
 		{key: "?", desc: "these keys"},
 	}
@@ -164,16 +164,16 @@ func quitKeyRef(targets int) []helpRow {
 
 func confirmKeyRef(verb string) []helpRow {
 	return []helpRow{
-		{key: "Enter y", desc: verb},
-		{key: "Esc n", desc: "cancel"},
+		{key: "Enter/y", desc: verb},
+		{key: "Esc/n", desc: "cancel"},
 		{key: "?", desc: "these keys"},
 	}
 }
 
 func breadcrumbKeyRef() []helpRow {
 	return []helpRow{
-		{key: "j k", desc: "move down / up"},
-		{key: "g G", desc: "first / last level"},
+		{key: "j/k", desc: "move down / up"},
+		{key: "g/G", desc: "first / last level"},
 		{key: "Enter", desc: "take this tab to the highlighted directory"},
 		{key: "Esc", desc: "close"},
 		{key: "?", desc: "these keys"},
@@ -182,9 +182,9 @@ func breadcrumbKeyRef() []helpRow {
 
 func finderKeyRef() []helpRow {
 	return []helpRow{
-		{key: "j k", desc: "move down / up"},
-		{key: "u d", desc: "half a page up / down"},
-		{key: "g G", desc: "first / last result"},
+		{key: "j/k", desc: "move down / up"},
+		{key: "u/d", desc: "half a page up / down"},
+		{key: "g/G", desc: "first / last result"},
 		{key: "Enter", desc: "go to the highlighted result"},
 		{key: "Tab", desc: "back to the query"},
 		{key: "Esc", desc: "close"},
@@ -200,7 +200,7 @@ func yankKeyRef() []helpRow {
 		}
 	}
 	return append(rows,
-		helpRow{key: "v", desc: "start selecting (then ? lists its keys)"},
+		helpRow{key: "v", desc: "start selecting (then [?] lists its keys)"},
 		helpRow{key: "y", desc: "copy everything"},
 		helpRow{key: "Esc", desc: "close"},
 		helpRow{key: "?", desc: "these keys"})
@@ -208,8 +208,8 @@ func yankKeyRef() []helpRow {
 
 func metaKeyRef() []helpRow {
 	return []helpRow{
-		{key: "j k", desc: "scroll down / up"},
-		{key: "g G", desc: "top / bottom"},
+		{key: "j/k", desc: "scroll down / up"},
+		{key: "g/G", desc: "top / bottom"},
 		{key: "Esc", desc: "close"},
 		{key: "?", desc: "these keys"},
 	}

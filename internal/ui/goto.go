@@ -39,8 +39,9 @@ func (m *AppModel) setGotoRootItems(title string) {
 // unfavorites), or a hint line when nothing is favorited.
 func (m *AppModel) setGotoPinnedItems() {
 	if len(m.places.pinned) == 0 {
+		m.gotoFavMenu.hintKeys = nil // nothing to unfavorite
 		m.gotoFavMenu.setItems([]menuItem{
-			{header: true, label: "Nothing favorited — press f on a directory to favorite it"},
+			{header: true, label: "Nothing favorited — press [f] on a directory to favorite it"},
 		}, "Favorites")
 		return
 	}
@@ -49,7 +50,8 @@ func (m *AppModel) setGotoPinnedItems() {
 	for i, p := range m.places.pinned {
 		items = append(items, menuItem{label: fitPath(p.path, budget), key: strconv.Itoa(i + 1)})
 	}
-	m.gotoFavMenu.setItems(items, "Favorites · f unfavorite")
+	m.gotoFavMenu.hintKeys = [][2]string{{"f", "unfavorite"}}
+	m.gotoFavMenu.setItems(items, "Favorites")
 }
 
 // advanceGotoFlow handles a key committed on the Goto picker: Same opens a new

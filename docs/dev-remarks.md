@@ -98,6 +98,9 @@
 - **popup 共用框** — 全部走 `drawPopupBox`(title 嵌上框、hint 嵌下框、內容上下各一列
   padding);yank viewport 與 finder 用 `drawPopupBoxPad(pad=false)` 貼齊邊框。popup
   內容列刻意不放 glyph(`lipgloss.Width` 會低估 ambiguous / PUA 寬度),glyph 只擺在框線上。
+  hint 與 panel 下框、footer 同一個 helper(`keyLegend()`):`鍵:說明`、項目之間一個空格，
+  鍵 Blue、冒號與說明 Overlay0(tdp M5、D2);`drawPopupBoxPad` 原樣放上去，不再用層色重畫。
+  key reference 的鍵 Blue、說明 Text,區塊標題維持暗字。
 - **popup 一律同寬** — 每個 popup 的外框都是 `min(terminal 寬 − 2, 120)`(`popupInnerWidth()`
   給扣掉左右邊框的內寬),不看內容:說明太長就截、訊息與值在框內折行(tdp F7,取代 D4 的
   「key reference 依最長說明算寬」)。finder 的兩個框加中間一欄間隔合起來是這個寬度。

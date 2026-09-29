@@ -83,7 +83,7 @@ func TestF1GotoFavoritesIsASeparatePopup(t *testing.T) {
 func TestF1FinderTypingEnterPicksTheHighlighted(t *testing.T) {
 	m := openedSearch("/root", "a.go", "b.go", "c.go")
 
-	if h := m.hint(); !strings.Contains(h, "Enter=go") || !strings.Contains(h, "Tab=list") {
+	if h := m.hint(); !strings.Contains(h, "Enter:go") || !strings.Contains(h, "Tab:list") {
 		t.Errorf("the hint while typing should say Enter picks and Tab goes to the list: %q", h)
 	}
 	m, _ = m.update(tea.KeyMsg{Type: tea.KeyDown})

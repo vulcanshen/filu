@@ -83,7 +83,7 @@ func (m breadcrumbPopup) renderFull() string {
 	hereStyle := lipgloss.NewStyle().Foreground(userColor) // current level, lavender = you-are-here
 
 	title := " " + string(rune(0xf07c)) + " Breadcrumb" // nf-fa-folder-open
-	hint := " j/k move   Enter jump   Esc close "
+	hint := keyLegend([][2]string{{"j/k", "move"}, {"Enter", "jump"}, {"Esc", "close"}})
 
 	// Content rows stay glyph-free (filu popup convention): a marker glyph in a
 	// content row would misalign the box on CJK icon fonts, where lipgloss.Width

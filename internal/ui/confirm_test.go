@@ -34,7 +34,7 @@ func TestConfirmRender(t *testing.T) {
 	m.open("Move README.md to the trash?", "trash")
 	plain := ansi.Strip(m.renderFull())
 	// tdp D3 (family default): the hint names what Enter does.
-	for _, want := range []string{"Confirm", "README.md", "Enter trash", "Esc cancel"} {
+	for _, want := range []string{"Confirm", "README.md", "Enter:trash", "Esc:cancel"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("confirm popup missing %q:\n%s", want, plain)
 		}

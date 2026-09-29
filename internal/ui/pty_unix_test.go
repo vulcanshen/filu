@@ -352,10 +352,22 @@ func TestPtyKeysBelongToShell(t *testing.T) {
 	}
 }
 
-// tdp K10 / M1: the exit key is on show in the PTY frame the whole time.
+// tdp K10 / M1: the exit key is on show in the PTY frame the whole time,
+// written as a hint (M5): the key Blue, its colon and description Overlay0.
 func TestPtyFrameShowsExitKey(t *testing.T) {
+	truecolor(t)
 	m := ptyApp(t)
-	if out := m.pty.renderPopup(); !strings.Contains(out, "Alt+Esc") {
-		t.Errorf("the PTY frame should name the exit key:\n%s", out)
+	out := m.pty.renderPopup()
+	if got := bottomHint(out); got != " Alt-Esc:close " {
+		t.Fatalf("the PTY frame hint = %q, want %q", got, " Alt-Esc:close ")
+	}
+	lines := strings.Split(out, "\n")
+	bottom := lines[len(lines)-1]
+	fg := cellFG(bottom)
+	if got := fg[cellAt(t, bottom, "Alt-Esc")]; !near(got, m5Blue) {
+		t.Errorf("the exit key is %v, want Blue %v", got, m5Blue)
+	}
+	if got := fg[cellAt(t, bottom, ":close")]; !near(got, m5Overlay0) {
+		t.Errorf("the exit key's description is %v, want Overlay0 %v", got, m5Overlay0)
 	}
 }
