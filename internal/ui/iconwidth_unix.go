@@ -20,7 +20,7 @@ import (
 // where the cursor ended up. Any failure (not a tty, no CPR reply, timeout)
 // leaves iconCells at its default of 1. Call once, before tea.NewProgram.
 func DetectIconWidth() {
-	if v := os.Getenv("FILU_ICON_WIDTH"); v != "" { // manual override for flaky CPR
+	if v := os.Getenv("FILU__ICON_WIDTH"); v != "" { // manual override for flaky CPR
 		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 2 {
 			iconCells = n
 			return

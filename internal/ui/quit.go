@@ -9,7 +9,7 @@ import (
 
 // envLastDirFile names the file filu writes the chosen directory to on quit, so
 // a shell wrapper can cd there — superfile's cd_on_quit. Unset = feature off.
-const envLastDirFile = "FILU_LAST_DIR_FILE"
+const envLastDirFile = "FILU__LAST_DIR_FILE"
 
 // writeLastDir records dir for the shell wrapper's cd-on-quit, when enabled.
 func writeLastDir(dir string) {

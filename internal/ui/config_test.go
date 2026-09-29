@@ -6,33 +6,40 @@ import (
 	"testing"
 )
 
-// FILU_CONFIG redirects config I/O (used by the demo tapes to isolate state);
-// the test-only override still wins over it.
+// FILU__CONFIG names a config directory, config.yaml inside it (tdp D6: an
+// app's variables are APP__NAME, CONFIG a directory; used by the demo tapes to
+// isolate state); the old FILU_CONFIG is not read any more, and the test-only
+// override still wins.
 func TestConfigPathEnvOverride(t *testing.T) {
 	old := configPathOverride
 	configPathOverride = ""
 	defer func() { configPathOverride = old }()
 
-	t.Setenv("FILU_CONFIG", "/tmp/filu-demo/config.yaml")
+	t.Setenv("XDG_CONFIG_HOME", "/tmp/xdg")
+	t.Setenv("FILU_CONFIG", "/tmp/old/config.yaml") // renamed without a fallback
+	if got, _ := configFilePath(); got != "/tmp/xdg/filu/config.yaml" {
+		t.Errorf("the old FILU_CONFIG should be ignored, got %q", got)
+	}
+	t.Setenv("FILU__CONFIG", "/tmp/filu-demo")
 	if got, ok := configFilePath(); !ok || got != "/tmp/filu-demo/config.yaml" {
-		t.Errorf("FILU_CONFIG not honoured: got %q ok=%v", got, ok)
+		t.Errorf("FILU__CONFIG not honoured as a directory: got %q ok=%v", got, ok)
 	}
 
 	configPathOverride = "/tmp/override/config.yaml" // test override beats the env
 	if got, _ := configFilePath(); got != "/tmp/override/config.yaml" {
-		t.Errorf("configPathOverride should win over FILU_CONFIG, got %q", got)
+		t.Errorf("configPathOverride should win over FILU__CONFIG, got %q", got)
 	}
 }
 
 // TestConfigDirHonoursXDG: XDG_CONFIG_HOME redirects both config.yaml and
 // state.yaml on every platform (so a macOS user can opt into ~/.config), but the
-// file-level FILU_CONFIG / FILU_STATE overrides still win over it.
+// FILU__CONFIG / FILU__STATE directories still win over it.
 func TestConfigDirHonoursXDG(t *testing.T) {
 	oldC, oldS := configPathOverride, statePathOverride
 	configPathOverride, statePathOverride = "", ""
 	defer func() { configPathOverride, statePathOverride = oldC, oldS }()
-	t.Setenv("FILU_CONFIG", "") // clear file-level overrides so XDG is exercised
-	t.Setenv("FILU_STATE", "")
+	t.Setenv("FILU__CONFIG", "") // clear the directory overrides so XDG is exercised
+	t.Setenv("FILU__STATE", "")
 
 	t.Setenv("XDG_CONFIG_HOME", "/tmp/xdg")
 	if got, ok := configFilePath(); !ok || got != "/tmp/xdg/filu/config.yaml" {
@@ -42,14 +49,14 @@ func TestConfigDirHonoursXDG(t *testing.T) {
 		t.Errorf("XDG_CONFIG_HOME should put state at /tmp/xdg/filu/state.yaml, got %q ok=%v", got, ok)
 	}
 
-	// the file-level env overrides still beat XDG
-	t.Setenv("FILU_CONFIG", "/tmp/explicit/config.yaml")
-	t.Setenv("FILU_STATE", "/tmp/explicit/state.yaml")
-	if got, _ := configFilePath(); got != "/tmp/explicit/config.yaml" {
-		t.Errorf("FILU_CONFIG should win over XDG, got %q", got)
+	// the directory overrides still beat XDG
+	t.Setenv("FILU__CONFIG", "/tmp/explicit-config")
+	t.Setenv("FILU__STATE", "/tmp/explicit-state")
+	if got, _ := configFilePath(); got != "/tmp/explicit-config/config.yaml" {
+		t.Errorf("FILU__CONFIG should win over XDG, got %q", got)
 	}
-	if got, _ := stateFilePath(); got != "/tmp/explicit/state.yaml" {
-		t.Errorf("FILU_STATE should win over XDG, got %q", got)
+	if got, _ := stateFilePath(); got != "/tmp/explicit-state/state.yaml" {
+		t.Errorf("FILU__STATE should win over XDG, got %q", got)
 	}
 }
 

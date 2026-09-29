@@ -71,8 +71,8 @@ func stateFilePath() (string, bool) {
 	if statePathOverride != "" {
 		return statePathOverride, true
 	}
-	if p := os.Getenv("FILU_STATE"); p != "" { // redirect state I/O (demo recordings / isolated runs)
-		return p, true
+	if d := os.Getenv("FILU__STATE"); d != "" { // a state directory (demo recordings / isolated runs, tdp D6)
+		return filepath.Join(d, "state.yaml"), true
 	}
 	dir, ok := filuConfigDir()
 	if !ok {

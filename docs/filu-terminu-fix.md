@@ -25,29 +25,6 @@ tdp 連結（README 兩份、docs、`.claude/rules`）已由 terminu session 從
 - **修完拿 v0.1.21 全文再逐條對一次**，修完刪掉這份清單。不 push、不發版；把這一輪寫進 terminu `.local/family-fix/filu/README.md`。
 
 
-## 2. 環境變數沒照家族命名 —— D6（v0.1.21）
-
-**現況**：filu 讀的變數都是單底線，而且 `FILU_CONFIG`、`FILU_STATE` 指向**檔案**：
-
-| 現在 | 意思 | 改成 |
-|---|---|---|
-| `FILU_CONFIG`（`internal/ui/config.go`） | 設定**檔**的路徑 | `FILU__CONFIG`：設定**目錄**，設定檔照原本的檔名放在裡面 |
-| `FILU_STATE`（`internal/ui/persist.go`） | 狀態**檔**的路徑 | `FILU__STATE`：狀態目錄，狀態檔照原本的檔名放在裡面 |
-| `FILU_LAST_DIR_FILE`（`cmd/filu/main.go`、`internal/ui/quit.go`） | 離開時寫最後目錄的檔案 | `FILU__LAST_DIR_FILE` |
-| `FILU_REPAINT`（`internal/ui/app.go`） | 除錯用 | `FILU__REPAINT` |
-| `FILU_ICON_WIDTH`（`internal/ui/iconwidth_unix.go`） | icon 寬度覆寫 | `FILU__ICON_WIDTH` |
-
-**規則**：D6（v0.1.21）—— `<大寫 app 名>__<變數名>`，變數名全大寫、單字之間一個底線；app 自己讀的變數（含測試用、傳給自己子程序的）
-都照這個寫。共用名：`<APP>__CONFIG`（設定目錄）、`<APP>__STATE`（狀態目錄）、`<APP>__DATA`（資料目錄）、`<APP>__CACHE`（快取目錄）、
-`<APP>__ICON_WIDTH`。給別的程式讀的變數例外。**改名不留舊名**（user 裁定）。
-
-**怎麼改**：程式照上表改名；`FILU__CONFIG`、`FILU__STATE` 改成目錄語意（讀到的是目錄，檔名 filu 自己接）。一起改的地方：`.local/demos/` 的六個
-tape（`demo-basics`、`demo-finders`、`demo-preview`、`demo-marks`、`demo-shell`、`demo-favorites`，現在設的是檔案路徑，改成目錄）、
-`docs/dev-remarks.md`、README 兩份（若有提）、測試。shell 整合若會設 `FILU_LAST_DIR_FILE`（README 的安裝段或 shell 函式），一起改，並在
-CHANGELOG 寫明使用者要更新 shell 設定。改完 `grep -rn 'FILU_[A-Z]' --include=*.go --include=*.md --include=*.tape --include=*.sh .`
-除了 CHANGELOG 舊段落是零。
-
-
 ## 已經符合、不用修的（對照 v0.1.21 的改動）
 
 - **D5 選取模式的移動**：yank viewport 的選取有 `h/j/k/l`、`w/b/e`（第七輪 `ec5b405`）、`0/$`、`gg/G`、`u/d`（`detailyank.go`、`selectkeys.go`）。

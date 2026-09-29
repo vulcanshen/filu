@@ -43,12 +43,12 @@ func main() {
 }
 
 // shellWrapper is a shell function that cd's to the directory filu wrote on quit
-// (cd-on-quit). It passes filu a temp file via FILU_LAST_DIR_FILE, then cds to
+// (cd-on-quit). It passes filu a temp file via FILU__LAST_DIR_FILE, then cds to
 // whatever filu recorded there. Enable with: eval "$(filu shell)".
 const shellWrapper = `filu() {
   local __filu_dir_file __filu_dir
   __filu_dir_file="$(mktemp -t filu-cwd.XXXXXX)" || return
-  FILU_LAST_DIR_FILE="$__filu_dir_file" command filu "$@"
+  FILU__LAST_DIR_FILE="$__filu_dir_file" command filu "$@"
   __filu_dir="$(cat -- "$__filu_dir_file" 2>/dev/null)"
   rm -f -- "$__filu_dir_file"
   [ -n "$__filu_dir" ] && [ -d "$__filu_dir" ] && cd -- "$__filu_dir"

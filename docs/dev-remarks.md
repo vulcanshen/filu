@@ -15,7 +15,7 @@
 唯一能原生改 shell cwd 的是 shell **內建指令**,而 filu 是外部 binary。
 
 所以採兩段式 handshake:`filu shell` 印出一個 shell function,它透過
-`FILU_LAST_DIR_FILE` 給 filu 一個暫存檔;filu 離開時把選定目錄寫進去,function 再讀檔
+`FILU__LAST_DIR_FILE` 給 filu 一個暫存檔;filu 離開時把選定目錄寫進去,function 再讀檔
 `cd`。這也是為什麼要用 `filu` 而不是 `./filu` 啟動 —— wrapper 攔截的是指令名 `filu`,
 帶路徑的呼叫會繞過它。
 
@@ -97,8 +97,11 @@
 - **session 持久化** — 多開的分頁(dir + cursor)、marks bucket、favorites、tasks、每
   目錄排序存進 `state.yaml`;第一個分頁永遠開在啟動目錄,啟動時永遠 focus 在清單。
 - **config 與 state 分開** — `config.yaml` 是使用者手改的檔,`state.yaml` 每次離開自動
-  重寫,兩者刻意分檔。`FILU_CONFIG` / `FILU_STATE` env var 可各自覆蓋單一檔案(測試與
-  demo 錄製用它隔離)。
+  重寫,兩者刻意分檔。`FILU__CONFIG` / `FILU__STATE` env var 各自指定一個**目錄**,
+  `config.yaml` / `state.yaml` 照原檔名放在裡面(測試與 demo 錄製用它隔離，demo 兩個都指向
+  `.local/demos/filu-home`)。filu 讀的變數一律照 tdp D6 的 `FILU__<名字>`(app 名後兩個底線):
+  `__CONFIG`、`__STATE`、`__LAST_DIR_FILE`、`__ICON_WIDTH`、`__REPAINT`;2026-09-29 從單底線
+  改名、不留舊名(user 裁定)。
 - **CJK Nerd Font 寬度** — 有些 CJK Nerd Font(如 Maple Mono NF CN)把 file-type icon
   畫成 2 格。filu 啟動時用 CPR 偵測實際格寬(`DetectIconWidth()`),**每一個量寬度的地方**
   都走 `width.go` 的顯示寬度層(tdp D6,filu 是參考實作):量寬 `dispWidth()`、截斷
@@ -370,7 +373,7 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 - **L5 focus 不只靠顏色**:focus 的 panel 畫雙線 `╔═╗`、失焦圓角(`panelBoxHint()` 的框線
   選擇),兩者同寬。
 - **D6 的探測**:`cmd/filu/main.go` 在 `tea.NewProgram` 之前呼叫 `ui.DetectIconWidth()`(CPR
-  探測，失敗維持 1,`FILU_ICON_WIDTH` 可覆寫),`filu iconwidth` 印出結果;`dimANSI()` 只改
+  探測，失敗維持 1,`FILU__ICON_WIDTH` 可覆寫),`filu iconwidth` 印出結果;`dimANSI()` 只改
   SGR、不量寬度。
 - **K11 focus 的 panel 保留線型**:filu 的模式在 popup 裡，不適用。
 - **D2 失焦 hint 的其他地方**:`[1]` 失焦時不顯示 hint、`[2]` 沒有 hint、zoom 時 panel 一定是
@@ -384,7 +387,7 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 **已經符合、不用修的**(對照 v0.1.20)
 
 - **D6 的新寫法**:filu 就是參考實作。CPR 量的是游標實際前進幾格(`DetectIconWidth()`),
-  `FILU_ICON_WIDTH` 覆寫、`filu iconwidth` 查看;Windows 的預設不適用(filu 沒有 Windows 版)。
+  `FILU__ICON_WIDTH` 覆寫、`filu iconwidth` 查看;Windows 的預設不適用(filu 沒有 Windows 版)。
   驗收的 grep(`lipgloss.Width` 等)在 `internal/ui` 除了 `width.go` 找不到 —— 這輪把 viewport 的
   `cellsBefore()` 也搬進 `width.go`。
 - **D3 模式名一個詞、先截標題**:`Selection` 一個詞;`drawPopupBoxMode()` 窄時先截標題。
@@ -444,7 +447,7 @@ CGO_ENABLED=0 go build -o filu ./cmd/filu   # 或:make build
   `internal/version.Version`。
 - 除了主程式,binary 還有幾個子指令:`filu version`、`filu shell`(印出
   cd-on-quit 的 shell wrapper)、`filu iconwidth`(印出偵測到的 icon 格寬,除錯用)。
-- `FILU_REPAINT=1`:每次導覽強制整頁重畫,給把 Nerd Font glyph 畫得比游標前進更寬、
+- `FILU__REPAINT=1`:每次導覽強制整頁重畫,給把 Nerd Font glyph 畫得比游標前進更寬、
   留下殘影的終端機用。
 
 測試是 table-driven + programmatic model test(送 msg、斷言 state / render),不靠真終端。
