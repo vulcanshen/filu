@@ -182,3 +182,30 @@ func TestK6KeyRefWidthFitsLongest(t *testing.T) {
 		}
 	}
 }
+
+// tdp K6, M4: the panel key reference names the keys the panels take — gg to
+// the top (a lone g only waits for the next key), and Shift-Tab, which focuses
+// the previous panel and was written nowhere.
+func TestK6PanelKeyRefMatchesTheKeys(t *testing.T) {
+	m := f4Model(t)
+	_, rows := m.panelKeyRef()
+	keys := map[string]string{}
+	for _, r := range rows {
+		keys[r.key] = r.desc
+	}
+	if _, ok := keys["gg/G"]; !ok {
+		t.Error("the panel key reference should list gg/G for top / bottom")
+	}
+	for k := range keys {
+		if k == "g" || strings.HasPrefix(k, "g/") || strings.HasPrefix(k, "g ") {
+			t.Errorf("a lone g does not move on a panel, yet the key reference lists %q", k)
+		}
+	}
+	if keys["Shift-Tab"] != "focus the previous panel" {
+		t.Fatalf("the panel key reference should list Shift-Tab, got %q", keys["Shift-Tab"])
+	}
+	m.focus = panelList
+	if m = press(t, m, tea.KeyMsg{Type: tea.KeyShiftTab}); m.focus != panelMarks {
+		t.Errorf("Shift-Tab from [1] should focus the previous panel, [3]; got %v", m.focus)
+	}
+}

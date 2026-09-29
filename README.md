@@ -79,7 +79,7 @@ filu opens with the file list focused. Five keys cover the rest:
 
 | Key | What it does |
 |---|---|
-| **`Tab`** | Move to the next panel (or press `1`–`3` to jump) |
+| **`Tab`** | Move to the next panel (`Shift-Tab` goes back, or press `1`–`3` to jump) |
 | **`Enter`** | Go into a directory, see a file's details, or confirm a choice |
 | **`Space`** | *What can I do here?* — the menu for wherever you are |
 | **`Esc`** | Back out — up one directory, or close a popup |
