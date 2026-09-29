@@ -105,6 +105,12 @@
   with a space on each side.
 
 ### Fixed
+- On fonts that draw icons two cells wide (CJK Nerd Fonts), popups keep their
+  borders straight: the finder's and inputs' prompt rows, finder results and
+  previews, Open in, and the preview's scrollable view no longer push their
+  right border out, a popup laid over icons in the panels no longer leaves its
+  rows a cell short or long, and the quit picker's directory glyph is no
+  longer cut to `…`. Text next to an icon is no longer cut a character short.
 - Renaming onto a name that already exists no longer overwrites that file.
   Rename, New and Zip now check the name when you press `Enter`: an empty
   name, a name that is taken, or (for Rename) one with a `/` keeps the box

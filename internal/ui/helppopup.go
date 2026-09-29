@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"strings"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -115,7 +113,7 @@ func (m helpPopup) renderFull() string {
 	keyW := 0
 	for _, r := range m.rows {
 		if !r.header {
-			keyW = max(keyW, lipgloss.Width(r.key))
+			keyW = max(keyW, dispWidth(r.key))
 		}
 	}
 	// The family width (tdp F7, which replaces D4's "as wide as the longest
@@ -128,7 +126,7 @@ func (m helpPopup) renderFull() string {
 			rows = append(rows, " "+headerStyle.Render(truncate(r.desc, innerW-2)))
 			continue
 		}
-		key := r.key + strings.Repeat(" ", max(0, keyW-lipgloss.Width(r.key)))
+		key := padDisp(r.key, keyW)
 		desc := truncate(r.desc, max(innerW-(2+keyW+2)-1, 1))
 		ks, ds := keyStyle, descStyle
 		if r.disabled { // can't run right now: key and description both dim (tdp M6)

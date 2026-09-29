@@ -135,8 +135,8 @@ func (a popupAnimator) renderFrame(full string) string {
 	if a.state == popupOpen {
 		return full
 	}
-	width := lipgloss.Width(full)
 	lines := strings.Split(full, "\n")
+	width := blockWidth(lines)
 	height := len(lines)
 	style := lipgloss.NewStyle().Foreground(a.color)
 

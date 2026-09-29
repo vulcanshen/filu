@@ -85,9 +85,16 @@
   重寫,兩者刻意分檔。`FILU_CONFIG` / `FILU_STATE` env var 可各自覆蓋單一檔案(測試與
   demo 錄製用它隔離)。
 - **CJK Nerd Font 寬度** — 有些 CJK Nerd Font(如 Maple Mono NF CN)把 file-type icon
-  畫成 2 格。filu 啟動時用 CPR 偵測實際格寬,並透過自訂的 display-width 層排版,讓面板
-  框線不會破。powerline caps `U+E0A0–E0D7` 刻意排除(它們單寬);不能靠終端的
-  East-Asian-Width 全域旋鈕解,那會連帶改動其他字元的寬度。
+  畫成 2 格。filu 啟動時用 CPR 偵測實際格寬(`DetectIconWidth()`),**每一個量寬度的地方**
+  都走 `width.go` 的顯示寬度層(tdp D6,filu 是參考實作):量寬 `dispWidth()`、截斷
+  `dispClip()` / `truncate()` / `truncPathLeft()`、補齊 `padDisp()`、並排 `joinH()` /
+  `joinV()`、置中 `centerDisp()`,疊 popup 用 `compositeDisp()`(`overlay.Composite` 的
+  顯示寬度版:左段 `dispClip()`、右段 `dispCutLeft()`,被框邊切成兩半的 icon 補一格空白)。
+  截斷從 w 格往回找，不假設 icon 只在行首(疊 popup 時切點右邊常有 icon)。splash 的
+  像素在兩格 icon 下只畫 glyph、不再加空白。powerline caps `U+E0A0–E0D7` 刻意排除(它們
+  單寬);不能靠終端的 East-Asian-Width 全域旋鈕解，那會連帶改動其他字元的寬度。
+  `d6_test.go` 在 icon 佔 1、2 格下把每一種 popup 各開一次，量單獨的框與疊上去的整個
+  畫面每一列(finder 量單一個框：`joinH()` 會把錯位補平);`width_test.go` 量 panel。
 - **控制字元清洗** — 檔名可能含控制字元(macOS 的 `Icon\r`)。`safeName`(`list.go`)在
   顯示時剝掉控制字元(也擋 ANSI injection),檔案操作仍用真實名;套在所有 name-render 點。
 - **Space menu 是熱鍵的殼** — `buildSpaceMenu` 依 focus 組 item / panel 兩區
@@ -96,8 +103,9 @@
 - **`gg` / `go` chord** — 單一 `AppModel.pendingG` 掛在主 switch 的 chokepoint(所有 popup
   return **之後**、只管主面板):`gg` 落既有 `case "g"`、`go` 呼 `handleListKey("go")`。
 - **popup 共用框** — 全部走 `drawPopupBox`(title 嵌上框、hint 嵌下框、內容上下各一列
-  padding);yank viewport 與 finder 用 `drawPopupBoxPad(pad=false)` 貼齊邊框。popup
-  內容列刻意不放 glyph(`lipgloss.Width` 會低估 ambiguous / PUA 寬度),glyph 只擺在框線上。
+  padding);yank viewport 與 finder 用 `drawPopupBoxPad(pad=false)` 貼齊邊框。內容列
+  (finder 的結果、input 的輸入列、Open in、quit picker、viewport 的目錄樹都有 icon)由
+  `padDisp()` 補齊或裁到框寬，寬度一律走 `width.go`(見「CJK Nerd Font 寬度」)。
   hint 與 panel 下框、footer 同一個 helper(`keyLegend()`):`鍵:說明`、項目之間一個空格，
   鍵 Blue、冒號與說明 Overlay0(tdp M5、D2);`drawPopupBoxPad` 原樣放上去，不再用層色重畫。
   key reference 的鍵 Blue、說明 Text,區塊標題維持暗字。
@@ -249,6 +257,8 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 
 - **平台**:macOS 與 Linux(WSL 可),見「設計決定」。
 - **目錄大小**:size 欄對目錄畫 `-`,不遞迴加總(會 walk 整棵子樹、卡)。
+- **`[s]hell` 裡的 icon**:PTY 的內容是 vt10x 的格子，子程序(例：`eza --icons`)自己認定
+  icon 佔一格;在 icon 畫成兩格的字型上，那一列會超出 shell 的框。子程序的排版 filu 改不了。
 - **未做**:
   - Mouse(沒有 wire)。
   - 每列錯誤 `!` 前綴:broken symlink / 無權限 / 上次操作失敗(目前僅面板層 error note)。

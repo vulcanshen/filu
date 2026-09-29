@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
+	overlay "github.com/rmhubbert/bubbletea-overlay"
 )
 
 // IconCells reports the detected Nerd Font icon cell width (1 or 2) — exposed
@@ -55,9 +56,9 @@ func dispWidth(s string) int {
 }
 
 // dispClip trims s to display width w (ANSI- and wide-icon-aware), no ellipsis.
-// Icons sit at the line start, so trailing cells removed are single-width text —
-// one measured cell freed == one display cell freed; the loop is a safety net
-// for the rare case a trim crosses an icon.
+// The first w measured cells are at least w display cells; each icon among them
+// takes one more, so step back until they fit — an icon anywhere in the line,
+// not only at its start (a row under a popup has icons past the cut).
 func dispClip(s string, w int) string {
 	if w <= 0 {
 		return ""
@@ -65,7 +66,7 @@ func dispClip(s string, w int) string {
 	if dispWidth(s) <= w {
 		return s
 	}
-	target := ansi.StringWidth(s) - (dispWidth(s) - w)
+	target := w
 	for target > 0 {
 		out := ansi.Truncate(s, target, "")
 		if dispWidth(out) <= w {
@@ -95,10 +96,9 @@ func padDispRight(s string, w int) string {
 	return s
 }
 
-// truncate clips s to display width w, appending "…" when it had to cut. Icons
-// are all near the line start, so keeping them costs iconCount*(iconCells-1)
-// extra display cells the "…"-budget must reserve; the loop tightens the rare
-// off-by-one from an icon landing at the cut.
+// truncate clips s to display width w, appending "…" when it had to cut. Like
+// dispClip it starts from w measured cells and steps back one per icon kept, so
+// icons past the cut do not cost room.
 func truncate(s string, w int) string {
 	if w <= 0 {
 		return ""
@@ -106,7 +106,7 @@ func truncate(s string, w int) string {
 	if dispWidth(s) <= w {
 		return s
 	}
-	target := max(w-iconCount(s)*(iconCells-1), 1)
+	target := w
 	for {
 		out := ansi.Truncate(s, target, "…")
 		if dispWidth(out) <= w || target <= 1 {
@@ -117,9 +117,8 @@ func truncate(s string, w int) string {
 }
 
 // truncPathLeft clips s to display width w from the LEFT, keeping the tail
-// (filename) visible and prepending "…" — the right choice for paths, where the
-// end matters more than the root. Paths carry no wide icons, so the measured and
-// display widths coincide.
+// visible and prepending "…" — the right choice for paths, where the end matters
+// more than the root, and for a value being typed, where the cursor is at the end.
 func truncPathLeft(s string, w int) string {
 	if w <= 0 {
 		return ""
@@ -127,7 +126,119 @@ func truncPathLeft(s string, w int) string {
 	if dispWidth(s) <= w {
 		return s
 	}
-	return ansi.TruncateLeft(s, dispWidth(s)-(w-1), "…")
+	return "…" + dispCutLeft(s, dispWidth(s)-(w-1))
+}
+
+// dispCutLeft drops the first n display cells of s and returns the rest, ANSI
+// styles kept. A wide icon or character cut in half is replaced by spaces, so
+// the result is always dispWidth(s) − n wide.
+func dispCutLeft(s string, n int) string {
+	if n <= 0 {
+		return s
+	}
+	total := dispWidth(s)
+	if n >= total {
+		return ""
+	}
+	// m measured cells hold at least n display cells; start where they would
+	// if every icon so far were narrow, and step up past a wide one.
+	m := max(n-iconCount(s)*(iconCells-1), 0)
+	for dispWidth(ansi.Truncate(s, m, "")) < n {
+		m++
+	}
+	rest := ansi.TruncateLeft(s, m, "")
+	return strings.Repeat(" ", max(total-n-dispWidth(rest), 0)) + rest
+}
+
+// compositeDisp draws fg over bg — overlay.Composite, but every width is the
+// display width, so a wide icon in the popup or in what it covers cannot push
+// a line past the screen (tdp D6, L4). Placement is the same: Left / Top at 0,
+// Center at half the background less half the foreground (each halved on its
+// own), Right / Bottom flush, then moved by the offsets and kept on screen.
+func compositeDisp(fg, bg string, xPos, yPos overlay.Position, xOff, yOff int) string {
+	if fg == "" {
+		return bg
+	}
+	if bg == "" {
+		return fg
+	}
+	fgLines, bgLines := strings.Split(fg, "\n"), strings.Split(bg, "\n")
+	fgW, bgW := blockWidth(fgLines), blockWidth(bgLines)
+	fgH, bgH := len(fgLines), len(bgLines)
+	if fgW >= bgW && fgH >= bgH {
+		return fg
+	}
+	x := clampSpan(placeOffset(xPos, bgW, fgW)+xOff, bgW-fgW)
+	y := clampSpan(placeOffset(yPos, bgH, fgH)+yOff, bgH-fgH)
+	for i, line := range fgLines {
+		if y+i >= bgH {
+			break
+		}
+		row := bgLines[y+i]
+		left := dispClip(row, x)
+		left += strings.Repeat(" ", x-dispWidth(left)) // a wide icon cut at x, or a short row
+		right := dispCutLeft(row, x+dispWidth(line))
+		bgLines[y+i] = left + line + right
+	}
+	return strings.Join(bgLines, "\n")
+}
+
+// centerDisp centres s in a w × h area by display width — lipgloss.Place(w, h,
+// Center, Center, s), which measures an icon as one cell: the smaller half of
+// the gap goes left and on top. In a direction s already fills, it is left as
+// it is; h 0 centres across only.
+func centerDisp(w, h int, s string) string {
+	lines := strings.Split(s, "\n")
+	width := blockWidth(lines)
+	if w > width {
+		for i, l := range lines {
+			gap := w - dispWidth(l)
+			lines[i] = strings.Repeat(" ", gap/2) + l + strings.Repeat(" ", gap-gap/2)
+		}
+		width = w
+	}
+	if gap := h - len(lines); gap > 0 {
+		blank := strings.Repeat(" ", width)
+		out := make([]string, 0, h)
+		for range gap / 2 {
+			out = append(out, blank)
+		}
+		out = append(out, lines...)
+		for len(out) < h {
+			out = append(out, blank)
+		}
+		lines = out
+	}
+	return strings.Join(lines, "\n")
+}
+
+// blockWidth is the display width of the widest line.
+func blockWidth(lines []string) int {
+	w := 0
+	for _, l := range lines {
+		w = max(w, dispWidth(l))
+	}
+	return w
+}
+
+// placeOffset is where a span of size fg starts in one of size bg.
+func placeOffset(p overlay.Position, bg, fg int) int {
+	switch p {
+	case overlay.Center:
+		return bg/2 - fg/2
+	case overlay.Right, overlay.Bottom:
+		return bg - fg
+	}
+	return 0
+}
+
+// clampSpan keeps v between 0 and hi (either way round, as overlay does).
+func clampSpan(v, hi int) int {
+	lo := 0
+	if lo > hi {
+		lo, hi = hi, lo
+	}
+	return min(max(v, lo), hi)
 }
 
 // joinH lays multi-line blocks side by side. Each block's lines are padded to

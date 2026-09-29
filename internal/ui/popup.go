@@ -40,9 +40,8 @@ func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, inner
 	if pad {
 		b.WriteString(padRow)
 	}
-	for _, line := range rows {
-		p := max(0, innerW-lipgloss.Width(line))
-		b.WriteString(left + line + strings.Repeat(" ", p) + right + "\n")
+	for _, line := range rows { // display width: an icon in the row may take two cells (tdp D6)
+		b.WriteString(left + padDisp(line, innerW) + right + "\n")
 	}
 	if pad {
 		b.WriteString(padRow)

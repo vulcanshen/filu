@@ -34,59 +34,6 @@ tdp 連結從 v0.1.17 改成 v0.1.19，只改網址。
   裁定、教訓），並更新那份的「回饋給 tdp 的」（D6、D3 hint 兩條已被 v0.1.18 採納）與「發布」段。
 
 
-## 1. icon 的實際寬度：還有地方沒走 `dispWidth()` —— D6、L4（filu 先做）
-
-**現況**：探測與寬度函式本身是對的（`iconwidth_unix.go` `DetectIconWidth()`、`width.go` `isWideIcon()` / `dispWidth()` /
-`dispClip()` / `padDisp()` / `truncate()` / `joinH()` / `joinV()`），panel 那一半也全走它們。但 popup 那一半還有這些地方用
-icon-blind 的量法（`lipgloss.Width`、`lipgloss.Size`、`lipgloss.Place`、`ansi.StringWidth`、`ansi.Truncate`、`ansi.TruncateLeft`）：
-
-| 位置 | 量法 | `iconCells = 2` 時的後果 |
-|---|---|---|
-| `popup.go` `drawPopupBoxPad()`：內容列補空白 `innerW - lipgloss.Width(line)` | 所有 popup 的內容列 | 列裡每個 icon 多出一格，右框線被推出去：finder 的輸入列（`inputGlyph`）與每一筆結果（`fileRow()` 的 `fileIcon()`）、finder 預覽框的目錄樹、input 的輸入列（`inputGlyph`）與上面那列檔名（`desc()` 的 `fileIcon()`）、Open in 的列（`iconTabHere` + 分頁標記）、yank viewport 顯示目錄樹時的每一列。finder 兩框用 `joinH()` 並排，一列寬一格就整個 finder 每一列都寬一格（實測單獨 render 是 99 格，應為 98） |
-| `spacemenu.go` `renderFull()`：`labelW`、兩種 `gap`、hint 的截斷預算、`pad` 都用 `lipgloss.Width` | menu 的列 | quit picker 靠右的 glyph（`iconCWD`、分頁標記）少算一格，截斷預算不夠，`truncate()` 把它截成 `…`（實測：quit picker 在兩格 icon 下那一欄只剩 `…`）；Open in 的 label 含兩個 icon，那一列寬兩格（實測 100 格，應為 98） |
-| `detailyank.go` `renderFull()`：`ansi.Truncate(body, innerW, "")` | viewport 的每一列 | 含 icon 的列（目錄樹預覽）多出 icon 數的格數 |
-| `inputpopup.go` `renderFull()`：`lipgloss.Width(field)` 與 `ansi.TruncateLeft` | input 的輸入列 | 值很長、要從左邊截的時候差一格（輸入列前有 `inputGlyph`） |
-| `view.go` `View()`：`overlay.Composite()`（`rmhubbert/bubbletea-overlay` v0.6.7，內部用 `lipgloss.Size`、`ansi.Truncate`、`ansi.TruncateLeft`、`ansi.StringWidth`） | 每一個 popup 與 toast 疊上底圖 | 一列的畫面寬 = 終端機寬 + popup 那列的 icon 數 − 被蓋掉的 icon 數。實測（100 欄）：Space menu 的上框、`?` key reference 蓋在檔案清單上的那幾列只剩 99 格；popup 自己多一格、又蓋掉一個 icon 的列剛好抵消，所以問題時有時無。filu 的 popup 幾乎滿版（左邊只露出一格 panel 邊框），所以目前只有寬度錯、還沒有左框線錯位 —— 換成較窄的框就會出現 |
-| `animation.go` `renderFrame()`：`lipgloss.Width(full)` | 開關動畫那條橫線的長度 | 最寬那列若是含 glyph 的標題列，差一格（輕微） |
-| `helppopup.go` `renderFull()` 的鍵欄寬、`breadcrumbpopup.go` `renderFull()` 的 `padW`、`metapopup.go` 的標籤寬與 `wrap`、`pty_unix.go` `renderPopup()` 的標題與下框、`marks.go` `centeredNote()` 與 `splash.go` 的 `lipgloss.Place` / `PlaceHorizontal` | 這些地方現在的內容沒有 icon | 量出來一樣；條文要所有地方走同一個函式，順手換掉，之後加 icon 才不會再壞 |
-
-測試：`width_test.go` `TestViewEveryLineIsTerminalWidth` 已經跑 `iconCells` 1 與 2，但只量 panel、沒有開任何 popup，所以上面這些都沒被
-抓到。
-
-**規則**：D6（v0.1.18）—— app 啟動時探測 icon 佔幾格，**所有量寬度的地方（補空白、截斷、框線、疊 popup）都走同一個顯示寬度函式**；
-L4 的畫面測試也跑一次「icon 佔兩格」。參考實作：filu `internal/ui/width.go`。L4 —— 每一列剛好等於終端機寬度。
-
-**怎麼改**：
-
-- `drawPopupBoxPad()` 的內容列改用 `padDisp(line, innerW)`（順便把超寬的列裁掉）。
-- `spacemenu.go` `renderFull()` 的 `labelW`、`gap`、hint 預算、`pad` 全改 `dispWidth()`；quit picker 的 glyph 要留住。
-- `detailyank.go` 的 `ansi.Truncate(body, innerW, "")` 改 `dispClip()`。
-- `inputpopup.go` 的輸入列用 `dispWidth()` 量整列，從左截的時候只截值那一段（glyph 不動）。
-- **疊 popup**：`overlay.Composite()` 換成 filu 自己寫、放在 `width.go` 的顯示寬度版（例：`compositeDisp()`）：置中位置用 `dispWidth()`
-  算；左段用 `dispClip()` 取到 x、不足補空白；右段從畫面第 `x + dispWidth(fg 那列)` 格之後開始取（需要一個顯示寬度版的「去掉前 n 格」，
-  例：`dispCutLeft()`）；一個兩格 icon 被切在邊界上時補一格空白。toast 的 `overlay.Bottom` 位置也走它。放在 `width.go`，其他 app
-  才能整個檔照搬。
-- `animation.go`、`helppopup.go`、`breadcrumbpopup.go`、`metapopup.go`、`pty_unix.go`、`marks.go`、`splash.go` 的量法一起換成
-  `dispWidth()` / `padDisp()` / `dispClip()`（置中用 `dispWidth()` 自己算）。
-- 做完 `grep -n 'lipgloss.Width\|lipgloss.Size\|lipgloss.Place\|ansi.StringWidth\|ansi.Truncate' internal/ui/*.go`，除了 `width.go`
-  不應該再有（`detailyank.go` 的 `ansi.Cut` 是在字串自己的格數裡切，不是量畫面寬，見第 6 條）。
-- 做不到的，寫進 dev-remarks「已知的牆」：`[s]hell` 的 PTY 內容是 vt10x 的格子，子程序（例：`eza --icons`）自己認定 icon 佔一格，
-  在兩格的 icon 字型上那一列會超出；filu 改不了子程序的排版。
-- 文件：dev-remarks「popup 共用框」那段說「popup 內容列刻意不放 glyph，glyph 只擺在框線上」—— 早就不是事實（finder、input、Open in、
-  quit picker、viewport 的內容列都有 icon），改寫成「所有寬度走 `width.go`，疊 popup 用 `compositeDisp()`」；「CJK Nerd Font 寬度」
-  那段補上「每一個量寬度的地方」與測試。
-- 測試（`width_test.go`）：
-  - `TestViewEveryLineIsTerminalWidth` 擴充成每一種 popup 都開一次（Space menu、quit picker、Open in、finder 有結果與目錄樹預覽、
-    input、yank viewport 顯示目錄樹、confirm、`?` key reference、metadata 框、toast），`iconCells` 1 與 2 各跑一次，每一列都等於終端機寬。
-  - 每一種 popup 單獨 render，每一列都等於它自己的框寬（疊上去之後的抵消會把錯藏起來，單獨量才抓得到；finder 要量單一個框，
-    `joinH()` 會把錯位補平）。
-  - quit picker 在兩格 icon 下那一欄是 `iconCWD`，不是 `…`。
-  - `compositeDisp()` 自己的測試：fg 有 icon、bg 被蓋掉的位置有 icon、兩格 icon 剛好跨在左右邊界上。
-  - mutation：每一處改回原本的量法，各自要紅。
-- 給其他 app 的交接：做完在 terminu `.local/family-fix/filu/README.md` 的「第六輪」列出要照搬的東西（`width.go` 裡的函式清單、
-  `DetectIconWidth()`、上面那組測試），terminu 再把 D6 的參考實作清單補齊。
-
-
 ## 2. finder 看不出 focus 在哪一邊 —— F1、D3
 
 **現況**：filu 只有一個 finder 元件 `searchModel`（`search.go`），Search（檔名，fd）、Find（內容，rg）、Goto（home 底下的目錄）、

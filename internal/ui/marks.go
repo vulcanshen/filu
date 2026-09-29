@@ -124,7 +124,7 @@ func centeredNote(w, rows int, text string) string {
 	if w < 1 || rows < 1 {
 		return msg
 	}
-	return lipgloss.Place(w, rows, lipgloss.Center, lipgloss.Center, msg)
+	return centerDisp(w, rows, msg)
 }
 
 // markGlyph marks a list file that sits in the marks bucket. markPickGlyph marks

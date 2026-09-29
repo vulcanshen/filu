@@ -68,10 +68,10 @@ func (m AppModel) View() string {
 		if i == top { // only the top popup is bright: everything under it dims (tdp F8)
 			out = dimANSI(out)
 		}
-		out = overlay.Composite(l.draw(), out, l.x, l.y, 0, l.dy)
+		out = compositeDisp(l.draw(), out, l.x, l.y, 0, l.dy)
 	}
 	if m.toast.isActive() { // transient, always on top, at the bottom above the footer (tdp F7)
-		out = overlay.Composite(m.toast.renderPopup(), out, overlay.Center, overlay.Bottom, 0, -2)
+		out = compositeDisp(m.toast.renderPopup(), out, overlay.Center, overlay.Bottom, 0, -2)
 	}
 	return out
 }
