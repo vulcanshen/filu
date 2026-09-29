@@ -34,21 +34,6 @@ tdp 連結從 v0.1.17 改成 v0.1.19，只改網址。
   裁定、教訓），並更新那份的「回饋給 tdp 的」（D6、D3 hint 兩條已被 v0.1.18 採納）與「發布」段。
 
 
-## 6. yank viewport 在中文字上把游標與選取畫錯位置 —— L4、D6（不是這一輪的改動）
-
-核對寬度時看到的，v0.1.17 以前就這樣。
-
-**現況**：`detailyank.go` 的 `overlayCursorOnStyledLine()` 與 `overlaySelectionOnStyledLine()` 拿到的位置是 rune 的序號（`cursorCol`、
-選取的起訖），卻交給 `ansi.Cut()` 當格數用；中文字一個 rune 佔兩格，位置就錯。scratch 實測：`中文abc` 游標停在 `a` 上畫成 `中a文abc`；
-選取 `ab` 畫成 `中ababc`（字被重複畫出來）。複製出去的內容是對的（`selectionText()` 用 rune 取），只有畫面錯。
-
-**規則**：L4 —— 每一列剛好等於終端機寬度；D6 —— 量寬度只走一套。
-
-**怎麼改**：`ansi.Cut()` 之前把 rune 序號換算成那一段在字串裡的格數（前面幾個 rune 的 `ansi.StringWidth()` 加總 —— 切的是字串自己的
-格數，要跟 `ansi.Cut()` 同一套量法，不是 `dispWidth()`）。測試：中文、中英混排、行尾，各寫死畫出來的純文字；mutation：拿掉換算要紅。
-要不要這一輪修，filu 自己排；不修的話寫進 dev-remarks「已知的牆」。
-
-
 ## 已經符合、不用修的（對照 v0.1.17 → v0.1.18 的改動）
 
 - **L5、K10（v0.1.19）**：focus 的 panel 畫雙線 `╔═╗`、失焦圓角（`view.go` 的框線選擇），不只靠顏色；shell PTY 一開就轉送按鍵，`Ctrl-C` 是 shell 的。
