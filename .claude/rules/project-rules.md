@@ -5,7 +5,7 @@ globs: *
 
 # filu Project Rules
 
-filu 是 terminu family 的成員,遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.13/principle)(tdp),與 kbu 共用技術棧。設計權威見 `.forge/meta/IDEA.md`;開發者備忘(運作方式、設計決定、偏離 tdp)在 `docs/dev-remarks.md`,尚未符合 tdp 的地方在 `docs/filu-terminu-fix.md`。
+filu 是 terminu family 的成員,遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.17/principle)(tdp),與 kbu 共用技術棧。設計權威見 `.forge/meta/IDEA.md`;開發者備忘(運作方式、設計決定、偏離 tdp)在 `docs/dev-remarks.md`,尚未符合 tdp 的地方在 `docs/filu-terminu-fix.md`。
 
 ## Code Quality
 - `gofmt` / `go vet` 乾淨才算完成。
