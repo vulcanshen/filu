@@ -83,6 +83,14 @@ func TestK11TabAnswersWhileSelecting(t *testing.T) {
 	if !m.detailYank.visual {
 		t.Error("Tab should not leave the selection")
 	}
+	// With that toast up, the first Esc takes the toast (K4, F3); the next one
+	// leaves the selection.
+	if m = press(t, m, tea.KeyMsg{Type: tea.KeyEsc}); m.toast.owns() || !m.detailYank.visual {
+		t.Fatalf("the first Esc should close only the toast: toast %v, selecting %v", m.toast.owns(), m.detailYank.visual)
+	}
+	if m = press(t, m, tea.KeyMsg{Type: tea.KeyEsc}); m.detailYank.visual {
+		t.Error("the second Esc should leave the selection")
+	}
 }
 
 // The hint follows the state; the box width does not (tdp L2).
