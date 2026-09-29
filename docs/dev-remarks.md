@@ -73,6 +73,9 @@
   (tdp K11、D2):外框與標題換成模式色 Yellow(`modeColor`),上框右側寫模式名
   `Selection`(`selectModeName`,`?` 的標題 `Selection keys` 用同一個);框太窄時先截標題，
   模式名留著(`drawPopupBoxMode()`)。離開選取就回到層色。選取的反白仍是 Lavender(`userColor`)。
+  游標與選取的位置是 rune 序號(複製用 rune 取);畫的時候交給 `ansi.Cut()` 之前先換算成那一段
+  在字串裡的格數(`cellsBefore()`,跟 `ansi.Cut()` 同一套量法):中文字一個 rune 佔兩格，不換算
+  就會畫在錯的字上、還把字重複畫出來。
 - **Yank** — 走 OSC 52,所以能穿 tmux / SSH。
 - **刪除** — 移到 OS 垃圾桶:macOS 用 `osascript`(不需 cgo)、Linux 寫 XDG
   `.trashinfo`。

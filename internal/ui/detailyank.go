@@ -335,8 +335,8 @@ func overlaySelectionOnStyledLine(styled, plain string, selStart, selEnd int, ha
 		selEnd = len(pr) - 1
 	}
 	const big = 1_000_000
-	before := ansi.Cut(styled, 0, selStart)
-	after := ansi.Cut(styled, selEnd+1, big)
+	before := ansi.Cut(styled, 0, cellsBefore(pr, selStart))
+	after := ansi.Cut(styled, cellsBefore(pr, selEnd+1), big)
 	var block strings.Builder
 	for i := selStart; i <= selEnd; i++ {
 		cell := string(pr[i])
@@ -363,10 +363,16 @@ func overlayCursorOnStyledLine(styled, plain string, cursorCol int, cursorStyle 
 		cursorCol = len(pr) - 1
 	}
 	const big = 1_000_000
-	before := ansi.Cut(styled, 0, cursorCol)
-	after := ansi.Cut(styled, cursorCol+1, big)
+	before := ansi.Cut(styled, 0, cellsBefore(pr, cursorCol))
+	after := ansi.Cut(styled, cellsBefore(pr, cursorCol+1), big)
 	return before + cursorStyle.Render(string(pr[cursorCol])) + after
 }
+
+// cellsBefore is where rune i of a line starts, in the line's own cells —
+// the positions ansi.Cut takes. A CJK character is one rune but two cells, so
+// a rune index handed to ansi.Cut as is lands the cursor or selection on the
+// wrong character (tdp L4). Measured as ansi.Cut measures, not dispWidth.
+func cellsBefore(pr []rune, i int) int { return ansi.StringWidth(string(pr[:i])) }
 
 // hint is the bottom border, per state: selecting is a mode (tdp K11) with
 // its own keys. The box width is the screen's, so it holds when the hint
