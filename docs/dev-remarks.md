@@ -125,8 +125,8 @@
   `#1e1e2e` 混(`dimKeep` = 0.45),每個通道取原值與混後較小的那個(比 base 暗的顏色不會被
   「淡化」成變亮，tdp D2),沒設顏色的文字補上 dim 過的預設色。這份是 tdp D2 引用的參考實作。所以底下 popup 的邊框
   是自己層色的 dim 版本、還看得出第幾層，串流內容與警示色一起 dim(tdp F8,T2 的例外)。
-  toast 不握鍵盤、不算一層，畫在 dim 之後也不觸發 dim。popup 的合成順序在
-  `popupLayers()`,跟 `stackOrder()` 同序。
+  toast 除了 `Esc` 不收鍵、不算一層(tdp F1、F8),畫在 dim 之後也不觸發 dim。popup 的合成
+  順序在 `popupLayers()`,跟 `stackOrder()` 同序，PTY 墊在最底下。
 - **`?` key reference** — 唯讀、可捲動、沒有游標(`helpPopup`)。按鍵路由在 quit 之後、所有
   popup 之前攔 `?`(輸入態除外，那裡 `?` 是字元),`keyRef()` 照疊層由上往下找最前面的
   surface:popup 各給自己的鍵;沒有 popup 時是 focus panel,由 `buildSpaceMenu()` 的 item /
@@ -218,6 +218,12 @@ filu/
   綁動)。list 的 `m`(在 bucket)與 `[3]` Marks 的 `p`(在 land 子集)用兩個不同 glyph
   (`f0b14` / `f05d`),兩個狀態不共用。
 - **`[2]` Preview 失焦不變暗**:它是邊看別的面板邊讀的參考視角。
+- **Zoom 是版面的切換，不是模式。** `z` 把 focus 的面板展開佔滿全畫面，再按一次 `z` 才還原
+  (`toggleZoom()`;focus 移到別的面板也會還原，`setFocus()`)。zoom 中沒有鍵換意思,`Esc`
+  仍是「回上一層目錄」:使用者在 zoom 的多欄裡照樣瀏覽,`Esc` 若拿去退出 zoom,就在同一個
+  畫面裡兼了兩種意義(P4)。tdp v0.1.14 的術語「模式」把版面的切換排除在外 ——`Esc` 不必
+  退出它，由它自己的鍵還原。以前記在「偏離 tdp」(K4),v0.1.14 起不再是偏離(2026-09-29
+  user 裁定)。
 - **平台:只支援 macOS / Linux。** `GOOS=windows` **刻意編譯失敗**:平台分岔操作
   (metadata / hidden / roots / trash / open)走 platform interface,unix 實作用 build tag,
   沒有 Windows 實作。Windows 使用者走 WSL。
@@ -250,14 +256,12 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   - chmod / extract、真圖(kitty / sixel)、sort filter、續傳。
 - **tdp**:2026-09-28 對照 v0.1.7 全文修完，同日再跟上 v0.1.8–v0.1.10(F1 六類、F7 尺寸、
   F8 dim、K11 模式沒有按鍵清單)與 v0.1.11–v0.1.12(F7 loading icon、D2 淡化不變亮、D6
-  truecolor)、v0.1.13(F1 放寬 menu 與 confirm,filu 不必改),除了下一節的偏離都符合。之後發現沒寫理由的違反，列進
+  truecolor)、v0.1.13(F1 放寬 menu 與 confirm,filu 不必改),都符合(沒有偏離，見下一節)。之後發現沒寫理由的違反，列進
   `docs/filu-terminu-fix.md`(目前沒有這個檔)。
 
 ## 偏離 tdp
 
-- **Zoom 不是 `Esc` 會退出的模式(K4)。** `z` 把 focus 的面板展開佔滿全畫面,再按一次
-  `z` 才還原;zoom 中 `Esc` 仍是「回上一層目錄」。zoom 是版面、不是任務模式 —— 使用者
-  在 zoom 的多欄裡照樣瀏覽,`Esc` 若拿去退出 zoom,就在同一個畫面裡兼了兩種意義(P4)。
+目前沒有。(zoom 不讓 `Esc` 退出，以前記在這裡;tdp v0.1.14 起 zoom 不算模式，見「設計決定」。)
 
 ## 對照 tdp 時確認過的
 
