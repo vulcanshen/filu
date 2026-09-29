@@ -25,22 +25,6 @@ tdp 連結（README 兩份、docs、`.claude/rules`）已由 terminu session 從
 - **修完拿 v0.1.21 全文再逐條對一次**，修完刪掉這份清單。不 push、不發版；把這一輪寫進 terminu `.local/family-fix/filu/README.md`。
 
 
-## 1. `compositeDisp()` 在 popup 比畫面大時 panic —— D6（v0.1.21，參考實作，先做）
-
-**現況**（`internal/ui/width.go`）：`compositeDisp()` 用 `clampSpan(placeOffset(...)+off, bgW-fgW)` 算起點。popup 比畫面寬（`fgW > bgW`）
-或高時，`bgW-fgW` 是負的，`clampSpan()` 把上下限對調，回傳負的起點：x 負的讓 `strings.Repeat(" ", x-dispWidth(left))` panic，y 負的讓
-`bgLines[y+i]` 越界 panic。`overlay.Composite` 原本只是讓那一列超出畫面。調整終端機大小的那一格（popup 還是用舊尺寸畫的）就會遇到，
-整個 TUI 當掉。kbu（`TestD6_CompositeDisp`）、locku 照搬時抓到、在自己那份修掉；sshu、webu 照搬的是 filu 這一版，也有同樣的 bug。
-
-**規則**：D6（v0.1.21）—— 疊 popup 時 popup 可能比畫面寬或高（調整終端機大小的那一格還是舊尺寸）：起點取 0、超出畫面的部分切掉，
-**不可以 panic**；測試的邊界要含這種情況。
-
-**怎麼改**：起點最小取 0（`x`、`y` 各自 `max(0, …)`，不再對調上下限）；popup 的列比畫面寬時，放上去之前先切到畫面寬（`dispClip(line, bgW-x)`）；
-比畫面高時多出的列不畫（迴圈已有 `y+i >= bgH` 的 break）。照 kbu 的做法（kbu `internal/ui/width.go` 的 `compositeDisp()`，`b0ccea9`）。
-測試：`compositeDisp()` 的邊界補三種 —— popup 比畫面寬、比畫面高、兩者都大；不 panic、結果每一列剛好畫面寬、列數等於畫面高。可以直接照搬
-kbu 的 `TestD6_CompositeDisp`。mutation：拿掉 `max(0, …)`、拿掉切寬。**sshu、webu 等這一條做完再照搬**，把 commit 寫進紀錄。
-
-
 ## 2. 環境變數沒照家族命名 —— D6（v0.1.21）
 
 **現況**：filu 讀的變數都是單底線，而且 `FILU_CONFIG`、`FILU_STATE` 指向**檔案**：

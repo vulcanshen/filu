@@ -104,7 +104,9 @@
   都走 `width.go` 的顯示寬度層(tdp D6,filu 是參考實作):量寬 `dispWidth()`、截斷
   `dispClip()` / `truncate()` / `truncPathLeft()`、補齊 `padDisp()`、並排 `joinH()` /
   `joinV()`、置中 `centerDisp()`,疊 popup 用 `compositeDisp()`(`overlay.Composite` 的
-  顯示寬度版:左段 `dispClip()`、右段 `dispCutLeft()`,被框邊切成兩半的 icon 補一格空白)。
+  顯示寬度版:左段 `dispClip()`、右段 `dispCutLeft()`,被框邊切成兩半的 icon 補一格空白;框比
+  畫面寬或高 —— 調整終端機大小的那一格還是舊尺寸 —— 起點取 0、切到畫面邊界，不 panic,tdp D6
+  v0.1.21。以前 `clampSpan()` 會給出負的起點,`strings.Repeat` 拿到負數就 panic)。
   截斷從 w 格往回找，不假設 icon 只在行首(疊 popup 時切點右邊常有 icon)。splash 的
   像素在兩格 icon 下只畫 glyph、不再加空白。powerline caps `U+E0A0–E0D7` 刻意排除(它們
   單寬);不能靠終端的 East-Asian-Width 全域旋鈕解，那會連帶改動其他字元的寬度。
