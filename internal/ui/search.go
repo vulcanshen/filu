@@ -686,16 +686,14 @@ func (m searchModel) listColumn(w, rows int) []string {
 	out = append(out, lipgloss.NewStyle().Foreground(dimColor).Render(strings.Repeat("─", w)))
 
 	listRows := rows - len(out)
-	// While typing (input mode) the highlighted row is what Enter would pick, moved
-	// with the arrows; it wears the neutral hand colour. Once Tab hands focus to
-	// the list (nav mode) it turns blue (focusColor, filu's structural focus
-	// colour) to signal "you're now moving this with j/k" — distinct from the
-	// lavender used elsewhere for a remembered, unfocused position.
-	cursorBg := handColor
+	// Only the side that takes the keys is bright (tdp F1, D3). While typing, the
+	// highlighted row is what Enter would pick, moved with the arrows: a pale bar
+	// (the hand colour). Once Tab hands focus to the list it is a menu's cursor —
+	// this layer's colour, dark bold text — and the query row goes grey.
+	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	if m.mode == searchNav {
-		cursorBg = focusColor
+		cursorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(popupLayerColor(m.anim.layer)).Bold(true)
 	}
-	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	switch {
 	case m.loading && len(m.files) == 0: // nothing streamed in yet; the title icon says it is loading
@@ -762,7 +760,8 @@ func (m searchModel) previewColumn(w, rows int) []string {
 
 // inputBar is the query row (snacks form): a peach chevron prompt, the query
 // with a blinking block cursor, and the count on the right — no background bar,
-// since the blinking cursor already marks it as an input.
+// since the blinking cursor already marks it as an input. With focus on the list
+// the whole row is grey and the cursor block goes (tdp F1, D3).
 func (m searchModel) inputBar(w int) string {
 	glyph := lipgloss.NewStyle().Foreground(lipgloss.Color("#fab387")).Bold(true).Render(inputGlyph)
 	gW := dispWidth(inputGlyph)
@@ -785,7 +784,11 @@ func (m searchModel) inputBar(w int) string {
 		leftW = dispWidth(left)
 	}
 	gap := max(avail-leftW-countW, 0)
-	return glyph + left + strings.Repeat(" ", gap) + lipgloss.NewStyle().Foreground(dimColor).Render(count)
+	dim := lipgloss.NewStyle().Foreground(dimColor)
+	if m.mode == searchNav { // focus is on the list: the whole query row is grey, one colour (tdp D3)
+		return dim.Render(inputGlyph + left + strings.Repeat(" ", gap) + count)
+	}
+	return glyph + left + strings.Repeat(" ", gap) + dim.Render(count)
 }
 
 func (m searchModel) hint(w int) string {

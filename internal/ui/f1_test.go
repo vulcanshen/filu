@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -142,4 +143,88 @@ func batchMsgs(cmd tea.Cmd) []tea.Msg {
 		}
 	}
 	return out
+}
+
+// sgrParams lists the parameters of every SGR sequence in s, in order.
+func sgrParams(s string) [][]string {
+	var out [][]string
+	for i := 0; i < len(s); i++ {
+		if !strings.HasPrefix(s[i:], "\x1b[") {
+			continue
+		}
+		end := strings.IndexByte(s[i:], 'm')
+		if end < 0 {
+			break
+		}
+		out = append(out, strings.Split(s[i+2:i+end], ";"))
+		i += end
+	}
+	return out
+}
+
+// firstBG is the first 24-bit background colour set in s, and whether bold is
+// set anywhere in it.
+func firstBG(s string) (bg [3]int, bold, ok bool) {
+	for _, ps := range sgrParams(s) {
+		for k := 0; k < len(ps); k++ {
+			switch {
+			case ps[k] == "1":
+				bold = true
+			case ps[k] == "38" && k+1 < len(ps) && ps[k+1] == "2":
+				k += 4
+			case ps[k] == "48" && k+4 < len(ps) && ps[k+1] == "2" && !ok:
+				for c := 0; c < 3; c++ {
+					bg[c], _ = strconv.Atoi(ps[k+2+c])
+				}
+				ok = true
+				k += 4
+			}
+		}
+	}
+	return bg, bold, ok
+}
+
+// tdp F1, D3: only the side of the finder that takes the keys is bright. While
+// typing, the query row is lit (Peach glyph) and the list cursor a pale bar;
+// after Tab the query row is all grey, no cursor block, and the list cursor is
+// this layer's colour with dark bold text — Search and Goto alike.
+func TestF1FinderShowsWhereTheKeysGo(t *testing.T) {
+	truecolor(t)
+	peach, subtext1, overlay0 := [3]int{0xfa, 0xb3, 0x87}, [3]int{0xba, 0xc2, 0xde}, [3]int{0x6c, 0x70, 0x86}
+	layer2 := [3]int{0x94, 0xc3, 0xf5} // Lavenphire50
+	for _, dirsOnly := range []bool{false, true} {
+		dir := t.TempDir()
+		s := newSearch()
+		s.open(dir, 100, 30, false, dirsOnly, make(chan fileBatchMsg, 1))
+		s.anim.state = popupOpen
+		s.anim.setLayer(2)
+		s.onStreamBatch(fileBatchMsg{gen: s.openGen, root: dir, batch: []string{"alpha/", "beta/"}, done: true})
+		_, sW, sRows, _, _ := s.geometry()
+
+		rows := s.listColumn(sW, sRows)
+		if got := cellFG(rows[0])[0]; !near(got, peach) {
+			t.Errorf("goto %v, typing: the query glyph is %v, want Peach %v", dirsOnly, got, peach)
+		}
+		if bg, _, ok := firstBG(rows[2]); !ok || !near(bg, subtext1) {
+			t.Errorf("goto %v, typing: the list cursor is %v, want the pale bar %v", dirsOnly, bg, subtext1)
+		}
+
+		s.mode = searchNav
+		rows = s.listColumn(sW, sRows)
+		if strings.Contains(rows[0], "█") {
+			t.Errorf("goto %v, list: no cursor block on the query row: %q", dirsOnly, ansi.Strip(rows[0]))
+		}
+		for x, c := range cellFG(rows[0]) {
+			if !near(c, overlay0) {
+				t.Errorf("goto %v, list: query row cell %d is %v, want Overlay0 %v", dirsOnly, x, c, overlay0)
+				break
+			}
+		}
+		if _, _, ok := firstBG(rows[0]); ok {
+			t.Errorf("goto %v, list: the query row has a background", dirsOnly)
+		}
+		if bg, bold, ok := firstBG(rows[2]); !ok || !near(bg, layer2) || !bold {
+			t.Errorf("goto %v, list: the cursor is %v bold %v, want the layer colour %v, bold", dirsOnly, bg, bold, layer2)
+		}
+	}
 }

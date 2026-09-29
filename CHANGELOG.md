@@ -65,6 +65,10 @@
 - A panel without focus shows its bottom line dim (the Marks and Favorites
   tabs while you are in the file list), so blue keys are only where your keys
   go.
+- In the finders, the side that takes your keys is the bright one: after `Tab`
+  into the results the query row turns grey and the highlighted result takes
+  the popup's border colour in bold, as in a menu; typing again brings the
+  query row back.
 - While selecting in the preview's scrollable view, its frame turns yellow
   and **Selection** shows at the top right; leaving the selection puts the
   frame back.

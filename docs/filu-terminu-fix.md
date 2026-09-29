@@ -34,30 +34,6 @@ tdp 連結從 v0.1.17 改成 v0.1.19，只改網址。
   裁定、教訓），並更新那份的「回饋給 tdp 的」（D6、D3 hint 兩條已被 v0.1.18 採納）與「發布」段。
 
 
-## 2. finder 看不出 focus 在哪一邊 —— F1、D3
-
-**現況**：filu 只有一個 finder 元件 `searchModel`（`search.go`），Search（檔名，fd）、Find（內容，rg）、Goto（home 底下的目錄）、
-New tab 的 Search 都是它。`listColumn()` 的 cursor 列：打字時底色 `handColor`（Subtext1 `#bac2de`）、深色字 —— 就是 D3 說的「淡的反白」；
-`Tab` 到清單後底色換成 `focusColor`（Blue `#89b4fa`）、不粗體。`inputBar()` 的篩選列兩個階段畫法一樣：Peach 粗體的 `inputGlyph`、
-預設色的 query、Overlay0 的計數；只有游標 `█` 在清單態不畫。
-
-**規則**：F1（v0.1.18）—— finder 這種依階段換類別的 popup，**focus 在哪一邊要看得出來**：只有拿鍵的那一邊是亮的。D3 —— 打字時
-篩選列亮、清單的 cursor 列是淡的反白；`Tab` 到清單後，篩選列整列用灰色（Overlay0，D2 的暗字）畫，不用 F8 的淡化、也不畫反白與游標；
-清單的 cursor 列換成 popup 層色底加深色粗體字（跟 menu 的 cursor 列一樣）。
-
-**怎麼改**：
-
-- 打字時維持現狀。
-- 清單態：`inputBar()` 整列（glyph、query、計數）都畫 `dimColor`（Overlay0 `#6c7086`），是單一顏色，不是 `dimANSI()`；游標照舊不畫。
-  `listColumn()` 的 cursor 列改成 `popupLayerColor(m.anim.layer)` 底、`baseHex` 字、粗體（跟 `spaceMenu.renderFull()` 的 `cursorStyle`
-  同一套）。
-- kbu 是這條的出處，但它現在用的是 `dimANSI()` 淡化、也要改；filu 照 D3 的文字做，不要照搬 kbu。
-- 文件：dev-remarks「Finder」那段補一句 focus 的畫法；`listColumn()` 裡「turns blue (focusColor)」那段註解跟著改。README 可以不動。
-- 測試（truecolor）：打字時篩選列的 glyph 是 Peach、cursor 列底色 `#bac2de`；`Tab` 之後篩選列每一格前景都是 `#6c7086`、沒有反白也沒有
-  `█`，cursor 列底色等於這個 popup 的層色、粗體。Goto 模式也跑一次（同一條路徑，但守住）。mutation：篩選列改回原色、cursor 列改回 Blue，
-  各自要紅。
-
-
 ## 6. yank viewport 在中文字上把游標與選取畫錯位置 —— L4、D6（不是這一輪的改動）
 
 核對寬度時看到的，v0.1.17 以前就這樣。

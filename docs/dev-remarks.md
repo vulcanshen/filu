@@ -55,6 +55,10 @@
   (`loading.go`:circle slice 八格、90ms 一格、由時鐘 `loadingNow()` 決定哪一格),跟 Tasks
   共用一個 `loadingTickMsg`,只在 `anyLoading()` 時續排。popup 的上下框用 `dispWidth()` 量
   標題與 hint,在 CJK icon 字型上 icon 佔兩格時框線跟著縮。
+  focus 在哪一邊看得出來(tdp F1、D3):打字時篩選列亮(Peach 的 glyph、游標 `█`),清單的
+  cursor 列是淡的反白(`handColor`);`Tab` 進清單後，篩選列整列單一灰色(Overlay0,不是
+  `dimANSI()` 的淡化)、不畫游標，cursor 列換成這一層的層色底、深色粗體字，跟 menu 的 cursor
+  列一樣。
 - **Preview** — 讀 magic bytes 判型別:目錄 → 內層 tree、壓縮包 → 內容清單、圖片 →
   base64 `data:` URI、SVG → 高亮 XML、文字 → Chroma(catppuccin-mocha)高亮 + 行號、
   二進位 → hex + ASCII、PDF → 抽出的文字 + 頁數。
