@@ -23,8 +23,11 @@ func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, inner
 }
 
 // drawPopupBoxMode is drawPopupBoxPad with a label at the right of the top
-// border, one dash in from the corner: the name of the mode the box is in (tdp
-// K11). The label is kept whole; a narrow box cuts the title first.
+// border, one dash in from the corner: the name of the mode the box is in, set
+// between two junctions like a tag on the border — ┤Selection├ on this single
+// line (tdp K11, D3). The junctions take the frame colour, the name the frame
+// colour bold (the mode colour, since the frame takes it in a mode). The label
+// is kept whole; a narrow box cuts the title first.
 func drawPopupBoxMode(bc lipgloss.Color, title, mode, hint string, rows []string, innerW int, pad bool) string {
 	bStyle := lipgloss.NewStyle().Foreground(bc)
 	tStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)
@@ -36,7 +39,7 @@ func drawPopupBoxMode(bc lipgloss.Color, title, mode, hint string, rows []string
 	// the border must shorten to match.
 	room := innerW - 1
 	if mode != "" {
-		room -= dispWidth(mode) + 1
+		room -= dispWidth(mode) + 3 // the two junctions and the dash before the corner
 	}
 	if dispWidth(title) > room {
 		title = truncate(title, room)
@@ -46,7 +49,7 @@ func drawPopupBoxMode(bc lipgloss.Color, title, mode, hint string, rows []string
 	dashesTop := max(0, room-dispWidth(title))
 	top := bStyle.Render("╭─") + tStyle.Render(title) + bStyle.Render(strings.Repeat("─", dashesTop))
 	if mode != "" {
-		top += tStyle.Render(mode) + bStyle.Render("─")
+		top += bStyle.Render("┤") + tStyle.Render(mode) + bStyle.Render("├─")
 	}
 	b.WriteString(top + bStyle.Render("╮") + "\n")
 	left, right := bStyle.Render("│"), bStyle.Render("│")

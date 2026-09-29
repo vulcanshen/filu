@@ -127,9 +127,10 @@ func TestK11TableCoversViewportKeys(t *testing.T) {
 	}
 }
 
-// tdp K11, D2: a mode labels itself — its name at the top right of the box it is
-// in, the frame in the mode colour (Yellow) — and leaving it puts both back.
-// The box keeps its width either way (L2), and a narrow one keeps the name.
+// tdp K11, D2, D3: a mode labels itself — its name between two junctions at the
+// top right of the box it is in, the frame in the mode colour (Yellow) — and
+// leaving it puts both back. The box keeps its width either way (L2), and a
+// narrow one keeps the name.
 func TestK11ModeLabelsItself(t *testing.T) {
 	truecolor(t)
 	yellow := [3]int{0xf9, 0xe2, 0xaf}
@@ -137,7 +138,7 @@ func TestK11ModeLabelsItself(t *testing.T) {
 	m := yankModel(t, true)
 	box := strings.Split(m.detailYank.renderFull(), "\n")
 	top := box[0]
-	if !strings.HasSuffix(ansi.Strip(top), " Selection ─╮") {
+	if !strings.HasSuffix(ansi.Strip(top), "┤Selection├─╮") {
 		t.Errorf("selecting, the top border should end with the mode name: %q", ansi.Strip(top))
 	}
 	fg := cellFG(top)
@@ -169,7 +170,7 @@ func TestK11ModeLabelsItself(t *testing.T) {
 	m = press(t, m, runes("v"))
 	m.detailYank.setSize(24, 40) // the narrowest box: 20 inside
 	top = ansi.Strip(strings.Split(m.detailYank.renderFull(), "\n")[0])
-	if !strings.HasSuffix(top, " Selection ─╮") || dispWidth(top) != 22 {
+	if !strings.HasSuffix(top, "┤Selection├─╮") || dispWidth(top) != 22 {
 		t.Errorf("a narrow box should cut the title and keep the mode name: %q", top)
 	}
 }
@@ -183,5 +184,52 @@ func TestK11SelectionIsYellow(t *testing.T) {
 	row := strings.Split(m.detailYank.renderFull(), "\n")[1]
 	if bg, _, ok := firstBG(row); !ok || !near(bg, [3]int{0xf9, 0xe2, 0xaf}) {
 		t.Errorf("the selection is %v, want Yellow #f9e2af: %q", bg, row)
+	}
+}
+
+// sgrBefore is the parameters of the last SGR sequence before sub in line.
+func sgrBefore(t *testing.T, line, sub string) []string {
+	t.Helper()
+	i := strings.Index(line, sub)
+	if i < 0 {
+		t.Fatalf("%q not in %q", sub, line)
+	}
+	ps := sgrParams(line[:i])
+	if len(ps) == 0 {
+		return nil
+	}
+	return ps[len(ps)-1]
+}
+
+func hasParam(ps []string, p string) bool {
+	for _, x := range ps {
+		if x == p {
+			return true
+		}
+	}
+	return false
+}
+
+// tdp D3, D6: the mode tag's junctions are drawn like the frame (not bold), its
+// name bold; with icons two cells wide and an icon in the title, the top border
+// still measures the box.
+func TestK11ModeTagJunctions(t *testing.T) {
+	truecolor(t)
+	defer restoreIconCells(iconCells)
+	m := yankModel(t, true)
+	top := strings.Split(m.detailYank.renderFull(), "\n")[0]
+	if hasParam(sgrBefore(t, top, "┤"), "1") || hasParam(sgrBefore(t, top, "├"), "1") {
+		t.Errorf("the junctions should be plain frame lines, not bold: %q", top)
+	}
+	if !hasParam(sgrBefore(t, top, "Selection"), "1") {
+		t.Errorf("the mode name should be bold: %q", top)
+	}
+	for _, cells := range []int{1, 2} {
+		iconCells = cells
+		m.detailYank.title = "notes " + wideIcon + ".txt"
+		lines := strings.Split(m.detailYank.renderFull(), "\n")
+		if got, want := dispWidth(lines[0]), dispWidth(lines[1]); got != want {
+			t.Errorf("icons %d: the top border is %d wide, the box %d: %q", cells, got, want, ansi.Strip(lines[0]))
+		}
 	}
 }
