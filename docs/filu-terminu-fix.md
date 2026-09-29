@@ -39,56 +39,6 @@ tdp 連結從 v0.1.13 改成 v0.1.17，只改網址。
   commit、裁定、教訓），並更新那份的「偏離 tdp」與「發布」段。
 
 
-## 1. PTY 的 `Alt-Esc` 直接結束 shell —— K10、D5（已定案）
-
-**現況**：`app.go` `Update()` 的 `tea.KeyMsg` 分支，splash 之後第一站是 `m.pty.isActive()`：`isExitKey()`（`Esc` + Alt）成立就直接
-`m.pty.exit()`，`pty_unix.go` 的 `ptyPopup.exit()` 立刻 `Kill()` shell、播關閉動畫、reload 目錄。filu 的 PTY 只跑 `s` 開的 shell
-（`buildShellCmd()`；`buildEditorCmd()` 只剩測試在用）。
-
-繪製順序（`view.go` `popupLayers()`）：confirm 與 `help` 在 PTY 之下，`quitMenu`、`quitHelp` 在 PTY 之上。PTY 不在 `stackOrder()`
-裡，`assignLayers()` 不算它，它的框固定畫第 1 層色（`renderPopup()` 的 `popupLayerColor(1)`）。
-
-**規則**：K10 —— 家族的 PTY 出口鍵是 `Alt-Esc`（filu 已經是）。D5（v0.1.16）—— **`Alt-Esc` 一律先 confirm**：按了會讓 focus 離開
-PTY 或結束子程序時，不論子程序留不留著，都先跳 confirm（`Enter` 離開、`Esc` 回到 PTY）。理由：終端機把 Alt 組合送成「`Esc` 加
-那個鍵」，`Alt-Esc` 跟兩次 `Esc` 的 byte 一模一樣；app 忙的時候讀鍵的一端卡住，兩次 `Esc` 就會疊在一起被讀成 `Alt-Esc`（tdp 在
-2026-09-29 用 bubbletea v1.3.10 實測：前面有鍵在排隊時，間隔 150ms 的兩次 `Esc` 也會黏在一起）。filu 用的正是 bubbletea v1.3.10：
-在 shell 裡開 vim 改檔、連按 `Esc`，shell 會連同沒存的編輯一起被殺掉。F4 —— confirm 疊在 PTY 上，`Esc` 回到 PTY。
-
-**已定案**（user，2026-09-29）：照做（v0.1.16 起 D5 本身就這樣要求）。
-
-**怎麼改**：
-
-- `Alt-Esc` 改成開 confirm（新增 `confirmEndShell`，照其他 confirm 重用 `m.confirm` 與 `confirmAction`）。問句寫出對象與後果
-  （F6，例：`End the shell in ~/proj? Anything still running in it stops.`），動詞 `end`（下框 `Enter:end Esc:cancel`，寫法見第 2 條）。
-  接受（`Enter` / `y`）才 `m.pty.exit()`；取消（`Esc` / `n`）關 confirm、回到 PTY，shell 照跑。
-- **路由**：PTY 分支要讓位給疊在它上面的框。confirm 開著時，鍵照一般 popup 的順序走：toast 的 `Esc` 先收（F3）、`q` / `Ctrl-C`
-  進離開流程（K9）、`?` 開 `Confirm keys`（K6）、其餘給 confirm。沒有框疊在 PTY 上時，才照舊把每個鍵（含 `Esc`、`Ctrl-C`、`q`）
-  送進 shell。
-- **繪製與層色**：confirm 與它的 `?` key reference 都要畫在 PTY 上面（現在兩者都在 PTY 之下，直接重用會被 PTY 蓋住）；confirm 用
-  PTY 上一層的層色（D2：第 2 層），PTY 在它底下 dim（F8）。做法由 filu 決定，兩個要避開的坑：
-  - 把 PTY 移到 `popupLayers()` 最底下最省事，但開 shell 那一刻，正在關的 Space menu 與 Shell confirm 會畫在 PTY 上、PTY 跟著
-    暗一下（F8 的「最上層」看的是 `isActive()`，含關閉中）。改完把畫面印出來看。
-  - 若把 PTY 放進 `stackOrder()` 好讓 `assignLayers()` 算到它，`clearStack()` 會直接關掉 PTY 的 animator、不經 `exit()`
-    （shell 沒被殺、`stopPending` 沒設）。confirm 接受後本來就會呼叫 `clearStack()`。
-- shell 在 confirm 開著時自己結束了（`ptyTickMsg` 看到 `done`），confirm 一起收掉：要結束的東西已經不在（T1）。
-- `ptyExitHint` 照樣常駐在 PTY 下框（K10）；寫法與顏色見第 2 條。
-- 文件：
-  - README 兩份「Open, edit, and everything else」／「開啟、編輯,以及其他」那一條改成「`Alt-Esc` 先問，接受才結束 shell」。
-  - dev-remarks「設計決定」PTY 那段改寫：出口鍵先 confirm 與理由（D5）、confirm 疊在 PTY 上、`Esc` 回 PTY、被讀成 `Alt-Esc` 的
-    那兩個 `Esc` 不會送進 vim（回到 PTY 後要再按一次）。同一節「一律先 confirm」的清單加上 `Alt-Esc`。
-  - dev-remarks「user 裁定的」：保留 2026-09-28 那條，補一條 2026-09-29 的新裁定（先 confirm）。
-  - CHANGELOG `[Unreleased]` 的 `Alt+Esc` 那條（Added，還沒發布）直接改寫。
-- 參考 kbu：`internal/ui/app.go` 的 `ptyLeaveRequestMsg` 分支（`ConfirmEndShell`，`m.confirm.SetLayer(m.popupDepth() + 1)`）與
-  `ptyKillMsg`；紀錄在 terminu `.local/family-fix/kbu/README.md` 的 K10 那一列（`8f530ca`、`7e861dd`）。
-- 測試（`pty_unix_test.go`）：
-  - `TestPtyAltEscExits` 改寫成守新規則：`Alt-Esc` 開 confirm、`stopPending` 仍是 false、process 還活著；`Enter` 之後 shell 結束、
-    popup 關掉；`Esc` 之後 confirm 關、PTY 還在、process 還活著。
-  - 另補：confirm 開著時 `View()` 看得到問句，PTY 那幾格是 dim 過的顏色（F8，照 `f8_test.go` 開 truecolor 比對）；confirm 的邊框是
-    第 2 層色（D2）；shell 自己結束時 confirm 跟著收。
-  - `TestPtyKeysBelongToShell`（`Esc`、`Ctrl-C`、`q` 給 shell）照舊要綠。
-  - mutation：`Alt-Esc` 改回直接 `exit()`、confirm 畫回 PTY 底下、層色不算 PTY，各自要紅。
-
-
 ## 2. 按鍵的寫法與顏色 —— M5、D1–D4（已定案）
 
 **規則**（v0.1.15 定案，畫面上所有地方與 README 都一樣）：

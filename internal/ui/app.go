@@ -42,6 +42,7 @@ const (
 	confirmOpen
 	confirmUnfavorite
 	confirmClearMarks
+	confirmEndShell
 )
 
 // AppModel is filu's root model.
@@ -161,6 +162,39 @@ func (m *AppModel) clearStack() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+// dropStack closes every popup in the stack at once, skipping the close
+// animation: the shell starting over them sits at the bottom of the stack, so
+// menus still collapsing would draw over it (and dim it, tdp F8).
+func (m *AppModel) dropStack() {
+	for _, a := range m.stackOrder() {
+		a.closeNow()
+	}
+}
+
+// boxOverPty reports whether a popup holds the keyboard over the shell: the
+// confirm its exit key opens, that confirm's key reference, or the leave flow.
+// Everything in the stack sits above the shell (dropStack cleared it when the
+// shell started).
+func (m *AppModel) boxOverPty() bool {
+	for _, a := range m.stackOrder() {
+		if a.owns() {
+			return true
+		}
+	}
+	return false
+}
+
+// openEndShell asks before the exit key ends the shell (tdp D5): a terminal
+// sends Alt-Esc as the same bytes as Esc twice, so two quick Esc presses in vim
+// can arrive as the exit key. Esc on the confirm returns to the shell.
+func (m *AppModel) openEndShell() tea.Cmd {
+	if m.pty.stopPending { // already on its way out
+		return nil
+	}
+	m.confirmAction = confirmEndShell
+	return m.confirm.open("End the shell in "+shortPath(m.pty.dir)+"? Anything still running in it stops.", "end")
+}
+
 // boxOverSpaceMenu reports whether a popup (or the shell) now holds the keyboard
 // above the Space menu — the quit picker included, which a row can open too.
 func (m *AppModel) boxOverSpaceMenu() bool {
@@ -238,6 +272,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.refreshPreview()
+		if m.confirmAction == confirmEndShell && m.confirm.owns() { // the shell ended by itself: nothing left to end (tdp T1)
+			return m, tea.Batch(m.confirm.close(), m.help.anim.close())
+		}
 		return m, nil
 	case fileBatchMsg:
 		m.search.onStreamBatch(msg)
@@ -304,9 +341,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.splash, cmd = m.splash.update(msg)
 			return m, cmd
 		}
-		if m.pty.isActive() { // the shell owns every keystroke but the exit key (tdp K10)
+		if m.pty.isActive() && !m.boxOverPty() { // the shell owns every keystroke but the exit key (tdp K10)
 			if isExitKey(msg) {
-				return m, m.pty.exit()
+				return m, m.openEndShell()
 			}
 			return m, m.pty.update(msg)
 		}
@@ -448,6 +485,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.refreshPreview()
 				case confirmShell:
 					cmd = tea.Batch(cmd, m.pty.start(buildShellCmd(), "Shell", m.cur().dir, m.width, m.height))
+					m.dropStack() // the shell sits at the bottom of the stack: nothing may collapse over it
+				case confirmEndShell:
+					cmd = tea.Batch(cmd, m.pty.exit())
 				case confirmOpen:
 					cmd = tea.Batch(cmd, m.openDefault())
 				case confirmUnfavorite:

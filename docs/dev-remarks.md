@@ -160,15 +160,25 @@ filu/
   它(`Ctrl-C` 在輸入態也有效，`q` 在輸入態是字母),在 picker 上再按 `Ctrl-C` 立即離開。
   picker 疊在當下整疊 popup 的最上面、不關底下的框，所以 `Esc` 回到原本的框;按鍵路由
   在 splash、PTY、toast 的 `Esc` 之後第一個處理它，繪製時也只有 toast 畫在它上面。
-- **PTY 的出口鍵是 `Alt+Esc`,按下直接結束 shell。** PTY 裡每個鍵都屬於 shell(包括 `Esc`、
-  `Ctrl-C`、`q`),只有 `Alt+Esc` 被 filu 攔下(`isExitKey()`、`ptyPopup.exit()`),常駐寫在
-  PTY 下框(`ptyExitHint`)。跟 sshu 同一個鍵(tdp K10 的例子)。filu 的 `[s]hell` 是
-  用完就走的子 shell,沒有「離開後再接回」的 session,所以出口鍵等同打 `exit`:殺掉 shell、
-  播關閉動畫、reload 該目錄，回到 panel(2026-09-28 user 裁定)。
+- **PTY 的出口鍵是 `Alt-Esc`,按了先 confirm。** PTY 裡每個鍵都屬於 shell(包括 `Esc`、
+  `Ctrl-C`、`q`),只有 `Alt-Esc` 被 filu 攔下(`isExitKey()`),常駐寫在 PTY 下框
+  (`ptyExitHint`),是家族的出口鍵(tdp K10、D5)。filu 的 `[s]hell` 是用完就走的子 shell,
+  沒有「離開後再接回」的 session,所以出口鍵等同打 `exit`:confirm 接受後殺掉 shell
+  (`ptyPopup.exit()`)、播關閉動畫、reload 該目錄，回到 panel(2026-09-28 user 裁定)。
+  先 confirm 是因為終端機把 Alt 組合送成「`Esc` 加那個鍵」,`Alt-Esc` 跟兩次 `Esc` 的 byte
+  一樣;app 忙的時候兩次 `Esc` 會黏成 `Alt-Esc`,在 shell 裡的 vim 連按 `Esc` 就會連同沒存
+  的編輯把 shell 殺掉(tdp D5,2026-09-29 user 裁定)。confirm 疊在 PTY 上、PTY 在它底下
+  dim;`Esc` 回到 PTY,shell 照跑 —— 被讀成 `Alt-Esc` 的那兩個 `Esc` 不會送進 vim,回到
+  PTY 後要再按一次。confirm 開著時鍵照一般 popup 的順序走(toast 的 `Esc`、`q` / `Ctrl-C`
+  的離開流程、`?` 的 `Confirm keys`);沒有框疊在 PTY 上時(`boxOverPty()`),每個鍵照舊送進
+  shell,toast 開著也一樣。shell 在 confirm 開著時自己結束,confirm 與它的 `?` 一起收掉。
+  繪製上 PTY 在整疊 popup 的最底下(`popupLayers()` 第一個，`assignLayers()` 把它算成第
+  1 層);開 shell 時 Space menu 與 Shell confirm 直接收掉、不播關閉動畫(`dropStack()`),
+  免得收合中的框畫在 PTY 上、讓它跟著暗一下(F8)。
 - **會改變磁碟或把控制權交出去的動作一律先 confirm**:`D` Delete(list)、`D`
-  Unfavorite(Favorites)、`o` Open、`s` Shell、`C` Clear(Marks)。`Open` 要問,是因為
-  交給外部 app 之後 filu 就管不到了;`Clear` 要問,是因為 bucket 是慢慢累積的、一鍵
-  歸零沒有 undo。`m` mark / `p` pick / `f` favorite 是可逆的一鍵 toggle,不 confirm。
+  Unfavorite(Favorites)、`o` Open、`s` Shell、`Alt-Esc` 結束 shell(見上一條)、`C`
+  Clear(Marks)。`Open` 要問,是因為交給外部 app 之後 filu 就管不到了;`Clear` 要問,
+  是因為 bucket 是慢慢累積的、一鍵歸零沒有 undo。`m` mark / `p` pick / `f` favorite 是可逆的一鍵 toggle,不 confirm。
   `O` Open with 的 picker 不再另跳 confirm,連選 `Default`(跟 `o` 同一個結果)也一樣:
   在 picker 裡挑一個 app 本身就是一次明確的選擇，等於確認過了;`o` 是一鍵直達，才需要
   confirm 擋誤觸。所以「交給外部 app」每次都經過一次確認，符合 tdp F6(2026-09-28 user 裁定)。
@@ -256,7 +266,7 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   finder 打字時是 input(tdp F1):`Enter` 就是送出，直接選反白的那一筆(預設第一筆);方向鍵
   在候選之間移動,`j` / `k` 仍是字元(K8);要用 `j` / `k` 就先 `Tab` 進清單(2026-09-28 user
   裁定，以前打字時的 `Enter` 跟 `Tab` 一樣只是把 focus 交給清單)。
-- **K10(至少一個出口鍵)**:filu 的 PTY 只有一格 shell,只需要出口鍵 `Alt+Esc`。
+- **K10(至少一個出口鍵)**:filu 的 PTY 只有一格 shell,只需要出口鍵 `Alt-Esc`。
 - **M3 與 P3「同一個動作在兩區」**:沒有熱鍵同時出現在兩個區。全域動作只有離開;切分頁、
   Goto、Search、Shell、Sort 都作用在 `[1]`,是 `[1]` 的 panel operation。
 - **K5 在其他 popup**:只有真正的 Space menu 讓 `Space` 關閉(`spaceToggle`);input popup 與
@@ -300,7 +310,9 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 - breadcrumb popup 的 `b` 兼關閉 → 拿掉，只留 `Esc`(其他熱鍵開的 popup 都只認 `Esc`)。
 - `[1]` 的 Space menu 標題 → `[1] <cursor 項目名>`(空目錄 `[1] CWD`):照 D4 的 `[N]`,又保留
   item operation 作用在哪個檔案。
-- PTY 出口鍵 → `Alt+Esc`,按下直接結束 shell。
+- PTY 出口鍵 → `Alt-Esc`,按下直接結束 shell。
+- (2026-09-29)PTY 出口鍵先 confirm → 照 tdp D5(v0.1.16):`Enter` 結束 shell、`Esc` 回到
+  PTY。上一條的「直接」不再成立，結束仍是殺掉 shell。
 - `O` 的 picker 要不要 confirm → 不要(見「設計決定」)。
 - `[3]` Tasks 執行中的轉圈 → 換成 D3 的 loading icon,全 app 只有一種轉圈(原本是 braille 點)。
 - finder 載入中 → 邊串流邊列出結果(以前要等走訪結束才顯示清單)。
