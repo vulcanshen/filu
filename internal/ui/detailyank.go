@@ -311,7 +311,7 @@ func (m detailYank) renderFull() string {
 	// the mode colour until the mode is left (tdp K11).
 	mode := ""
 	if m.visual {
-		bc, mode = modeColor, " "+selectModeName+" "
+		bc, mode = modeColor, selectModeName
 	}
 	return drawPopupBoxMode(bc, " "+m.title, mode, m.hint(innerW-1), out, innerW, false)
 }
@@ -367,12 +367,6 @@ func overlayCursorOnStyledLine(styled, plain string, cursorCol int, cursorStyle 
 	after := ansi.Cut(styled, cellsBefore(pr, cursorCol+1), big)
 	return before + cursorStyle.Render(string(pr[cursorCol])) + after
 }
-
-// cellsBefore is where rune i of a line starts, in the line's own cells —
-// the positions ansi.Cut takes. A CJK character is one rune but two cells, so
-// a rune index handed to ansi.Cut as is lands the cursor or selection on the
-// wrong character (tdp L4). Measured as ansi.Cut measures, not dispWidth.
-func cellsBefore(pr []rune, i int) int { return ansi.StringWidth(string(pr[:i])) }
 
 // hint is the bottom border, per state: selecting is a mode (tdp K11) with
 // its own keys. The box width is the screen's, so it holds when the hint

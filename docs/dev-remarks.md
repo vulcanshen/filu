@@ -70,13 +70,14 @@
   按鍵清單，模式的鍵直接按;選取中 `Space` 不作用(tdp v0.1.10 拿掉了 v0.1.2 起那份只用方向鍵
   移動的按鍵清單 `modeList`)。選取中 `Tab` 暫停但回一個 toast;選取外 `Space` 也不作用
   (K5)。下框 hint 分選取內外兩種，框寬跟著螢幕、不跟 hint 變(L2)。選取中框標示自己是模式
-  (tdp K11、D2):外框與標題換成模式色 Yellow(`modeColor`),上框右側寫模式名
-  `Selection`(`selectModeName`,`?` 的標題 `Selection keys` 用同一個);框太窄時先截標題，
-  模式名留著(`drawPopupBoxMode()`)。離開選取就回到層色。選取的反白也是 Yellow(`selectColor`,
-  D2 的「選取」;以前是 Lavender,跟黃框不搭，Lavender 回到只當使用者足跡，P4)。
-  游標與選取的位置是 rune 序號(複製用 rune 取);畫的時候交給 `ansi.Cut()` 之前先換算成那一段
-  在字串裡的格數(`cellsBefore()`,跟 `ansi.Cut()` 同一套量法):中文字一個 rune 佔兩格，不換算
-  就會畫在錯的字上、還把字重複畫出來。
+  (tdp K11、D2、D3):外框與標題換成模式色 Yellow(`modeColor`),上框右側的模式名夾在兩個
+  接頭之間、像框上嵌了一個標籤:`╭─ notes.txt ────┤Selection├─╮`(popup 是單線框，接頭用
+  `┤` `├`,跟框同色不加粗，名字加粗;`selectModeName`,`?` 的標題 `Selection keys` 用同一個);
+  框太窄時先截標題，模式名與接頭留著(`drawPopupBoxMode()`)。離開選取就回到層色。選取的反白也
+  是 Yellow(`selectColor`,D2 的「選取」;以前是 Lavender,跟黃框不搭，Lavender 回到只當使用者
+  足跡，P4)。游標與選取的位置是 rune 序號(複製用 rune 取);畫的時候交給 `ansi.Cut()` 之前先
+  換算成那一段在字串裡的格數(`width.go` 的 `cellsBefore()`,跟 `ansi.Cut()` 同一套量法):中文字
+  一個 rune 佔兩格，不換算就會畫在錯的字上、還把字重複畫出來。
 - **Yank** — 走 OSC 52,所以能穿 tmux / SSH。
 - **刪除** — 移到 OS 垃圾桶:macOS 用 `osascript`(不需 cgo)、Linux 寫 XDG
   `.trashinfo`。

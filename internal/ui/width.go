@@ -294,3 +294,10 @@ func joinV(blocks ...string) string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+// cellsBefore is where rune i of a line starts, in the line's own cells — the
+// positions ansi.Cut takes (the preview viewport keeps its cursor and selection
+// as rune indexes). A CJK character is one rune but two cells, so a rune index
+// handed to ansi.Cut as is lands on the wrong character (tdp L4). Measured as
+// ansi.Cut measures, not dispWidth: it cuts the string's own cells.
+func cellsBefore(pr []rune, i int) int { return ansi.StringWidth(string(pr[:i])) }
