@@ -106,8 +106,10 @@
   padding);yank viewport 與 finder 用 `drawPopupBoxPad(pad=false)` 貼齊邊框。內容列
   (finder 的結果、input 的輸入列、Open in、quit picker、viewport 的目錄樹都有 icon)由
   `padDisp()` 補齊或裁到框寬，寬度一律走 `width.go`(見「CJK Nerd Font 寬度」)。
-  hint 與 panel 下框、footer 同一個 helper(`keyLegend()`):`鍵:說明`、項目之間一個空格，
-  鍵 Blue、冒號與說明 Overlay0(tdp M5、D2);`drawPopupBoxPad` 原樣放上去，不再用層色重畫。
+  hint 與 panel 下框、footer 同一個 helper(`keyLegendFit()`):`鍵:說明`、項目之間一個空格，
+  鍵 Blue、冒號與說明 Overlay0(tdp M5、D2)。每個框用自己的寬度去 fit,放不下的項目從尾端
+  整組不放、不截在中間(tdp D3、D1;finder 並排時的清單框在 96–116 欄會用到);`drawPopupBoxPad`
+  原樣放上去，不再截、也不用層色重畫。panel 的下框收「鍵、說明」的組，由 `panelBoxHint()` fit。
   key reference 的鍵 Blue、說明 Text,區塊標題維持暗字。
 - **popup 一律同寬** — 每個 popup 的外框都是 `min(terminal 寬 − 2, 120)`(`popupInnerWidth()`
   給扣掉左右邊框的內寬),不看內容:說明太長就截、訊息與值在框內折行(tdp F7,取代 D4 的

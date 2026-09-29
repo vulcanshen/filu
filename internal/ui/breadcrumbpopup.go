@@ -83,7 +83,7 @@ func (m breadcrumbPopup) renderFull() string {
 	hereStyle := lipgloss.NewStyle().Foreground(userColor) // current level, lavender = you-are-here
 
 	title := " " + string(rune(0xf07c)) + " Breadcrumb" // nf-fa-folder-open
-	hint := keyLegend([][2]string{{"j/k", "move"}, {"Enter", "jump"}, {"Esc", "close"}})
+	hint := keyLegendFit([][2]string{{"j/k", "move"}, {"Enter", "jump"}, {"Esc", "close"}}, popupInnerWidth(m.screenW)-1)
 
 	// Alignment comes from a plain 2-space gutter; the current level is flagged by
 	// lavender text, not a symbol. Widths are display widths, so a glyph added

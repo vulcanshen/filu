@@ -147,13 +147,13 @@ func TestM6EmptyPreviewDimsYankAndEnter(t *testing.T) {
 // tdp M6: the bottom-border hints name only keys that work now (the app's
 // choice): h/l with one tab, and o / D with no favorites, are left out.
 func TestM6HintsListWhatWorks(t *testing.T) {
-	if got := ansi.Strip(listNavHint(true, 1)); strings.Contains(got, "h/l") {
+	if got := ansi.Strip(keyLegend(listNavHint(true, 1))); strings.Contains(got, "h/l") {
 		t.Errorf("with one tab there is no tab to switch to: %q", got)
 	}
-	if got := ansi.Strip(listNavHint(true, 2)); !strings.Contains(got, "h/l:switch tab") {
+	if got := ansi.Strip(keyLegend(listNavHint(true, 2))); !strings.Contains(got, "h/l:switch tab") {
 		t.Errorf("with two tabs h/l switches: %q", got)
 	}
-	if got := favoritesHint(false); got != "" {
+	if got := favoritesHint(false); got != nil {
 		t.Errorf("with no favorites the edge should stay clean, got %q", got)
 	}
 }

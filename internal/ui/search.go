@@ -669,7 +669,7 @@ func (m searchModel) renderFull() string {
 	if m.isLoading() { // loading is always disclosed after the title (tdp F7, D3)
 		title += " " + loadingIcon()
 	}
-	sb := drawPopupBoxPad(bc, title, m.hint(), m.listColumn(sW, sRows), sW, false)
+	sb := drawPopupBoxPad(bc, title, m.hint(sW-1), m.listColumn(sW, sRows), sW, false)
 	pb := drawPopupBoxPad(bc, m.previewTitle(), "", m.previewColumn(pW, pRows), pW, false)
 	if side {
 		h := strings.Count(sb, "\n") + 1 // a 1-col gap so the two boxes read as separate panels
@@ -788,11 +788,11 @@ func (m searchModel) inputBar(w int) string {
 	return glyph + left + strings.Repeat(" ", gap) + lipgloss.NewStyle().Foreground(dimColor).Render(count)
 }
 
-func (m searchModel) hint() string {
+func (m searchModel) hint(w int) string {
 	if m.mode == searchNav {
-		return keyLegend([][2]string{{"j/k/u/d", "move"}, {"Enter", "go"}, {"Tab", "query"}, {"Esc", "close"}})
+		return keyLegendFit([][2]string{{"j/k/u/d", "move"}, {"Enter", "go"}, {"Tab", "query"}, {"Esc", "close"}}, w)
 	}
-	return keyLegend([][2]string{{"↑/↓", "move"}, {"Enter", "go"}, {"Tab", "list"}, {"Esc", "close"}})
+	return keyLegendFit([][2]string{{"↑/↓", "move"}, {"Enter", "go"}, {"Tab", "list"}, {"Esc", "close"}}, w)
 }
 
 // --- fd / ripgrep ---

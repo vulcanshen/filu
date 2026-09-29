@@ -59,6 +59,9 @@
   a sentence is bracketed (`press [f] on a directory`). The panel key list now
   says `gg` for the top, which is what the panels take, and lists `Shift-Tab`
   (the previous panel), which it left out.
+- A bottom line or the footer that does not fit leaves whole items out from the
+  end instead of cutting one in the middle — the finder's list, side by side
+  with its preview at about 96–116 columns, read `… Esc:clo…`.
 - The key list (`?`) dims the keys that can't do anything right now, as the
   `Space` menu dims those rows — switching or closing tabs with only one open,
   a new tab with all five in use, Reset with no sort. On an empty preview (an

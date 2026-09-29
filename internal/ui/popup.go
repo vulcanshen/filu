@@ -16,20 +16,18 @@ func drawPopupBox(bc lipgloss.Color, title, hint string, rows []string, innerW i
 // drawPopupBoxPad is drawPopupBox with control over the blank padding rows that
 // frame the content. pad=false makes the content hug the borders (kbu's YAML
 // popup form — used by the panel [2] yank viewport and the finder). hint comes
-// already styled (keyLegend: key Blue, colon and description Overlay0, tdp M5).
+// already styled and already fitted to innerW − 1 (keyLegendFit: whole pairs
+// only, key Blue, colon and description Overlay0, tdp M5, D3).
 func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, innerW int, pad bool) string {
 	bStyle := lipgloss.NewStyle().Foreground(bc)
 	tStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)
 
-	// A title / hint wider than the box would push its border out and, when the
-	// box is joined beside another, open a gap — clip both to fit. Measured with
+	// A title wider than the box would push its border out and, when the box is
+	// joined beside another, open a gap — clip it to fit. Measured with
 	// dispWidth: a title glyph (the loading icon, a warning sign) takes two cells
 	// on a CJK icon font, and the border must shorten to match.
 	if dispWidth(title) > innerW-1 {
 		title = truncate(title, innerW-1)
-	}
-	if dispWidth(hint) > innerW-1 {
-		hint = truncate(hint, innerW-1)
 	}
 
 	var b strings.Builder
