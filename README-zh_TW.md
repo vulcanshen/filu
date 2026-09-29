@@ -33,6 +33,7 @@
 ### 系統需求
 
 - 終端機要用 **Nerd Font** —— filu 的 icon 都是 Nerd Font glyph。CJK Nerd Font(如 Maple Mono NF CN)也沒問題。
+  filu 啟動時會問終端機一個 icon 佔幾格。框線還是歪的話,`filu iconwidth` 會印出量到的格數，設 `FILU__ICON_WIDTH=1` 或 `2` 就能指定。`TERMINU__ICON_WIDTH` 是 terminu 家族共用的同一個設定：設一次，家族每個 app 都讀得到(`FILU__ICON_WIDTH` 仍然優先)。在家族 app 的終端機裡跑 —— kbu 的 Alterm、filu 自己的 shell —— 外層 app 會替你設好,filu 也會替它 shell 裡跑的程式設好。
 - 終端機要支援 **truecolor(24-bit 色)** —— filu 的配色與 popup 底下的變暗都需要它;256 色下深淺會糊在一起。
 - **ripgrep** 用於內容搜尋,**fd** 讓 finder 更快(快速安裝與 Homebrew 都會幫你裝好)。
 - **macOS 或 Linux** —— Windows 請用 WSL。
