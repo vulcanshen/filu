@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"math"
 	"regexp"
 	"strings"
 	"testing"
@@ -58,7 +59,7 @@ func TestM5HintsAndFooter(t *testing.T) {
 	vp := newDetailYank()
 	vp.visual = true
 	fs := newSearch()
-	typing := fs.hint()
+	typing := fs.hint(200)
 	fs.mode = searchNav
 	m := f4Model(t)
 	m.width = 100
@@ -66,13 +67,13 @@ func TestM5HintsAndFooter(t *testing.T) {
 	m.places.pinned = []place{{path: "/tmp"}}
 	m.setGotoPinnedItems()
 	for name, c := range map[string]struct{ got, want string }{
-		"selecting":      {vp.hint(), " y:copy Esc:leave ?:keys "},
+		"selecting":      {vp.hint(200), " y:copy Esc:leave ?:keys "},
 		"finder typing":  {typing, " ↑/↓:move Enter:go Tab:list Esc:close "},
-		"finder list":    {fs.hint(), " j/k/u/d:move Enter:go Tab:query Esc:close "},
+		"finder list":    {fs.hint(200), " j/k/u/d:move Enter:go Tab:query Esc:close "},
 		"favorites menu": {bottomHint(m.gotoFavMenu.renderFull()), " j/k:move Enter:run f:unfavorite Esc:close "},
-		"list panel":     {listNavHint(true, 2), " Enter:into Esc:back j/k/u/d:move h/l:switch tab "},
-		"marks panel":    {marksHint(true), " p:pick m:unmark Z:zip C:clear "},
-		"favorites tab":  {favoritesHint(true), " o:open in D:remove "},
+		"list panel":     {keyLegend(listNavHint(true, 2)), " Enter:into Esc:back j/k/u/d:move h/l:switch tab "},
+		"marks panel":    {keyLegend(marksHint(true)), " p:pick m:unmark Z:zip C:clear "},
+		"favorites tab":  {keyLegend(favoritesHint(true)), " o:open in D:remove "},
 		"footer":         {strings.TrimRight(m.footerBar(60), " "), " Space:menu ?:help Tab/1–3:panels q:quit"},
 	} {
 		if got := ansi.Strip(c.got); got != c.want {
@@ -227,4 +228,33 @@ func TestM5KeyColours(t *testing.T) {
 		return
 	}
 	t.Fatal("no Tab row in the key reference")
+}
+
+// keyLegend is keyLegendFit with no width limit: every pair, for the tests
+// that check what a hint says rather than what fits.
+func keyLegend(pairs [][2]string) string { return keyLegendFit(pairs, math.MaxInt) }
+
+// tdp D3, D1: a hint or footer that does not fit leaves pairs out from the end,
+// whole — never cut in the middle, never an ellipsis.
+func TestD3HintsDropWholePairs(t *testing.T) {
+	m, _ := d6App(t) // 100 columns: the finder's list box is 37 inside
+	m.search.open(t.TempDir(), m.width, m.height, false, false, make(chan fileBatchMsg, 1))
+	m.search.anim.state = popupOpen
+	typing := bottomHint(m.search.renderFull())
+	m.search.mode = searchNav
+	list := bottomHint(m.search.renderFull())
+	var mm AppModel
+	panel := strings.Split(mm.panelBoxHint(true, singleChip("[1]", true), listNavHint(true, 2), 40, 4, "body"), "\n")
+	for _, c := range []struct{ name, got, want string }{
+		{"finder typing", typing, " ↑/↓:move Enter:go Tab:list "},
+		{"finder list", list, " j/k/u/d:move Enter:go Tab:query "},
+		{"[1] at 40 columns", ansi.Strip(panel[3]), "╚ Enter:into Esc:back j/k/u/d:move ════╝"},
+		{"footer at 30", ansi.Strip(mm.footerBar(30)), " Space:menu ?:help " + strings.Repeat(" ", 11)},
+		{"footer just fits", ansi.Strip(mm.footerBar(41)), " Space:menu ?:help Tab/1–3:panels q:quit "},
+		{"footer one short", ansi.Strip(mm.footerBar(40)), " Space:menu ?:help Tab/1–3:panels " + strings.Repeat(" ", 6)},
+	} {
+		if c.got != c.want {
+			t.Errorf("%s = %q, want %q", c.name, c.got, c.want)
+		}
+	}
 }

@@ -58,9 +58,9 @@ func (m confirmPopup) renderPopup() string { return m.anim.renderFrame(m.renderF
 func (m confirmPopup) renderFull() string {
 	bc := popupLayerColor(m.anim.layer)
 	title := " " + string(rune(0xf071)) + " Confirm" // nf-fa-warning
-	hint := keyLegend([][2]string{{"Enter", m.verb}, {"Esc", "cancel"}})
 
 	innerW := popupInnerWidth(m.screenW) // the family width (tdp F7); the message wraps inside
+	hint := keyLegendFit([][2]string{{"Enter", m.verb}, {"Esc", "cancel"}}, innerW-1)
 
 	msgStyle := lipgloss.NewStyle().Bold(true)
 	var rows []string

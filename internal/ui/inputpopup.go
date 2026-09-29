@@ -107,8 +107,8 @@ func (m inputPopup) update(msg tea.KeyMsg) (inputPopup, bool, tea.Cmd) {
 	return m, false, nil
 }
 
-// hint names what Enter does for this kind of input (tdp D3).
-func (m inputPopup) hint() string {
+// hint names what Enter does for this kind of input (tdp D3), in w cells.
+func (m inputPopup) hint(w int) string {
 	verb := "confirm"
 	switch m.kind {
 	case inputRename:
@@ -118,7 +118,7 @@ func (m inputPopup) hint() string {
 	case inputZip:
 		verb = "zip"
 	}
-	return keyLegend([][2]string{{"Enter", verb}, {"Esc", "cancel"}})
+	return keyLegendFit([][2]string{{"Enter", verb}, {"Esc", "cancel"}}, w)
 }
 
 // desc is the item exactly as panel [1] shows it — type icon + eza colour — or
@@ -165,5 +165,5 @@ func (m inputPopup) renderFull() string {
 		red := lipgloss.NewStyle().Foreground(lipgloss.Color("#f38ba8"))
 		rows = append(rows, red.Render(" "+truncate(m.errMsg, innerW-2)))
 	}
-	return drawPopupBoxPad(bc, title, m.hint(), rows, innerW, false)
+	return drawPopupBoxPad(bc, title, m.hint(innerW-1), rows, innerW, false)
 }

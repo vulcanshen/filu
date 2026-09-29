@@ -183,10 +183,10 @@ func (m AppModel) marksTitle() string {
 
 // marksBody renders panel [3]'s active tab — the Marks bucket (with its own
 // workflow hint), the Tasks land log, or the Favorites list.
-func (m AppModel) marksBody(w, rows int, focused bool) (body, hint string) {
+func (m AppModel) marksBody(w, rows int, focused bool) (body string, hint [][2]string) {
 	switch m.marksTab {
 	case 1:
-		return m.tasksView(w, rows, focused), ""
+		return m.tasksView(w, rows, focused), nil
 	case 2:
 		return m.places.view(w, rows, focused), favoritesHint(len(m.places.pinned) > 0)
 	}
@@ -300,13 +300,13 @@ func (m AppModel) detailBody(w, rows int) string {
 // panelBox draws a bordered panel with the title embedded in the top border
 // (kbu style). Focused = double border + blue, else rounded + dim.
 func (m AppModel) panelBox(focused bool, title string, w, h int, body string) string {
-	return m.panelBoxHint(focused, title, "", w, h, body)
+	return m.panelBoxHint(focused, title, nil, w, h, body)
 }
 
 // panelBoxHint is panelBox with a key legend embedded in the bottom border
-// (kbu popup form: title on top, hint on the bottom). hint is pre-styled chrome;
-// "" leaves the bottom edge plain.
-func (m AppModel) panelBoxHint(focused bool, title, hint string, w, h int, body string) string {
+// (kbu popup form: title on top, hint on the bottom): the pairs that fit, whole
+// (keyLegendFit). No pairs leave the bottom edge plain.
+func (m AppModel) panelBoxHint(focused bool, title string, pairs [][2]string, w, h int, body string) string {
 	color := borderDim
 	tl, tr, bl, br, hz, vt := "╭", "╮", "╰", "╯", "─", "│"
 	if focused {
@@ -329,28 +329,36 @@ func (m AppModel) panelBoxHint(focused bool, title, hint string, w, h int, body 
 		}
 		b.WriteString(bs.Render(vt) + padDisp(line, inner) + bs.Render(vt) + "\n")
 	}
-	if hint == "" {
-		b.WriteString(bs.Render(bl + strings.Repeat(hz, inner) + br))
-	} else {
-		if dispWidth(hint) > inner {
-			hint = truncate(hint, inner)
-		}
-		botFill := max(inner-dispWidth(hint), 0)
-		b.WriteString(bs.Render(bl) + hint + bs.Render(strings.Repeat(hz, botFill)+br))
-	}
+	hint := keyLegendFit(pairs, inner)
+	botFill := max(inner-dispWidth(hint), 0)
+	b.WriteString(bs.Render(bl) + hint + bs.Render(strings.Repeat(hz, botFill)+br))
 	return b.String()
 }
 
-// keyLegend renders a "key:desc key:desc" hint line (tdp M5) — each key in Blue,
-// its colon and description in Overlay0 (D2), one space between the pairs and
-// one on each side. Every hint goes through it: the panels' and popups' bottom
-// borders and the footer.
-func keyLegend(pairs [][2]string) string {
+// keyLegendFit renders a "key:desc key:desc" hint line (tdp M5) in at most w
+// cells — each key in Blue, its colon and description in Overlay0 (D2), one
+// space between the pairs and one on each side. Pairs that do not fit are left
+// out from the end, whole, never cut in the middle (tdp D3, as D1's footer); ""
+// when not even the first one fits, or there are none. Every hint goes through
+// it: the panels' and popups' bottom borders and the footer.
+func keyLegendFit(pairs [][2]string, w int) string {
 	keyStyle := lipgloss.NewStyle().Foreground(focusColor)
 	descStyle := lipgloss.NewStyle().Foreground(dimColor)
-	parts := make([]string, len(pairs))
-	for i, p := range pairs {
-		parts[i] = keyStyle.Render(p[0]) + descStyle.Render(":"+p[1])
+	var parts []string
+	used := 2 // a space on each side
+	for _, p := range pairs {
+		cell := dispWidth(p[0]) + 1 + dispWidth(p[1])
+		if len(parts) > 0 {
+			cell++ // the space before it
+		}
+		if used+cell > w {
+			break
+		}
+		used += cell
+		parts = append(parts, keyStyle.Render(p[0])+descStyle.Render(":"+p[1]))
+	}
+	if len(parts) == 0 {
+		return ""
 	}
 	return " " + strings.Join(parts, " ") + " "
 }
@@ -358,39 +366,39 @@ func keyLegend(pairs [][2]string) string {
 // listNavHint is the key legend shown in the focused list panel's bottom border:
 // the core open-model navigation keys (j/k/u/d folds cursor + paging into one
 // entry, h/l switches the directory tab — named only when there is another tab
-// to switch to, like the other hints, tdp M6). "" when the list is unfocused so
-// an idle panel keeps a clean edge.
-func listNavHint(focused bool, tabs int) string {
+// to switch to, like the other hints, tdp M6). None when the list is unfocused
+// so an idle panel keeps a clean edge.
+func listNavHint(focused bool, tabs int) [][2]string {
 	if !focused {
-		return ""
+		return nil
 	}
 	pairs := [][2]string{{"Enter", "into"}, {"Esc", "back"}, {"j/k/u/d", "move"}}
 	if tabs > 1 {
 		pairs = append(pairs, [2]string{"h/l", "switch tab"})
 	}
-	return keyLegend(pairs)
+	return pairs
 }
 
 // marksHint is the Marks tab's bottom-border legend: the keys that act here, on
 // the bucket. It used to name the list's m / c / v, but on this panel m unmarks
 // and c / v do nothing — a legend must show what pressing the key here does
 // (tdp M9). With an empty bucket none of them apply, so the edge stays clean.
-func marksHint(hasItems bool) string {
+func marksHint(hasItems bool) [][2]string {
 	if !hasItems {
-		return ""
+		return nil
 	}
-	return keyLegend([][2]string{{"p", "pick"}, {"m", "unmark"}, {"Z", "zip"}, {"C", "clear"}})
+	return [][2]string{{"p", "pick"}, {"m", "unmark"}, {"Z", "zip"}, {"C", "clear"}}
 }
 
 // favoritesHint is the Favorites tab's bottom-border legend: o opens the
 // highlighted favorite's dir in a tab (New tab / an existing one), D unfavorites
 // it. `f` on the LIST still creates/removes favorites. With no favorites neither
 // applies, so the edge stays clean (as marksHint).
-func favoritesHint(hasItems bool) string {
+func favoritesHint(hasItems bool) [][2]string {
 	if !hasItems {
-		return ""
+		return nil
 	}
-	return keyLegend([][2]string{{"o", "open in"}, {"D", "remove"}})
+	return [][2]string{{"o", "open in"}, {"D", "remove"}}
 }
 
 // eza-style permission accents (catppuccin-mocha), matching eza's long-format
@@ -462,9 +470,9 @@ func colorOwner(s string) string {
 }
 
 func (m AppModel) footerBar(w int) string {
-	return padDisp(keyLegend([][2]string{
+	return padDisp(keyLegendFit([][2]string{
 		{"Space", "menu"}, {"?", "help"}, {"Tab/1–3", "panels"}, {"q", "quit"},
-	}), w)
+	}, w), w) // what does not fit is left out, whole (tdp D1)
 }
 
 // shortPath folds the home dir to ~ (keeps normal / separators).

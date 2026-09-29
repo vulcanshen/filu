@@ -307,7 +307,7 @@ func (m detailYank) renderFull() string {
 	}
 	// pad=false: content hugs the top border like kbu's YAML popup — no leading
 	// blank row, and the gutter is just the line number (no "│" separator).
-	return drawPopupBoxPad(bc, " "+m.title, m.hint(), out, innerW, false)
+	return drawPopupBoxPad(bc, " "+m.title, m.hint(innerW-1), out, innerW, false)
 }
 
 // overlaySelectionOnStyledLine keeps the styled line intact outside the
@@ -365,9 +365,9 @@ func overlayCursorOnStyledLine(styled, plain string, cursorCol int, cursorStyle 
 // hint is the bottom border, per state: selecting is a mode (tdp K11) with
 // its own keys. The box width is the screen's, so it holds when the hint
 // changes (L2).
-func (m detailYank) hint() string {
+func (m detailYank) hint(w int) string {
 	if m.visual {
-		return keyLegend([][2]string{{"y", "copy"}, {"Esc", "leave"}, {"?", "keys"}})
+		return keyLegendFit([][2]string{{"y", "copy"}, {"Esc", "leave"}, {"?", "keys"}}, w)
 	}
-	return keyLegend([][2]string{{"v", "select"}, {"y", "copy all"}, {"Esc", "close"}})
+	return keyLegendFit([][2]string{{"v", "select"}, {"y", "copy all"}, {"Esc", "close"}}, w)
 }

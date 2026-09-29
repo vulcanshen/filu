@@ -326,8 +326,9 @@ func (m spaceMenu) renderFull() string {
 	cursorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bc).Bold(true)
 
 	title := " " + m.title
+	innerW := popupInnerWidth(m.screenW)
 	pairs := append([][2]string{{"j/k", "move"}, {"Enter", "run"}}, m.hintKeys...)
-	hint := keyLegend(append(pairs, [2]string{"Esc", "close"}))
+	hint := keyLegendFit(append(pairs, [2]string{"Esc", "close"}), innerW-1)
 
 	// One line per row (the family form): labels in a column as wide as the
 	// widest label, each hint on the same line after it. The box is the family
@@ -341,7 +342,6 @@ func (m spaceMenu) renderFull() string {
 		labelW = max(labelW, dispWidth(bracketHotkey(it.label, it.key)))
 	}
 	labelCol := labelW + 2
-	innerW := popupInnerWidth(m.screenW)
 
 	rows := make([]string, 0, len(m.items))
 	for i, it := range m.items {

@@ -96,7 +96,9 @@ func (m helpPopup) update(msg tea.KeyMsg) (helpPopup, tea.Cmd) {
 func (m helpPopup) renderPopup() string { return m.anim.renderFrame(m.renderFull()) }
 
 // helpHint is the key reference's bottom border: only how to move and leave.
-func helpHint() string { return keyLegend([][2]string{{"j/k", "scroll"}, {"?/Esc", "close"}}) }
+func helpHint(w int) string {
+	return keyLegendFit([][2]string{{"j/k", "scroll"}, {"?/Esc", "close"}}, w)
+}
 
 // keyRefDesc is a key reference's description colour, Text (tdp D2); the keys
 // are Blue, like the hints'.
@@ -139,5 +141,5 @@ func (m helpPopup) renderFull() string {
 		top := max(0, min(m.top, len(rows)-vis))
 		rows = rows[top : top+vis]
 	}
-	return drawPopupBox(bc, title, helpHint(), rows, innerW)
+	return drawPopupBox(bc, title, helpHint(innerW-1), rows, innerW)
 }

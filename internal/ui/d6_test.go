@@ -92,7 +92,7 @@ var d6Popups = []d6Popup{
 		_, sW, sRows, pW, pRows := m.search.geometry() // each box alone: joined, one box's error hides
 		bc := popupLayerColor(1)
 		return []string{
-			drawPopupBoxPad(bc, " Search", m.search.hint(), m.search.listColumn(sW, sRows), sW, false),
+			drawPopupBoxPad(bc, " Search", m.search.hint(sW-1), m.search.listColumn(sW, sRows), sW, false),
 			drawPopupBoxPad(bc, m.search.previewTitle(), "", m.search.previewColumn(pW, pRows), pW, false),
 		}
 	}},

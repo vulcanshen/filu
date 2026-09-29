@@ -98,32 +98,6 @@ New tab 的 Search 都是它。`listColumn()` 的 cursor 列：打字時底色 `
 Overlay0。Favorites 分頁也跑一次。mutation：失焦時改回原配色要紅。
 
 
-## 5. 下框 hint 放不下時截在項目中間 —— D3（D1）
-
-**現況**：
-
-- `popup.go` `drawPopupBoxPad()`：`dispWidth(hint) > innerW-1` 時 `truncate(hint, innerW-1)`，截在項目中間、補 `…`。
-- `view.go` `panelBoxHint()`：`truncate(hint, inner)`，同樣。
-- `view.go` `footerBar()`：`padDisp(keyLegend(...), w)`，同樣截在中間（不加 `…`）。
-- 80 × 40 以上實際會截到的只有 finder 並排時的清單框（`search.go` `geometry()`：寬 ≥ 96 欄並排，清單框是全寬的五分之二）：清單態的
-  ` j/k/u/d:move Enter:go Tab:query Esc:close `（43 格）在 96–116 欄被截成 `… Esc:clo…` 之類，打字態的
-  ` ↑/↓:move Enter:go Tab:list Esc:close `（38 格）在 96–104 欄被截。`[1]` 下框（多個分頁時 49 格）在 80 欄放得下，72–79 欄會截；footer（41 格）
-  要到 42 欄以下才截 —— 兩者都在 L1 的最小尺寸以下，但走同一個 helper，一起改。
-
-**規則**：D3（v0.1.18）—— 下框 hint 放不下時，從尾端整組捨棄（跟 D1 的 footer 一樣），不截在項目中間。D1 —— footer 寬度不夠時從尾端
-整組捨棄。
-
-**怎麼改**：
-
-- 一個 helper 收「鍵、說明」的組與可用寬度，從頭放、放不下的那一組和之後的都不放（例：`keyLegendFit(pairs, w)`，量寬用 `dispWidth()`）。
-- 各 popup 把 hint 以組的形式交給 `drawPopupBoxPad()`（或自己先 fit 好再交），`drawPopupBoxPad()` 不再 `truncate()` hint；`panelBoxHint()`、
-  `footerBar()` 也走這個 helper。toast 傳的 `" "` 照舊。
-- 例：96 欄的 finder 清單態變成 ` j/k/u/d:move Enter:go Tab:query `（`Esc:close` 整組不放）。
-- 文件：dev-remarks「popup 共用框」那段補一句。這是 filu 回饋給 tdp 的（第五輪「tdp 可能還缺的」），terminu 紀錄的那條改成「v0.1.18 採納」。
-- 測試：100 欄 finder 兩個階段的 hint 各寫死完整字串、不含 `…`；`[1]` 在 75 欄、footer 在 30 欄各寫死一次；hint 寬剛好等於可用寬度時整條
-  都在。mutation：改回 `truncate()` 要紅。
-
-
 ## 6. yank viewport 在中文字上把游標與選取畫錯位置 —— L4、D6（不是這一輪的改動）
 
 核對寬度時看到的，v0.1.17 以前就這樣。

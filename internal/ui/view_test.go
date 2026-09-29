@@ -12,10 +12,10 @@ import (
 
 // TestListNavHintFocusGated: the list's key legend appears only while focused.
 func TestListNavHintFocusGated(t *testing.T) {
-	if got := listNavHint(false, 2); got != "" {
+	if got := listNavHint(false, 2); got != nil {
 		t.Errorf("unfocused list should have no hint, got %q", got)
 	}
-	if got, want := ansi.Strip(listNavHint(true, 2)), " Enter:into Esc:back j/k/u/d:move h/l:switch tab "; got != want {
+	if got, want := ansi.Strip(keyLegend(listNavHint(true, 2))), " Enter:into Esc:back j/k/u/d:move h/l:switch tab "; got != want {
 		t.Errorf("focused list hint = %q, want %q", got, want)
 	}
 }
@@ -24,7 +24,7 @@ func TestListNavHintFocusGated(t *testing.T) {
 // (tdp M9) — not the list's m / c / v, which here would unmark or do nothing —
 // and stays empty when the bucket is.
 func TestMarksHint(t *testing.T) {
-	plain := ansi.Strip(marksHint(true))
+	plain := ansi.Strip(keyLegend(marksHint(true)))
 	if want := " p:pick m:unmark Z:zip C:clear "; plain != want {
 		t.Errorf("marks hint = %q, want %q", plain, want)
 	}
@@ -33,7 +33,7 @@ func TestMarksHint(t *testing.T) {
 			t.Errorf("marks hint names %q, a key of another panel", not)
 		}
 	}
-	if got := marksHint(false); got != "" {
+	if got := marksHint(false); got != nil {
 		t.Errorf("an empty bucket should leave the edge clean, got %q", got)
 	}
 }
@@ -57,7 +57,7 @@ func TestPanelBoxHintBottomBorder(t *testing.T) {
 		t.Errorf("bottom border should carry the hint, got %q", bottom)
 	}
 
-	plainBox := m.panelBoxHint(true, title, "", w, h, "body")
+	plainBox := m.panelBoxHint(true, title, nil, w, h, "body")
 	plainBottom := ansi.Strip(strings.Split(plainBox, "\n")[h-1])
 	if strings.Contains(plainBottom, "Enter") {
 		t.Errorf("no-hint box should have a clean bottom border, got %q", plainBottom)
