@@ -58,30 +58,6 @@ New tab 的 Search 都是它。`listColumn()` 的 cursor 列：打字時底色 `
   各自要紅。
 
 
-## 3. 選取模式沒有標示自己 —— K11、D2
-
-**現況**：照術語「模式」逐個找，filu 只有一個模式：yank viewport 的選取（`detailYank.visual`，`v` 進、`v` / `Esc` 出）。zoom 是版面
-切換、finder 打字 / 清單是階段（F1）、`pendingG` 是 chord，都不是模式。選取中 `detailyank.go` `renderFull()` 的框照樣用這一層的層色
-（`popupLayerColor(m.anim.layer)`），標題照樣是 `Yank: Preview`，唯一的差別是下框 hint 換成 `y:copy Esc:leave ?:keys`。
-
-**規則**：K11（v0.1.18）—— 模式名一律顯示在模式所在的框的**上框右側**，外框換成模式色；離開模式就恢復。focus 的 panel 在模式裡照樣
-是 focus 的線型，只換顏色（filu 的模式在 popup 裡，這半句不適用）。D2 —— 模式色是 Yellow `#f9e2af`（外框與右上角的模式名）。
-
-**怎麼改**：
-
-- 選取中：外框（含標題）畫 Yellow，上框右側放模式名（名字由 filu 定，例：`Selection`，跟 `?` 的標題 `Selection keys` 一致），也是
-  Yellow。離開選取就回到層色、拿掉模式名。
-- `drawPopupBoxPad()` 目前只有左邊的標題，要能在上框右側放一段（橫線長度用 `dispWidth()` 扣掉兩段）；寬度不夠時先截左邊的標題，
-  模式名保留。框的寬度不跟著變（L2）。
-- `?` 疊在選取模式上時，底下的 Yellow 框照 F8 淡化（`dimANSI()` 自然做到），不用另外處理。
-- 順帶一提（不是這輪的改動）：選取反白現在是 Lavender（`selStyle` 的 `userColor`），D2 的「選取」預設是 Yellow；框變 Yellow 之後兩種顏色
-  會同時出現，改完印畫面看一次。
-- 文件：dev-remarks「Preview yank viewport」那段補一句；README 兩份「Preview and copy」／「預覽與複製」可以寫「選取中框變黃、右上角寫著
-  模式名」；CHANGELOG 記一條。
-- 測試（truecolor）：選取中上框在 `╮` 前面是模式名、框線每一格是 `#f9e2af`；離開後框線是層色、沒有模式名；兩種狀態框寬一樣；很窄的
-  寬度下模式名還在。mutation：拿掉顏色、拿掉模式名、離開時不恢復，各自要紅。
-
-
 ## 6. yank viewport 在中文字上把游標與選取畫錯位置 —— L4、D6（不是這一輪的改動）
 
 核對寬度時看到的，v0.1.17 以前就這樣。

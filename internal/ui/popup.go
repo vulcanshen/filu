@@ -19,20 +19,36 @@ func drawPopupBox(bc lipgloss.Color, title, hint string, rows []string, innerW i
 // already styled and already fitted to innerW − 1 (keyLegendFit: whole pairs
 // only, key Blue, colon and description Overlay0, tdp M5, D3).
 func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, innerW int, pad bool) string {
+	return drawPopupBoxMode(bc, title, "", hint, rows, innerW, pad)
+}
+
+// drawPopupBoxMode is drawPopupBoxPad with a label at the right of the top
+// border, one dash in from the corner: the name of the mode the box is in (tdp
+// K11). The label is kept whole; a narrow box cuts the title first.
+func drawPopupBoxMode(bc lipgloss.Color, title, mode, hint string, rows []string, innerW int, pad bool) string {
 	bStyle := lipgloss.NewStyle().Foreground(bc)
 	tStyle := lipgloss.NewStyle().Foreground(bc).Bold(true)
 
-	// A title wider than the box would push its border out and, when the box is
-	// joined beside another, open a gap — clip it to fit. Measured with
-	// dispWidth: a title glyph (the loading icon, a warning sign) takes two cells
-	// on a CJK icon font, and the border must shorten to match.
-	if dispWidth(title) > innerW-1 {
-		title = truncate(title, innerW-1)
+	// The title and the dashes after it fill what the mode label leaves. A title
+	// wider than that would push the border out and, when the box is joined beside
+	// another, open a gap — clip it to fit. Measured with dispWidth: a title glyph
+	// (the loading icon, a warning sign) takes two cells on a CJK icon font, and
+	// the border must shorten to match.
+	room := innerW - 1
+	if mode != "" {
+		room -= dispWidth(mode) + 1
+	}
+	if dispWidth(title) > room {
+		title = truncate(title, room)
 	}
 
 	var b strings.Builder
-	dashesTop := max(0, innerW-1-dispWidth(title))
-	b.WriteString(bStyle.Render("╭─") + tStyle.Render(title) + bStyle.Render(strings.Repeat("─", dashesTop)+"╮") + "\n")
+	dashesTop := max(0, room-dispWidth(title))
+	top := bStyle.Render("╭─") + tStyle.Render(title) + bStyle.Render(strings.Repeat("─", dashesTop))
+	if mode != "" {
+		top += tStyle.Render(mode) + bStyle.Render("─")
+	}
+	b.WriteString(top + bStyle.Render("╮") + "\n")
 	left, right := bStyle.Render("│"), bStyle.Render("│")
 	padRow := left + strings.Repeat(" ", innerW) + right + "\n"
 	if pad {

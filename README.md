@@ -136,7 +136,7 @@ Three panels:
 ### Preview and copy
 
 - The preview shows text with syntax highlighting and line numbers, directory trees, archive contents, PDFs, images, SVG source, and hex for binaries.
-- `y` (or `Enter`) in the preview opens it in a scrollable view: `v` starts a selection, `y` copies it (or everything, if nothing is selected). While selecting, `?` lists the selection keys.
+- `y` (or `Enter`) in the preview opens it in a scrollable view: `v` starts a selection, `y` copies it (or everything, if nothing is selected). While selecting, the box turns yellow with **Selection** at its top right, and `?` lists the selection keys.
 - `y` on a file copies its full path. Copying works through tmux and SSH.
 
 ### Open, edit, and everything else

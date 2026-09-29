@@ -126,3 +126,50 @@ func TestK11TableCoversViewportKeys(t *testing.T) {
 		}
 	}
 }
+
+// tdp K11, D2: a mode labels itself — its name at the top right of the box it is
+// in, the frame in the mode colour (Yellow) — and leaving it puts both back.
+// The box keeps its width either way (L2), and a narrow one keeps the name.
+func TestK11ModeLabelsItself(t *testing.T) {
+	truecolor(t)
+	yellow := [3]int{0xf9, 0xe2, 0xaf}
+	layer1 := [3]int{0xa4, 0xc0, 0xfa} // Lavenphire25
+	m := yankModel(t, true)
+	box := strings.Split(m.detailYank.renderFull(), "\n")
+	top := box[0]
+	if !strings.HasSuffix(ansi.Strip(top), " Selection ─╮") {
+		t.Errorf("selecting, the top border should end with the mode name: %q", ansi.Strip(top))
+	}
+	fg := cellFG(top)
+	for _, at := range []int{0, len(fg) - 1, cellAt(t, top, "Selection"), cellAt(t, top, "notes")} {
+		if !near(fg[at], yellow) {
+			t.Errorf("selecting, top border cell %d is %v, want Yellow %v", at, fg[at], yellow)
+		}
+	}
+	if got := cellFG(box[1])[0]; !near(got, yellow) {
+		t.Errorf("selecting, the side border is %v, want Yellow", got)
+	}
+	width := dispWidth(top)
+
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEsc})
+	if m.detailYank.visual {
+		t.Fatal("Esc should leave the selection")
+	}
+	top = strings.Split(m.detailYank.renderFull(), "\n")[0]
+	if strings.Contains(ansi.Strip(top), "Selection") {
+		t.Errorf("out of the mode, no mode name: %q", ansi.Strip(top))
+	}
+	if got := cellFG(top)[0]; !near(got, layer1) {
+		t.Errorf("out of the mode, the frame is %v, want its layer colour %v", got, layer1)
+	}
+	if got := dispWidth(top); got != width {
+		t.Errorf("the box is %d wide out of the mode, %d in it", got, width)
+	}
+
+	m = press(t, m, runes("v"))
+	m.detailYank.setSize(24, 40) // the narrowest box: 20 inside
+	top = ansi.Strip(strings.Split(m.detailYank.renderFull(), "\n")[0])
+	if !strings.HasSuffix(top, " Selection ─╮") || dispWidth(top) != 22 {
+		t.Errorf("a narrow box should cut the title and keep the mode name: %q", top)
+	}
+}
