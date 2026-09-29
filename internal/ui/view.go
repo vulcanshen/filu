@@ -330,6 +330,9 @@ func (m AppModel) panelBoxHint(focused bool, title string, pairs [][2]string, w,
 		b.WriteString(bs.Render(vt) + padDisp(line, inner) + bs.Render(vt) + "\n")
 	}
 	hint := keyLegendFit(pairs, inner)
+	if !focused { // Blue is for where the keys go: an idle panel's hint is dim (tdp D2)
+		hint = legendFit(pairs, inner, dimColor, borderDim)
+	}
 	botFill := max(inner-dispWidth(hint), 0)
 	b.WriteString(bs.Render(bl) + hint + bs.Render(strings.Repeat(hz, botFill)+br))
 	return b.String()
@@ -342,8 +345,14 @@ func (m AppModel) panelBoxHint(focused bool, title string, pairs [][2]string, w,
 // when not even the first one fits, or there are none. Every hint goes through
 // it: the panels' and popups' bottom borders and the footer.
 func keyLegendFit(pairs [][2]string, w int) string {
-	keyStyle := lipgloss.NewStyle().Foreground(focusColor)
-	descStyle := lipgloss.NewStyle().Foreground(dimColor)
+	return legendFit(pairs, w, focusColor, dimColor)
+}
+
+// legendFit is keyLegendFit in the given colours: the key, then its colon and
+// description. A panel without focus uses Overlay0 / Surface2 (tdp D2).
+func legendFit(pairs [][2]string, w int, keyColor, descColor lipgloss.Color) string {
+	keyStyle := lipgloss.NewStyle().Foreground(keyColor)
+	descStyle := lipgloss.NewStyle().Foreground(descColor)
 	var parts []string
 	used := 2 // a space on each side
 	for _, p := range pairs {

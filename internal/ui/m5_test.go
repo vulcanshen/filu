@@ -2,6 +2,7 @@ package ui
 
 import (
 	"math"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -255,6 +256,44 @@ func TestD3HintsDropWholePairs(t *testing.T) {
 	} {
 		if c.got != c.want {
 			t.Errorf("%s = %q, want %q", c.name, c.got, c.want)
+		}
+	}
+}
+
+// tdp D2: a panel without focus shows its hint dim — the key Overlay0, colon and
+// description Surface2; Blue is for where the keys go.
+func TestD2UnfocusedPanelHintIsDim(t *testing.T) {
+	surface2 := [3]int{0x58, 0x5b, 0x70}
+	for _, c := range []struct {
+		tab       int
+		key, desc string
+	}{{0, "p", ":pick"}, {2, "o", ":open in"}} {
+		m := f8Model(t)
+		m.marks.items = []string{filepath.Join(m.tabs[0].dir, "a.txt")}
+		m.places.pinned = []place{{path: m.tabs[0].dir}}
+		m.marksTab = c.tab
+		for _, f := range []struct {
+			focus     panelID
+			key, desc [3]int
+		}{{panelList, m5Overlay0, surface2}, {panelMarks, m5Blue, m5Overlay0}} {
+			m.focus = f.focus
+			found := false
+			for _, line := range strings.Split(m.View(), "\n") {
+				if !strings.Contains(ansi.Strip(line), c.key+c.desc) {
+					continue
+				}
+				found = true
+				fg := cellFG(line)
+				if got := fg[cellAt(t, line, c.key+c.desc)]; !near(got, f.key) {
+					t.Errorf("tab %d, focus %d: key %q is %v, want %v", c.tab, f.focus, c.key, got, f.key)
+				}
+				if got := fg[cellAt(t, line, c.desc)]; !near(got, f.desc) {
+					t.Errorf("tab %d, focus %d: %q is %v, want %v", c.tab, f.focus, c.desc, got, f.desc)
+				}
+			}
+			if !found {
+				t.Errorf("tab %d, focus %d: no %q hint on screen", c.tab, f.focus, c.key+c.desc)
+			}
 		}
 	}
 }
