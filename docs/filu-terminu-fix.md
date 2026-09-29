@@ -82,22 +82,6 @@ New tab 的 Search 都是它。`listColumn()` 的 cursor 列：打字時底色 `
   寬度下模式名還在。mutation：拿掉顏色、拿掉模式名、離開時不恢復，各自要紅。
 
 
-## 4. 失焦的 `[3]` 邊框上的 hint 還是 focus 的顏色 —— D2
-
-**現況**：`view.go` `marksBody()` 不管 `focused` 都回傳 `marksHint()` / `favoritesHint()`，`normalMiddle()` 把它交給 `panelBoxHint()`，
-所以 `[3]` 失焦時下框照樣有 hint，而且是 `keyLegend()` 的配色（鍵 Blue、冒號與說明 Overlay0），跟 focus 時一樣。`[1]` 失焦時
-`listNavHint()` 回空字串、`[2]` 沒有 hint、zoom 時 panel 一定是 focus 的，這三處沒有問題。
-
-**規則**：D2（v0.1.18）—— 失焦 panel 邊框上的 hint：鍵 Overlay0 `#6c7086`、冒號與說明 Surface2 `#585b70`；Blue 是 focus 的顏色，只給
-拿鍵的地方。
-
-**怎麼改**：`keyLegend()` 多一種失焦配色（或帶一個 focused 參數），`marksBody()` 在 `!focused` 時用它。要不要乾脆像 `[1]` 一樣失焦就
-不顯示，由 filu 決定；顯示的話照上面的顏色。
-
-測試（truecolor）：focus 在 `[1]`、bucket 有東西時，`[3]` 下框 hint 的鍵是 `#6c7086`、冒號與說明 `#585b70`；focus 移到 `[3]` 後是 Blue /
-Overlay0。Favorites 分頁也跑一次。mutation：失焦時改回原配色要紅。
-
-
 ## 6. yank viewport 在中文字上把游標與選取畫錯位置 —— L4、D6（不是這一輪的改動）
 
 核對寬度時看到的，v0.1.17 以前就這樣。

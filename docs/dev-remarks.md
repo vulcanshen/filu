@@ -109,7 +109,9 @@
   hint 與 panel 下框、footer 同一個 helper(`keyLegendFit()`):`鍵:說明`、項目之間一個空格，
   鍵 Blue、冒號與說明 Overlay0(tdp M5、D2)。每個框用自己的寬度去 fit,放不下的項目從尾端
   整組不放、不截在中間(tdp D3、D1;finder 並排時的清單框在 96–116 欄會用到);`drawPopupBoxPad`
-  原樣放上去，不再截、也不用層色重畫。panel 的下框收「鍵、說明」的組，由 `panelBoxHint()` fit。
+  原樣放上去，不再截、也不用層色重畫。panel 的下框收「鍵、說明」的組，由 `panelBoxHint()` fit;
+  panel 沒有 focus 時(`[3]` 在 focus 停在 `[1]` 時照樣列 Marks / Favorites 的鍵)改用
+  `legendFit()` 的暗配色：鍵 Overlay0、冒號與說明 Surface2 —— Blue 只給拿鍵的地方(tdp D2)。
   key reference 的鍵 Blue、說明 Text,區塊標題維持暗字。
 - **popup 一律同寬** — 每個 popup 的外框都是 `min(terminal 寬 − 2, 120)`(`popupInnerWidth()`
   給扣掉左右邊框的內寬),不看內容:說明太長就截、訊息與值在框內折行(tdp F7,取代 D4 的
