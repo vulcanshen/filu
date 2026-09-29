@@ -256,8 +256,9 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   - chmod / extract、真圖(kitty / sixel)、sort filter、續傳。
 - **tdp**:2026-09-28 對照 v0.1.7 全文修完，同日再跟上 v0.1.8–v0.1.10(F1 六類、F7 尺寸、
   F8 dim、K11 模式沒有按鍵清單)與 v0.1.11–v0.1.12(F7 loading icon、D2 淡化不變亮、D6
-  truecolor)、v0.1.13(F1 放寬 menu 與 confirm,filu 不必改),都符合(沒有偏離，見下一節)。之後發現沒寫理由的違反，列進
-  `docs/filu-terminu-fix.md`(目前沒有這個檔)。
+  truecolor)、v0.1.13(F1 放寬 menu 與 confirm,filu 不必改);2026-09-29 跟上 v0.1.14–v0.1.17
+  (PTY 出口鍵先 confirm、按鍵的寫法與顏色、key reference 變暗、zoom 不算模式),都符合(沒有
+  偏離，見下一節)。之後發現沒寫理由的違反，列進 `docs/filu-terminu-fix.md`(目前沒有這個檔)。
 
 ## 偏離 tdp
 
@@ -265,8 +266,8 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 
 ## 對照 tdp 時確認過的
 
-2026-09-28 三輪修 `filu-terminu-fix.md`(v0.1.7、v0.1.10、v0.1.12 各一輪，清單都已刪)時留下的：
-下次對照不必重查的，以及當時由 user 逐題裁定的。
+2026-09-28 到 09-29 四次修 `filu-terminu-fix.md`(v0.1.7、v0.1.10、v0.1.12、v0.1.17 各一輪，清單
+都已刪;v0.1.13 只改文件)時留下的：下次對照不必重查的，以及當時由 user 逐題裁定的。
 
 **已經符合、不用修的**(對照 v0.1.7)
 
@@ -314,7 +315,24 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   `Enter` 都是執行，沒有「只有 cursor、沒別的動作」的清單;confirm 只有一句問句(Delete、Unfavorite、Clear marks、
   Open、Shell),沒有要先讀的明細。沒有東西要改。
 
-**user 裁定的**(2026-09-28)
+**已經符合、不用修的**(對照 v0.1.14–v0.1.17)
+
+- **F1、F8 toast 除了 `Esc` 不收鍵、不觸發 dim**:`Update` 的 toast 分支只認 `esc`,其他鍵照常
+  往下路由(`TestF3ToastLetsOtherKeysThrough`);toast 不在 `popupLayers()` / `stackOrder()`,
+  `View` 在 dim 與合成之後才畫它。
+- **K11 模式裡回應 `Tab` 的 toast,第一個 `Esc` 先收它**:toast 的 `Esc` 分支在 `detailYank`
+  路由之前，第一個 `Esc` 收 toast、選取還在，第二個才離開選取(`TestK11TabAnswersWhileSelecting`)。
+- **PTY 開著時的 toast**:沒有框疊在 PTY 上時，`Esc` 給 shell,toast 等時間到自己收 ——
+  terminal 類「按鍵都給子程序，只有出口鍵屬於 app」(F1、K10)優先;PTY 上疊了 confirm 時，
+  toast 的 `Esc` 才先收(`TestPtyToastEscOrder`)。
+- **D5 其他 Alt 組合的出口鍵**:filu 的 PTY 只有 `Alt-Esc` 一個 app 鍵，不適用。
+- **術語「模式」**:filu 唯一的模式是 yank viewport 的選取;zoom 見「設計決定」。
+- **M5 的 label**:`[]` 只出現在 label —— menu 的列(`bracketHotkey()`)與 panel 標題。key
+  reference 說明裡的 `[1]`(`enterDesc()`)是 panel 的名字，不是熱鍵標記。
+- **M6 描述別的 surface 的段落(v0.1.16)**:filu 的 key reference 沒有這種段落 —— 區塊標題
+  `item operation`、`panel operation`、`keys` 都是這個 surface 自己的鍵。
+
+**user 裁定的**(2026-09-28、2026-09-29)
 
 - 檔案列上 `Enter` 不做事 → 不符合 K3,改成開 metadata popup(`metaPopup`)。`[2]`、`[3]`
   的 `Enter` 見「設計決定」的 `Enter` 那條。
@@ -328,6 +346,11 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 - `O` 的 picker 要不要 confirm → 不要(見「設計決定」)。
 - `[3]` Tasks 執行中的轉圈 → 換成 D3 的 loading icon,全 app 只有一種轉圈(原本是 braille 點)。
 - finder 載入中 → 邊串流邊列出結果(以前要等走訪結束才顯示清單)。
+- (2026-09-29)下框與 footer 的小寫 `enter`、`space`、`esc`、`tab` → 大駝峰;toast 的 `(w)`
+  → `[w]`;README 兩份照同一套鍵名(tdp M5,v0.1.15)。
+- (2026-09-29)menu 與 key reference 說明欄裡提到的鍵算不算句子 → 算，加方括號
+  (`next tab [h]/[l]`);tdp v0.1.17 照這個裁定寫進 M5。
+- (2026-09-29)zoom 不讓 `Esc` 退出 → 照 v0.1.14 的術語「模式」已經不是偏離，移到「設計決定」。
 
 ## 設計文件導讀
 
