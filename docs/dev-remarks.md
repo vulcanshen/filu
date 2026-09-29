@@ -65,6 +65,9 @@
 - **Preview yank viewport** — `[2]` 的 `y` 開一個覆蓋 preview 的 viewport(`detailyank.go`):
   vim cursor + `v` 字元級選取,行號 gutter 不進剪貼簿;preview 為了塞進面板寬折斷的
   續行(`previewModel.cont`)複製時**不補**換行,否則貼出來的 base64 / 長 URL 會斷掉。
+  移動照 vim:`h/j/k/l`、`0/$`、`gg/G`、`u/d`,以及以字為單位的 `w/b/e`(`wordmotion.go`):
+  字分三類(空白、字母數字與 `_`、其他標點),跨行時行尾算空白、空行自成一個字(`w`、`b` 停在
+  它上面),但折斷的續行不算行尾 —— 被面板寬切成兩段的字仍是一個字。選取內外都能用。
   選取是 tdp K11 的「模式」:鍵表只有一張(`selectKeys`),選取中 `?` 的 key reference 與
   viewport 本身 key reference 的移動列都由它產生。模式裡沒有 Space menu、也沒有可執行的
   按鍵清單，模式的鍵直接按;選取中 `Space` 不作用(tdp v0.1.10 拿掉了 v0.1.2 起那份只用方向鍵

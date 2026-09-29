@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- In the preview's scrollable view, `w`, `b` and `e` move by word, as in vim —
+  across lines, stopping on empty lines, and through a selection too. A word
+  the preview wrapped to fit the panel still counts as one word.
 - The finders show a turning icon after their title while results are still
   coming in (the file walk, or a content search), and it goes when they are
   done.
