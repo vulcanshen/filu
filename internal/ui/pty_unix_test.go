@@ -5,6 +5,7 @@ package ui
 import (
 	"bytes"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -369,5 +370,48 @@ func TestPtyFrameShowsExitKey(t *testing.T) {
 	}
 	if got := fg[cellAt(t, bottom, ":close")]; !near(got, m5Overlay0) {
 		t.Errorf("the exit key's description is %v, want Overlay0 %v", got, m5Overlay0)
+	}
+}
+
+// tdp D6 (v0.1.22): what runs in the shell PTY is told the icon width filu
+// uses, as TERMINU__ICON_WIDTH — one entry, replacing any it inherited, the
+// rest of its environment kept — and it really sees it.
+func TestPtyHandsDownTheIconWidth(t *testing.T) {
+	defer restoreIconCells(iconCells)
+	for _, cells := range []int{1, 2} {
+		iconCells = cells
+		want := "TERMINU__ICON_WIDTH=" + string(rune('0'+cells))
+
+		cmd := exec.Command("true")
+		cmd.Env = []string{"KEEP=1", "TERMINU__ICON_WIDTH=9"}
+		p := newPtyPopup()
+		p.start(cmd, "Shell", t.TempDir(), 80, 24)
+		n := 0
+		for _, kv := range cmd.Env {
+			if strings.HasPrefix(kv, "TERMINU__ICON_WIDTH=") {
+				n++
+				if kv != want {
+					t.Errorf("cells %d: the child got %q, want %q", cells, kv, want)
+				}
+			}
+		}
+		if n != 1 || !slices.Contains(cmd.Env, "KEEP=1") {
+			t.Errorf("cells %d: want one TERMINU__ICON_WIDTH and the rest kept, got %q", cells, cmd.Env)
+		}
+		p.stop()
+
+		// End to end: a shell in the PTY prints what it was handed, and still
+		// has filu's own environment (a command with no Env of its own inherits it).
+		t.Setenv("FILU__TEST_MARK", "kept")
+		p = newPtyPopup()
+		p.start(exec.Command("sh", "-c", "echo W=$TERMINU__ICON_WIDTH M=$FILU__TEST_MARK"), "Shell", t.TempDir(), 80, 24)
+		if !waitDone(p, 3*time.Second) {
+			t.Fatal("the shell should have exited")
+		}
+		p.anim.state = popupOpen // past the open animation: the frame shows the grid
+		if out := ansi.Strip(p.renderPopup()); !strings.Contains(out, "W="+string(rune('0'+cells))+" M=kept") {
+			t.Errorf("cells %d: the shell should see TERMINU__ICON_WIDTH=%d and filu's environment:\n%s", cells, cells, out)
+		}
+		p.stop()
 	}
 }

@@ -19,9 +19,15 @@ import (
 // the borders. It probes with CPR: print an icon at column 1, ask the terminal
 // where the cursor ended up. Any failure (not a tty, no CPR reply, timeout)
 // leaves iconCells at its default of 1. Call once, before tea.NewProgram.
+//
+// Two variables come first (tdp D6): FILU__ICON_WIDTH, the manual override for
+// a flaky CPR; then TERMINU__ICON_WIDTH, which a family app sets for what runs
+// in its PTY — in there the probe is answered by that app's terminal emulator,
+// which counts an icon as one cell. Only 1 or 2 count; anything else is as if
+// unset.
 func DetectIconWidth() {
-	if v := os.Getenv("FILU__ICON_WIDTH"); v != "" { // manual override for flaky CPR
-		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 2 {
+	for _, name := range []string{"FILU__ICON_WIDTH", "TERMINU__ICON_WIDTH"} {
+		if n, err := strconv.Atoi(os.Getenv(name)); err == nil && n >= 1 && n <= 2 {
 			iconCells = n
 			return
 		}

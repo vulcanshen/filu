@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -71,6 +72,9 @@ func (p *ptyPopup) start(cmd *exec.Cmd, title, dir string, hostW, hostH int) tea
 	cols, rows := p.dims()
 	p.term = vt10x.New(vt10x.WithSize(cols, rows))
 	cmd.Dir = dir // root the process in the tab's directory (the shell opens here)
+	// A family app run in here asks this PTY where its cursor went, and vt10x
+	// counts an icon as one cell: hand it the width filu uses (tdp D6).
+	cmd.Env = withEnv(cmd.Env, "TERMINU__ICON_WIDTH", strconv.Itoa(iconCells))
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})
 	if err != nil { // the popup never opens; say why instead of doing nothing (tdp F5)
 		p.active = false
@@ -386,6 +390,21 @@ func buildShellCmd() *exec.Cmd {
 	c := exec.Command(shell)
 	c.Env = sanitizeEditorEnv()
 	return c
+}
+
+// withEnv is env with key set to val: an existing key=… entry is replaced, not
+// repeated. A nil env stands for filu's own environment, as exec.Cmd takes it.
+func withEnv(env []string, key, val string) []string {
+	if env == nil {
+		env = os.Environ()
+	}
+	out := make([]string, 0, len(env)+1)
+	for _, kv := range env {
+		if k, _, _ := strings.Cut(kv, "="); k != key {
+			out = append(out, kv)
+		}
+	}
+	return append(out, key+"="+val)
 }
 
 func sanitizeEditorEnv() []string {

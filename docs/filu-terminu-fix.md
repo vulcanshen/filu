@@ -21,29 +21,6 @@ tdp 連結（README 兩份、docs、`.claude/rules`）已由 terminu session 從
 - 每修一處補 model test、做 mutation；同一個 commit 同步 README 兩份與 dev-remarks；CHANGELOG 記 `[Unreleased]`。
 - **修完拿 v0.1.22 全文再逐條對一次**，修完刪掉這份清單。不 push、不發版；把這一輪寫進 terminu `.local/family-fix/filu/README.md`。
 
-## 1. icon 寬度沒有讀 `TERMINU__ICON_WIDTH` —— D6（v0.1.22）
-
-**現況**（`internal/ui/iconwidth_unix.go` `DetectIconWidth()`）：先讀 `FILU__ICON_WIDTH`，沒有就探測。filu 跑在別的 app 的 PTY 裡時（例：kbu 的 Alterm、filu 的 shell、sshu 的
-格子），探測由外層的終端模擬器回答，icon 一律量成一格。
-
-**規則**：D6（v0.1.22）—— 取 icon 寬度的順序是 `<APP>__ICON_WIDTH` → `TERMINU__ICON_WIDTH` → 探測；有 PTY 的 app 開子程序時，在子程序
-的環境設 `TERMINU__ICON_WIDTH=<自己用的格數>`（自己用的格數 = 上面三步得到的那個值，所以巢狀幾層都傳得下去）。
-
-**怎麼改**：`FILU__ICON_WIDTH` 沒設時讀 `TERMINU__ICON_WIDTH`（只收 `1`、`2`，其他值當沒設），都沒有才探測；有值時不探測（不送 CPR）。
-測試：三種來源的優先順序各一例（兩個都設時 `FILU__ICON_WIDTH` 贏；只有 `TERMINU__ICON_WIDTH` 時用它、不探測；都沒有時探測）；
-不合法的值被忽略。README 兩份寫 icon 寬度的地方與 dev-remarks 補一句。
-
-## 2. 開 PTY 子程序時沒有設 `TERMINU__ICON_WIDTH` —— D6（v0.1.22）
-
-**現況**：shell PTY 在 `internal/ui/pty_unix.go` 用 `pty.StartWithSize(cmd, …)` 開，`cmd.Env` 沒有加 `TERMINU__ICON_WIDTH`。
-
-**規則**：D6（v0.1.22）—— 取 icon 寬度的順序是 `<APP>__ICON_WIDTH` → `TERMINU__ICON_WIDTH` → 探測；有 PTY 的 app 開子程序時，在子程序
-的環境設 `TERMINU__ICON_WIDTH=<自己用的格數>`（自己用的格數 = 上面三步得到的那個值，所以巢狀幾層都傳得下去）。
-
-**怎麼改**：每個開 PTY 的地方，子程序的環境加上 `TERMINU__ICON_WIDTH=<iconCells>`（已經有同名的就覆寫，不重複）。測試：子程序拿到的環境
-裡有這個變數、值等於目前的 `iconCells`（1 與 2 各一例）。實機：在這個 app 的 PTY 裡跑另一個家族 app，框線不歪。
-
-
 ## 已經符合、不用修的（對照 v0.1.22 的改動）
 
 - **D6 疊 popup 寬高都大也切**：`compositeDisp()` 第八輪（`b2436f3`）已經拿掉「又寬又高就原樣回傳」，`TestD6CompositeDispOversized` 就是
