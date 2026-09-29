@@ -1,7 +1,7 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.20/principle)（tdp）；
+[terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.21/principle)（tdp）；
 使用者要知道的在 README,這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
@@ -413,7 +413,7 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 ## 設計文件導讀
 
 filu 沒有另外的設計文件;功能與決定的原始清單在 `.forge/meta/IDEA.md`(本機、不進版控)。
-tdp 本身在 [terminu](https://github.com/vulcanshen/terminu/tree/v0.1.20/principle)。
+tdp 本身在 [terminu](https://github.com/vulcanshen/terminu/tree/v0.1.21/principle)。
 
 | 檔案 | 內容 |
 |---|---|
