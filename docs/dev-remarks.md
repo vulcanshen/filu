@@ -281,8 +281,10 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 - **tdp**:2026-09-28 對照 v0.1.7 全文修完，同日再跟上 v0.1.8–v0.1.10(F1 六類、F7 尺寸、
   F8 dim、K11 模式沒有按鍵清單)與 v0.1.11–v0.1.12(F7 loading icon、D2 淡化不變亮、D6
   truecolor)、v0.1.13(F1 放寬 menu 與 confirm,filu 不必改);2026-09-29 跟上 v0.1.14–v0.1.17
-  (PTY 出口鍵先 confirm、按鍵的寫法與顏色、key reference 變暗、zoom 不算模式),都符合(沒有
-  偏離，見下一節)。之後發現沒寫理由的違反，列進 `docs/filu-terminu-fix.md`(目前沒有這個檔)。
+  (PTY 出口鍵先 confirm、按鍵的寫法與顏色、key reference 變暗、zoom 不算模式)與 v0.1.18–
+  v0.1.19(icon 寬度全走顯示寬度、finder 的 focus、模式標示自己、失焦 hint 變暗、hint 整組捨棄),
+  都符合(沒有偏離，見下一節)。之後發現沒寫理由的違反，列進 `docs/filu-terminu-fix.md`(目前
+  沒有這個檔)。
 
 ## 偏離 tdp
 
@@ -290,8 +292,8 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
 
 ## 對照 tdp 時確認過的
 
-2026-09-28 到 09-29 四次修 `filu-terminu-fix.md`(v0.1.7、v0.1.10、v0.1.12、v0.1.17 各一輪，清單
-都已刪;v0.1.13 只改文件)時留下的：下次對照不必重查的，以及當時由 user 逐題裁定的。
+2026-09-28 到 09-29 五次修 `filu-terminu-fix.md`(v0.1.7、v0.1.10、v0.1.12、v0.1.17、v0.1.19 各一輪，
+清單都已刪;v0.1.13 只改文件)時留下的：下次對照不必重查的，以及當時由 user 逐題裁定的。
 
 **已經符合、不用修的**(對照 v0.1.7)
 
@@ -355,6 +357,22 @@ CJK 字型畫 2 格)、分頁標籤用目錄名、`gt` 當 Goto chord(vim 的 go
   reference 說明裡的 `[1]`(`enterDesc()`)是 panel 的名字，不是熱鍵標記。
 - **M6 描述別的 surface 的段落(v0.1.16)**:filu 的 key reference 沒有這種段落 —— 區塊標題
   `item operation`、`panel operation`、`keys` 都是這個 surface 自己的鍵。
+
+**已經符合、不用修的**(對照 v0.1.18–v0.1.19)
+
+- **L5 focus 不只靠顏色**:focus 的 panel 畫雙線 `╔═╗`、失焦圓角(`panelBoxHint()` 的框線
+  選擇),兩者同寬。
+- **D6 的探測**:`cmd/filu/main.go` 在 `tea.NewProgram` 之前呼叫 `ui.DetectIconWidth()`(CPR
+  探測，失敗維持 1,`FILU_ICON_WIDTH` 可覆寫),`filu iconwidth` 印出結果;`dimANSI()` 只改
+  SGR、不量寬度。
+- **K11 focus 的 panel 保留線型**:filu 的模式在 popup 裡，不適用。
+- **D2 失焦 hint 的其他地方**:`[1]` 失焦時不顯示 hint、`[2]` 沒有 hint、zoom 時 panel 一定是
+  focus 的;要改的只有 `[3]`。
+- **K10 子程序還沒準備好收鍵**:shell 同步啟動,`ptyPopup.update()` 在 `ptmx` 建好之前不轉送;
+  條文是「可以」。一開就轉送,`Ctrl-C` 是 shell 的，出口鍵 `Alt-Esc` 照樣有效、常駐揭露。
+- **K9 PTY 裡 `q`、`Ctrl-C` 屬於子程序**:沒有框疊在 PTY 上時全部送進 shell
+  (`TestPtyKeysBelongToShell`);`Alt-Esc` 的 confirm 疊在上面時 focus 已經不在 PTY,`q` /
+  `Ctrl-C` 進離開流程。
 
 **user 裁定的**(2026-09-28、2026-09-29)
 
