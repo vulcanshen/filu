@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 ### Added
+- filu run inside another terminu app's terminal (kbu's Alterm, filu's own
+  shell, an sshu cell) takes the icon width that app uses from
+  `TERMINU__ICON_WIDTH`, instead of a probe the inner terminal answers wrongly;
+  and programs started in filu's shell are told filu's icon width the same way.
+  `FILU__ICON_WIDTH` still wins over both.
 - In the preview's scrollable view, `w`, `b` and `e` move by word, as in vim —
   across lines, stopping on empty lines, and through a selection too. A word
   the preview wrapped to fit the panel still counts as one word.

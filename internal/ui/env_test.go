@@ -32,6 +32,7 @@ func TestEnvNamesFollowTheFamily(t *testing.T) {
 	// The icon width override (tests run without a terminal, so no probe).
 	defer restoreIconCells(iconCells)
 	iconCells = 1
+	t.Setenv("TERMINU__ICON_WIDTH", "") // not what an outer family PTY may have set
 	t.Setenv("FILU_ICON_WIDTH", "2")
 	DetectIconWidth()
 	if iconCells != 1 {
@@ -64,5 +65,32 @@ func TestEnvNamesFollowTheFamily(t *testing.T) {
 	t.Setenv("FILU__REPAINT", "1")
 	if !repaints() {
 		t.Error("FILU__REPAINT=1 should repaint on navigation")
+	}
+}
+
+// tdp D6 (v0.1.22): the icon width comes from FILU__ICON_WIDTH, then
+// TERMINU__ICON_WIDTH (set by a family app for what runs in its PTY), then the
+// probe; only 1 or 2 count. Tests run without a terminal, so the probe leaves
+// the width as it was (1 here).
+func TestIconWidthSources(t *testing.T) {
+	defer restoreIconCells(iconCells)
+	for _, c := range []struct {
+		name        string
+		own, family string
+		want        int
+	}{
+		{"both set: filu's own wins", "1", "2", 1},
+		{"only the family one", "", "2", 2},
+		{"own not a width: the family one", "x", "2", 2},
+		{"family not a width: ignored", "", "3", 1},
+		{"neither: the probe", "", "", 1},
+	} {
+		iconCells = 1
+		t.Setenv("FILU__ICON_WIDTH", c.own)
+		t.Setenv("TERMINU__ICON_WIDTH", c.family)
+		DetectIconWidth()
+		if iconCells != c.want {
+			t.Errorf("%s: %d cells, want %d", c.name, iconCells, c.want)
+		}
 	}
 }

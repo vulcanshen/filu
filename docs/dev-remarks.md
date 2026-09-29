@@ -101,9 +101,13 @@
   `config.yaml` / `state.yaml` 照原檔名放在裡面(測試與 demo 錄製用它隔離，demo 兩個都指向
   `.local/demos/filu-home`)。filu 讀的變數一律照 tdp D6 的 `FILU__<名字>`(app 名後兩個底線):
   `__CONFIG`、`__STATE`、`__LAST_DIR_FILE`、`__ICON_WIDTH`、`__REPAINT`;2026-09-29 從單底線
-  改名、不留舊名(user 裁定)。
+  改名、不留舊名(user 裁定)。另讀家族共用的 `TERMINU__ICON_WIDTH`(見下一條)。
 - **CJK Nerd Font 寬度** — 有些 CJK Nerd Font(如 Maple Mono NF CN)把 file-type icon
-  畫成 2 格。filu 啟動時用 CPR 偵測實際格寬(`DetectIconWidth()`),**每一個量寬度的地方**
+  畫成 2 格。filu 啟動時決定 icon 佔幾格(`DetectIconWidth()`),順序照 tdp D6:
+  `FILU__ICON_WIDTH`(手動覆寫)→ `TERMINU__ICON_WIDTH`(家族 app 在自己的 PTY 裡設給子程序的;
+  在別的 app 的 PTY 裡，CPR 是外層的終端模擬器回答，它把 icon 當一格，量不到真的)→ CPR 探測
+  實際格寬，只收 1、2。反過來，`[s]hell` 的 PTY 開子程序時也把自己用的格數設成
+  `TERMINU__ICON_WIDTH`(`ptyPopup.start()`,取代繼承來的同名值),巢狀幾層都傳得下去。**每一個量寬度的地方**
   都走 `width.go` 的顯示寬度層(tdp D6,filu 是參考實作):量寬 `dispWidth()`、截斷
   `dispClip()` / `truncate()` / `truncPathLeft()`、補齊 `padDisp()`、並排 `joinH()` /
   `joinV()`、置中 `centerDisp()`,疊 popup 用 `compositeDisp()`(`overlay.Composite` 的
