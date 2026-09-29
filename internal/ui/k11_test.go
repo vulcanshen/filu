@@ -120,7 +120,7 @@ func TestK11TableCoversViewportKeys(t *testing.T) {
 	for _, k := range selectKeys {
 		triggers[k.trigger()] = true
 	}
-	for _, key := range []string{"h", "l", "j", "k", "0", "$", "g", "G", "u", "d", "y", "v"} {
+	for _, key := range []string{"h", "l", "j", "k", "w", "b", "e", "0", "$", "g", "G", "u", "d", "y", "v"} {
 		if !triggers[key] {
 			t.Errorf("the viewport answers to %q while selecting, but the mode's key reference has no row for it", key)
 		}

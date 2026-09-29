@@ -123,8 +123,8 @@ func (m *detailYank) ensureVisible() {
 	}
 }
 
-// update handles motion (hjkl, 0/$, gg/G, d/u), v (visual toggle), y (copy), and
-// Esc (leave visual, then close).
+// update handles motion (hjkl, w/e/b, 0/$, gg/G, d/u), v (visual toggle), y
+// (copy), and Esc (leave visual, then close).
 func (m detailYank) update(msg tea.KeyMsg) (detailYank, tea.Cmd) {
 	if !m.anim.isInteractive() {
 		return m, nil
@@ -160,6 +160,16 @@ func (m detailYank) update(msg tea.KeyMsg) (detailYank, tea.Cmd) {
 			m.clampCol()
 		}
 		m.pendingG = false
+		m.ensureVisible()
+	case "w", "e", "b": // by word, as vim (wordmotion.go)
+		m.pendingG = false
+		if len(m.plain) == 0 {
+			return m, nil
+		}
+		move := map[string]func(wordPos) wordPos{"w": m.wordForward, "e": m.wordEnd, "b": m.wordBack}[msg.String()]
+		p := move(wordPos{m.cursorLine, m.cursorCol})
+		m.cursorLine, m.cursorCol = p.line, p.col
+		m.clampCol()
 		m.ensureVisible()
 	case "0":
 		m.cursorCol, m.pendingG = 0, false
