@@ -261,6 +261,8 @@ filu/
   breadcrumb 承載。第一格固定是 rocket(= `iconCWD`,quit picker 用的同一顆)。
 - **`maxTabs = 5` 恆定**:讓 tab bar 寬度與 zoom 分欄數有上界。zoom 時有 tab 的面板依
   實際 tab 數攤成等寬並排欄(`splitN(w, len(m.tabs))`),每欄各自顯示自己的 breadcrumb。
+  focus 的那欄下框跟一般版面的 `[1]` 一樣帶 `listNavHint()`,其他欄跟失焦的 list 一樣空著;
+  v0.4.0 發版前才補上(原本 zoom 畫的是 `panelBox()`,下框全空，`TestZoomListKeepsItsHint`)。
 - **面板數是成本。** 早期是 5-panel + header 麵包屑 + top status bar;v0.2.0 收斂成 3-panel
   (Places 併進 Favorites tab 與 Goto picker、Meta 併進 list 的多欄、Carries 與 Tasks 併成
   `[3]`),v0.2.8 再拆光頂部兩列。能收進既有面板的就不開新面板。
