@@ -16,14 +16,6 @@ tdp 版本不變，連結不用改。這份清單由 terminu session 寫好留�
   terminu `.local/family-fix/filu/README.md`。
 
 
-## 3. Zip 的值只剩 `/` 或 `.` 時，框關了、什麼都沒做
-
-**現況**：檢查只擋空值（`app.go:1176-1178`）。送出時 `zipFileName`（`zip.go:59-68`）取 basename，`/`、`.` 處理成空字串，
-`startZip`（`zip.go:72-89`）直接不做事：popup 照樣關閉、沒有任何訊息。
-
-**怎麼改**：檢查時 `zipFileName` 得到空字串 → 錯誤列（例：`Not a name for a zip file`），框留著。
-
-
 ## 4. CHANGELOG `[Unreleased]` 與註解說「CJK 字型的 icon 就是兩格」
 
 **現況**：tdp D7（v0.1.23）不拿「一定佔兩格」的字型當例子 —— filu 自己實測過，Maple Mono NF CN 的 icon 看起來兩格，游標只

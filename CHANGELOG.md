@@ -151,6 +151,8 @@
   climbs out with `../`, or starts with `/` (which used to land under the
   current directory instead), is refused with the reason in the box. A name
   with directories on the way (`src/new.go`) still creates them.
+- Zip no longer closes without doing anything when its name is only `/` or
+  `.`: the box stays open and says that is not a name for a zip file.
 - On fonts that draw icons two cells wide (CJK Nerd Fonts), popups keep their
   borders straight: the finder's and inputs' prompt rows, finder results and
   previews, Open in, and the preview's scrollable view no longer push their
