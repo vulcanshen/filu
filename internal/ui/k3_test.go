@@ -44,6 +44,10 @@ func TestK3NameCheck(t *testing.T) {
 		{inputAdd, "", "new/../b.txt", ""}, // still in here once cleaned
 		{inputZip, "", "", "Type a name"},
 		{inputZip, "", "bundle", ""},
+		{inputZip, "", "/", "Not a name for a zip file"},
+		{inputZip, "", ".", "Not a name for a zip file"},
+		{inputZip, "", "out/.", "Not a name for a zip file"},
+		{inputZip, "", "out/b", ""}, // packs as b.zip
 	} {
 		got := nameCheck(tc.kind, dir, tc.target)(tc.name)
 		if (tc.want == "") != (got == "") || !strings.Contains(got, tc.want) {
@@ -80,6 +84,25 @@ func TestK3AddStaysInThisDirectory(t *testing.T) {
 	m = press(t, m, enterKey)
 	if _, err := os.Lstat(filepath.Join(sub, "in.txt")); err != nil {
 		t.Error("x/../in.txt stays in the directory and should be created there")
+	}
+}
+
+// Zip's value that leaves no file name (only / or .) keeps the box open and
+// says why, instead of closing and packing nothing.
+func TestK3ZipNeedsAFileName(t *testing.T) {
+	m := f4Model(t)
+	m.focus = panelMarks
+	m.marks.items = []string{filepath.Join(m.tabs[0].dir, "a.txt")}
+	m.handleMarksKey("Z")
+	m.inputPopup.anim.state = popupOpen
+	m.inputPopup.buffer = ""
+	m = press(t, m, runes("/"))
+	m = press(t, m, enterKey)
+	if !m.inputPopup.owns() || !strings.Contains(m.inputPopup.errMsg, "Not a name for a zip file") {
+		t.Errorf("owns %v, reason %q — want the box open with the reason", m.inputPopup.owns(), m.inputPopup.errMsg)
+	}
+	if len(m.tasks) != 0 {
+		t.Errorf("nothing should be packed, got %d tasks", len(m.tasks))
 	}
 }
 

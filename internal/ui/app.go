@@ -1205,6 +1205,10 @@ func nameCheck(kind inputKind, dir, target string) func(string) string {
 			if _, err := os.Lstat(filepath.Join(dir, base)); err == nil {
 				return base + " already exists here"
 			}
+		case inputZip:
+			if zipFileName(name) == "" { // only / or . — the zip would have no name
+				return "Not a name for a zip file"
+			}
 		}
 		return ""
 	}
