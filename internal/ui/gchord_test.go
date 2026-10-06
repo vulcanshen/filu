@@ -146,6 +146,11 @@ func TestGotoMenuFlow(t *testing.T) {
 func TestSearchChooserFlow(t *testing.T) {
 	dir := t.TempDir()
 	mustWrite(t, filepath.Join(dir, "a.go"))
+	// Content search opens only with ripgrep installed, which the CI runners do
+	// not have; without it is TestF5ContentSearchWithoutRipgrep.
+	old := lookPath
+	lookPath = func(string) (string, error) { return "/usr/bin/rg", nil }
+	defer func() { lookPath = old }()
 
 	newM := func() AppModel {
 		m := minModel()
