@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-06
+
+**The environment variables filu reads are renamed, and the old names are no
+longer read**: the app name followed by two underscores, as across the terminu
+family. If you set the old ones, set the new names — filu otherwise goes back
+to its defaults without a word:
+
+| Old | New |
+|---|---|
+| `FILU_CONFIG` (the config **file**) | `FILU__CONFIG` (a config **directory**; `config.yaml` inside it) |
+| `FILU_STATE` (the state **file**) | `FILU__STATE` (a state **directory**; `state.yaml` inside it) |
+| `FILU_LAST_DIR_FILE` | `FILU__LAST_DIR_FILE` |
+| `FILU_ICON_WIDTH` | `FILU__ICON_WIDTH` |
+| `FILU_REPAINT` | `FILU__REPAINT` |
+
+`FILU__LAST_DIR_FILE` is set by the shell function from `filu shell`: after
+upgrading, open a new shell (or run `eval "$(filu shell)"` again) so quitting
+still leaves you in the directory you picked.
+
 ### Added
 - filu run inside another terminu app's terminal (kbu's Alterm, filu's own
   shell, an sshu cell) takes the icon width that app uses from
@@ -35,20 +54,6 @@
   presses in vim can arrive as `Alt-Esc`). The shell's frame now says so.
 
 ### Changed
-- **The environment variables filu reads are renamed**, the app name followed
-  by two underscores; the old names are no longer read:
-
-  | Old | New |
-  |---|---|
-  | `FILU_CONFIG` (the config **file**) | `FILU__CONFIG` (a config **directory**; `config.yaml` inside it) |
-  | `FILU_STATE` (the state **file**) | `FILU__STATE` (a state **directory**; `state.yaml` inside it) |
-  | `FILU_LAST_DIR_FILE` | `FILU__LAST_DIR_FILE` |
-  | `FILU_ICON_WIDTH` | `FILU__ICON_WIDTH` |
-  | `FILU_REPAINT` | `FILU__REPAINT` |
-
-  `FILU__LAST_DIR_FILE` is set by the shell function from `filu shell`: after
-  upgrading, open a new shell (or run `eval "$(filu shell)"` again) so
-  quitting still leaves you in the directory you picked.
 - Every popup — menus, confirmations, inputs, key references, file details,
   the finder, the preview viewport and notifications — now has the same width:
   the terminal less one column on each side, at most 120 columns, whatever it
