@@ -37,6 +37,11 @@ func TestK3NameCheck(t *testing.T) {
 		{inputAdd, "", "a.txt", "a.txt already exists"},
 		{inputAdd, "", "sub/", "sub already exists"},
 		{inputAdd, "", "new/deep.txt", ""},
+		{inputAdd, "", "../out.txt", "../out.txt is outside this directory"},
+		{inputAdd, "", "/out/", "/out is outside this directory"},
+		{inputAdd, "", "new/../../out", "outside this directory"},
+		{inputAdd, "", "new/../../", "outside this directory"},
+		{inputAdd, "", "new/../b.txt", ""}, // still in here once cleaned
 		{inputZip, "", "", "Type a name"},
 		{inputZip, "", "bundle", ""},
 	} {
@@ -44,6 +49,37 @@ func TestK3NameCheck(t *testing.T) {
 		if (tc.want == "") != (got == "") || !strings.Contains(got, tc.want) {
 			t.Errorf("kind %d, %q → %q, want %q", tc.kind, tc.name, got, tc.want)
 		}
+	}
+}
+
+// Add creates under the current directory only: a value that climbs out with
+// ../ or starts at / is refused on the spot and creates nothing, here or above;
+// a ../ that stays inside still goes through.
+func TestK3AddStaysInThisDirectory(t *testing.T) {
+	m := f4Model(t)
+	root := m.tabs[0].dir
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	m.tabs[0] = newList(sub)
+	for _, v := range []string{"../out.txt", "/out.txt", "x/../../out.txt"} {
+		m := press(t, openAdd(t, m), runes(v))
+		m = press(t, m, enterKey)
+		if !m.inputPopup.owns() || !strings.Contains(m.inputPopup.errMsg, "outside this directory") {
+			t.Errorf("%q: owns %v, reason %q — want it refused", v, m.inputPopup.owns(), m.inputPopup.errMsg)
+		}
+		for _, p := range []string{filepath.Join(root, "out.txt"), filepath.Join(sub, "out.txt")} {
+			if _, err := os.Lstat(p); err == nil {
+				t.Errorf("%q created %s", v, p)
+				_ = os.Remove(p)
+			}
+		}
+	}
+	m = press(t, openAdd(t, m), runes("x/../in.txt"))
+	m = press(t, m, enterKey)
+	if _, err := os.Lstat(filepath.Join(sub, "in.txt")); err != nil {
+		t.Error("x/../in.txt stays in the directory and should be created there")
 	}
 }
 

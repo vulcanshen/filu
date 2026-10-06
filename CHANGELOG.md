@@ -147,6 +147,10 @@
   Zip refuse a name holding one instead of creating a file with a line break
   in its name: renaming macOS's `Icon\r` shows its `\n`, to delete before
   `Enter`. Other control characters in a paste or a filled-in name are dropped.
+- New no longer creates anything outside the current directory: a name that
+  climbs out with `../`, or starts with `/` (which used to land under the
+  current directory instead), is refused with the reason in the box. A name
+  with directories on the way (`src/new.go`) still creates them.
 - On fonts that draw icons two cells wide (CJK Nerd Fonts), popups keep their
   borders straight: the finder's and inputs' prompt rows, finder results and
   previews, Open in, and the preview's scrollable view no longer push their

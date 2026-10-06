@@ -1197,6 +1197,11 @@ func nameCheck(kind inputKind, dir, target string) func(string) string {
 			if base == "" || base == "." || base == ".." {
 				return "Not a name for a file or directory"
 			}
+			// Under this directory only: filepath.Join would take a ../ out of
+			// it and put a leading / back under it.
+			if c := filepath.Clean(base); filepath.IsAbs(c) || c == ".." || strings.HasPrefix(c, "../") {
+				return base + " is outside this directory"
+			}
 			if _, err := os.Lstat(filepath.Join(dir, base)); err == nil {
 				return base + " already exists here"
 			}

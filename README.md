@@ -144,7 +144,7 @@ Three panels:
 
 - `o` opens a file or directory with its default app. `O` lets you choose the app — add your own (VSCode, IntelliJ IDEA, …) in the config.
 - `s` drops you into your shell in the current directory; type `exit` to come back, or press `Alt-Esc`: filu asks first, then `Enter` ends the shell (whatever is running in it) and `Esc` takes you back to it.
-- `r` renames, `a` creates a file (end the name with `/` for a directory), `D` moves to the trash after asking. A name that is empty, already taken or holding a line break or tab is refused on the spot — the box stays open and says why. A line break or tab you paste, here or into a finder, shows as a red `\n` / `\t`.
+- `r` renames, `a` creates a file (end the name with `/` for a directory), `D` moves to the trash after asking. A name that is empty, already taken, outside the current directory or holding a line break or tab is refused on the spot — the box stays open and says why. A line break or tab you paste, here or into a finder, shows as a red `\n` / `\t`.
 
 ## Key reference
 
