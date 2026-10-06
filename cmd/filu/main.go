@@ -34,7 +34,7 @@ func main() {
 		}
 		startDir, focusName = dir, focus
 	}
-	ui.DetectIconWidth() // measure Nerd Font icon cell width (CJK fonts draw them 2-wide)
+	ui.DetectIconWidth() // how many cells a Nerd Font icon takes: the font and terminal decide
 	p := tea.NewProgram(ui.New(startDir, focusName), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "filu:", err)

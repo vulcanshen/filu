@@ -12,15 +12,15 @@ import (
 func IconCells() int { return iconCells }
 
 // iconCells is how many terminal cells a Nerd Font file-type icon actually
-// occupies. On a normal Nerd Font it is 1; on a CJK "full-width icon" font
-// (e.g. Maple Mono NF CN) the icons are drawn 2 cells wide to align to the CJK
-// grid, while lipgloss/x-ansi still measure them as 1 — that mismatch is what
+// occupies: how far the cursor moves past one, which the font and the terminal
+// decide — an icon can look two cells wide and still move it one. Where it is
+// 2, lipgloss/x-ansi still measure the icon as 1 — that mismatch is what
 // breaks the panel borders. DetectIconWidth (CPR probe, startup) sets this; the
-// default of 1 means "no adjustment", so nothing changes on a normal font.
+// default of 1 means "no adjustment".
 var iconCells = 1
 
-// isWideIcon reports whether r is a Nerd Font file-type glyph that a CJK icon
-// font renders double-width. The powerline caps (U+E0A0–E0D7, the tab-bar
+// isWideIcon reports whether r is a Nerd Font file-type glyph, one that
+// takes iconCells cells. The powerline caps (U+E0A0–E0D7, the tab-bar
 // triangles/rounds) live in the PUA too but render single-width, so they are
 // excluded — only file-type icons get the +1 treatment.
 func isWideIcon(r rune) bool {
@@ -28,7 +28,7 @@ func isWideIcon(r rune) bool {
 		return true // Ⅰ..Ⅴ tab numerals: ambiguous width, drawn wide on CJK fonts
 	}
 	if r >= 0xe0a0 && r <= 0xe0d7 {
-		return false // powerline caps — single-width even on CJK icon fonts
+		return false // powerline caps — single-width even where file icons take two cells
 	}
 	// BMP Private Use Area + supplementary PUA-A (Material Design icons).
 	return (r >= 0xe000 && r <= 0xf8ff) || (r >= 0xf0000 && r <= 0xffffd)
@@ -50,7 +50,7 @@ func iconCount(s string) int {
 }
 
 // dispWidth is the on-screen width of s: the measured width plus the extra cell
-// each file-type icon eats on a CJK icon font.
+// each file-type icon eats where icons take two cells.
 func dispWidth(s string) int {
 	return ansi.StringWidth(s) + iconCount(s)*(iconCells-1)
 }

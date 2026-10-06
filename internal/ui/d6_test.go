@@ -12,7 +12,7 @@ import (
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 )
 
-// wideIcon is a Nerd Font icon: one cell on a normal font, two on a CJK icon font.
+// wideIcon is a Nerd Font icon: one cell or two, as the font and terminal draw icons.
 var wideIcon = string(rune(0xf015))
 
 // d6App is the whole app, 100 × 30, on a directory whose names, previews and

@@ -165,9 +165,8 @@ func (m splashModel) render(width, height int) string {
 	}
 
 	// A pixel is the nf-fa-square glyph in the cell's colour plus a space (two cells
-	// per pixel), matching kbu's splash; unrevealed cells are two blanks. Where a
-	// CJK icon font already draws the glyph two cells wide, the glyph alone is the
-	// pixel (tdp D6).
+	// per pixel), matching kbu's splash; unrevealed cells are two blanks. Where
+	// the glyph already takes two cells, the glyph alone is the pixel (tdp D6).
 	pixel := pixelGlyph + strings.Repeat(" ", max(2-iconCells, 0))
 	var logoLines []string
 	for r := 0; r < len(logoPixels); r++ {

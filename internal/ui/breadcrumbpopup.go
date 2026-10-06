@@ -87,7 +87,7 @@ func (m breadcrumbPopup) renderFull() string {
 
 	// Alignment comes from a plain 2-space gutter; the current level is flagged by
 	// lavender text, not a symbol. Widths are display widths, so a glyph added
-	// here later would still line up on CJK icon fonts (tdp D6).
+	// here later would still line up where icons take two cells (tdp D6).
 	const gutter = "  "
 	innerW := popupInnerWidth(m.screenW) // the family width (tdp F7)
 

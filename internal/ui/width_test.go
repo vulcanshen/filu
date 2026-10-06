@@ -43,7 +43,7 @@ func TestDispWidthWideIcons(t *testing.T) {
 	if got := dispWidth(" " + icon + " name"); got != 7 {
 		t.Errorf("iconCells=1: dispWidth = %d, want 7", got)
 	}
-	iconCells = 2 // CJK icon font: the icon eats an extra cell
+	iconCells = 2 // icons take two cells: the icon eats an extra cell
 	if got := dispWidth(" " + icon + " name"); got != 8 {
 		t.Errorf("iconCells=2: dispWidth = %d, want 8", got)
 	}
@@ -78,7 +78,7 @@ func TestJoinHKeepsColumnsAligned(t *testing.T) {
 }
 
 // TestViewEveryLineIsTerminalWidth is the real proof: with icons rendering
-// 2-wide (the CJK-font case that broke the borders), every line of the composed
+// 2-wide (the case that broke the borders), every line of the composed
 // View must still be exactly the terminal width — otherwise a border is pushed.
 func TestViewEveryLineIsTerminalWidth(t *testing.T) {
 	defer restoreIconCells(iconCells)

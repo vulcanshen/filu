@@ -153,8 +153,8 @@
   with directories on the way (`src/new.go`) still creates them.
 - Zip no longer closes without doing anything when its name is only `/` or
   `.`: the box stays open and says that is not a name for a zip file.
-- On fonts that draw icons two cells wide (CJK Nerd Fonts), popups keep their
-  borders straight: the finder's and inputs' prompt rows, finder results and
+- Where an icon takes two cells (the font and the terminal decide that),
+  popups keep their borders straight: the finder's and inputs' prompt rows, finder results and
   previews, Open in, and the preview's scrollable view no longer push their
   right border out, a popup laid over icons in the panels no longer leaves its
   rows a cell short or long, and the quit picker's directory glyph is no

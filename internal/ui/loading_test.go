@@ -166,7 +166,7 @@ func TestD3FinderOpenersStartTheTick(t *testing.T) {
 	}
 }
 
-// On a CJK icon font the loading icon takes two cells; the top border shortens
+// Where icons take two cells the loading icon does too; the top border shortens
 // to match, so the box stays square (tdp L4). Measured on one box: beside the
 // finder's preview the join pads rows and would hide a border cell too many.
 func TestF7LoadingIconKeepsTheBorderOnWideIconFonts(t *testing.T) {

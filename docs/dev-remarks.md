@@ -54,7 +54,7 @@
   loading icon(tdp F7);一筆都還沒到才寫 `(indexing…)`。icon 是 tdp D3 的規格
   (`loading.go`:circle slice 八格、90ms 一格、由時鐘 `loadingNow()` 決定哪一格),跟 Tasks
   共用一個 `loadingTickMsg`,只在 `anyLoading()` 時續排。popup 的上下框用 `dispWidth()` 量
-  標題與 hint,在 CJK icon 字型上 icon 佔兩格時框線跟著縮。
+  標題與 hint,icon 佔兩格時框線跟著縮。
   focus 在哪一邊看得出來(tdp F1、D3):打字時篩選列亮(Peach 的 glyph、游標 `█`),清單的
   cursor 列是淡的反白(`handColor`);`Tab` 進清單後，篩選列整列單一灰色(Overlay0,不是
   `dimANSI()` 的淡化)、不畫游標，cursor 列換成這一層的層色底、深色粗體字，跟 menu 的 cursor
@@ -102,8 +102,8 @@
   `.local/demos/filu-home`)。filu 讀的變數一律照 tdp D6 的 `FILU__<名字>`(app 名後兩個底線):
   `__CONFIG`、`__STATE`、`__LAST_DIR_FILE`、`__ICON_WIDTH`、`__REPAINT`;2026-09-29 從單底線
   改名、不留舊名(user 裁定)。另讀家族共用的 `TERMINU__ICON_WIDTH`(見下一條)。
-- **CJK Nerd Font 寬度** — 有些 CJK Nerd Font(如 Maple Mono NF CN)把 file-type icon
-  畫成 2 格。filu 啟動時決定 icon 佔幾格(`DetectIconWidth()`),順序照 tdp D6:
+- **icon 寬度** — file-type icon 佔幾格(游標前進幾格)看字型與終端機，不看它畫起來多寬:
+  user 的 Maple Mono NF CN 看起來兩格，游標只前進一格。filu 啟動時決定 icon 佔幾格(`DetectIconWidth()`),順序照 tdp D6:
   `FILU__ICON_WIDTH`(手動覆寫)→ `TERMINU__ICON_WIDTH`(家族 app 在自己的 PTY 裡設給子程序的;
   在別的 app 的 PTY 裡，CPR 是外層的終端模擬器回答，它把 icon 當一格，量不到真的)→ CPR 探測
   實際格寬，只收 1、2。反過來，`[s]hell` 的 PTY 開子程序時也把自己用的格數設成
@@ -142,7 +142,7 @@
 - **popup 共用框** — 全部走 `drawPopupBox`(title 嵌上框、hint 嵌下框、內容上下各一列
   padding);yank viewport 與 finder 用 `drawPopupBoxPad(pad=false)` 貼齊邊框。內容列
   (finder 的結果、input 的輸入列、Open in、quit picker、viewport 的目錄樹都有 icon)由
-  `padDisp()` 補齊或裁到框寬，寬度一律走 `width.go`(見「CJK Nerd Font 寬度」)。
+  `padDisp()` 補齊或裁到框寬，寬度一律走 `width.go`(見「icon 寬度」)。
   hint 與 panel 下框、footer 同一個 helper(`keyLegendFit()`):`鍵:說明`、項目之間一個空格，
   鍵 Blue、冒號與說明 Overlay0(tdp M5、D2)。每個框用自己的寬度去 fit,放不下的項目從尾端
   整組不放、不截在中間(tdp D3、D1;finder 並排時的清單框在 96–116 欄會用到);`drawPopupBoxPad`

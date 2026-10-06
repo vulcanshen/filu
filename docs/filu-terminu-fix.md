@@ -16,17 +16,6 @@ tdp 版本不變，連結不用改。這份清單由 terminu session 寫好留�
   terminu `.local/family-fix/filu/README.md`。
 
 
-## 4. CHANGELOG `[Unreleased]` 與註解說「CJK 字型的 icon 就是兩格」
-
-**現況**：tdp D7（v0.1.23）不拿「一定佔兩格」的字型當例子 —— filu 自己實測過，Maple Mono NF CN 的 icon 看起來兩格，游標只
-前進一格。CHANGELOG `[Unreleased]` 的 Fixed 卻寫「On fonts that draw icons two cells wide (CJK Nerd Fonts)」；程式註解也有三處：
-`cmd/filu/main.go:37`（`CJK fonts draw them 2-wide`）、`internal/ui/view.go:272`（`All slots are wide icons on a CJK Nerd Font`）、
-`internal/ui/iconwidth_unix_test.go:14`（`CJK font`）。webu 這一輪找到同一類，順手改了。
-
-**怎麼改**：`[Unreleased]` 那句拿掉括號裡的例子，或照 locku 寫成不說死的「as some made for CJK do」；三處註解照實寫（icon
-佔幾格看字型與終端機，啟動時量）。已發版的段落是歷史，不動。
-
-
 ## 這一輪不修
 
 沒有。
