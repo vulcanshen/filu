@@ -121,6 +121,19 @@
   畫面每一列(finder 量單一個框：`joinH()` 會把錯位補平);`width_test.go` 量 panel。
 - **控制字元清洗** — 檔名可能含控制字元(macOS 的 `Icon\r`)。`safeName`(`list.go`)在
   顯示時剝掉控制字元(也擋 ANSI injection),檔案操作仍用真實名;套在所有 name-render 點。
+  使用者打的值不走這裡(它會把換行藏起來),見下一條。
+- **單行的值收進換行與 Tab** — input popup(Rename / Add / Zip)與 finder 的 query 收字都走
+  `singleLine()`(`singleline.go`):換行(`\r\n` 存成一個 `\n`)與 Tab 原樣留在值裡，其他
+  控制字元(C0、DEL、C1)丟掉。bracketed paste 是一整個 `KeyRunes`,打字進來的不會有控制
+  字元，所以每個 `KeyRunes` 都過濾、不看 `msg.Paste`;按下去的 `Tab`、`Enter` 是別的
+  `msg.Type`,照舊做原本的事。預填的值(Rename 的原檔名、Zip 的建議名)在
+  `inputPopup.open()` 走同一個過濾。畫的時候 `valueTail()` 把換行畫成 `\n`、Tab 畫成 `\t`,
+  Red、佔 2 格、截斷時不切開(切在中間就整個丟掉、補一格空白),跟手打的 `\`、`n` 分得開;
+  finder 在清單態整列一次上灰,`\n` 也跟著灰。item 的說明列與 finder 的結果列是磁碟上的名字，
+  照舊走 `safeName()`。`nameCheck()` 在 trim **之前**找換行與 Tab —— `TrimSpace` 會把頭尾的
+  吃掉，值被改了卻看不出來 —— 有就擋下(`A name can't have line breaks or tabs`);finder 的
+  query 只拿來找，不擋。macOS 的 `Icon\r` 改名時看得到 Red `\n`,刪掉才送得出去(以前 trim
+  掉 `\r`,直接改成 `Icon`)。這是五個 app 共通的做法(2026-10-06 family input 盤點)。
 - **Space menu 是熱鍵的殼** — `buildSpaceMenu` 依 focus 組 item / panel 兩區
   (`groupedMenu`),選一列就把那個熱鍵送給 focus 的 panel(`dispatchFocusKey`)。
   新增一個動作,要同步加進對應 focus 的 Space menu。
@@ -227,8 +240,8 @@ filu/
   在 picker 裡挑一個 app 本身就是一次明確的選擇，等於確認過了;`o` 是一鍵直達，才需要
   confirm 擋誤觸。所以「交給外部 app」每次都經過一次確認，符合 tdp F6(2026-09-28 user 裁定)。
 - **input popup 在 `Enter` 當下驗證，不過就不送出。** Rename / Add / Zip 開框時掛上
-  `nameCheck()`:空白、Rename 名稱含 `/` 或撞到現有名稱(改回原名放行)、Add 是 `.` / `..`
-  或已存在，都留在框裡、在輸入列下方預留的錯誤列用紅字說原因，打字就清掉(tdp K3)。Rename 以前會
+  `nameCheck()`:空白、含換行或 Tab、Rename 名稱含 `/` 或撞到現有名稱(改回原名放行)、
+  Add 是 `.` / `..` 或已存在，都留在框裡、在輸入列下方預留的錯誤列用紅字說原因，打字就清掉(tdp K3)。Rename 以前會
   `os.Rename` 直接蓋掉同名檔，現在在送出前就擋下。框寬照 F7 固定(`popupInnerWidth()`),
   錯誤列在開框時就留好、平常空白(掛了 `check` 的 input 才留，也就是送出可能失敗的那種),
   原因太長就截;值太長從左邊截。框的寬高都不跟著浮動(tdp F7、L2)。

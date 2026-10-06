@@ -316,7 +316,7 @@ func (m searchModel) update(msg tea.KeyMsg) (searchModel, tea.Cmd) {
 			m.query += " "
 			return m, m.queryChanged()
 		case tea.KeyRunes:
-			m.query += string(msg.Runes)
+			m.query += singleLine(string(msg.Runes))
 			return m, m.queryChanged()
 		}
 		return m, nil
@@ -770,20 +770,19 @@ func (m searchModel) inputBar(w int) string {
 	if m.mode == searchInput && m.blink {
 		cur = "█"
 	}
-	left := " " + m.query + cur
 	count := fmt.Sprintf("%d", len(m.files))
 	if m.mode == searchNav && len(m.files) > 0 {
 		count = fmt.Sprintf("%d/%d", m.cursor+1, len(m.files))
 	}
 	count += " "
 
+	// A query too long keeps its tail (the cursor) visible. A line break or tab
+	// in it shows as \n / \t: Red while typing, grey with the rest of the row on
+	// the list.
 	avail := w - gW
-	leftW, countW := dispWidth(left), dispWidth(count)
-	if leftW+countW > avail { // query too long: keep the tail (cursor) visible
-		left = truncPathLeft(left, avail-countW)
-		leftW = dispWidth(left)
-	}
-	gap := max(avail-leftW-countW, 0)
+	countW := dispWidth(count)
+	left := valueTail(" ", m.query, cur, avail-countW, m.mode == searchInput)
+	gap := max(avail-dispWidth(left)-countW, 0)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	if m.mode == searchNav { // focus is on the list: the whole query row is grey, one colour (tdp D3)
 		return dim.Render(inputGlyph + left + strings.Repeat(" ", gap) + count)

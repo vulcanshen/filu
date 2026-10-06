@@ -141,6 +141,12 @@
   with a space on each side.
 
 ### Fixed
+- A line break or tab pasted into Rename, New, Zip or a finder's query shows
+  as a red `\n` / `\t`. It used to vanish from Rename, New and Zip while
+  staying in the name, and split a finder's query row in two. Rename, New and
+  Zip refuse a name holding one instead of creating a file with a line break
+  in its name: renaming macOS's `Icon\r` shows its `\n`, to delete before
+  `Enter`. Other control characters in a paste or a filled-in name are dropped.
 - On fonts that draw icons two cells wide (CJK Nerd Fonts), popups keep their
   borders straight: the finder's and inputs' prompt rows, finder results and
   previews, Open in, and the preview's scrollable view no longer push their

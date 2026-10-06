@@ -28,7 +28,7 @@ type inputPopup struct {
 	blink    bool     // cursor blink phase
 	blinkGen int
 	screenW  int
-	// check validates the trimmed value on Enter: "" lets the submit through,
+	// check validates the value on Enter: "" lets the submit through,
 	// anything else is the reason it can't go, shown under the field (tdp K3).
 	check func(string) string
 	// errMsg is the last failed check's reason; typing clears it.
@@ -40,7 +40,7 @@ func newInputPopup() inputPopup {
 }
 
 func (m *inputPopup) open(kind inputKind, prompt, buffer string, item fileItem) tea.Cmd {
-	m.kind, m.prompt, m.buffer, m.item = kind, prompt, buffer, item
+	m.kind, m.prompt, m.buffer, m.item = kind, prompt, singleLine(buffer), item
 	m.check, m.errMsg = nil, ""
 	m.blink, m.blinkGen = true, m.blinkGen+1
 	return tea.Batch(m.anim.open(), inputBlinkCmd(m.blinkGen))
@@ -86,7 +86,7 @@ func (m inputPopup) update(msg tea.KeyMsg) (inputPopup, bool, tea.Cmd) {
 		return m, false, m.anim.close()
 	case tea.KeyEnter:
 		if m.check != nil {
-			if reason := m.check(strings.TrimSpace(m.buffer)); reason != "" {
+			if reason := m.check(m.buffer); reason != "" {
 				m.errMsg = reason
 				return m, false, nil
 			}
@@ -101,7 +101,7 @@ func (m inputPopup) update(msg tea.KeyMsg) (inputPopup, bool, tea.Cmd) {
 		m.buffer += " "
 		m.errMsg = ""
 	case tea.KeyRunes:
-		m.buffer += string(msg.Runes)
+		m.buffer += singleLine(string(msg.Runes))
 		m.errMsg = ""
 	}
 	return m, false, nil
@@ -149,8 +149,9 @@ func (m inputPopup) renderFull() string {
 	innerW := popupInnerWidth(m.screenW)
 
 	// A long value keeps its tail (the cursor) in view; only the value is cut,
-	// the glyph stays, and both are measured by display width (tdp D6).
-	field := glyph + truncPathLeft(" "+safeName(m.buffer)+cur, innerW-dispWidth(inputGlyph))
+	// the glyph stays, and both are measured by display width (tdp D6). A line
+	// break or tab in the value shows as a Red \n / \t.
+	field := glyph + valueTail(" ", m.buffer, cur, innerW-dispWidth(inputGlyph), true)
 	// pad=false so the content hugs the top border (no empty top); a grey divider
 	// sits UNDER the input, same as Search — compact.
 	divider := lipgloss.NewStyle().Foreground(dimColor).Render(strings.Repeat("─", innerW))
