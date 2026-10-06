@@ -1170,9 +1170,14 @@ func (m *AppModel) openInput(kind inputKind, prompt, buffer string, item fileIte
 // nameCheck is the input popup's validation for kind, run on Enter before the
 // popup closes: it returns why the name can't be used, or "" when it can. An
 // empty name is caught here too — with Enter always submitting, "nothing
-// typed" is a failed check, not a silent no-op.
+// typed" is a failed check, not a silent no-op. A line break or tab is
+// looked for before the trim, which would drop one at either end unseen.
 func nameCheck(kind inputKind, dir, target string) func(string) string {
-	return func(name string) string {
+	return func(value string) string {
+		if hasBreak(value) {
+			return "A name can't have line breaks or tabs"
+		}
+		name := strings.TrimSpace(value)
 		if name == "" {
 			return "Type a name first"
 		}
