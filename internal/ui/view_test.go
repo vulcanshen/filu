@@ -64,6 +64,45 @@ func TestPanelBoxHintBottomBorder(t *testing.T) {
 	}
 }
 
+// TestZoomListKeepsItsHint: zoomed, panel [1] keeps the bottom line it has in
+// the grid, checked on what middleView draws: the focused tab's column names
+// its keys (h/l once there is another tab to switch to), and the other tabs'
+// columns stay plain, as an unfocused list does.
+func TestZoomListKeepsItsHint(t *testing.T) {
+	for _, tc := range []struct {
+		tabs, active int
+		want         string
+	}{
+		{1, 0, " Enter:into Esc:back j/k/u/d:move "},
+		{2, 1, " Enter:into Esc:back j/k/u/d:move h/l:switch tab "},
+		{3, 0, " Enter:into Esc:back j/k/u/d:move "}, // 40-cell columns: h/l is left out whole
+	} {
+		m := minModel()
+		m.width, m.height = 120, 40
+		m.zoom, m.focus = panelList, panelList
+		m.tabs, m.tab = m.tabs[:tc.tabs], tc.active
+
+		rows := strings.Split(m.middleView(m.width, m.height-1), "\n")
+		for i, row := range rows {
+			if got := dispWidth(row); got != m.width {
+				t.Errorf("%d tabs: row %d is %d cells, want %d", tc.tabs, i, got, m.width)
+			}
+		}
+		bottom := []rune(ansi.Strip(rows[len(rows)-1])) // box lines and ASCII: one rune, one cell
+		start := 0
+		for i, w := range splitN(m.width, tc.tabs) {
+			col := string(bottom[start : start+w])
+			start += w
+			if i == tc.active && !strings.Contains(col, "╚"+tc.want+"═") {
+				t.Errorf("%d tabs: the focused tab's column should end in %q, got %q", tc.tabs, tc.want, col)
+			}
+			if i != tc.active && strings.Contains(col, ":") {
+				t.Errorf("%d tabs: tab %d is not focused, its bottom line should be plain, got %q", tc.tabs, i, col)
+			}
+		}
+	}
+}
+
 // TestListRowsMatchesRender: the cursor's row budget must equal the file rows
 // the app really puts on screen. It renders through middleView with View's own
 // midH and counts them, rather than re-deriving a height — an earlier version

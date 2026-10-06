@@ -204,7 +204,8 @@ func (m AppModel) zoomListView(w, midH int) string {
 }
 
 // expandedListTabs lays panel [1]'s directory tabs out as equal-width columns;
-// the active tab is the focused column when [1] holds focus.
+// the active tab is the focused column when [1] holds focus, and carries the
+// list's bottom line as in the grid.
 func (m AppModel) expandedListTabs(w, h int) string {
 	widths := splitN(w, len(m.tabs))
 	cols := make([]string, len(m.tabs))
@@ -213,7 +214,7 @@ func (m AppModel) expandedListTabs(w, h int) string {
 		focused := m.focus == panelList && m.tab == i
 		// trailing space: singleChip sits flush against its round cap, so a wide
 		// tab mark glyph gets clipped by it — pad a cell as tabBar does.
-		cols[i] = m.panelBox(focused, singleChip("[1] "+tabMark(i)+" ", focused), cw, h, m.listBody(i, cw-2, h-2, focused))
+		cols[i] = m.panelBoxHint(focused, singleChip("[1] "+tabMark(i)+" ", focused), listNavHint(focused, len(m.tabs)), cw, h, m.listBody(i, cw-2, h-2, focused))
 	}
 	return joinH(cols...)
 }

@@ -141,6 +141,9 @@
   with a space on each side.
 
 ### Fixed
+- Zoomed (`z`), the file list now shows its keys on its bottom line — in the
+  column of the tab you are in — as it does unzoomed; the line used to be
+  empty.
 - A line break or tab pasted into Rename, New, Zip or a finder's query shows
   as a red `\n` / `\t`. It used to vanish from Rename, New and Zip while
   staying in the name, and split a finder's query row in two. Rename, New and
