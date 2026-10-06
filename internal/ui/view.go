@@ -268,8 +268,8 @@ func (m AppModel) listTitle(w int) string {
 // at the launch directory every start (it is never persisted), so it carries
 // the launch identity that the removed top status row used to show. The rest
 // are Material Design companions: friendly, unmistakable one-glyph identities
-// (codepoints from nerd-fonts glyphnames.json). All slots are wide icons on a
-// CJK Nerd Font, so any of them lines up the same.
+// (codepoints from nerd-fonts glyphnames.json). All slots are file-type icons
+// to isWideIcon, so whatever cells an icon takes, any of them lines up the same.
 var tabMarks = []string{
 	iconCWD,               // nf-md-rocket_launch
 	string(rune(0xf011b)), // nf-md-cat

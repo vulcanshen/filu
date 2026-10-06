@@ -35,7 +35,7 @@ func drawPopupBoxMode(bc lipgloss.Color, title, mode, hint string, rows []string
 	// The title and the dashes after it fill what the mode label leaves. A title
 	// wider than that would push the border out and, when the box is joined beside
 	// another, open a gap — clip it to fit. Measured with dispWidth: a title glyph
-	// (the loading icon, a warning sign) takes two cells on a CJK icon font, and
+	// (the loading icon, a warning sign) takes two cells where icons do, and
 	// the border must shorten to match.
 	room := innerW - 1
 	if mode != "" {

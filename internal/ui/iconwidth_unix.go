@@ -14,9 +14,9 @@ import (
 
 // DetectIconWidth measures how many cells the terminal draws a Nerd Font
 // file-type icon in and sets iconCells so the layout reserves the right space.
-// Most fonts draw them 1 cell; CJK "full-width icon" fonts (Maple Mono NF CN,
-// etc.) draw them 2 while lipgloss still measures 1 — that gap is what breaks
-// the borders. It probes with CPR: print an icon at column 1, ask the terminal
+// The font and the terminal decide it, not how wide an icon looks; where it is
+// 2, lipgloss still measures 1 — that gap is what breaks the borders. It
+// probes with CPR: print an icon at column 1, ask the terminal
 // where the cursor ended up. Any failure (not a tty, no CPR reply, timeout)
 // leaves iconCells at its default of 1. Call once, before tea.NewProgram.
 //

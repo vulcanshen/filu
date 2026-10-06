@@ -8,7 +8,7 @@ import (
 
 // toastModel is a transient notification (kbu form): a small popup that opens on
 // an event and auto-dismisses after a short delay. Body text only — no wide
-// glyphs — so it can't disturb the popup border on CJK icon fonts.
+// glyphs — so it can't disturb the popup border where icons take two cells.
 type toastModel struct {
 	anim    popupAnimator
 	message string
