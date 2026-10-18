@@ -479,9 +479,10 @@ CGO_ENABLED=0 go build -o filu ./cmd/filu   # 或:make build
 
 - 需要 **Go 1.26+**。
 - 一律 `CGO_ENABLED=0`,產出靜態 binary(同 kbu)。
-- `Makefile` 收攏常用工作 —— `make build`(→ `./filu`)、`make install`(→
-  `$GOPATH/bin`)/ `make uninstall`、`make package`(當前平台的 `.tar.gz` 到
-  `dist/`)、`make check`(fmt + vet + test)。跑 `make` 列出全部。
+- `Makefile` 只設 `BINARY`、`TAPES` 再 include 家族共用的 `family.mk`(tdp project 的範本，照原樣
+  複製、不在這裡改)。常用的：`make build`(→ `./filu`)、`make install` / `make uninstall`、
+  `make package`、`make check`(commit 前跑：fmt-check、vet、`go test -race`;有 `go.work` 時加
+  `check-lib`)。跑 `make` 列出全部;filu 自己的 target 放在最後一段 `##@ filu 自己的`(目前沒有)。
 - 本機 build 的版本號永遠是 `dev`;release 版號由 goreleaser 以 `-X` 注入
   `internal/version.Version`。
 - 除了主程式,binary 還有幾個子指令:`filu version`、`filu shell`(印出
@@ -513,8 +514,11 @@ tape 照家族慣例放在 `.local/demos/`(gitignore,不進版控):先 `make bui
 push 一個 `v*` tag,GitHub Actions(`.github/workflows/release.yml`)在 ubuntu 與 macOS 跑
 `go test -race`,過了 goreleaser 打包 4 個 unix target(linux / darwin × amd64 / arm64)與
 checksums、更新 vulcanshen/homebrew-tap 的 formula;release notes 是 `CHANGELOG.md` 對應的
-那一節。CHANGELOG 只記 binary 行為的變動;`install.sh`、`uninstall.sh`、打包、CI 與文件的
-改動不記。
+那一節(標題 `## vX.Y.Z — tdp vA.B.C`,改動先寫在 `## Unreleased`;v0.4.0 以前的標題照舊)。
+CHANGELOG 只記 binary 行為的變動;`install.sh`、`uninstall.sh`、打包、CI 與文件的改動不記。
+`release.yml`、`.goreleaser.yaml`、`install.sh`、`uninstall.sh`、`family.mk`、`.gitignore`、
+`internal/version/version.go` 是 tdp project 的範本，只改範本允許的地方(`app's own` 的段落、`app:` 的行);
+把 `filu` 換回 `<app>` 跟同一版 tdp 的範本 diff,只該差那些地方。
 
 - **goreleaser 的 `--release-notes` 不可靠**:workflow 最後一步用 `gh release edit` 把 body
   強制換成 CHANGELOG 那一節。

@@ -1,17 +1,31 @@
 #!/bin/sh
-# filu installer for macOS / Linux (unix-only — on Windows use WSL).
+# filu installer for macOS / Linux.
 # Usage: curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/install.sh | sh
+#
+# terminu family template (tdp project/install.sh). Replace filu; set
+# WINDOWS; the blocks marked "app's own" are the app's, the rest stays as it is.
 
 set -e
 
-REPO="vulcanshen/filu"
+APP="filu"
+REPO="vulcanshen/$APP"
+# yes when the app ships a Windows build and an install.ps1.
+WINDOWS="no"
 
 # Detect OS
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$OS" in
   linux*)  OS="linux" ;;
   darwin*) OS="darwin" ;;
-  *) echo "Error: filu is unix-only (no Windows build — use WSL). Unsupported OS: $OS"; exit 1 ;;
+  *)
+    echo "Error: unsupported OS: $OS."
+    if [ "$WINDOWS" = "yes" ]; then
+      echo "On Windows, run in PowerShell:"
+      echo "  irm https://raw.githubusercontent.com/$REPO/main/install.ps1 | iex"
+    else
+      echo "$APP is unix-only (no Windows build — use WSL)."
+    fi
+    exit 1 ;;
 esac
 
 # Detect architecture
@@ -21,6 +35,9 @@ case "$ARCH" in
   aarch64|arm64) ARCH="arm64" ;;
   *) echo "Error: unsupported architecture: $ARCH"; exit 1 ;;
 esac
+
+# --- app's own: checks before the download (none by default) ---
+# --- end of the app's own ---
 
 # Get latest version
 echo "Fetching latest release..."
@@ -34,7 +51,7 @@ else
   INSTALL_DIR="$HOME/.local/bin"
 fi
 
-FILENAME="filu_${VERSION}_${OS}_${ARCH}.tar.gz"
+FILENAME="${APP}_${VERSION}_${OS}_${ARCH}.tar.gz"
 DOWNLOAD_URL="https://github.com/$REPO/releases/download/v${VERSION}/$FILENAME"
 
 # Download
@@ -48,12 +65,12 @@ tar xzf "$TMPDIR/$FILENAME" -C "$TMPDIR"
 
 # Install
 mkdir -p "$INSTALL_DIR"
-cp "$TMPDIR/filu" "$INSTALL_DIR/filu"
-chmod +x "$INSTALL_DIR/filu"
+cp "$TMPDIR/$APP" "$INSTALL_DIR/$APP"
+chmod +x "$INSTALL_DIR/$APP"
 rm -rf "$TMPDIR"
 
 echo ""
-echo "filu $VERSION installed to $INSTALL_DIR"
+echo "$APP $VERSION installed to $INSTALL_DIR"
 
 # Check if install dir is in PATH
 case ":$PATH:" in
@@ -66,8 +83,9 @@ case ":$PATH:" in
     ;;
 esac
 
+# --- app's own: what to know, and what to run first ---
 # ── Search tools (ripgrep + fd) ──────────────────────────────────────────────
-# filu's finders use ripgrep (Find `f`, content search — required) and fd
+# filu's finders use ripgrep (content search — required) and fd
 # (Search `/` + Goto `go` listing — optional; filu falls back to a built-in Go
 # walk when it is absent). A brew install pulls these in as formula dependencies;
 # a raw install.sh has no package manager to lean on, so — for whatever is
@@ -129,13 +147,13 @@ if [ "$need_rg" = true ] || [ "$need_fd" = true ]; then
 fi
 
 # Anything still absent (not on PATH and not freshly dropped into INSTALL_DIR) —
-# point the user at their package manager. filu still runs; only Find needs rg.
+# point the user at their package manager. filu still runs; only content search needs rg.
 still=""
 if ! command -v rg >/dev/null 2>&1 && [ ! -x "$INSTALL_DIR/rg" ]; then still="$still ripgrep"; fi
 if ! command -v fd >/dev/null 2>&1 && [ ! -x "$INSTALL_DIR/fd" ]; then still="$still fd"; fi
 if [ -n "$still" ]; then
   echo ""
-  echo "NOTE: still missing:$still — filu runs, but Find (f) needs ripgrep"
+  echo "NOTE: still missing:$still — filu runs, but content search needs ripgrep"
   echo "(fd only speeds up listing; it falls back to a built-in walk). Install via:"
   echo "  macOS:          brew install ripgrep fd"
   echo "  Debian/Ubuntu:  sudo apt install ripgrep fd-find     # fd binary is 'fdfind'"
@@ -144,4 +162,8 @@ if [ -n "$still" ]; then
 fi
 
 echo ""
-echo "Run 'filu' to launch."
+echo "NOTE: $APP draws with Nerd Font glyphs. Use a Nerd Font terminal"
+echo "      profile (https://www.nerdfonts.com) or they render as boxes."
+echo ""
+echo "Run '$APP' to start."
+# --- end of the app's own ---

@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+Each release names the version of terminu design (tdp) it follows.
+
+## Unreleased
 
 ## [0.4.0] — 2026-10-06
 

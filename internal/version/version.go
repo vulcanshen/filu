@@ -1,7 +1,9 @@
 // Package version holds the filu build version, injected at build time via
 // goreleaser ldflags (-X github.com/vulcanshen/filu/internal/version.Version=...).
-// A local `go build` / `make build` produces a "dev" build, which surfaces in the
-// splash screen.
+// A local `go build` / `make build` produces a "dev" build.
+//
+// terminu family template (tdp project/version.go), copied to an app's
+// internal/version/version.go; replace filu.
 package version
 
 // Version is the build version. Set to the goreleaser tag minus its "v" prefix

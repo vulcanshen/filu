@@ -1,27 +1,19 @@
-# forge — local dev state (never commit)
-CLAUDE.md
-.forge/
-
-# Claude Code local settings
-.claude/settings.local.json
-
-# local demo tooling — VHS tapes + generated fixture tree (only docs/*.gif ship)
-.local/
-
-# Go
+# terminu family template (tdp project/gitignore), copied to an app's
+# .gitignore; replace filu. The app's own lines go below the last one.
 /filu
-/filu.exe
-*.exe
-*.test
-*.out
 /dist/
-go.work
-go.work.sum
-
-# macOS
-.DS_Store
-
-# Editor
+.local/
 .idea/
 .vscode/
+.DS_Store
+*.test
+*.out
+go.work
+go.work.sum
+.claude/settings.local.json
+.claude/worktrees/
+
+# filu: local dev state (never commit)
+CLAUDE.md
+.forge/
 *.swp
