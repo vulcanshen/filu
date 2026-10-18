@@ -44,8 +44,15 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 - **排序** —— filu 自己排（`sortItems`）：目錄一律在前，再照這個目錄的排序鏈（`sortByDir`，每個目錄各自記住、存進 `state.yaml`），
   最後依名稱。lib 的 `List.SortBy` 會把目錄打散，所以不用它；表頭的排序標示照 lib 的寫法自己寫進欄名（順位 `(2)`、U+F160 升冪、
   U+F161 降冪，`fileColumns`）。`TODO(lib FL6)`。
-- **路徑列** —— `[1]` 的第一列：Lavender 純文字、斜線暗（`header.go` 的 `crumbRow`），下面一條 Surface0 的細線；太長時前段縮成
-  字首（`~/Documents/x` → `~/D/x`），再不夠中間縮 `…`，永不折行（`fitPathSegments`）。目錄是最愛時後面加一顆星。
+- **路徑列** —— `[1]` 的第一列：Lavender 純文字、斜線暗（`header.go` 的 `crumbRow`），下面直接接表頭、不畫線（panel 的表頭與
+  打字列下面也不畫）；太長時前段縮成字首（`~/Documents/x` → `~/D/x`），再不夠中間縮 `…`，永不折行（`fitPathSegments`）。目錄是
+  最愛時後面加一顆星。
+- **先問的動作** —— Open、Delete、Shell、Clear、Unfavorite 用 `Action.Ask`：lib 把 confirm 疊在開它的 Space menu 上（`Esc` 回到
+  menu），接受後才整疊收掉（tdp F4、T1）。問句要寫 cursor 那一項的名字，`Ask` 卻是固定的指標：lib 執行動作時先問 `Disabled`、
+  再讀 `Ask`，所以 `Disabled` 順手把問句填好（`actions.go` 的 `asking`，`TODO(lib FL15)`）。
+- **錯誤** —— `config.yaml` 讀不懂、`state.yaml` 讀不到或讀不懂、目錄監看起不來，啟動後立刻說（一個用 toast、好幾個用 error popup）。
+  `state.yaml` 壞掉時不覆寫它（`keepState`）：寫回去就是把裡面的 tabs、marks、最愛、排序無聲丟掉。`[2]` 讀不到的檔是 panel 的錯誤
+  （`Panel.Fail`：Red 的事實加點名按鍵的提示）。動作失敗開 error popup，標題寫「哪件事失敗」（`Rename failed`）。
 - **marks** —— 一個跨目錄、跨 tab 的 bucket（`marks.go` 的 `marksModel`），存在 `state.yaml`。清單上的勾是 lib 的標記欄，換目錄、
   bucket 變動時用 `syncMarks` 照 bucket 重勾（`TODO(lib FL4)`：List 只能動 cursor 那一列）。`[3]` Marks 清單自己的標記就是 pick：
   有 pick 時只有 pick 的會落地（`landItems`）。複製保留 bucket；搬移把搬走的移出 bucket。
@@ -56,12 +63,15 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 - **Finder** —— lib 的 `terminu.Finder`：檔名搜尋與 Goto 用 `Files: true`（lib 的檔案預覽與四列資訊），結果由 `fd` 串流進 `Items`
   （`streamFinder`，走訪序、不排序；沒有 `fd` 時退回 Go 的 walk），到 `finder_cap` 為止。Goto 一律掃隱藏目錄，噪音靠 `ignore_dirs`
   擋。比對照 components/input/finder（包含、不分大小寫、每個詞都要出現、順序不變），是 lib 做的。內容搜尋先用 text input 問要找
-  什麼，再把 `rg` 找到的檔（一個檔一列、記下第一個符合的行）串流進 finder，預覽從那一行的上面幾行開始（`hitPreview`）。
+  什麼，再把 `rg` 找到的檔（一個檔一列、記下第一個符合的行）串流進 finder，預覽從那一行的上面幾行開始（`hitPreview`，照
+  file-picker 的預覽：`hide_secrets_in_preview`、控制字元畫成 Red 的名字、讀不到寫灰字 `(unreadable)`）。
   `TODO(lib FL2)`：finder 不告訴 app 打了什麼，所以內容搜尋不能邊打邊找，以前 `/`、`~/` 開頭的路徑搜尋也拿掉了。
+  `TODO(lib FL16)`：lib 的檔案預覽不能從某一行開始，所以內容搜尋的預覽是 filu 自己畫的，下面少了檔案的四列資訊。
 - **預覽** —— 讀 magic bytes 判型別：目錄 → 三層的樹、壓縮包 → 內容清單、圖片 → base64 `data:` URI、PDF → 抽出的文字與頁數、
   文字 → Chroma（catppuccin-mocha）上色 + 行號、二進位 → hex + ASCII（`preview.go`）。Tab 畫成 `input_tab_width` 格。行依寬度產生
   （圖片的 data URI 照寬度折），所以在 `previewBody.Draw` 時才做。`TODO(lib FL3)`：lib 的檔案預覽只有 finder 用得到。
-- **檢視與複製** —— `[2]` 的 `Enter` 用 lib 的 `Viewer` 打開預覽（文字檔交給 lib 上色，`Lang` 是檔名），選取模式是 lib 的
+- **檢視與複製** —— `[2]` 的 `Enter` 用 lib 的 `Viewer` 打開預覽。文字檔交出去的是檔案原本的文字（最多 4 MB）：Tab、控制字元、
+  CRLF、太長的行都由 lib 畫（`Lang` 是檔名，跟預覽一樣上色），複製出來是原樣；`[2]` 的 sanitize 只給 panel 用。選取模式是 lib 的
   （`v` 兩次、vim 的移動、`y` 複製）；`y` 在選取以外複製全部。圖片的 data URI 合回一行再交出去，lib 自己折行，複製出來不會斷。
   剪貼簿走 OSC 52（`clipboard.go`），穿得過 tmux 與 SSH。
 - **檔案資訊** —— 檔案上的 `Enter` 用 `Viewer` 顯示 `fileFacts`（`facts.go`）：完整路徑（symlink 多一列目標）、類型（跟預覽同一套判法）、
@@ -69,8 +79,9 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 - **刪除** —— 移到 OS 垃圾桶：macOS `~/.Trash`、Linux `~/.local/share/Trash/files`（`trash.go`）。
 - **tab 的標記** —— 第一個 tab 是啟動的 glyph（它永遠開在啟動的目錄），其餘各一隻動物（`look.go` 的 `tabMarks`）。標記是 panel 的
   tab 名稱（lib 的膠囊串），固定寬，不跟目錄名綁動（tdp L2）。上限五個（`maxTabs`）：到上限時 New tab 停用。
-- **zoom** —— `z` 切換 lib 的 `ForceNarrow`：只畫 focus 的 panel、佔滿畫面。`[1]` 在 zoom 時把每個 tab 畫成等寬並排的欄（`drawColumns`），
-  `h|l` 換到的那一欄是亮的，其他的淡化（Principle P6）。zoom 是版面的切換，不是模式：沒有鍵換意思，`Esc` 照樣回上一層目錄。
+- **zoom** —— `z` 切換 lib 的 `ForceNarrow`：只畫 focus 的 panel、佔滿畫面。`[1]` 在 zoom 時把每個 tab 畫成等寬並排的欄（`drawColumns`，
+  欄間一條 Overlay0 的 `│`），`h|l` 換到的那一欄是亮的，其他的淡化（tdp P6）—— 這是偏離，見「偏離 tdp」。zoom 是版面的切換，
+  不是模式：沒有鍵換意思，`Esc` 照樣回上一層目錄。
 - **icon 與配色** —— 檔案類型的 glyph 取自 eza 完整的 icon 表（`ezadata.go`）；顏色來自烘進 binary 的
   `vivid generate catppuccin-mocha` `LS_COLORS`，依 eza 的優先序解析（目錄 → symlink → executable → 最長 suffix → 副檔名，`theme.go`）。
   執行時不讀 `LS_COLORS`。
@@ -143,14 +154,20 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
   icon 佔一格，在 icon 畫成兩格的字型上那一列會歪。
 - **等 lib 或規範的**（程式裡的 `TODO(lib FLn)`、`TODO(tdp FLn)`，已回報 terminu）：FL1 離開流程不能是選單；FL2 finder 拿不到打的字
   （內容搜尋先問字、沒有路徑搜尋）；FL3 panel 用的檔案預覽；FL4 照 ID 設標記；FL5 macOS 舊的設定目錄；FL6 排序時目錄在前、
-  整欄收掉；FL7 key reference 沒列 `Shift-Tab`；FL8 finder 在很小的畫面上當掉（測試跳過那一格）；FL9 新值的建議名字。
+  整欄收掉；FL7 key reference 沒列 `Shift-Tab`；FL8 finder 在很小的畫面上當掉（測試跳過那一格）；FL9 新值的建議名字；
+  FL14 menu 的標題不能照原樣放名稱（`Open with`、`Open in` 只寫動作）；FL15 confirm 的問句不能跟著 cursor 那一項；FL16 內容搜尋的
+  預覽不能用 lib 的檔案預覽。
 - **未做**：Mouse；每列的錯誤標示（broken symlink、沒有權限）；zoxide 式的目錄索引；chmod、解壓縮、真的圖（kitty / sixel）、續傳。
 - **拿掉的**：`FILU__REPAINT`（每次導覽整頁重畫，給把 glyph 畫得比游標前進更寬的終端機用）：畫到終端機是 lib 的事。
 
 ## 偏離 tdp
 
-目前沒有。`[1]` 的路徑列、zoom 時並排的 tab、`[3]` 各清單的欄位都是 panel 的內容，不是 tdp 規定的元件；排序的標示照
-components/layout/panel 的寫法。
+- **zoom 時 `[1]` 的 tab 並排**（components/layout/panel 的 tab；`files.go` 的 `drawColumns`）：panel 的 tab 一次只顯示一頁，
+  components 沒有「幾頁並排」的方案。filu 在 zoom 時把每個 tab 畫成一欄：zoom 本來就是要更多空間，在好幾個目錄之間比對、搬檔時，
+  一次看到全部的 tab 比一頁一頁切好用；`h|l` 照樣換 tab，有 focus 的那一欄亮、其他的淡化（P6），欄間的線用 Overlay0（跟 menu 的
+  分隔線一樣）。已回報成 components 的缺漏（FL17）。
+
+`[1]` 的路徑列、`[3]` 各清單的欄位是 panel 的內容，不是 tdp 規定的元件；排序的標示照 components/layout/panel 的寫法。
 
 ## 設計文件導讀
 
@@ -160,6 +177,7 @@ tdp 在 [terminu](https://github.com/vulcanshen/terminu)（`principle/`、`compo
 
 | 檔案 | 內容 |
 |---|---|
+| [`filu-terminu-fix.md`](filu-terminu-fix.md) | 還沒符合 tdp、在等 lib 或規範的地方（tdp E7；全部修完就刪掉） |
 | [`icon.svg`](icon.svg) | 家族 mark 的正本；`V` 的 splash 照它畫（程式裡的副本是 `internal/ui/icon.svg`，`TestIconMatchesDocs` 守住兩份一樣） |
 | [`social-preview.png`](social-preview.png) | GitHub 的 social preview |
 

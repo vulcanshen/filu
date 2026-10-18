@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -70,7 +72,7 @@ func stateFilePath() (string, bool) {
 	if statePathOverride != "" {
 		return statePathOverride, true
 	}
-	if d := os.Getenv("FILU__STATE"); d != "" { // a state directory (demo recordings / isolated runs, tdp D6)
+	if d := os.Getenv("FILU__STATE"); d != "" { // a state directory (demo recordings / isolated runs, tdp E2, E3)
 		return filepath.Join(d, "state.yaml"), true
 	}
 	dir, ok := filuConfigDir()
@@ -80,20 +82,24 @@ func stateFilePath() (string, bool) {
 	return filepath.Join(dir, "state.yaml"), true
 }
 
-func loadState() (sessionState, bool) {
-	path, ok := stateFilePath()
-	if !ok {
-		return sessionState{}, false
+// loadState reads the saved session: ok false when there is none (the first
+// run), err when there is one that cannot be read or makes no sense.
+func loadState() (st sessionState, ok bool, err error) {
+	path, found := stateFilePath()
+	if !found {
+		return sessionState{}, false, nil
 	}
 	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return sessionState{}, false, nil
+	}
 	if err != nil {
-		return sessionState{}, false
+		return sessionState{}, false, err
 	}
-	var st sessionState
-	if yaml.Unmarshal(data, &st) != nil {
-		return sessionState{}, false
+	if err := yaml.Unmarshal(data, &st); err != nil {
+		return sessionState{}, false, err
 	}
-	return st, true
+	return st, true, nil
 }
 
 // saveState writes the session and reports a failure, so the caller can show it

@@ -131,7 +131,7 @@ func (a *App) gotoFinder(newTab bool) tea.Cmd {
 // asked for first instead of searched as it is typed.
 func (a *App) contentSearch() tea.Cmd {
 	if _, err := lookPath("rg"); err != nil {
-		return a.t.Error("Search", "Cannot search file contents: ripgrep (rg) is not installed")
+		return a.t.Error("Search failed", "Cannot search file contents: ripgrep (rg) is not installed")
 	}
 	root := a.cur().dir
 	where := safeName(shortPath(root))
@@ -151,29 +151,76 @@ func (a *App) contentSearch() tea.Cmd {
 		}})
 }
 
-// hitPreview is a file from a few lines above its first match, numbered, the
-// match's number lit.
+// hitPreview is a file from a few lines above its first match, numbered, as
+// components/input/file-picker previews a text file: secrets kept out when
+// hide_secrets_in_preview is on, control characters named in Red, a file
+// that cannot be read in grey.
+// TODO(lib FL16): a finder's file preview cannot start at a line, nor show
+// the file's facts under it from here.
 func (a *App) hitPreview(path string) []string {
+	grey := func(s string) []string { return []string{terminu.Fg(terminu.Overlay0).Render(s)} }
+	st, err := os.Stat(path)
+	if err != nil {
+		return grey("(unreadable)")
+	}
 	data, err := readCapped(path, previewCap)
 	if err != nil {
-		return []string{terminu.Fg(terminu.Red).Render(opFailedText("read it", err))}
+		return grey("(unreadable)")
 	}
-	lines := sanitizeLines(strings.Split(string(data), "\n"))
-	if hl, ok := highlight(filepath.Base(path), strings.Join(lines, "\n")); ok {
+	if a.t.HideSecretsInPreview {
+		first, _, _ := strings.Cut(string(data), "\n")
+		first = strings.TrimRight(first, "\r")
+		if strings.HasPrefix(first, "-----BEGIN") && strings.Contains(first, "PRIVATE KEY") || strings.HasPrefix(first, "PuTTY-User-Key-File-") {
+			return []string{terminu.Fg(terminu.Text).Render(first), terminu.Fg(terminu.Overlay0).Render("(sensitive content not shown)")}
+		}
+		if st.Mode().Perm()&0o044 == 0 {
+			return grey("(sensitive content not shown)")
+		}
+	}
+	raw := strings.Split(string(data), "\n")
+	lines := make([]string, len(raw))
+	control := false
+	for i, l := range raw {
+		lines[i] = strings.ReplaceAll(strings.TrimSuffix(l, "\r"), "\t", strings.Repeat(" ", inputTabWidth))
+		control = control || strings.ContainsFunc(lines[i], isControl)
+	}
+	if control {
+		for i, l := range lines {
+			lines[i] = namedControls(l)
+		}
+	} else if hl, ok := highlight(filepath.Base(path), strings.Join(lines, "\n")); ok {
 		lines = hl
 	}
-	hit := a.hits[path]
-	from := max(hit-4, 0)
+	from := max(a.hits[path]-4, 0)
 	numW := max(len(strconv.Itoa(len(lines))), 3)
 	var out []string
 	for i := from; i < len(lines); i++ {
-		num := terminu.Fg(terminu.Overlay0)
-		if i+1 == hit {
-			num = terminu.Fg(terminu.Text)
-		}
-		out = append(out, num.Render(fmt.Sprintf("%*d", numW, i+1))+" "+lines[i])
+		out = append(out, terminu.Fg(terminu.Overlay0).Render(fmt.Sprintf("%*d", numW, i+1))+" "+lines[i])
 	}
 	return out
+}
+
+// isControl reports a control character: C0, DEL, C1.
+func isControl(r rune) bool { return r < 0x20 || r == 0x7f || r >= 0x80 && r < 0xa0 }
+
+// namedControls draws a line's control characters as their names in Red
+// (\r, \x07), the rest in Text (components/input/README, pasted control
+// characters).
+func namedControls(l string) string {
+	var b strings.Builder
+	for _, r := range l {
+		switch {
+		case r == '\r':
+			b.WriteString(terminu.Fg(terminu.Red).Render(`\r`))
+		case r == '\n':
+			b.WriteString(terminu.Fg(terminu.Red).Render(`\n`))
+		case isControl(r):
+			b.WriteString(terminu.Fg(terminu.Red).Render(fmt.Sprintf(`\x%02x`, r)))
+		default:
+			b.WriteString(terminu.Fg(terminu.Text).Render(string(r)))
+		}
+	}
+	return b.String()
 }
 
 // streamFinder sends what fd finds under root to ch in batches (directories

@@ -48,7 +48,7 @@ func TestMarksPickUnmarkClear(t *testing.T) {
 }
 
 // Enter on a mark shows it in [1]: the tab on its directory, or a new one;
-// the focus stays in [3] (Rules K3) and a toast says where to look.
+// the focus stays in [3] (tdp K3) and a toast says where to look.
 func TestMarkShowInTabs(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"sub/deep.txt": "", "top.txt": ""})
 	hs.a.cd(hs.path("sub"), "")
@@ -128,7 +128,7 @@ func TestFavoritesTab(t *testing.T) {
 	}
 	hs.keys("o")
 	hs.has("OPEN IN", "New tab", "already there")
-	hs.keys("Esc", "Esc", "D") // the first Esc takes the toast (Rules K4)
+	hs.keys("Esc", "Esc", "D") // the first Esc takes the toast (tdp K4)
 	hs.has("Take the star off")
 	hs.keys("Enter")
 	if len(hs.a.favs.pinned) != 0 {
@@ -275,7 +275,7 @@ func TestSplash(t *testing.T) {
 	for range 40 {
 		hs.run(nil)
 	}
-	hs.keys("q") // only closes it (Rules S3)
+	hs.keys("q") // only closes it (tdp S3)
 	if hs.quit {
 		t.Fatal("q on the splash quit")
 	}

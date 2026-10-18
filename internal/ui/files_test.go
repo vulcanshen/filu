@@ -11,7 +11,7 @@ import (
 )
 
 // Enter goes into a directory; Esc goes back up, the cursor on the directory
-// it came from (Rules K3, K4).
+// it came from (tdp K3, K4).
 func TestEnterIntoAndEscUp(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"a/inner.txt": "x", "b/": "", "c.txt": ""})
 	hs.to("b")
@@ -107,7 +107,7 @@ func TestMarkCopyMove(t *testing.T) {
 	if len(hs.a.marks.items) != 1 {
 		t.Fatalf("a copy keeps the marks: %v", hs.a.marks.items)
 	}
-	hs.a.cd(hs.root, "") // Esc would close the toast first (Rules K4)
+	hs.a.cd(hs.root, "") // Esc would close the toast first (tdp K4)
 	hs.to("b.txt")
 	hs.keys("m")
 	hs.to("dest")
@@ -124,7 +124,7 @@ func TestMarkCopyMove(t *testing.T) {
 	}
 }
 
-// Copy here and Move here cannot run with nothing marked (Rules M6).
+// Copy here and Move here cannot run with nothing marked (tdp M6).
 func TestLandDisabledWithoutMarks(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
 	hs.keys("c")
@@ -193,13 +193,13 @@ func TestTabs(t *testing.T) {
 	if len(hs.a.tabs) != 1 {
 		t.Fatalf("w left %d tabs", len(hs.a.tabs))
 	}
-	hs.keys("w") // the last tab stays (Rules M6: Close tab cannot run)
+	hs.keys("w") // the last tab stays (tdp M6: Close tab cannot run)
 	if len(hs.a.tabs) != 1 {
 		t.Fatal("w closed the last tab")
 	}
 }
 
-// At five tabs a new tab cannot be opened (Rules M6).
+// At five tabs a new tab cannot be opened (tdp M6).
 func TestAtMostFiveTabs(t *testing.T) {
 	hs := newHarness(t, 120, 40, nil)
 	for range 6 {
@@ -211,7 +211,7 @@ func TestAtMostFiveTabs(t *testing.T) {
 }
 
 // r renames in place; a name already there, or with a /, is refused on the
-// spot and the popup stays (Rules K3).
+// spot and the popup stays (tdp K3).
 func TestRename(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"old.txt": "", "taken.txt": ""})
 	hs.to("old.txt")
@@ -253,7 +253,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-// D asks, then moves the file to the trash (Rules F6).
+// D asks, then moves the file to the trash (tdp F6).
 func TestDeleteAsksFirst(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"gone.txt": "x"})
 	hs.to("gone.txt")

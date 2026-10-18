@@ -72,7 +72,7 @@ func taskText(t landTask) string {
 	to := " → " + safeName(t.dest)
 	grey := terminu.Fg(terminu.Overlay0)
 	switch t.status {
-	case taskRunning: // a row that is still going, the app's to show (Rules F7)
+	case taskRunning: // a row that is still going, the app's to show (tdp F7)
 		return terminu.Fg(terminu.Green).Render(glyphRunning) + " " + verbing + " " + subject + to + "  " + grey.Render(fmt.Sprintf("%d/%d", t.done, t.total))
 	case taskDone:
 		return terminu.Fg(terminu.Green).Render(glyphDone) + " " + verbed + " " + subject + to
@@ -123,17 +123,17 @@ func (a *App) drawerActions() []terminu.Action {
 				a.marksChanged()
 				return a.persist()
 			}},
-		{Key: "Z", Label: "Zip", Desc: "the picks, or every mark, into one zip to land", Scope: panel,
+		{Key: "Z", Label: "Zip", Desc: "the picks, or every mark, into one zip to land", Scope: panel, Hint: "zip",
 			Hidden: not(drawerMarks), Disabled: a.nothingMarked, Do: a.zip},
-		{Key: "C", Label: "Clear", Desc: "every mark; the files stay where they are", Scope: panel,
-			Hidden: not(drawerMarks), Disabled: func() bool { return len(a.marks.items) == 0 },
+		{Key: "C", Label: "Clear", Desc: "every mark; the files stay where they are", Scope: panel, Hint: "clear",
+			Hidden: not(drawerMarks), Ask: a.clearAsk,
+			Disabled: asking(a.clearAsk, func(k *terminu.Ask) {
+				k.Question = fmt.Sprintf("Clear all %d marks?", len(a.marks.items))
+			}, func() bool { return len(a.marks.items) == 0 }),
 			Do: func() tea.Cmd {
-				n := len(a.marks.items)
-				return a.t.Confirm(terminu.Ask{Title: "Clear", Question: fmt.Sprintf("Clear all %d marks?", n), Verb: "clear"}, func() tea.Cmd {
-					a.marks.clear()
-					a.marksChanged()
-					return a.persist()
-				})
+				a.marks.clear()
+				a.marksChanged()
+				return a.persist()
 			}},
 		// Tasks
 		{Key: "Enter", Label: "Go to", Desc: "where it landed, in the tab [1] shows", Scope: item, Hint: "go",
@@ -165,11 +165,15 @@ func (a *App) drawerActions() []terminu.Action {
 				return a.openInMenu(r.ID)
 			}},
 		{Key: "D", Label: "Unfavorite", Desc: "it: take its star off", Scope: item,
-			Hidden: not(drawerFavs), Do: func() tea.Cmd {
+			Hidden: not(drawerFavs), Ask: a.unfavAsk,
+			Disabled: asking(a.unfavAsk, func(k *terminu.Ask) {
 				r, _ := a.favsL.Current()
 				where := safeName(shortPath(r.ID))
-				return a.t.Confirm(terminu.Ask{Title: "Unfavorite", Subject: where, Question: "Take the star off " + where + "?", Verb: "unfavorite"},
-					func() tea.Cmd { return a.toggleFavorite(r.ID) })
+				k.Subject, k.Question = where, "Take the star off "+where+"?"
+			}, nil),
+			Do: func() tea.Cmd {
+				r, _ := a.favsL.Current()
+				return a.toggleFavorite(r.ID)
 			}},
 		a.zoomAction(),
 	}
@@ -208,7 +212,7 @@ func (a *App) removeTask(id int) {
 
 // showInTabs brings dir up in [1]: the tab on it if there is one, else a new
 // tab there; with every tab in use it says so. With focus set (a path) the
-// cursor goes there. The focus stays where it is (Rules K3): a toast says
+// cursor goes there. The focus stays where it is (tdp K3): a toast says
 // where to look.
 func (a *App) showInTabs(dir, focus string) tea.Cmd {
 	at := -1
@@ -257,7 +261,8 @@ func (a *App) openInMenu(dir string) tea.Cmd {
 				return a.cd(dir, "")
 			}})
 	}
-	return a.t.Menu("Open in: "+safeName(shortPath(dir)), terminu.MenuSection{Actions: acts})
+	return a.t.Menu("Open in", // TODO(lib FL14): a menu title cannot keep a name as it is
+		terminu.MenuSection{Actions: acts})
 }
 
 // --- tasks: copies, moves and zips in the background --------------------------
@@ -366,7 +371,7 @@ func (a *App) zip() tea.Cmd {
 			name := zipFileName(v)
 			dir, err := os.MkdirTemp("", "filu-zip-")
 			if err != nil {
-				return a.t.Error("Zip", opFailedText("make a temporary directory", err))
+				return a.t.Error("Zip failed", opFailedText("make a temporary directory", err))
 			}
 			id := a.addTask("zip", name, dir, items)
 			go runZip(id, items, filepath.Join(dir, name), a.taskCh)
@@ -378,7 +383,7 @@ func (a *App) zip() tea.Cmd {
 // --- quitting ------------------------------------------------------------------
 
 // syncQuit writes into the quit confirm where the shell will be, and warns
-// while a task is still running (Rules K9: the quit flow is the app's).
+// while a task is still running (tdp K9: the quit flow is the app's).
 func (a *App) syncQuit() {
 	ask := &terminu.Ask{Title: "Quit", Question: "Quit filu?", Verb: "quit"}
 	if os.Getenv(envLastDirFile) != "" {

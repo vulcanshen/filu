@@ -243,9 +243,6 @@ type filesBody struct {
 	app *App
 }
 
-// pathRows are the rows the path takes above the list.
-const pathRows = 2
-
 func (b *filesBody) Draw(w, h int, focused bool) []string {
 	a := b.app
 	if a.zoomed && len(a.tabs) > 1 {
@@ -258,13 +255,11 @@ func (b *filesBody) Draw(w, h int, focused bool) []string {
 // put one in its middle.
 func (b *filesBody) Empty() bool { return false }
 
-// drawTab is one tab in w × h: its path, a divider, the list (or why the
-// directory could not be read).
+// drawTab is one tab in w × h: its path, then the list (or why the directory
+// could not be read). Nothing is drawn between them: a panel draws no line
+// under its header or its typing row either (components/layout/panel).
 func (a *App) drawTab(t *tab, w, h int, focused bool) []string {
 	out := []string{pathRow(t, w)}
-	if h > 1 {
-		out = append(out, terminu.Fg(terminu.Hex(colSurface0)).Render(terminu.Repeat("─", w)))
-	}
 	rest := h - len(out)
 	if rest <= 0 {
 		return terminu.Pad2(out, w, h)
@@ -279,9 +274,6 @@ func (a *App) drawTab(t *tab, w, h int, focused bool) []string {
 	}
 	return append(out, t.list.Draw(w, rest, focused)...)
 }
-
-// colSurface0 is the divider under the path: quieter than any frame line.
-const colSurface0 = "#313244"
 
 // failRows are a panel's error, centred: the fact in Red, the hint in Overlay0
 // (components/layout/panel, loading and errors).
@@ -304,8 +296,10 @@ func pathRow(t *tab, w int) string {
 	return terminu.Pad(crumbRow(t.dir, w-terminu.Width(star))+star, w)
 }
 
-// drawColumns is every tab side by side, a light line between; the tab the
-// keys go to is lit and the others dimmed (Principle P6).
+// drawColumns is every tab side by side, a quiet line between (Overlay0, as
+// the menu's separators); the tab the keys go to is lit and the others dimmed
+// (tdp P6). No component lays tabs out like this: a deviation, written in
+// dev-remarks.
 func (b *filesBody) drawColumns(w, h int, focused bool) []string {
 	a := b.app
 	n := len(a.tabs)
@@ -326,7 +320,7 @@ func (b *filesBody) drawColumns(w, h int, focused bool) []string {
 		if i < n-1 {
 			sep := make([]string, h)
 			for r := range sep {
-				sep[r] = terminu.Fg(terminu.Surface2).Render("│")
+				sep[r] = terminu.Fg(terminu.Overlay0).Render("│")
 			}
 			terminu.Composite(out, sep, x, 0, w)
 			x++
@@ -379,7 +373,7 @@ func (a *App) cd(dir, focus string) tea.Cmd {
 }
 
 // up is Esc on [1]: the parent directory, the cursor on the one it came from
-// (Rules K4, one level up).
+// (tdp K4, one level up).
 func (a *App) up() tea.Cmd {
 	t := a.cur()
 	parent := filepath.Dir(t.dir)

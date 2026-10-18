@@ -38,12 +38,22 @@ func (a *App) filesActions() []terminu.Action {
 			}},
 		{Key: "Enter", Label: "Info", Desc: "the file's path, type, size, times, permissions and owner", Scope: item, Hint: "info",
 			Hidden: a.isDirItem, Do: a.info},
-		{Key: "o", Label: "open", Desc: "it with its default app", Scope: item, Do: a.open},
+		{Key: "o", Label: "open", Desc: "it with its default app", Scope: item, Ask: a.openAsk,
+			Disabled: asking(a.openAsk, func(k *terminu.Ask) {
+				name := a.itemName()
+				k.Subject, k.Question = name, "Open "+name+" with its default app?"
+			}, nil),
+			Do: a.open},
 		{Key: "O", Label: "Open with", Desc: "an app you choose", Scope: item, Do: a.openWith},
 		{Key: "m", Label: "mark", Desc: "it to copy or move it later, or take the mark off", Scope: item, Hint: "mark", Do: a.toggleMark},
 		{Key: "y", Label: "yank", Desc: "its full path, to the clipboard", Scope: item, Do: a.yankItem},
 		{Key: "r", Label: "rename", Desc: "it, in place", Scope: item, Do: a.rename},
-		{Key: "D", Label: "Delete", Desc: "it: into the trash", Scope: item, Do: a.delete},
+		{Key: "D", Label: "Delete", Desc: "it: into the trash", Scope: item, Ask: a.deleteAsk,
+			Disabled: asking(a.deleteAsk, func(k *terminu.Ask) {
+				name := a.itemName()
+				k.Subject, k.Question = name, "Move "+name+" to the trash?"
+			}, nil),
+			Do: a.delete},
 		{Key: "f", Label: "favorite", Desc: "this directory, or take its star off", Scope: item,
 			Hidden: func() bool { return !a.isDirItem() },
 			Do: func() tea.Cmd {
@@ -58,14 +68,21 @@ func (a *App) filesActions() []terminu.Action {
 		{Key: "go", Label: "goto", Desc: "a favorite, or any directory under your home", Scope: panel, Do: a.gotoMenu},
 		{Key: "F", Label: "Favorite here", Desc: "the directory you are in, or take its star off", Scope: panel,
 			Do: func() tea.Cmd { return a.toggleFavorite(a.cur().dir) }},
-		{Key: "b", Label: "breadcrumb", Desc: "up to one of the directories this one is in", Scope: panel, Do: a.breadcrumb},
+		{Key: "b", Label: "breadcrumb", Desc: "up to one of the directories this one is in", Scope: panel,
+			Hidden: func() bool { d := a.cur().dir; return filepath.Dir(d) == d }, // at / there is none (tdp M6)
+			Do:     a.breadcrumb},
 		{Key: "t", Label: "new tab", Desc: "the same directory, a favorite, or a search", Scope: panel,
 			Disabled: func() bool { return len(a.tabs) >= maxTabs }, Do: a.newTabMenu},
 		{Key: "w", Label: "Close tab", Desc: "this tab", Scope: panel,
 			Disabled: func() bool { return len(a.tabs) <= 1 }, Do: a.closeTab},
 		{Key: "a", Label: "add", Desc: "a file here; end its name with / for a directory", Scope: panel, Do: a.add},
 		{Key: "S", Label: "Sort", Desc: "by a column, then a direction; this directory keeps it", Scope: panel, Do: a.sortMenu},
-		{Key: "s", Label: "shell", Desc: "your shell, in this directory", Scope: panel, Do: a.shell},
+		{Key: "s", Label: "shell", Desc: "your shell, in this directory", Scope: panel, Ask: a.shellAsk,
+			Disabled: asking(a.shellAsk, func(k *terminu.Ask) {
+				where := safeName(shortPath(a.cur().dir))
+				k.Subject, k.Question = where, "Open your shell in "+where+"?"
+			}, nil),
+			Do: a.shell},
 		{Key: ".", Label: "Hidden files", Desc: "show them, or hide them again", Scope: panel, Do: a.toggleHidden},
 		a.zoomAction(),
 	}
@@ -73,9 +90,9 @@ func (a *App) filesActions() []terminu.Action {
 
 // zoomAction is z on any panel: it takes the whole screen, or gives it back.
 // Zoom is a change of layout, not a mode: no key changes its meaning and Esc
-// does not end it (Principle, "mode").
+// does not end it (the tdp term "mode").
 func (a *App) zoomAction() terminu.Action {
-	return terminu.Action{Key: "z", Label: "zoom", Desc: "this panel to the whole screen, or back", Scope: terminu.PanelScope,
+	return terminu.Action{Key: "z", Label: "zoom", Desc: "this panel to the whole screen, or back", Scope: terminu.PanelScope, Hint: "zoom",
 		Do: func() tea.Cmd {
 			a.zoomed = !a.zoomed
 			a.t.ForceNarrow = a.zoomed
@@ -94,7 +111,23 @@ func (a *App) globalActions() []terminu.Action {
 
 func (a *App) nothingMarked() bool { return len(a.marks.landItems()) == 0 }
 
-// info shows the file's facts (Rules K3: Enter on a file).
+// asking fills in an action's Ask from where filu is now — the question names
+// the item under the cursor — and reports whether the action cannot run.
+// terminu reads an action's Ask when it runs it, after it asks Disabled, so the
+// question is always the one for now; and an action with an Ask opens its
+// confirm over the menu it ran from (tdp F4, T1).
+// TODO(lib FL15): an Ask that depends on the item.
+func asking(ask *terminu.Ask, fill func(*terminu.Ask), disabled func() bool) func() bool {
+	return func() bool {
+		if disabled != nil && disabled() {
+			return true
+		}
+		fill(ask)
+		return false
+	}
+}
+
+// info shows the file's facts (tdp K3: Enter on a file).
 func (a *App) info() tea.Cmd {
 	it, p, ok := a.item()
 	if !ok {
@@ -106,22 +139,23 @@ func (a *App) info() tea.Cmd {
 	for _, r := range rows {
 		w = max(w, len(r.label))
 	}
+	// The labels in the layer colour, as a file-picker's facts are
+	// (components/input/file-picker); the viewer opens as the first layer.
+	label := terminu.Fg(terminu.LayerColor(1))
 	for _, r := range rows {
-		lines = append(lines, terminu.Fg(terminu.Blue).Render(fmt.Sprintf("%-*s", w, strings.ToUpper(r.label)))+"  "+r.value)
+		lines = append(lines, label.Render(fmt.Sprintf("%-*s", w, strings.ToUpper(r.label)))+"  "+r.value)
 	}
 	return a.t.Viewer(&terminu.Viewer{Title: "Info", Subject: safeName(it.name), Glyph: glyphInfo, Lines: lines})
 }
 
-// open asks, then hands the entry to its default app: filu cannot follow it
-// there (tdp F6, the app's choice).
+// open hands the entry to its default app, once asked (openAsk): filu cannot
+// follow it there (tdp F6, the app's choice).
 func (a *App) open() tea.Cmd {
 	_, p, ok := a.item()
 	if !ok {
 		return nil
 	}
-	name := a.itemName()
-	return a.t.Confirm(terminu.Ask{Title: "Open", Subject: name, Question: "Open " + name + " with its default app?", Verb: "open"},
-		func() tea.Cmd { return openFileCmd(p) })
+	return openFileCmd(p)
 }
 
 // openWith lists the default app and the ones config.yaml names; choosing one
@@ -136,7 +170,8 @@ func (a *App) openWith() tea.Cmd {
 		app := app
 		acts = append(acts, terminu.Action{Label: app.Name, Desc: "runs " + app.Cmd, Do: func() tea.Cmd { return openWithCmd(app.Cmd, p) }})
 	}
-	return a.t.Menu("Open with: "+a.itemName(), terminu.MenuSection{Actions: acts})
+	return a.t.Menu("Open with", // TODO(lib FL14): a menu title cannot keep a name as it is
+		terminu.MenuSection{Actions: acts})
 }
 
 // toggleMark puts the entry in the marks, or takes it out.
@@ -183,7 +218,7 @@ func (a *App) rename() tea.Cmd {
 		Done: func(v string) tea.Cmd {
 			to := filepath.Join(dir, v)
 			if err := os.Rename(p, to); err != nil {
-				return a.t.Error("Rename", opFailedText("rename "+safeName(it.name), err))
+				return a.t.Error("Rename failed", opFailedText("rename "+safeName(it.name), err))
 			}
 			a.reloadDir(dir)
 			a.cur().list.Select(to)
@@ -237,7 +272,7 @@ func (a *App) add() tea.Cmd {
 				}
 			}
 			if err != nil {
-				return a.t.Error("Add", opFailedText("add "+safeName(v), err))
+				return a.t.Error("Add failed", opFailedText("add "+safeName(v), err))
 			}
 			a.reloadDir(dir)
 			a.cur().list.Select(filepath.Join(dir, firstElem(strings.TrimSuffix(v, "/"))))
@@ -271,24 +306,21 @@ func addProblem(dir, name string) string {
 	return ""
 }
 
-// delete asks, then moves the entry to the trash.
+// delete moves the entry to the trash, once asked (deleteAsk).
 func (a *App) delete() tea.Cmd {
 	_, p, ok := a.item()
 	if !ok {
 		return nil
 	}
 	name, dir := a.itemName(), a.cur().dir
-	return a.t.Confirm(terminu.Ask{Title: "Delete", Subject: name, Question: "Move " + name + " to the trash?", Verb: "delete"},
-		func() tea.Cmd {
-			if err := moveToTrash(p); err != nil {
-				return a.t.Error("Delete", opFailedText("delete "+name, err))
-			}
-			a.marks.removeItem(p)
-			a.reloadDir(dir)
-			a.marksChanged()
-			a.refreshPreview()
-			return tea.Batch(a.t.Toast(terminu.Info, "Moved "+name+" to the trash"), a.persist())
-		})
+	if err := moveToTrash(p); err != nil {
+		return a.t.Error("Delete failed", opFailedText("delete "+name, err))
+	}
+	a.marks.removeItem(p)
+	a.reloadDir(dir)
+	a.marksChanged()
+	a.refreshPreview()
+	return tea.Batch(a.t.Toast(terminu.Info, "Moved "+name+" to the trash"), a.persist())
 }
 
 // toggleFavorite stars dir, or takes its star off.
@@ -326,9 +358,6 @@ func (a *App) breadcrumb() tea.Cmd {
 		if filepath.Dir(d) == d {
 			break
 		}
-	}
-	if dir == filepath.Dir(dir) {
-		return a.t.Toast(terminu.Info, "This is the top: there is no directory above it")
 	}
 	return a.t.Menu("Breadcrumb", terminu.MenuSection{Actions: acts})
 }
@@ -447,18 +476,15 @@ func direction(asc bool) string {
 	return "descending"
 }
 
-// shell asks, then opens the user's shell in the directory; when it ends, the
-// directory is read again.
+// shell opens the user's shell in the directory, once asked (shellAsk); when it
+// ends, the directory is read again.
 func (a *App) shell() tea.Cmd {
 	dir := a.cur().dir
-	where := safeName(shortPath(dir))
-	return a.t.Confirm(terminu.Ask{Title: "Shell", Subject: where, Question: "Open your shell in " + where + "?", Verb: "open"},
-		func() tea.Cmd {
-			return a.t.OpenTerminal(&terminu.Terminal{Title: "Shell", Subject: where, Dir: dir, Ends: true,
-				OnExit: func(error) tea.Cmd {
-					a.reloadDir(dir)
-					a.refreshPreview()
-					return nil
-				}})
-		})
+	a.term = &terminu.Terminal{Title: "Shell", Subject: safeName(shortPath(dir)), Dir: dir, Ends: true,
+		OnExit: func(error) tea.Cmd {
+			a.reloadDir(dir)
+			a.refreshPreview()
+			return nil
+		}}
+	return a.t.OpenTerminal(a.term)
 }

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -33,6 +34,29 @@ var popups = map[string][]string{
 	"rename":      {"r"},
 	"toast":       {"y"},
 	"quit":        {"q"},
+	"error":       {"/", "c"},     // content search without ripgrep (openPopup)
+	"terminal":    {"s", "Enter"}, // the shell, /bin/sh (openPopup)
+}
+
+// openPopup opens one of popups on hs: the error popup needs ripgrep missing,
+// the terminal a shell that starts fast and is stopped after.
+func openPopup(t *testing.T, hs *harness, name string) {
+	t.Helper()
+	switch name {
+	case "error":
+		old := lookPath
+		lookPath = func(string) (string, error) { return "", os.ErrNotExist }
+		t.Cleanup(func() { lookPath = old })
+	case "terminal":
+		t.Setenv("SHELL", "/bin/sh")
+		t.Cleanup(func() {
+			if hs.a.term != nil {
+				hs.a.term.Stop()
+			}
+		})
+	}
+	hs.to("notes.md")
+	hs.keys(popups[name]...)
 }
 
 // sizesFor are the screen sizes each pair of widths is drawn at: the sizes
@@ -43,18 +67,17 @@ var sizesFor = map[[2]int][][2]int{
 	{2, 2}: {{80, 40}, {120, 40}},
 }
 
-// Every row of the screen is exactly as wide as the terminal (Rules L4), at
+// Every row of the screen is exactly as wide as the terminal (tdp L4), at
 // the sizes filu has to work at and narrower, with an icon one cell or two and
-// a powerline symbol one or two (Rules E5), and with every kind of popup open.
+// a powerline symbol one or two (tdp E5), and with every kind of popup open.
 func TestL4EveryRowIsTheScreenWidth(t *testing.T) {
 	for iw, sizes := range sizesFor {
 		for _, sz := range sizes {
-			for name, keys := range popups {
+			for name := range popups {
 				t.Run(fmt.Sprintf("icon%d-pl%d/%dx%d/%s", iw[0], iw[1], sz[0], sz[1], name), func(t *testing.T) {
 					hs := newHarness(t, sz[0], sz[1], fixture)
 					terminu.SetIconWidth(iw[0], iw[1])
-					hs.to("notes.md")
-					hs.keys(keys...)
+					openPopup(t, hs, name)
 					checkWidths(t, hs, sz[0], sz[1])
 				})
 			}
@@ -63,10 +86,10 @@ func TestL4EveryRowIsTheScreenWidth(t *testing.T) {
 }
 
 // A popup opened on a larger screen stays put while the terminal shrinks under
-// it — wider than the screen, taller, or both — and nothing breaks (Rules E5).
+// it — wider than the screen, taller, or both — and nothing breaks (tdp E5).
 func TestE5PopupLargerThanTheScreen(t *testing.T) {
 	for _, iw := range [][2]int{{1, 1}, {2, 2}} {
-		for name, keys := range popups {
+		for name := range popups {
 			for _, to := range [][2]int{{30, 40}, {120, 8}, {24, 6}} {
 				if name == "name finder" && to == [2]int{24, 6} {
 					// TODO(lib FL8): a finder with file facts panics drawing them on a
@@ -76,8 +99,7 @@ func TestE5PopupLargerThanTheScreen(t *testing.T) {
 				t.Run(fmt.Sprintf("icon%d-pl%d/%s/%dx%d", iw[0], iw[1], name, to[0], to[1]), func(t *testing.T) {
 					hs := newHarness(t, 120, 40, fixture)
 					terminu.SetIconWidth(iw[0], iw[1])
-					hs.to("notes.md")
-					hs.keys(keys...)
+					openPopup(t, hs, name)
 					hs.send(tea.WindowSizeMsg{Width: to[0], Height: to[1]})
 					checkWidths(t, hs, to[0], to[1])
 				})

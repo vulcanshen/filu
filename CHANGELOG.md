@@ -55,6 +55,15 @@ to switch.
 - In the viewer the selection mode is called Visual; `y` outside it copies
   everything.
 - A running task shows a timer glyph and its count instead of a spinner.
+- A `state.yaml` filu cannot read is said when it starts, and left as it is
+  instead of being written over with an empty session; so is a directory
+  watch that cannot start.
+- `[2]` says in red why it cannot read a file. The viewer shows a text file
+  as it is — tabs, control characters, long lines — and copies it unchanged.
+- The content search's preview keeps private keys out with
+  `hide_secrets_in_preview` and names control characters in red.
+- The path row in `[1]` has no line under it; Breadcrumb is not offered at
+  `/`.
 
 ### Removed
 

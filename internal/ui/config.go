@@ -103,7 +103,7 @@ func configFilePath() (string, bool) {
 	if configPathOverride != "" {
 		return configPathOverride, true
 	}
-	if d := os.Getenv("FILU__CONFIG"); d != "" { // a config directory (demo recordings / isolated runs, tdp D6)
+	if d := os.Getenv("FILU__CONFIG"); d != "" { // a config directory (demo recordings / isolated runs, tdp E2, E3)
 		return filepath.Join(d, "config.yaml"), true
 	}
 	dir, ok := filuConfigDir()

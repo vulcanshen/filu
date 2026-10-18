@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// FILU__CONFIG names a config directory, config.yaml inside it (tdp D6: an
+// FILU__CONFIG names a config directory, config.yaml inside it (tdp E2: an
 // app's variables are APP__NAME, CONFIG a directory; used by the demo tapes to
 // isolate state); the old FILU_CONFIG is not read any more, and the test-only
 // override still wins.
