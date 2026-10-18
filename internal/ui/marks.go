@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/charmbracelet/lipgloss"
 )
 
 // marksModel is panel [3]'s Marks bucket (the type keeps its legacy name): files
@@ -117,16 +115,6 @@ func (m *marksModel) removeItem(path string) {
 	}
 }
 
-// centeredNote renders a dim message centred both ways in a w×rows box — used
-// for panel [3]'s empty states.
-func centeredNote(w, rows int, text string) string {
-	msg := lipgloss.NewStyle().Foreground(dimColor).Render(text)
-	if w < 1 || rows < 1 {
-		return msg
-	}
-	return centerDisp(w, rows, msg)
-}
-
 // markGlyph marks a list file that sits in the marks bucket. markPickGlyph marks
 // a Marks-panel item that is picked into the land subset — a distinct glyph from
 // the bucket mark so the two "picked" states never read as the same thing
@@ -146,53 +134,6 @@ func pathIcon(p string) string {
 		it.isDir = fi.IsDir()
 	}
 	return fileIcon(it)
-}
-
-func (m marksModel) view(w, rows int, focused bool) string {
-	if len(m.items) == 0 {
-		return centeredNote(w, rows, "(empty)")
-	}
-	us := lipgloss.NewStyle().Foreground(userColor)                    // carried = user footprint
-	check := lipgloss.NewStyle().Foreground(lipgloss.Color("#a6e3a1")) // picked = green tick
-	cursorBg := handColor                                              // focused: current hand
-	if !focused {
-		cursorBg = userColor
-	}
-	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(cursorBg)
-
-	var b strings.Builder
-	n := min(len(m.items), rows)
-	for i := range n {
-		p := m.items[i]
-		picked := m.picked[p]
-		markW := 1
-		if picked {
-			markW = dispWidth(markPickGlyph)
-		}
-		// Prefix cells: " <mark> <icon> " — reserve them, then fit the full path
-		// (home-folded) into the rest, trimmed from the left so the filename stays
-		// on screen.
-		icon := pathIcon(p)
-		prefixW := 1 + markW + 1 + dispWidth(icon) + 1
-		path := truncPathLeft(safeName(shortPath(p)), w-prefixW)
-		if focused && i == m.cursor {
-			mark := " "
-			if picked {
-				mark = markPickGlyph
-			}
-			b.WriteString(cur.Render(padDisp(" "+mark+" "+icon+" "+path, w)))
-		} else {
-			mark := " "
-			if picked {
-				mark = check.Render(markPickGlyph)
-			}
-			b.WriteString(truncate(" "+mark+" "+us.Render(icon+" "+path), w))
-		}
-		if i < n-1 {
-			b.WriteByte('\n')
-		}
-	}
-	return b.String()
 }
 
 // --- file operations ---

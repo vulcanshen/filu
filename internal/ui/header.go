@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	terminu "github.com/vulcanshen/terminu-go"
 )
 
 // pathSegments splits a directory into breadcrumb segments, folding the home dir
@@ -41,7 +42,7 @@ func pathSegments(dir string) []string {
 // final hard clip.
 func crumbRow(dir string, w int) string {
 	segs := breadcrumbSegments(dir, w-1) // one cell of left margin off the border
-	return truncate(padDisp(" "+renderCrumb(segs), w), w)
+	return terminu.Pad(" "+renderCrumb(segs), w)
 }
 
 // renderCrumb draws the path portion of the breadcrumb: each segment in
@@ -97,11 +98,11 @@ func fitPathSegments(segs []string, fits func([]string) bool) []string {
 }
 
 // breadcrumbSegments shrinks a directory's path segments to fit budget display
-// cells of rendered width (see fitPathSegments); padDisp clips if even the
+// cells of rendered width (see fitPathSegments); terminu.Pad clips if even the
 // current segment alone overflows.
 func breadcrumbSegments(dir string, budget int) []string {
 	return fitPathSegments(pathSegments(dir), func(s []string) bool {
-		return dispWidth(renderCrumb(s)) <= budget
+		return terminu.Width(renderCrumb(s)) <= budget
 	})
 }
 
@@ -120,6 +121,14 @@ func joinSegs(segs []string) string {
 // pinned dirs and the header shorten the same way.
 func fitPath(dir string, w int) string {
 	return joinSegs(fitPathSegments(pathSegments(dir), func(s []string) bool {
-		return dispWidth(joinSegs(s)) <= w
+		return terminu.Width(joinSegs(s)) <= w
 	}))
+}
+
+// firstRune is the first character of s.
+func firstRune(s string) string {
+	for _, r := range s {
+		return string(r)
+	}
+	return ""
 }

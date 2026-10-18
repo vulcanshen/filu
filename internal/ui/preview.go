@@ -108,7 +108,7 @@ func sanitizeLine(s string) string {
 		}
 		switch {
 		case r == '\t':
-			b.WriteString("    ")
+			b.WriteString(strings.Repeat(" ", inputTabWidth)) // input_tab_width cells (tdp E3)
 		case r == '\r':
 			continue
 		case r < 0x20 || r == 0x7f:
@@ -194,22 +194,6 @@ func isText(data []byte) bool {
 		return false
 	}
 	return utf8.Valid(data)
-}
-
-// renderLinesFrom renders up to rows lines starting at offset, each clipped to w.
-func renderLinesFrom(lines []string, offset, w, rows int) string {
-	if offset < 0 {
-		offset = 0
-	}
-	end := min(offset+rows, len(lines))
-	var b strings.Builder
-	for i := offset; i < end; i++ {
-		b.WriteString(truncate(lines[i], w))
-		if i < end-1 {
-			b.WriteByte('\n')
-		}
-	}
-	return b.String()
 }
 
 // hexDump renders data xxd-style: offset, 16 hex bytes, ASCII gutter.

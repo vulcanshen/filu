@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 // Zip packs the Marks panel's land subset into one archive. It lands in a fresh
@@ -65,27 +63,6 @@ func zipFileName(input string) string {
 		name += ".zip"
 	}
 	return name
-}
-
-// startZip packs items into name.zip inside a fresh temp dir, as an async task
-// in the Tasks tab (same shape as a land — long work off the UI goroutine).
-func (m *AppModel) startZip(items []string, name string) tea.Cmd {
-	if len(items) == 0 || name == "" {
-		return nil
-	}
-	dir, err := os.MkdirTemp("", "filu-zip-")
-	if err != nil {
-		return m.toast.show("Could not create a temp dir")
-	}
-	m.nextTaskID++
-	m.tasks = append(m.tasks, landTask{
-		id: m.nextTaskID, action: "zip",
-		dest: name, destPath: dir, srcs: items,
-		total: len(items), at: time.Now(), status: taskRunning,
-	})
-	m.capTasks()
-	go runZip(m.nextTaskID, items, filepath.Join(dir, name), m.taskCh)
-	return tea.Batch(m.persist(), m.keepLoading())
 }
 
 // runZip writes items into zipPath on a goroutine, streaming progress to ch. It

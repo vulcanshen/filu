@@ -5,8 +5,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 // sortCol is a file attribute the list can be ordered by.
@@ -205,85 +203,3 @@ func sortBadgeText(rules []sortRule, c sortCol) string {
 // Each step is its own popup (tdp F1): the column picker stays open underneath
 // while the direction picker sits over it (F4), so Esc on the direction goes
 // back to the columns.
-
-// openSortColumnPicker opens the sort picker on the column step (animated).
-func (m *AppModel) openSortColumnPicker() tea.Cmd {
-	m.setSortColumnItems()
-	m.sortMenu.setSize(m.width, m.height)
-	return m.sortMenu.open()
-}
-
-// setSortColumnItems (re)populates the column picker with the sortable columns
-// plus Reset, dimmed while there is no sort to reset (tdp M6) — always there,
-// so the box keeps the height it opened with as a sort is added (F7). The
-// badges reflect the sort of the active tab's directory (the one being edited).
-func (m *AppModel) setSortColumnItems() {
-	rules := sortRulesFor(m.cur().dir)
-	items := make([]menuItem, 0, len(sortCols)+2)
-	for _, d := range sortCols {
-		items = append(items, menuItem{label: d.title, key: d.key, hint: sortBadgeText(rules, d.col)})
-	}
-	items = append(items, menuItem{separator: true})
-	items = append(items, menuItem{label: "Reset", key: "r", hint: "default order", disabled: len(rules) == 0})
-	m.sortMenu.setItems(items, "Sort by…")
-}
-
-// setSortDirectionItems fills the direction picker: Ascending/Descending, plus
-// Unset when the column is already part of the active dir's chain.
-func (m *AppModel) setSortDirectionItems(col sortCol) {
-	items := []menuItem{
-		{label: "Ascending", key: "a"},
-		{label: "Descending", key: "d"},
-	}
-	if sortRuleIndex(sortRulesFor(m.cur().dir), col) >= 0 {
-		items = append(items, menuItem{separator: true})
-		items = append(items, menuItem{label: "Unset", key: "u", hint: "remove from sort"})
-	}
-	m.sortDirMenu.setItems(items, "Sort "+sortColTitle(col)+"…")
-}
-
-// advanceSortFlow handles a key committed on the column picker: Reset clears
-// the sort in place; a column opens the direction picker over it.
-func (m *AppModel) advanceSortFlow(key string) tea.Cmd {
-	if key == "r" {
-		resetSortFor(m.cur().dir)
-		m.reloadAllTabs()
-		m.setSortColumnItems()
-		return m.persist()
-	}
-	if col, ok := sortColByKey(key); ok {
-		m.sortFlowCol = col
-		m.setSortDirectionItems(col)
-		m.sortDirMenu.setSize(m.width, m.height)
-		return m.sortDirMenu.open()
-	}
-	return nil
-}
-
-// applySortDirection handles a key committed on the direction picker: it
-// applies asc/desc/unset to the column, re-sorts, persists, and closes the
-// direction picker so the column picker beneath shows the new chain (kbu chain
-// building).
-func (m *AppModel) applySortDirection(key string) tea.Cmd {
-	dir := m.cur().dir // the picker edits the active tab's directory
-	switch key {
-	case "a":
-		setSortFor(dir, m.sortFlowCol, true)
-	case "d":
-		setSortFor(dir, m.sortFlowCol, false)
-	case "u":
-		unsetSortFor(dir, m.sortFlowCol)
-	}
-	m.reloadAllTabs()
-	m.setSortColumnItems()
-	return tea.Batch(m.sortDirMenu.close(), m.persist())
-}
-
-// reloadAllTabs re-sorts every tab (cursor preserved) after a sort change.
-func (m *AppModel) reloadAllTabs() {
-	for i := range m.tabs {
-		m.tabs[i].reloadPreserving()
-	}
-	m.cur().ensureVisible(m.listRows())
-	m.refreshPreview()
-}

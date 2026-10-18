@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -41,14 +40,5 @@ func TestWithLineNumbers(t *testing.T) {
 		if fields := strings.Fields(ansi.Strip(l)); len(fields) == 0 || fields[0] != strconv.Itoa(i+1) {
 			t.Errorf("line %d gutter should start with %d: %q", i+1, i+1, ansi.Strip(l))
 		}
-	}
-}
-
-func TestTruncateWidth(t *testing.T) {
-	// a wide-char line must clip to the display width, not the rune count
-	s := strings.Repeat("你", 20) // 20 runes, 40 display cells
-	got := truncate(s, 10)
-	if w := lipgloss.Width(got); w > 10 {
-		t.Errorf("truncate width = %d, want <= 10 (%q)", w, got)
 	}
 }

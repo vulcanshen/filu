@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"gopkg.in/yaml.v3"
 )
@@ -33,16 +34,24 @@ var (
 	finderCap        = defaultFinderCap
 	finderIgnoreDirs = defaultIgnoreDirs
 	openWithApps     []openWithApp
+	// The family's shared settings (tdp E3), handed to terminu.
+	inputTabWidth        = defaultInputTabWidth
+	hideSecretsInPreview bool
 )
+
+// defaultInputTabWidth is input_tab_width's default (tdp E3).
+const defaultInputTabWidth = 4
 
 // fileConfig is the user-editable configuration (config.yaml, hand-edited) — kept
 // separate from the auto-managed state.yaml so tuning knobs never mix with
 // session state. IgnoreDirs is a pointer so an absent key falls back to the
 // default while an explicit empty list means "exclude nothing".
 type fileConfig struct {
-	FinderCap  int           `yaml:"finder_cap"`
-	IgnoreDirs *[]string     `yaml:"ignore_dirs"`
-	OpenWith   []openWithApp `yaml:"open_with"`
+	FinderCap            int           `yaml:"finder_cap"`
+	IgnoreDirs           *[]string     `yaml:"ignore_dirs"`
+	OpenWith             []openWithApp `yaml:"open_with"`
+	InputTabWidth        int           `yaml:"input_tab_width"`
+	HideSecretsInPreview bool          `yaml:"hide_secrets_in_preview"`
 }
 
 // openWithApp is one entry in config.yaml's open_with: a display name and the
@@ -56,22 +65,38 @@ type openWithApp struct {
 
 var configPathOverride string // tests redirect config I/O here
 
-// filuConfigDir resolves the directory that holds config.yaml and state.yaml.
-// XDG_CONFIG_HOME wins on every platform when set — so a macOS user can opt into
-// ~/.config/filu by exporting it, instead of being stuck with
-// ~/Library/Application Support — otherwise os.UserConfigDir() decides (macOS:
-// ~/Library/Application Support; Linux: $XDG_CONFIG_HOME or ~/.config). Go's
-// UserConfigDir already honours XDG_CONFIG_HOME on Linux, so this only changes
-// macOS behaviour; the result is identical on Linux.
+// filuConfigDir resolves the directory that holds config.yaml and state.yaml:
+// $XDG_CONFIG_HOME/filu, else ~/.config/filu, the same on every platform (tdp
+// E3).
+// TODO(tdp FL5): up to v0.4.0 macOS used ~/Library/Application Support/filu;
+// while ~/.config/filu does not exist and that one does, filu keeps using it.
 func filuConfigDir() (string, bool) {
 	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
 		return filepath.Join(x, "filu"), true
 	}
-	dir, err := os.UserConfigDir()
-	if err != nil {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
 		return "", false
 	}
-	return filepath.Join(dir, "filu"), true
+	dir := filepath.Join(home, ".config", "filu")
+	if old := legacyConfigDir(home); old != "" && !isDir(dir) && isDir(old) {
+		return old, true
+	}
+	return dir, true
+}
+
+// legacyConfigDir is where filu kept its settings before tdp E3, when that was
+// not ~/.config/filu: macOS's Application Support.
+func legacyConfigDir(home string) string {
+	if runtime.GOOS == "darwin" {
+		return filepath.Join(home, "Library", "Application Support", "filu")
+	}
+	return ""
+}
+
+func isDir(p string) bool {
+	fi, err := os.Stat(p)
+	return err == nil && fi.IsDir()
 }
 
 func configFilePath() (string, bool) {
@@ -117,6 +142,10 @@ func loadConfig() error {
 		finderIgnoreDirs = *c.IgnoreDirs
 	}
 	openWithApps = c.OpenWith
+	if c.InputTabWidth > 0 {
+		inputTabWidth = c.InputTabWidth
+	}
+	hideSecretsInPreview = c.HideSecretsInPreview
 	return nil
 }
 
@@ -145,10 +174,18 @@ const configHeader = `# filu configuration — hand-edited, and separate from th
 #       - name: IntelliJ IDEA
 #         cmd: idea
 #
+# input_tab_width: how many cells a tab takes in the preview and the viewer.
+#
+# hide_secrets_in_preview: true keeps private keys, and files only their owner
+#   may read, out of the finders' previews.
+#
+# The last two are the same setting in every terminu family app.
+#
 `
 
 func defaultConfigBytes() []byte {
-	body, _ := yaml.Marshal(fileConfig{FinderCap: defaultFinderCap, IgnoreDirs: &defaultIgnoreDirs, OpenWith: []openWithApp{}})
+	body, _ := yaml.Marshal(fileConfig{FinderCap: defaultFinderCap, IgnoreDirs: &defaultIgnoreDirs, OpenWith: []openWithApp{},
+		InputTabWidth: defaultInputTabWidth})
 	return append([]byte(configHeader), body...)
 }
 
