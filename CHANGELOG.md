@@ -4,10 +4,61 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-- filu is built on terminu-go, the terminu family's shared library: the
-  screen, the `Space` menu, `?`, the popups and their animations, confirms,
-  inputs, toasts, the finders, the shell and the splash are the family's own,
-  and look and work the same as in every terminu app.
+filu now follows tdp v0.7.4 and is built on terminu-go, the terminu
+family's shared library: the screen, the `Space` menu, `?`, the popups and
+their animations, confirms, inputs, toasts, the finders, the viewer, the shell
+and the splash are the family's own, and look and work the same as in every
+terminu app. What changes for you:
+
+**On macOS the settings move to `~/.config/filu`** (or
+`$XDG_CONFIG_HOME/filu`), as on Linux and in every family app. Until that
+directory exists, filu keeps reading and writing
+`~/Library/Application Support/filu`; move `config.yaml` and `state.yaml` over
+to switch.
+
+### Added
+
+- `filu help` (also `--help`, `-h`) prints the usage; `--version` and `-v`
+  print the version.
+- `config.yaml` takes the family's shared `input_tab_width` (how many cells a
+  tab takes in the preview and the viewer, 4) and `hide_secrets_in_preview`
+  (keep private keys out of the finders' previews, off).
+- `FILU__POWERLINE_WIDTH` and `TERMINU__POWERLINE_WIDTH` set how many cells a
+  powerline symbol takes, as the icon ones do; `filu iconwidth` prints both,
+  and where each came from. filu's shell gets both family variables.
+- **Quit to** (`Q`, in the global operation popup) chooses where your shell
+  goes and leaves.
+- The finders preview a file with its type, size, modified time and mode
+  under it.
+
+### Changed
+
+- `q` asks before quitting and says which directory your shell goes to (the
+  tab's you are on); choosing another is **Quit to**.
+- Content search asks for the text first, then lists the files that hold it.
+  Starting a search with `/` or `~/` to search from that path is gone for now.
+- A finder narrows by the words you type, each as typed and in any order,
+  instead of fuzzily; `Enter` on the typing row goes to the list, and `Enter`
+  there opens.
+- Rename shows the old name in grey: `Tab` takes it to edit, or type a new
+  one. Zip no longer fills in a name: the box says the one it would choose.
+- `Enter` on a mark, a favorite or a task leaves you in `[3]`; a short message
+  says where `[1]` went.
+- `[2]` dims when it does not have the focus, as the other panels do.
+- The sort's direction is chosen with `a` or `D`, and choosing it closes the
+  sort; sort again to add a tie-break. The ascending and descending glyphs in
+  the header were the wrong way round.
+- Zoomed, `Tab` moves to the next panel, zoomed too, instead of zooming out.
+- A marked file shows the family's tick; a starred directory shows its star
+  after its name, and after the path when you are in it. `[3]` lists have
+  column headers.
+- In the viewer the selection mode is called Visual; `y` outside it copies
+  everything.
+- A running task shows a timer glyph and its count instead of a spinner.
+
+### Removed
+
+- `FILU__REPAINT`: drawing the screen is terminu-go's now.
 
 ## [0.4.0] — 2026-10-06
 

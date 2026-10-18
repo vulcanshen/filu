@@ -6,36 +6,34 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/vulcanshen/filu)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-**語言**: [English](README.md) · 繁體中文
+**Language**: [English](README.md) · 繁體中文
 
-**不用學的終端機檔案管理器。** 四個鍵 —— `Tab`、`Enter`、`Space`、`Esc` —— 就能用到 filu 的所有功能。一眼看清重點的檔案清單、把檔案收集起來再放到別處、依檔名或內容找東西、邊走邊預覽,離開時還能把 shell 留在你最後所在的目錄。
+**不用學的終端機檔案管理器。** 不管在哪裡，按 `Space` 列出能做的事，按 `?` 列出能按的鍵。一眼看清重點的檔案清單、把檔案收集起來再放到別處、依檔名或內容找東西、邊走邊預覽，離開時還能把 shell 留在你最後所在的目錄。
 
-> _遇事不決,就按_ **`Space`**。
+> _遇事不決，就按_ **`Space`**。
 
 ## Demo
 
 ![demo](docs/demo-basics.gif)
 
-在 filu 裡走動：面板、分頁、`Space` menu，還有一直看得到的路徑。
-
 ## 為什麼用 filu
 
-- **什麼都不用背。** 在任何面板按 `Space`,filu 就列出這裡能做的事。每個快捷鍵都只是選單項目的捷徑,從來不是唯一入口。
-- **一眼看懂一個目錄。** 修改時間、擁有者、權限、大小就排在檔名旁邊,配色跟你的 `eza` / `ls` 一樣。可依任一欄排序,而且每個目錄記得自己的排序。
-- **像桌面一樣複製、搬移。** 邊逛邊 mark 檔案,走到目的地按 `c` 或 `v`。可以跨分頁 mark、把同一批檔案放到好幾個地方,或先打包成 zip。
-- **很快就找到。** 模糊搜尋檔名、用 ripgrep 搜尋檔案內容,或跳到 home 底下任何目錄 —— 結果邊打字邊冒出來,旁邊附即時預覽。
-- **打開前先看一眼。** 語法高亮的文字、壓縮檔內容、目錄樹、PDF、圖片、二進位檔的 hex。選取其中一段複製到剪貼簿 —— 連 SSH 上都行。
-- **離開時留在工作的地方。** 按 `q` 離開,shell 會停在你挑的那個目錄。
-- **下次接著用。** 分頁、marks、最愛、每個目錄的排序,重開後都還在。
+- **什麼都不用背。** 在任何 panel 按 `Space`，filu 就列出這裡能做的事。每個熱鍵都只是那個選單裡某一列的捷徑，從來不是唯一入口。
+- **一眼看懂一個目錄。** 修改時間、擁有者、權限、大小就排在檔名旁邊，配色跟你的 `eza` / `ls` 一樣。可依任一欄排序、疊好幾層，而且每個目錄記得自己的排序。
+- **像桌面一樣複製、搬移。** 邊逛邊 mark 檔案，走到目的地按 `c` 或 `v`。可以跨目錄、跨 tab mark，把同一批檔案放到好幾個地方，或先打包成 zip。
+- **很快就找到。** 搜尋檔名、用 ripgrep 搜尋檔案內容，或跳到 home 底下任何目錄 —— 結果找到一筆就列一筆，旁邊附預覽。
+- **打開前先看一眼。** 語法上色的文字、壓縮檔內容、目錄樹、PDF、圖片、二進位檔的 hex。選取其中一段複製到剪貼簿 —— 連 SSH 上都行。
+- **離開時留在工作的地方。** 離開後 shell 停在你最後所在的目錄，或你挑的那一個。
+- **下次接著用。** tab、marks、最愛、tasks、每個目錄的排序，重開後都還在。
 
 ## 安裝
 
 ### 系統需求
 
-- 終端機要用 **Nerd Font** —— filu 的 icon 都是 Nerd Font glyph。CJK Nerd Font(如 Maple Mono NF CN)也沒問題。
-  filu 啟動時會問終端機一個 icon 佔幾格。框線還是歪的話,`filu iconwidth` 會印出量到的格數，設 `FILU__ICON_WIDTH=1` 或 `2` 就能指定。`TERMINU__ICON_WIDTH` 是 terminu 家族共用的同一個設定：設一次，家族每個 app 都讀得到(`FILU__ICON_WIDTH` 仍然優先)。在家族 app 的終端機裡跑 —— kbu 的 Alterm、filu 自己的 shell —— 外層 app 會替你設好,filu 也會替它 shell 裡跑的程式設好。
-- 終端機要支援 **truecolor(24-bit 色)** —— filu 的配色與 popup 底下的變暗都需要它;256 色下深淺會糊在一起。
-- **ripgrep** 用於內容搜尋,**fd** 讓 finder 更快(快速安裝與 Homebrew 都會幫你裝好)。
+- 終端機要用 **Nerd Font** —— filu 的 icon 都是 Nerd Font glyph。
+  filu 啟動時會問終端機一個 icon 佔幾格，以及一個 powerline 符號（panel 標籤的兩端、cursor 尾端的箭頭）佔幾格。框線還是歪的話，`filu iconwidth` 會印出量到的格數，也可以自己指定：icon 用 `FILU__ICON_WIDTH=1` 或 `2`，powerline 符號用 `FILU__POWERLINE_WIDTH=1` 或 `2`。`TERMINU__ICON_WIDTH` 與 `TERMINU__POWERLINE_WIDTH` 是 terminu 家族共用的同一組設定：設一次，家族每個 app 都讀得到（`FILU__` 的仍然優先）。在家族 app 的終端機裡跑 —— kbu 的 Alterm、filu 自己的 shell —— 外層 app 會替你把兩個都設好。
+- 終端機要支援 **truecolor（24-bit 色）** —— filu 的配色與 popup 底下的淡化都需要它；256 色下深淺會糊在一起。
+- **ripgrep** 用於內容搜尋，**fd** 讓 finder 更快（快速安裝與 Homebrew 都會幫你裝好）。
 - **macOS 或 Linux** —— Windows 請用 WSL。
 
 ### 快速安裝
@@ -44,7 +42,7 @@
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/install.sh | sh
 ```
 
-安裝 filu,缺 `ripgrep`、`fd` 的話也一併裝好 —— 不需要 sudo。
+安裝 filu，缺 `ripgrep`、`fd` 的話也一併裝好 —— 不需要 sudo。
 
 ### Homebrew
 
@@ -60,7 +58,11 @@ brew install vulcanshen/tap/filu
 go install github.com/vulcanshen/filu/cmd/filu@latest
 ```
 
-需要 Go 1.26+。內容搜尋與快速 finder 需要的 `ripgrep`、`fd` 請自行安裝。
+需要 Go 1.26+。內容搜尋與快速的 finder 要自己裝 `ripgrep`、`fd`。
+
+### 第一次啟動
+
+filu 會在設定目錄（見[設定](#設定)）寫一份帶註解的 `config.yaml`，然後打開你啟動它的目錄。沒有別的要設定。
 
 ### 移除
 
@@ -68,168 +70,166 @@ go install github.com/vulcanshen/filu/cmd/filu@latest
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh | sh
 ```
 
-## 開始使用
+刪除你的設定前會先問。
+
+## 快速開始
 
 ```bash
-filu              # 開在當前目錄
-filu ~/proj       # 開某個目錄
-filu ~/notes.md   # 開它所在的目錄,游標停在這個檔案
+filu              # 打開目前的目錄
+filu ~/proj       # 打開一個目錄
+filu ~/notes.md   # 打開它所在的目錄，cursor 停在這個檔上
+filu help         # 命令列的用法
 ```
 
-filu 開啟時 focus 在檔案清單。剩下的交給五個鍵:
+filu 打開時 focus 在檔案清單上。其他的事靠這幾個鍵：
 
-| 鍵 | 作用 |
+| 鍵 | 做什麼 |
 |---|---|
-| **`Tab`** | 移到下一個面板(`Shift-Tab` 往回，或按 `1`–`3` 直達) |
-| **`Enter`** | 進入目錄、看檔案的詳細資訊，或確認選擇 |
-| **`Space`** | *這裡能做什麼?* —— 當下所在位置的選單 |
-| **`Esc`** | 退出 —— 回上層目錄,或關掉 popup |
-| **`?`** | 按鍵 —— 現在這裡能按的鍵(在 popup 上就是那個 popup 的鍵) |
+| **`Space`** | *這裡能做什麼？* —— 你所在 panel 的選單；最後一列打開整個 app 的動作 |
+| **`?`** | 這裡能按的鍵（在 popup 裡就是那個 popup 的鍵） |
+| **`Enter`** | 進入目錄、看檔案的資訊，或做你所在那一列的事 |
+| **`Esc`** | 退一步：關掉最上層的 popup，或回上一層目錄 |
+| **`Tab`** | 下一個 panel（`Shift-Tab` 上一個，`1`–`3` 直接跳過去） |
+| **`q`** | 離開（先問） |
 
-### 讓 `q` 切換 shell 的目錄
+### 讓離開 filu 時 shell 換目錄
 
-在 `~/.zshrc` 或 `~/.bashrc` 加上這一行:
+在 `~/.zshrc` 或 `~/.bashrc` 加這一行：
 
 ```sh
 eval "$(filu shell)"
 ```
 
-之後用 **`filu`**(不是 `./filu`)啟動。按 `q` 會列出啟動目錄與每個分頁的目錄;挑一個,filu 關掉時 shell 就在那裡。沒加這行 filu 一樣能用 —— 只是離開時 shell 留在原地。
+之後用 **`filu`**（不是 `./filu`）啟動。按 `q` 離開時，filu 會寫出 shell 會停在哪個目錄 —— 你所在那個 tab 的目錄。要選別的，打開 `Space` → **Global operation** → **Quit to**（或按 `Q`）：你啟動 filu 的目錄，或任何一個 tab 的目錄。沒加這一行，filu 照樣能用 —— 只是離開後 shell 停在原地。
 
 ## 畫面
 
-三個面板:
+三個 panel：
 
-- **`[1]` Files** —— 主要的檔案清單,頂端是路徑列。最多五個分頁,各自瀏覽自己的目錄。
-- **`[2]` Preview** —— 游標所在項目的預覽。
-- **`[3]` Marks | Tasks | Favorites** —— 你收集的檔案、複製搬移的紀錄、你存下的目錄。
+- **`[1]` 檔案** —— 清單，最上面是目錄的路徑。最多五個 tab，各自在自己的目錄。
+- **`[2]` 預覽** —— `[1]` 的 cursor 所在的那一項。
+- **`[3]` Marks | Tasks | Favorites** —— 收集起來的檔案、複製／搬移／打包的紀錄，以及加星號的目錄。
 
-`Tab`(或 `1`–`3`)切換面板,`h` / `l` 切換面板內的分頁,`z` 把當前面板放大到全螢幕。
+`Tab`（或 `1`–`3`）在 panel 之間移動，`h` / `l` 切換 panel 的 tab，`z` 把你所在的 panel 放大到整個畫面 —— 放大時 `[1]` 的每個 tab 並排。
 
 ## 能做什麼
 
 ### 瀏覽
 
-- `Enter` 進入目錄 —— 在檔案上則顯示詳細資訊：完整路徑、類型、大小、時間、權限、擁有者。`Esc` 回上層;`j` / `k`、`u` / `d` 捲半頁、`gg` / `G` 到頂到底。
-- `b` 跳到任一層上層目錄。`.` 顯示或隱藏隱藏檔。
-- `S` 依名稱、修改時間、擁有者、權限或大小排序 —— 可疊多層決定平手時的順序。排序只套用在那個目錄。
-- `t` 開新分頁(同目錄、某個最愛,或搜尋),`w` 關掉。
-- 其他程式改動了檔案,清單會自己更新。
+- `Enter` 進入目錄；在檔案上會顯示資訊：完整路徑、類型、大小、時間、權限、擁有者。`Esc` 回上一層；`j` / `k`，`u` / `d` 半頁，`gg` / `G` 到頭、到尾。
+- `b` 跳到這個目錄所在的任何一層。`.` 顯示或隱藏隱藏檔。
+- `S` 依名稱、修改時間、權限、擁有者或大小排序 —— 先選欄位、再選方向；再排一次就多一層比較。目錄一律在前面。排序只記在那個目錄；**Reset** 回到照名稱排。
+- `t` 開新 tab（同一個目錄、一個最愛，或搜尋），`w` 關掉你所在的 tab。
+- 別的程式改了檔案，清單會自己更新。
 
 ### 收集、複製、搬移
 
-- `m` mark 一個檔案。四處移動時 marks 都會留著,可以從好幾個目錄、分頁收集。
-- 走到檔案該去的地方,按 `c` 複製、`v` 搬移過去。複製後 marks 還在,可以再放到別的地方。
-- 在 **Marks** 分頁:`Enter` 在 `[1]` 顯示那個檔案(已開著它目錄的分頁或新分頁)、`p` 只挑其中一部分落地、`m` 取消某個 mark、`C` 全部清空、`Z` 把挑中的打包成 zip,再用 `c` / `v` 放過去。
-- 複製與搬移在背景進行;**Tasks** 分頁用白話紀錄進度，在一筆紀錄上按 `Enter` 會帶你到它落地的地方。離開時沒跑完的任務,下次開啟會回來。
+- `m` mark 一個檔。移動時 marks 留著，可以從好幾個目錄、好幾個 tab 收集。
+- 走到檔案要去的地方，按 `c` 複製或 `v` 搬過去。複製會保留 marks，同一批可以放到不只一個地方。
+- 在 **Marks** tab 裡：`Enter` 在 `[1]` 顯示那個檔（在已經開著它目錄的 tab，或開一個新的），`p` pick 其中幾個、只有 pick 的會落地，`m` 取消一個 mark，`C` 全部清掉，`y` 複製路徑，`Z` 把 pick 的打包成 zip，再用 `c` / `v` 落地。
+- 複製、搬移、打包在背景跑；**Tasks** tab 用白話記下每一筆，在一筆上按 `Enter` 讓 `[1]` 到它落地的地方。離開時沒做完的工作，下次會標成中斷。
 
 ### 尋找
 
-- **`/` Search** —— 依**檔名**(模糊比對,範圍是當前目錄以下)或依**內容**(ripgrep;預覽會跳到命中那一行)。query 以 `/` 或 `~/` 開頭,就改從那個路徑搜尋,磁碟上哪裡都行。
-- **`go` Goto** —— 跳到某個最愛,或模糊搜尋 home 底下所有目錄(含隱藏目錄)。`Enter` 把分頁帶過去。
-- 結果邊找邊出現 —— 直接開始打字就好。打字時用 `↑` / `↓` 在結果之間移動,`Enter` 直接開啟反白的那一筆;`Tab` 進到清單裡，就能用 `j` / `k` 移動。
+- **`/` Search** —— **File names**：這個目錄底下的全部，邊打字邊縮小（打的每個詞都要出現，順序不拘）。**Contents**（ripgrep）：先打要找的字，接著列出含有它的檔案，預覽停在第一個找到的地方。
+- **`go` Goto** —— 跳到一個最愛，或搜尋 home 底下的每個目錄（包括隱藏的）。
+- 結果找到一筆就列一筆 —— 馬上就能開始打字。打字時 `↑` / `↓` 在結果之間移動；`Enter` 或 `Tab` 到清單，在清單上 `j` / `k` 移動、`Enter` 打開所在那一筆；`Tab` 或 `/` 回去打字；`Esc` 關掉。
 
 ### 最愛
 
-- `f` 把游標上的目錄加星號;`F` 把你所在的目錄加星號。加星的目錄在清單上會標出來。
-- **Favorites** 分頁列出所有最愛:`Enter` 過去(已開著的分頁或新分頁)、`o` 自己挑分頁、`D` 移除。也可以用 Goto → Favorites 跳過去。
+- `f` 替 cursor 所在的目錄加星號；`F` 替你所在的目錄加。加了星號的目錄，名稱後面有一顆星；你在那個目錄裡時，路徑後面也有。
+- **Favorites** tab 列出它們：`Enter` 到那裡（它的 tab，或一個新的），`o` 自己選 tab，`D` 拿掉星號（先問）。Goto → Favorite 也能跳過去。
 
 ### 預覽與複製
 
-- 預覽支援:語法高亮加行號的文字、目錄樹、壓縮檔內容、PDF、圖片、SVG 原始碼、二進位檔的 hex。
-- 在預覽按 `y`(或 `Enter`)開啟可捲動的檢視：用 `h`/`j`/`k`/`l` 移動、`w`/`b`/`e` 以字為單位、`0`/`$` 到行首行尾;`v` 開始選取、`y` 複製(沒選取就複製全部)。選取中框會變黃、右上角寫著 **Selection**,按 `?` 會列出選取模式的按鍵。
-- 在檔案上按 `y` 複製它的完整路徑。複製可以穿過 tmux 與 SSH。
+- 預覽顯示語法上色加行號的文字、目錄樹、壓縮檔內容、PDF、圖片、SVG 原始碼，二進位檔顯示 hex。
+- 在 `[2]` 按 `Enter` 用可捲動的檢視打開預覽：`v` 叫出游標，再按一次 `v` 開始選，用 `h`/`j`/`k`/`l` 移動、`w`/`b`/`e` 一個字一個字、`0`/`$` 到行首行尾，`y` 複製選起來的部分。沒有在選時，`y` 複製全部 —— 跟在 `[2]` 上直接按 `y` 一樣。
+- 在 `[1]` 的檔案上按 `y` 複製它的完整路徑。複製能穿過 tmux 與 SSH。
 
-### 開啟、編輯,以及其他
+### 開啟、編輯與其他
 
-- `o` 用預設 app 開啟檔案或目錄。`O` 讓你挑 app —— 可以在設定裡加上自己的(VSCode、IntelliJ IDEA…)。
-- `s` 在當前目錄開你的 shell;打 `exit` 回來，或按 `Alt-Esc`:filu 會先問,`Enter` 結束 shell(不管裡面在跑什麼),`Esc` 回到 shell。
-- `r` 改名、`a` 新增檔案(名稱以 `/` 結尾就是目錄)、`D` 先確認再移到垃圾桶。名稱是空的、已經有同名的、在目前目錄外面，或含換行、Tab,會當場擋下 —— 輸入框留著、告訴你原因。貼進這裡或 finder 的換行與 Tab,以紅色的 `\n`、`\t` 顯示。
+- `o` 用預設 app 開檔案或目錄（先問）。`O` 自己選 app —— 在設定裡加你自己的（VSCode、IntelliJ IDEA……）。
+- `s` 在目前的目錄打開你的 shell（先問）；打 `exit` 回來，或按 `Alt-Esc`：filu 會先問，`Enter` 結束 shell（連同裡面還在跑的東西），`Esc` 回到 shell。
+- `r` 重新命名（舊名稱是灰字：`Tab` 收進來改，或直接打新的），`a` 新增檔案（名稱以 `/` 結尾就是目錄），`D` 問過之後移到垃圾桶。名稱是空的、已經有了、在目前目錄外面，或含控制字元，當場就會擋下 —— 框留著，說明原因。
 
-## 按鍵一覽
+## 按鍵
 
-```
- 游標      j/k        u/d         gg/G        h/l(切本面板分頁)
- 清單      o open     O open-with  m mark     c copy    v move    f favorite
-           y yank     r rename     a add      s shell   D delete  S sort   . hidden   z zoom
- finder    / search   go goto      b breadcrumb
- 分頁      t 開分頁   w 關分頁
-```
+| 鍵 | `[1]` 檔案 |
+|---|---|
+| `Enter` | 進入目錄 · 檔案的資訊 |
+| `o` / `O` | 開啟 · 選 app 開啟 |
+| `m` · `c` · `v` | mark · 把 marks 複製到這裡 · 搬到這裡 |
+| `y` · `r` · `D` | 複製路徑 · 重新命名 · 刪除 |
+| `f` · `F` | 替 cursor 所在的目錄加星號 · 替你所在的目錄加 |
+| `/` · `go` · `b` | 搜尋 · goto · 上層目錄 |
+| `t` · `w` · `h` / `l` | 新 tab · 關掉 tab · 切換 tab |
+| `a` · `S` · `s` · `.` · `z` | 新增 · 排序 · shell · 隱藏檔 · 放大 |
+
+| 鍵 | `[2]` 預覽 | `[3]` Marks | `[3]` Tasks | `[3]` Favorites |
+|---|---|---|---|---|
+| `Enter` | 檢視 | 在 `[1]` 顯示 | 到它落地的地方 | 到那裡 |
+| 其他 | `y` 全部複製 · `z` 放大 | `p` pick · `m` 取消 mark · `y` 複製路徑 · `Z` 打包 · `C` 清掉 · `z` 放大 | `D` 從紀錄拿掉 · `z` 放大 | `o` 在某個 tab 開 · `D` 拿掉星號 · `z` 放大 |
 
 | 鍵 | 任何地方 |
 |---|---|
-| `?` | 這裡能按的鍵，現在按了不會有作用的會變暗;再按 `?` 或 `Esc` 關掉 |
-| `q` | 離開,並選擇 shell 要停在哪裡(打字時 `q` 就是一個字母) |
-| `Ctrl-C` | 同 `q`,打字時也有效;在離開畫面上再按一次就立即離開 |
+| `?` | 這裡能按的鍵；`?` 或 `Esc` 關掉 |
+| `q` · `Ctrl-C` | 離開（先問）；`Ctrl-C` 打字時也有效，再按一次立刻離開 |
+| `Q` | 離開，shell 到你選的目錄 |
 
-各面板的 `Space` 選單依序列出：對游標項目能做的事、對整個面板能做的事，最後一列是 **Global operation**,打開全 app 的動作選單(目前只有 Quit `q`)。暫時不能做的項目(例如只開一個分頁時的 Close tab)會變暗顯示。
-
-| Focus | 選單項目 |
-|---|---|
-| **`[1]` Files** | Open `o`、Open with `O`、Mark `m`、Yank `y`、Rename `r`、Delete `D`、Favorite `f` · Copy `c`、Move `v`、Search `/`、Goto `go`、Favorite dir `F`、Breadcrumb `b`、Switch tab `l`、Tab `t`、Close tab `w`、Add `a`、Sort `S`、Shell `s`、Hidden `.`、Zoom `z` |
-| **`[2]` Preview** | Yank `y`、Zoom `z` |
-| **`[3]` Marks** | Pick `p`、Yank `y`、Unmark `m` · Zip `Z`、Clear `C`、Switch tab `l`、Zoom `z` |
-| **`[3]` Tasks** | Delete `D` · Switch tab `l`、Zoom `z` |
-| **`[3]` Favorites** | Open in `o`、Delete `D` · Switch tab `l`、Zoom `z` |
+每個 panel 的 `Space` menu 先列出對 cursor 所在項目能做的事，再列出對整個 panel 能做的事，最後一列是 **Global operation**：整個 app 的動作（Quit to、Quit）。現在不能做的列 —— 例如只有一個 tab 時的 Close tab —— 會變暗。
 
 ## 設定
 
-設定檔是 `config.yaml`:
+設定在 `config.yaml`，放在 `$XDG_CONFIG_HOME/filu/`（或 `~/.config/filu/`）；`FILU__CONFIG` 可以指定另一個目錄。filu 第一次執行時會寫一份帶註解的，之後不會蓋掉你的。旁邊的 `state.yaml` 存你的 session —— 交給 filu 就好（`FILU__STATE` 把它放到另一個目錄）。
 
-| OS | 目錄 |
-|---|---|
-| Linux | `$XDG_CONFIG_HOME/filu/` 或 `~/.config/filu/` |
-| macOS | `~/Library/Application Support/filu/`(設了 `$XDG_CONFIG_HOME` 時用 `$XDG_CONFIG_HOME/filu/`) |
-
-filu 第一次執行時會寫一份帶註解的設定檔,之後絕不覆蓋你的版本。旁邊的 `state.yaml` 存的是你的 session —— 交給 filu 管就好。
+macOS 上，0.4.0 以前的版本把兩個檔都放在 `~/Library/Application Support/filu/`。在 `~/.config/filu/` 出現之前，filu 會繼續用那個目錄；把檔案搬過去就換過來了。
 
 ```yaml
-# finder 最多掃幾筆才停。Goto 會走整個 $HOME,所以這個值決定它的上限 ——
-# 調大 = 更多目錄跳得到,調小 = 在大 home 上 fuzzy 過濾比較不卡。
+# finder 掃描幾筆就停。Goto 會走遍整個 $HOME，靠這個設上限。
 finder_cap: 50000
 
-# finder 直接跳過的目錄 —— 快取、build 產物、IDE metadata、你不會 cd 進去的
-# 容器資料。一般名字比對任意層級;含斜線(如 go/pkg)比對路徑。設成 [] 代表
-# 不排除任何東西。
+# finder 略過的目錄 —— 快取、建置產物、IDE 的資料、容器的資料，都是不會 cd
+# 進去的地方。只寫名字的在任何深度都符合；帶斜線的（例：go/pkg）比對路徑。
+# 設成 [] 就什麼都不略過。
 ignore_dirs:
   - node_modules
   - .git
   - Library
-  - OrbStack
   - go/pkg
-  - vendor
-  - target
-  - __pycache__
-  - .venv
-  - .idea
-  - .vscode
-  - .cache
-  - .Trash
+  # …
 
-# [O]pen-with picker 的 app(對檔案或目錄按 [O];單按 [o] 就用 OS 預設開)。每個 entry
-# 是 name + 一個指令,filu 會跑 `<cmd> <path>`。「Default」(OS 預設 app)永遠排第一。
+# Open with 選單裡的 app（在檔案或目錄上按 [O]；[o] 用系統預設的開）。
+# filu 執行 `<cmd> <path>`。
 open_with:
   - name: VSCode
     cmd: code
   - name: IntelliJ IDEA
     cmd: idea
+
+# 預覽與檢視裡，一個 Tab 佔幾格。
+input_tab_width: 4
+
+# true 時，finder 的預覽不顯示私鑰，也不顯示只有擁有者能讀的檔。
+hide_secrets_in_preview: false
 ```
+
+`input_tab_width` 與 `hide_secrets_in_preview` 在 terminu 家族每個 app 都是同一個設定。
 
 ## 限制
 
 刻意不做的：
-- **原生 Windows** —— filu 支援 macOS 與 Linux；Windows 請在 WSL 裡使用
-- **滑鼠** —— 所有操作都在鍵盤上
-- **目錄大小** —— 目錄的大小欄顯示 `-`，filu 不會把整棵樹加總
+- **原生 Windows** —— filu 在 macOS 與 Linux 上跑；Windows 請在 WSL 裡用
+- **滑鼠** —— 全部用鍵盤
+- **目錄大小** —— 目錄的大小顯示成 `-`；filu 不會把整棵樹加總
 
 ## 相關連結
 
-- [CHANGELOG.md](CHANGELOG.md) —— 每個版本改了什麼
-- [`docs/dev-remarks.md`](docs/dev-remarks.md) —— 開發者備忘：運作方式、設計理由、從原始碼建置、發布
+- [CHANGELOG.md](CHANGELOG.md) —— 每一版改了什麼
+- [`docs/dev-remarks.md`](docs/dev-remarks.md) —— 開發者備忘：怎麼運作、為什麼、從原始碼建置、發布
 
 ## terminu family
 
-filu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)：跟家族其他成員一樣的按鍵、一樣的 menu —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）與 [locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
+filu 遵循 [terminu design](https://github.com/vulcanshen/terminu)，建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、選單與 popup —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）與 [locku](https://github.com/vulcanshen/locku)（鎖定畫面）。
 
 ## License
 
