@@ -129,10 +129,12 @@ filu/
 ### 暫定（2026-10-18 改用 terminu-go 時自己定的，等 user 確認）
 
 - **zoom 時換 panel 照樣放大**：zoom 用 lib 的 `ForceNarrow`，`Tab` 換到下一個 panel 時，下一個也是放大的；以前 focus 一換就還原。
+  理由：放大是使用者要的版面，換 panel 不代表不要了；跟窄寬時一次只看一個 panel 的走法一樣，`z` 才是還原的鍵。
 - **執行中的 task 用固定的 glyph**（nf-md-timer_sand 加 `3/10`）：lib 的 loading icon 沒有公開給一列用；panel 的 loading icon 指的是
   「整個 panel 還在載入」，不合用。
 - **檔案資訊用 viewer**：lib 的 note 有 viewer、error popup、key reference 三種，資訊是唯讀可捲動的內容，用 viewer（左邊有行號）。
-- **`[3]` 的欄位**：Marks、Favorites 是 `NAME` 與 `IN`（所在目錄，從前面截）；Tasks 是 `WHEN` 與 `TASK`。
+- **`[3]` 的欄位**：Marks、Favorites 是 `NAME` 與 `IN`（所在目錄，從前面截）；Tasks 是 `WHEN` 與 `TASK`。理由：名稱與所在目錄分兩欄，
+  名稱不會被長路徑擠掉，`IN` 從前面截、留下最近的幾層；Tasks 照時間讀，所以時間放前面。
 - **排序選了方向就整個收起來**：lib 的 menu 執行一列會關掉整疊；要疊第二層就再按一次 `S`。以前方向框收起、欄位框留著。
 - **離開的 confirm 寫出 shell 會停在哪**，`[Q]uit to` 在 global operation popup 裡選別的目錄（`TODO(lib FL1)`）。
 - **Zip 的名字**：灰字提議只能是舊值（components/input/README），新 zip 沒有舊值，建議的名字寫在說明列，使用者自己打
@@ -164,7 +166,7 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
 
 - **zoom 時 `[1]` 的 tab 並排**（components/layout/panel 的 tab；`files.go` 的 `drawColumns`）：panel 的 tab 一次只顯示一頁，
   components 沒有「幾頁並排」的方案。filu 在 zoom 時把每個 tab 畫成一欄：zoom 本來就是要更多空間，在好幾個目錄之間比對、搬檔時，
-  一次看到全部的 tab 比一頁一頁切好用；`h|l` 照樣換 tab，有 focus 的那一欄亮、其他的淡化（P6），欄間的線用 Overlay0（跟 menu 的
+  一次看到全部的 tab 比一頁一頁切好用；`h|l` 照樣換 tab，有 focus 的那一欄亮、其他的淡化（tdp P6），欄間的線用 Overlay0（跟 menu 的
   分隔線一樣）。已回報成 components 的缺漏（FL17）。
 
 `[1]` 的路徑列、`[3]` 各清單的欄位是 panel 的內容，不是 tdp 規定的元件；排序的標示照 components/layout/panel 的寫法。
@@ -197,17 +199,19 @@ make build        # → ./filu（CGO_ENABLED=0 靜態；版本是 dev）
 - `Makefile` 只設 `BINARY`、`TAPES` 再 include 家族共用的 `family.mk`（tdp project 的範本，照原樣複製、不在這裡改）。常用的：
   `make build`、`make install` / `make uninstall`、`make package`、`make check`（commit 前跑：fmt-check、vet、`go test -race`；有
   `go.work` 時加 `check-lib`）。跑 `make` 列出全部；filu 自己的 target 放在最後一段 `##@ filu 自己的`（目前沒有）。
-- **改 lib 時**：`go.mod` 寫發布的 terminu-go 版本（不用 `replace`）；本機用 gitignore 掉的 `go.work`（`go work init . ../terminu-go`）接上
+- **改 lib 時**：`go.mod` 寫發布的 terminu-go 版本（不用 `replace`）；本機用 gitignore 掉的 `go.work`、`go.work.sum`（`go work init . ../terminu-go`）接上
   lib 的工作目錄。`make check` 的 `check-lib` 關掉 `go.work`、照 `go.mod` 的版本編譯與測試：過不了就是用到了 lib 還沒發版的東西。
 - 本機 build 的版本號是 `dev`；release 版號由 goreleaser 以 `-X` 注入 `internal/version.Version`。
 - binary 的子指令：`filu version`（也收 `--version`、`-v`）、`filu help`（也收 `--help`、`-h`）、`filu shell`（印出 cd-on-quit 的 shell
   function）、`filu iconwidth`（印出 lib 探測到的 icon 與 powerline 符號格數，以及從哪裡來的）。
-- 頂層另有 `CLAUDE.md`（gitignore，給 AI 協作的指引）。
+- 頂層另有（tdp project 的目錄圖上沒有的）：`CLAUDE.md`（gitignore，給 AI 協作的指引）、`.claude/`（進版控：專案的 Claude Code
+  規則、agent 與指令）、`.forge/`（gitignore：forge 的 GOAL.md、PROGRESS.md、IDEA.md、REDESIGN-LIST-AND-NAV.md，內容停在 v0.2.0
+  前後）、`.checkpoints/`（自帶 `.gitignore`：AI 協作的 session 紀錄）。
 
 測試是 programmatic 的（不靠真終端）：`harness_test.go` 照 terminu-go 的 app 的做法，把按鍵送進 `App.Update`、跑完它發出的
 command（動畫、背景的 channel）、讀 `Frame()`。session、設定、垃圾桶、剪貼簿都指到測試自己的暫存目錄。
 
-- **L4 與 E5**：`screen_test.go` 在幾種尺寸、「icon 一格 / 兩格、powerline 符號一格 / 兩格」下，每一類 popup 各開一次，量每一列；
+- **tdp L4 與 E5**：`screen_test.go` 在幾種尺寸、「icon 一格 / 兩格、powerline 符號一格 / 兩格」下，每一類 popup 各開一次，量每一列；
   再把畫面縮到比 popup 小（比畫面寬、比畫面高、兩邊都大）。popup 的開關動畫是真的 32ms 一格，所以這組測試要幾十秒。
 - **lib 的檢查**：`terminu.App` 在登記時就拒絕佔用 core key 或移動字母的熱鍵（popup 裡也一樣，例：menu 不能用 `d`）—— 新加的
   menu 要在測試裡打開過一次，才知道沒踩到。

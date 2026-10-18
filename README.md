@@ -19,10 +19,10 @@
 ## Why filu
 
 - **Nothing to memorize.** Press `Space` on any panel and filu lists what you can do there. Every hotkey is a shortcut to a row of that menu — never the only way in.
-- **A directory at a glance.** Modified time, owner, permissions and size sit beside every name, coloured the way your `eza` / `ls` colours them. Sort by any column, stack several, and each directory remembers its own sort.
+- **A directory at a glance.** Modified time, owner, permissions and size sit beside every name, coloured by type the way eza colours them (catppuccin-mocha). Sort by any column, stack several, and each directory remembers its own sort.
 - **Copy and move like a desktop.** Mark files as you browse, walk to the destination, press `c` or `v`. Mark across directories and tabs, land the same files in several places, or zip them up first.
 - **Find it fast.** Search file names, search file contents with ripgrep, or jump to any directory under your home — results appear as they are found, with a preview beside them.
-- **Look before you open.** Syntax-highlighted text, archive contents, directory trees, PDFs, images, hex for binaries. Select part of it and copy it to your clipboard — even over SSH.
+- **Look before you open.** Syntax-highlighted text, archive contents, directory trees, PDFs (their text), images (as a data: URI), hex for binaries. Select part of it and copy it to your clipboard — even over SSH.
 - **Leave where you're working.** Quit and your shell lands in the directory you were in, or one you choose.
 - **Picks up where you left off.** Tabs, marks, favorites, tasks and per-directory sorts survive a restart.
 
@@ -100,7 +100,7 @@ Add this line to `~/.zshrc` or `~/.bashrc`:
 eval "$(filu shell)"
 ```
 
-Then start filu as **`filu`** (not `./filu`). When you quit with `q`, filu says which directory your shell goes to — the one the tab you are on shows. To choose another, open `Space` → **Global operation** → **Quit to** (or press `Q`): the directory you started in, or any tab's. Without the line, filu works the same — quitting just leaves your shell where it was.
+Then start filu as **`filu`** (not `./filu`). When you quit with `q`, filu says which directory your shell goes to — the one the tab you are on shows. To choose another, open `Space` → **Global operation** → `[Q]uit to` (or press `Q`): the directory you started in, or any tab's. Without the line, filu works the same — quitting just leaves your shell where it was.
 
 ## The screen
 
@@ -110,15 +110,15 @@ Three panels:
 - **`[2]` Preview** — whatever the cursor in `[1]` is on.
 - **`[3]` Marks | Tasks | Favorites** — the files you've gathered, the log of copies, moves and zips, and your starred directories.
 
-`Tab` (or `1`–`3`) moves between panels, `h` / `l` switches a panel's tabs, and `z` zooms the panel you are on to the whole screen — zoomed, `[1]` shows all its tabs side by side.
+`Tab` (or `1`–`3`) moves between panels, `h|l` switches a panel's tabs, and `z` zooms the panel you are on to the whole screen — zoomed, `[1]` shows all its tabs side by side.
 
 ## What you can do
 
 ### Browse
 
-- `Enter` goes into a directory; on a file it shows the details: full path, type, size, times, permissions, owner. `Esc` goes up; `j` / `k`, `u` / `d` for half a page, `gg` / `G` for top and bottom.
+- `Enter` goes into a directory; on a file it shows the details: full path, type, size, times, permissions, owner. `Esc` goes up; `j|k`, `u|d` for half a page, `gg|G` for top and bottom.
 - `b` jumps up to any of the directories this one is in. `.` shows or hides hidden files.
-- `S` sorts by name, modified time, permissions, owner or size — choose a column, then a direction; sort again to add a tie-break. Directories stay first. The sort sticks to that directory only; **Reset** goes back to names.
+- `S` sorts by name, modified time, permissions, owner or size — choose a column, then a direction; sort again to add a tie-break. Directories stay first. The sort sticks to that directory only; `[r] Reset` goes back to names.
 - `t` opens a new tab (the same directory, a favorite, or a search), `w` closes the one you are on.
 - Files changed by other programs show up on their own.
 
@@ -126,24 +126,24 @@ Three panels:
 
 - `m` marks a file. Marks stay put while you move around, so you can gather from several directories and tabs.
 - Go where the files belong and press `c` to copy or `v` to move them there. Copying keeps your marks, so you can land them in more than one place.
-- In the **Marks** tab: `Enter` shows the file in `[1]` (in the tab already on its directory, or a new one), `p` picks some of them so that only the picks land, `m` unmarks one, `C` clears them all, `y` copies a path, and `Z` packs your picks into a zip that you then land with `c` / `v`.
+- In the **Marks** tab: `Enter` shows the file in `[1]` (in the tab already on its directory, or a new one), `p` picks some of them so that only the picks land, `m` unmarks one, `C` clears them all, `y` copies a path, and `Z` packs what would land — the picks, or every mark — into a zip that you then land with `c` or `v`.
 - Copies, moves and zips run in the background; the **Tasks** tab logs them in plain words, and `Enter` on one takes `[1]` to where it landed. A task cut short by quitting comes back marked as interrupted.
 
 ### Find
 
-- **`/` Search** — **File names**: everything under the directory, narrowed as you type (every word you type must appear, in any order). **Contents** (ripgrep): type the text to find, then you get the files that hold it, each previewed at its first match.
-- **`go` Goto** — jump to a favorite, or search every directory under your home (hidden ones too).
-- Results appear as they're found — start typing right away. While you type, `↑` / `↓` move among the results; `Enter` or `Tab` goes to the list, where `j` / `k` move and `Enter` opens the one you are on; `Tab` or `/` goes back to typing; `Esc` closes.
+- **`[/] Search`** — `[f] File names`: everything under the directory, narrowed as you type (every word you type must appear, in any order). `[c] Contents` (ripgrep): type the text to find, then you get the files that hold it, each previewed at its first match.
+- **`[go]to`** — jump to a favorite, or search every directory under your home (hidden ones too).
+- Results appear as they're found — start typing right away. While you type, `↑|↓` move among the results; `Enter` or `Tab` goes to the list, where `j|k` move and `Enter` opens the one you are on; `Tab` or `/` goes back to typing; `Esc` closes.
 
 ### Favorites
 
 - `f` stars the directory under the cursor; `F` stars the one you're in. A star shows after a starred directory's name, and after the path when you are in one.
-- The **Favorites** tab lists them: `Enter` goes there (its tab, or a new one), `o` lets you choose the tab, `D` takes the star off (it asks first). Goto → Favorite jumps there too.
+- The **Favorites** tab lists them: `Enter` goes there (its tab, or a new one), `o` lets you choose the tab, `D` takes the star off (it asks first). `[go]to` → `[f] Favorite` jumps there too.
 
 ### Preview and copy
 
-- The preview shows text with syntax highlighting and line numbers, directory trees, archive contents, PDFs, images, SVG source, and hex for binaries.
-- In `[2]`, `Enter` opens the preview in a scrollable view: `v` brings out a cursor, `v` again starts selecting, move with `h`/`j`/`k`/`l`, by word with `w`/`b`/`e` and to the line ends with `0`/`$`, and `y` copies the selection. Outside a selection `y` copies all of it — as `y` on `[2]` itself does.
+- The preview shows text with syntax highlighting and line numbers, directory trees, archive contents, PDFs (their text), images (as a data: URI), SVG source, and hex for binaries.
+- In `[2]`, `Enter` opens the preview in a scrollable view: `v` brings out a cursor, `v` again starts selecting, move with `h|j|k|l`, by word with `w|b|e` and to the line ends with `0|$`, and `y` copies the selection. Without the cursor `y` copies all of it — as `y` on `[2]` itself does.
 - `y` on a file in `[1]` copies its full path. Copying works through tmux and SSH.
 
 ### Open, edit, and everything else
@@ -157,12 +157,12 @@ Three panels:
 | Key | `[1]` Files |
 |---|---|
 | `Enter` | into a directory · a file's details |
-| `o` / `O` | open · open with |
+| `o` · `O` | open · open with |
 | `m` · `c` · `v` | mark · copy the marks here · move them here |
 | `y` · `r` · `D` | copy the path · rename · delete |
 | `f` · `F` | star the directory under the cursor · the one you are in |
 | `/` · `go` · `b` | search · goto · breadcrumb |
-| `t` · `w` · `h` / `l` | new tab · close tab · switch tab |
+| `t` · `w` · `h\|l` | new tab · close tab · switch tab |
 | `a` · `S` · `s` · `.` · `z` | add · sort · shell · hidden files · zoom |
 
 | Key | `[2]` Preview | `[3]` Marks | `[3]` Tasks | `[3]` Favorites |
@@ -176,7 +176,7 @@ Three panels:
 | `q` · `Ctrl-C` | Quit (asks first); `Ctrl-C` works while typing too, and pressed again it leaves at once |
 | `Q` | Quit to a directory you choose |
 
-Every panel's `Space` menu lists what you can do to the item under the cursor, then to the panel, and ends with **Global operation**: the app-wide actions (Quit to, Quit). A row that can't run right now — say, Close tab with only one tab open — is shown dimmed.
+Every panel's `Space` menu lists what you can do to the item under the cursor, then to the panel, and ends with **Global operation**: the app-wide actions (`[Q]uit to`, `[q] Quit`). A row that can't run right now — say, `[w] Close tab` with only one tab open — is shown dimmed.
 
 ## Configuration
 
@@ -223,6 +223,7 @@ Not there, on purpose:
 - **native Windows** — filu runs on macOS and Linux; on Windows, run it inside WSL
 - **the mouse** — everything is on the keyboard
 - **directory sizes** — a directory's size shows as `-`; filu never adds up a whole tree
+- **pictures** — an image shows as its data: URI, not drawn
 
 ## Links
 
@@ -231,7 +232,7 @@ Not there, on purpose:
 
 ## terminu family
 
-filu follows the [terminu design](https://github.com/vulcanshen/terminu) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and popups as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [sshu](https://github.com/vulcanshen/sshu) (ssh), [webu](https://github.com/vulcanshen/webu) (the web) and [locku](https://github.com/vulcanshen/locku) (screen lock).
+filu follows the [terminu design](https://github.com/vulcanshen/terminu) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and popups as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [sshu](https://github.com/vulcanshen/sshu) (ssh), [webu](https://github.com/vulcanshen/webu) (the web), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
 
 ## License
 

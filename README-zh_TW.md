@@ -19,10 +19,10 @@
 ## 為什麼用 filu
 
 - **什麼都不用背。** 在任何 panel 按 `Space`，filu 就列出這裡能做的事。每個熱鍵都只是那個選單裡某一列的捷徑，從來不是唯一入口。
-- **一眼看懂一個目錄。** 修改時間、擁有者、權限、大小就排在檔名旁邊，配色跟你的 `eza` / `ls` 一樣。可依任一欄排序、疊好幾層，而且每個目錄記得自己的排序。
+- **一眼看懂一個目錄。** 修改時間、擁有者、權限、大小就排在檔名旁邊，依類型上色，跟 eza 的 catppuccin-mocha 配色一樣。可依任一欄排序、疊好幾層，而且每個目錄記得自己的排序。
 - **像桌面一樣複製、搬移。** 邊逛邊 mark 檔案，走到目的地按 `c` 或 `v`。可以跨目錄、跨 tab mark，把同一批檔案放到好幾個地方，或先打包成 zip。
 - **很快就找到。** 搜尋檔名、用 ripgrep 搜尋檔案內容，或跳到 home 底下任何目錄 —— 結果找到一筆就列一筆，旁邊附預覽。
-- **打開前先看一眼。** 語法上色的文字、壓縮檔內容、目錄樹、PDF、圖片、二進位檔的 hex。選取其中一段複製到剪貼簿 —— 連 SSH 上都行。
+- **打開前先看一眼。** 語法上色的文字、壓縮檔內容、目錄樹、PDF 的文字、圖片的 data: URI、二進位檔的 hex。選取其中一段複製到剪貼簿 —— 連 SSH 上都行。
 - **離開時留在工作的地方。** 離開後 shell 停在你最後所在的目錄，或你挑的那一個。
 - **下次接著用。** tab、marks、最愛、tasks、每個目錄的排序，重開後都還在。
 
@@ -100,7 +100,7 @@ filu 打開時 focus 在檔案清單上。其他的事靠這幾個鍵：
 eval "$(filu shell)"
 ```
 
-之後用 **`filu`**（不是 `./filu`）啟動。按 `q` 離開時，filu 會寫出 shell 會停在哪個目錄 —— 你所在那個 tab 的目錄。要選別的，打開 `Space` → **Global operation** → **Quit to**（或按 `Q`）：你啟動 filu 的目錄，或任何一個 tab 的目錄。沒加這一行，filu 照樣能用 —— 只是離開後 shell 停在原地。
+之後用 **`filu`**（不是 `./filu`）啟動。按 `q` 離開時，filu 會寫出 shell 會停在哪個目錄 —— 你所在那個 tab 的目錄。要選別的，打開 `Space` → **Global operation** → `[Q]uit to`（或按 `Q`）：你啟動 filu 的目錄，或任何一個 tab 的目錄。沒加這一行，filu 照樣能用 —— 只是離開後 shell 停在原地。
 
 ## 畫面
 
@@ -110,15 +110,15 @@ eval "$(filu shell)"
 - **`[2]` 預覽** —— `[1]` 的 cursor 所在的那一項。
 - **`[3]` Marks | Tasks | Favorites** —— 收集起來的檔案、複製／搬移／打包的紀錄，以及加星號的目錄。
 
-`Tab`（或 `1`–`3`）在 panel 之間移動，`h` / `l` 切換 panel 的 tab，`z` 把你所在的 panel 放大到整個畫面 —— 放大時 `[1]` 的每個 tab 並排。
+`Tab`（或 `1`–`3`）在 panel 之間移動，`h|l` 切換 panel 的 tab，`z` 把你所在的 panel 放大到整個畫面 —— 放大時 `[1]` 的每個 tab 並排。
 
 ## 能做什麼
 
 ### 瀏覽
 
-- `Enter` 進入目錄；在檔案上會顯示資訊：完整路徑、類型、大小、時間、權限、擁有者。`Esc` 回上一層；`j` / `k`，`u` / `d` 半頁，`gg` / `G` 到頭、到尾。
+- `Enter` 進入目錄；在檔案上會顯示資訊：完整路徑、類型、大小、時間、權限、擁有者。`Esc` 回上一層；`j|k`，`u|d` 半頁，`gg|G` 到頭、到尾。
 - `b` 跳到這個目錄所在的任何一層。`.` 顯示或隱藏隱藏檔。
-- `S` 依名稱、修改時間、權限、擁有者或大小排序 —— 先選欄位、再選方向；再排一次就多一層比較。目錄一律在前面。排序只記在那個目錄；**Reset** 回到照名稱排。
+- `S` 依名稱、修改時間、權限、擁有者或大小排序 —— 先選欄位、再選方向；再排一次就多一層比較。目錄一律在前面。排序只記在那個目錄；`[r] Reset` 回到照名稱排。
 - `t` 開新 tab（同一個目錄、一個最愛，或搜尋），`w` 關掉你所在的 tab。
 - 別的程式改了檔案，清單會自己更新。
 
@@ -126,24 +126,24 @@ eval "$(filu shell)"
 
 - `m` mark 一個檔。移動時 marks 留著，可以從好幾個目錄、好幾個 tab 收集。
 - 走到檔案要去的地方，按 `c` 複製或 `v` 搬過去。複製會保留 marks，同一批可以放到不只一個地方。
-- 在 **Marks** tab 裡：`Enter` 在 `[1]` 顯示那個檔（在已經開著它目錄的 tab，或開一個新的），`p` pick 其中幾個、只有 pick 的會落地，`m` 取消一個 mark，`C` 全部清掉，`y` 複製路徑，`Z` 把 pick 的打包成 zip，再用 `c` / `v` 落地。
+- 在 **Marks** tab 裡：`Enter` 在 `[1]` 顯示那個檔（在已經開著它目錄的 tab，或開一個新的），`p` pick 其中幾個、只有 pick 的會落地，`m` 取消一個 mark，`C` 全部清掉，`y` 複製路徑，`Z` 把會落地的（有 pick 就是 pick 的，否則全部 marks）打包成 zip，再用 `c` 或 `v` 落地。
 - 複製、搬移、打包在背景跑；**Tasks** tab 用白話記下每一筆，在一筆上按 `Enter` 讓 `[1]` 到它落地的地方。離開時沒做完的工作，下次會標成中斷。
 
 ### 尋找
 
-- **`/` Search** —— **File names**：這個目錄底下的全部，邊打字邊縮小（打的每個詞都要出現，順序不拘）。**Contents**（ripgrep）：先打要找的字，接著列出含有它的檔案，預覽停在第一個找到的地方。
-- **`go` Goto** —— 跳到一個最愛，或搜尋 home 底下的每個目錄（包括隱藏的）。
-- 結果找到一筆就列一筆 —— 馬上就能開始打字。打字時 `↑` / `↓` 在結果之間移動；`Enter` 或 `Tab` 到清單，在清單上 `j` / `k` 移動、`Enter` 打開所在那一筆；`Tab` 或 `/` 回去打字；`Esc` 關掉。
+- **`[/] Search`** —— `[f] File names`：這個目錄底下的全部，邊打字邊縮小（打的每個詞都要出現，順序不拘）。`[c] Contents`（ripgrep）：先打要找的字，接著列出含有它的檔案，預覽停在第一個找到的地方。
+- **`[go]to`** —— 跳到一個最愛，或搜尋 home 底下的每個目錄（包括隱藏的）。
+- 結果找到一筆就列一筆 —— 馬上就能開始打字。打字時 `↑|↓` 在結果之間移動；`Enter` 或 `Tab` 到清單，在清單上 `j|k` 移動、`Enter` 打開所在那一筆；`Tab` 或 `/` 回去打字；`Esc` 關掉。
 
 ### 最愛
 
 - `f` 替 cursor 所在的目錄加星號；`F` 替你所在的目錄加。加了星號的目錄，名稱後面有一顆星；你在那個目錄裡時，路徑後面也有。
-- **Favorites** tab 列出它們：`Enter` 到那裡（它的 tab，或一個新的），`o` 自己選 tab，`D` 拿掉星號（先問）。Goto → Favorite 也能跳過去。
+- **Favorites** tab 列出它們：`Enter` 到那裡（它的 tab，或一個新的），`o` 自己選 tab，`D` 拿掉星號（先問）。`[go]to` → `[f] Favorite` 也能跳過去。
 
 ### 預覽與複製
 
-- 預覽顯示語法上色加行號的文字、目錄樹、壓縮檔內容、PDF、圖片、SVG 原始碼，二進位檔顯示 hex。
-- 在 `[2]` 按 `Enter` 用可捲動的檢視打開預覽：`v` 叫出游標，再按一次 `v` 開始選，用 `h`/`j`/`k`/`l` 移動、`w`/`b`/`e` 一個字一個字、`0`/`$` 到行首行尾，`y` 複製選起來的部分。沒有在選時，`y` 複製全部 —— 跟在 `[2]` 上直接按 `y` 一樣。
+- 預覽顯示語法上色加行號的文字、目錄樹、壓縮檔內容、PDF 的文字、圖片的 data: URI、SVG 原始碼，二進位檔顯示 hex。
+- 在 `[2]` 按 `Enter` 用可捲動的檢視打開預覽：`v` 叫出游標，再按一次 `v` 開始選，用 `h|j|k|l` 移動、`w|b|e` 一個字一個字、`0|$` 到行首行尾，`y` 複製選起來的部分。沒有游標時，`y` 複製全部 —— 跟在 `[2]` 上直接按 `y` 一樣。
 - 在 `[1]` 的檔案上按 `y` 複製它的完整路徑。複製能穿過 tmux 與 SSH。
 
 ### 開啟、編輯與其他
@@ -157,12 +157,12 @@ eval "$(filu shell)"
 | 鍵 | `[1]` 檔案 |
 |---|---|
 | `Enter` | 進入目錄 · 檔案的資訊 |
-| `o` / `O` | 開啟 · 選 app 開啟 |
+| `o` · `O` | 開啟 · 選 app 開啟 |
 | `m` · `c` · `v` | mark · 把 marks 複製到這裡 · 搬到這裡 |
 | `y` · `r` · `D` | 複製路徑 · 重新命名 · 刪除 |
 | `f` · `F` | 替 cursor 所在的目錄加星號 · 替你所在的目錄加 |
 | `/` · `go` · `b` | 搜尋 · goto · 上層目錄 |
-| `t` · `w` · `h` / `l` | 新 tab · 關掉 tab · 切換 tab |
+| `t` · `w` · `h\|l` | 新 tab · 關掉 tab · 切換 tab |
 | `a` · `S` · `s` · `.` · `z` | 新增 · 排序 · shell · 隱藏檔 · 放大 |
 
 | 鍵 | `[2]` 預覽 | `[3]` Marks | `[3]` Tasks | `[3]` Favorites |
@@ -176,7 +176,7 @@ eval "$(filu shell)"
 | `q` · `Ctrl-C` | 離開（先問）；`Ctrl-C` 打字時也有效，再按一次立刻離開 |
 | `Q` | 離開，shell 到你選的目錄 |
 
-每個 panel 的 `Space` menu 先列出對 cursor 所在項目能做的事，再列出對整個 panel 能做的事，最後一列是 **Global operation**：整個 app 的動作（Quit to、Quit）。現在不能做的列 —— 例如只有一個 tab 時的 Close tab —— 會變暗。
+每個 panel 的 `Space` menu 先列出對 cursor 所在項目能做的事，再列出對整個 panel 能做的事，最後一列是 **Global operation**：整個 app 的動作（`[Q]uit to`、`[q] Quit`）。現在不能做的列 —— 例如只有一個 tab 時的 `[w] Close tab` —— 會變暗。
 
 ## 設定
 
@@ -221,6 +221,7 @@ hide_secrets_in_preview: false
 - **原生 Windows** —— filu 在 macOS 與 Linux 上跑；Windows 請在 WSL 裡用
 - **滑鼠** —— 全部用鍵盤
 - **目錄大小** —— 目錄的大小顯示成 `-`；filu 不會把整棵樹加總
+- **畫出圖片** —— 圖片顯示成 data: URI，不畫出來
 
 ## 相關連結
 
@@ -229,7 +230,7 @@ hide_secrets_in_preview: false
 
 ## terminu family
 
-filu 遵循 [terminu design](https://github.com/vulcanshen/terminu)，建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、選單與 popup —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）與 [locku](https://github.com/vulcanshen/locku)（鎖定畫面）。
+filu 遵循 [terminu design](https://github.com/vulcanshen/terminu)，建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、選單與 popup —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）、[locku](https://github.com/vulcanshen/locku)（鎖定畫面）、[kamonu](https://github.com/vulcanshen/kamonu)（畫家族 mark 的編輯器）與 [ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側邊欄）。
 
 ## License
 

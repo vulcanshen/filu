@@ -201,5 +201,5 @@ func sortBadgeText(rules []sortRule, c sortCol) string {
 // --- sort picker flow (kbu: column → direction → back to the columns, Esc to close) ---
 //
 // Each step is its own popup (tdp F1): the column picker stays open underneath
-// while the direction picker sits over it (F4), so Esc on the direction goes
+// while the direction picker sits over it (tdp F4), so Esc on the direction goes
 // back to the columns.
