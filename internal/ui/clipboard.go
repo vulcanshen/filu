@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"io"
 	"os"
 
 	osc52 "github.com/aymanbagabas/go-osc52/v2"
@@ -12,9 +13,12 @@ import (
 type clipboardCopiedMsg struct{ note string }
 type clipboardFailedMsg struct{}
 
+// clipboardOut is where the OSC 52 sequence goes: stderr, the terminal, since
+// Bubble Tea owns stdout; a variable so that tests can read it.
+var clipboardOut io.Writer = os.Stderr
+
 // copyToClipboardCmd writes text to the system clipboard via OSC 52, which works
-// over SSH and inside tmux without a local clipboard tool. The escape is written
-// to stderr because Bubble Tea owns stdout in alt-screen mode. note is the toast
+// over SSH and inside tmux without a local clipboard tool. note is the toast
 // shown on success.
 func copyToClipboardCmd(text, note string) tea.Cmd {
 	return func() tea.Msg {
@@ -25,7 +29,7 @@ func copyToClipboardCmd(text, note string) tea.Cmd {
 		if os.Getenv("TMUX") != "" {
 			seq = seq.Tmux()
 		}
-		if _, err := seq.WriteTo(os.Stderr); err != nil {
+		if _, err := seq.WriteTo(clipboardOut); err != nil {
 			return clipboardFailedMsg{}
 		}
 		return clipboardCopiedMsg{note: note}

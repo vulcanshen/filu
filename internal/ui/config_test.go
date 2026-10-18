@@ -31,6 +31,55 @@ func TestConfigPathEnvOverride(t *testing.T) {
 	}
 }
 
+// The settings directory is ~/.config/filu on every platform (tdp E3); the
+// Application Support one older versions used on macOS is still read while the
+// new one does not exist (FL5).
+func TestE3ConfigDir(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", "")
+	if got, _ := filuConfigDir(); got != filepath.Join(home, ".config", "filu") {
+		t.Fatalf("the settings directory is %s", got)
+	}
+	old := legacyConfigDir(home)
+	if old == "" {
+		return // only macOS had another place
+	}
+	if err := os.MkdirAll(old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := filuConfigDir(); got != old {
+		t.Fatalf("with only the old directory there, it is %s", got)
+	}
+	if err := os.MkdirAll(filepath.Join(home, ".config", "filu"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := filuConfigDir(); got != filepath.Join(home, ".config", "filu") {
+		t.Fatalf("with both there, it is %s", got)
+	}
+}
+
+// config.yaml takes the family's shared settings (tdp E3).
+func TestSharedSettings(t *testing.T) {
+	dir := t.TempDir()
+	old := configPathOverride
+	configPathOverride = filepath.Join(dir, "config.yaml")
+	defer func() { configPathOverride = old }()
+	defer resetGlobals()
+	if err := os.WriteFile(configPathOverride, []byte("input_tab_width: 2\nhide_secrets_in_preview: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := loadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	if inputTabWidth != 2 || !hideSecretsInPreview {
+		t.Fatalf("input_tab_width %d, hide_secrets_in_preview %v", inputTabWidth, hideSecretsInPreview)
+	}
+	if got := sanitizeLine("\tx"); got != "  x" {
+		t.Fatalf("a tab in the preview is %q", got)
+	}
+}
+
 // TestConfigDirHonoursXDG: XDG_CONFIG_HOME redirects both config.yaml and
 // state.yaml on every platform (so a macOS user can opt into ~/.config), but the
 // FILU__CONFIG / FILU__STATE directories still win over it.

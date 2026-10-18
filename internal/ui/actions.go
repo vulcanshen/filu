@@ -414,7 +414,7 @@ func (a *App) sortDirMenu(dir string, d sortColDef) tea.Cmd {
 	in := sortRuleIndex(sortRulesFor(dir), d.col) >= 0
 	acts := []terminu.Action{
 		{Key: "a", Label: "Ascending", Desc: "smallest, oldest or A first", Do: func() tea.Cmd { setSortFor(dir, d.col, true); return a.sorted(dir) }},
-		{Key: "d", Label: "Descending", Desc: "largest, newest or Z first", Do: func() tea.Cmd { setSortFor(dir, d.col, false); return a.sorted(dir) }},
+		{Key: "D", Label: "Descending", Desc: "largest, newest or Z first", Do: func() tea.Cmd { setSortFor(dir, d.col, false); return a.sorted(dir) }},
 		{Key: "x", Label: "Remove", Desc: "this column from the sort", Hidden: func() bool { return !in },
 			Do: func() tea.Cmd { unsetSortFor(dir, d.col); return a.sorted(dir) }},
 	}

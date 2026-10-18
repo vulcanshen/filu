@@ -84,7 +84,7 @@ func NewApp(startDir, focusName string) *App {
 	}
 	a.t.InputTabWidth = inputTabWidth
 	a.t.HideSecretsInPreview = hideSecretsInPreview
-	a.t.ShiftTab = true
+	a.t.ShiftTab = true // TODO(lib FL7): the key reference does not list Shift-Tab
 	a.t.QuitDesc = "leave filu, your shell in the directory it says"
 
 	first := newTab(dir)

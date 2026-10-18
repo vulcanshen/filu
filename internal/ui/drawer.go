@@ -351,8 +351,11 @@ func (a *App) zip() tea.Cmd {
 		return nil
 	}
 	return a.t.Text(terminu.TextInput{
-		Title: "Zip", Glyph: glyphZip, Name: "The name", Prompt: zipPrompt(len(items)) + ": the name of the zip", Verb: "zip",
-		Old: suggestZipName(items),
+		// A grey suggestion is only ever the value now (components/input/README);
+		// a new zip has none, so the name filu would choose is in the prompt.
+		// TODO(tdp FL9): a suggested name for a new value.
+		Title: "Zip", Glyph: glyphZip, Name: "The name", Verb: "zip",
+		Prompt: zipPrompt(len(items)) + ": a name for the zip, like " + suggestZipName(items),
 		Check: func(v string) error {
 			if zipFileName(v) == "" {
 				return fmt.Errorf("Not a name for a zip file")

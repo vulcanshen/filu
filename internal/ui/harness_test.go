@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"bytes"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,8 +17,10 @@ import (
 type harness struct {
 	t    *testing.T
 	a    *App
-	root string // the directory filu opened in
-	quit bool   // filu asked to quit
+	root string       // the directory filu opened in
+	home string       // $HOME for the test: the settings, the session and the trash are under it
+	quit bool         // filu asked to quit
+	clip bytes.Buffer // what was copied to the clipboard (OSC 52)
 }
 
 // newHarness is filu on a w × h screen over a fresh directory holding files
@@ -31,6 +35,12 @@ func newHarness(t *testing.T, w, h int, files map[string]string) *harness {
 	statePathOverride = filepath.Join(home, "state", "state.yaml")
 	t.Cleanup(func() { configPathOverride, statePathOverride = oldC, oldS })
 	t.Setenv("FILU__LAST_DIR_FILE", "")
+	t.Setenv("HOME", home) // the trash, ~ in paths and Goto stay in here
+	t.Setenv("XDG_CONFIG_HOME", "")
+	oldClip := clipboardOut
+	hs0 := &harness{}
+	clipboardOut = &hs0.clip
+	t.Cleanup(func() { clipboardOut = oldClip })
 	resetGlobals()
 	root := filepath.Join(home, "work")
 	makeDir(t, root)
@@ -51,7 +61,8 @@ func newHarness(t *testing.T, w, h int, files map[string]string) *harness {
 			a.watcher.Close()
 		}
 	})
-	hs := &harness{t: t, a: a, root: root}
+	hs := hs0
+	hs.t, hs.a, hs.root, hs.home = t, a, root, home
 	hs.send(tea.WindowSizeMsg{Width: w, Height: h})
 	return hs
 }
@@ -86,6 +97,16 @@ func (hs *harness) run(cmd tea.Cmd) {
 	deadline := time.Now().Add(5 * time.Second)
 	queue := []tea.Cmd{cmd}
 	for len(queue) > 0 && time.Now().Before(deadline) {
+		// What filu's goroutines have sent: finder results, task progress.
+		select {
+		case m := <-hs.a.finds:
+			_, next := hs.a.t.Update(m)
+			queue = append(queue, next)
+		case m := <-hs.a.taskCh:
+			_, next := hs.a.t.Update(m)
+			queue = append(queue, next)
+		default:
+		}
 		c := queue[0]
 		queue = queue[1:]
 		if c == nil {
@@ -185,4 +206,52 @@ func (hs *harness) hasNot(not ...string) {
 			hs.t.Fatalf("the screen has %q:\n%s", w, s)
 		}
 	}
+}
+
+// copied is the text last copied to the clipboard.
+func (hs *harness) copied() string {
+	s := hs.clip.String()
+	i := strings.LastIndex(s, ";")
+	if i < 0 {
+		return ""
+	}
+	s = strings.TrimRight(s[i+1:], "\a\x1b\\")
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		hs.t.Fatalf("not an OSC 52 sequence: %q", hs.clip.String())
+	}
+	return string(b)
+}
+
+// restart ends filu as quitting does and starts it again on the same
+// directory, settings and session.
+func (hs *harness) restart() {
+	hs.a.shutdown()
+	w, h := hs.a.t.Size()
+	hs.a = NewApp(hs.root, "")
+	hs.send(tea.WindowSizeMsg{Width: w, Height: h})
+}
+
+// path is a file of the test's directory.
+func (hs *harness) path(name string) string { return filepath.Join(hs.root, name) }
+
+// exists reports a file of the test's directory.
+func (hs *harness) exists(name string) bool {
+	_, err := os.Lstat(hs.path(name))
+	return err == nil
+}
+
+// cursor is the entry under [1]'s cursor.
+func (hs *harness) cursor() string {
+	it, _, _ := hs.a.item()
+	return it.name
+}
+
+// to puts [1]'s cursor on name.
+func (hs *harness) to(name string) {
+	hs.t.Helper()
+	if !hs.a.cur().focus(name) {
+		hs.t.Fatalf("%s is not in the list", name)
+	}
+	hs.send(nil)
 }
