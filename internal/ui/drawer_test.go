@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // In [3] Marks, p picks some of the marks: only the picks land; m takes one
@@ -127,7 +129,7 @@ func TestFavoritesTab(t *testing.T) {
 		t.Fatalf("Enter on the favorite: [1] is on %s", hs.a.cur().dir)
 	}
 	hs.keys("o")
-	hs.has("OPEN IN", "New tab", "already there")
+	hs.has("OPEN IN", "a tab of its own", "already there")
 	hs.keys("Esc", "Esc", "D") // the first Esc takes the toast (tdp K4)
 	hs.has("Take the star off")
 	hs.keys("Enter")
@@ -156,6 +158,35 @@ func TestSessionComesBack(t *testing.T) {
 	}
 	if !slices.Contains(hs.a.cur().list.Marked(), hs.path("a.txt")) {
 		t.Fatal("[1] does not show the mark after a restart")
+	}
+}
+
+// The favorites and the task log are data (tdp E3): they are kept in
+// data.yaml, not in the state; ones an older version left in state.yaml move
+// there on the first start, and filu says so.
+func TestFavoritesAndTasksAreData(t *testing.T) {
+	hs := newHarness(t, 120, 40, map[string]string{"proj/": ""})
+	if err := os.MkdirAll(filepath.Dir(statePathOverride), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	old := "pinned:\n  - " + hs.path("proj") + "\ntasks:\n  - id: 3\n    action: cp\n    dest: x\n    path: /tmp\n    total: 1\n    status: done\n"
+	if err := os.WriteFile(statePathOverride, []byte(old), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	hs.a = NewApp(hs.root, "")
+	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
+	hs.run(hs.a.start())
+	hs.has("Moved the favorites and the task log")
+	if !hs.a.favs.pinnedSet()[hs.path("proj")] || len(hs.a.tasks) != 1 {
+		t.Fatalf("favorites %v, tasks %v", hs.a.favs.pinned, hs.a.tasks)
+	}
+	state, _ := os.ReadFile(statePathOverride)
+	data, _ := os.ReadFile(dataPathOverride)
+	if strings.Contains(string(state), "pinned") || strings.Contains(string(state), "tasks:") {
+		t.Fatalf("state.yaml still has them:\n%s", state)
+	}
+	if !strings.Contains(string(data), hs.path("proj")) || !strings.Contains(string(data), "id: 3") {
+		t.Fatalf("data.yaml:\n%s", data)
 	}
 }
 

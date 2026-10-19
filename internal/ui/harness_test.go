@@ -30,10 +30,11 @@ func newHarness(t *testing.T, w, h int, files map[string]string) *harness {
 	t.Helper()
 	terminu.SetIconWidth(1, 1)
 	home := t.TempDir()
-	oldC, oldS := configPathOverride, statePathOverride
+	oldC, oldS, oldD := configPathOverride, statePathOverride, dataPathOverride
 	configPathOverride = filepath.Join(home, "config", "config.yaml")
 	statePathOverride = filepath.Join(home, "state", "state.yaml")
-	t.Cleanup(func() { configPathOverride, statePathOverride = oldC, oldS })
+	dataPathOverride = filepath.Join(home, "data", "data.yaml")
+	t.Cleanup(func() { configPathOverride, statePathOverride, dataPathOverride = oldC, oldS, oldD })
 	t.Setenv("FILU__LAST_DIR_FILE", "")
 	t.Setenv("HOME", home) // the trash, ~ in paths and Goto stay in here
 	t.Setenv("XDG_CONFIG_HOME", "")

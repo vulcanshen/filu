@@ -82,40 +82,95 @@ func stateFilePath() (string, bool) {
 	return filepath.Join(dir, "state.yaml"), true
 }
 
-// loadState reads the saved session: ok false when there is none (the first
-// run), err when there is one that cannot be read or makes no sense.
-func loadState() (st sessionState, ok bool, err error) {
-	path, found := stateFilePath()
-	if !found {
-		return sessionState{}, false, nil
-	}
-	data, err := os.ReadFile(path)
-	if errors.Is(err, fs.ErrNotExist) {
-		return sessionState{}, false, nil
-	}
-	if err != nil {
-		return sessionState{}, false, err
-	}
-	if err := yaml.Unmarshal(data, &st); err != nil {
-		return sessionState{}, false, err
-	}
-	return st, true, nil
+// dataState is filu's data (tdp E3): what is gone for good when it is deleted
+// and worth a backup — the favorites and the task log. It lives in
+// ~/.filu/data.yaml (FILU__DATA names another directory), apart from the state,
+// which only brings back where you were.
+type dataState struct {
+	Favorites []string        `yaml:"favorites,omitempty"`
+	Tasks     []persistedTask `yaml:"tasks,omitempty"`
 }
 
-// saveState writes the session and reports a failure, so the caller can show it
-// (tdp F5): a save that silently fails loses tabs, marks, favorites and sorts.
-// No state path (no home dir) is not a failure — there is nowhere to save to.
-func saveState(st sessionState) error {
-	path, ok := stateFilePath()
-	if !ok {
-		return nil
+var dataPathOverride string // tests redirect data I/O here
+
+func dataFilePath() (string, bool) {
+	if dataPathOverride != "" {
+		return dataPathOverride, true
 	}
+	if d := os.Getenv("FILU__DATA"); d != "" { // a data directory (tdp E2, E3)
+		return filepath.Join(d, "data.yaml"), true
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return "", false
+	}
+	return filepath.Join(home, ".filu", "data.yaml"), true
+}
+
+// readYAML reads path into v: found false when there is no such file, err
+// when it cannot be read or makes no sense.
+func readYAML(path string, v any) (found bool, err error) {
+	b, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, yaml.Unmarshal(b, v)
+}
+
+// writeYAML writes v to path, making its directory.
+func writeYAML(path string, v any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	data, err := yaml.Marshal(st)
+	b, err := yaml.Marshal(v)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, b, 0o644)
+}
+
+// loadState reads the saved session and the data: ok false when there is
+// neither (the first run), err when one cannot be read or makes no sense.
+// moved reports favorites or tasks that were still in state.yaml, where
+// versions before the data directory kept them: the next save moves them.
+func loadState() (st sessionState, ok bool, moved bool, err error) {
+	if path, found := stateFilePath(); found {
+		if ok, err = readYAML(path, &st); err != nil {
+			return sessionState{}, false, false, err
+		}
+	}
+	path, found := dataFilePath()
+	if !found {
+		return st, ok, false, nil
+	}
+	var d dataState
+	has, err := readYAML(path, &d)
+	switch {
+	case err != nil:
+		return sessionState{}, false, false, err
+	case has:
+		st.Pinned, st.Tasks = d.Favorites, d.Tasks
+		return st, true, false, nil
+	}
+	return st, ok, len(st.Pinned) > 0 || len(st.Tasks) > 0, nil
+}
+
+// saveState writes the session and the data and reports a failure, so the
+// caller can show it (tdp F5): a save that silently fails loses tabs, marks,
+// favorites and sorts. No path (no home dir) is not a failure — there is
+// nowhere to save to.
+func saveState(st sessionState) error {
+	if path, ok := dataFilePath(); ok {
+		if err := writeYAML(path, dataState{Favorites: st.Pinned, Tasks: st.Tasks}); err != nil {
+			return err
+		}
+		st.Pinned, st.Tasks = nil, nil // in data.yaml, not in the state
+	}
+	if path, ok := stateFilePath(); ok {
+		return writeYAML(path, st)
+	}
+	return nil
 }

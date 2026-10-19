@@ -52,7 +52,7 @@ func TestBrokenStateIsSaidAndKept(t *testing.T) {
 	hs.a = NewApp(hs.root, "")
 	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
 	hs.run(hs.a.start())
-	hs.has("Cannot read state.yaml")
+	hs.has("Cannot read the session")
 	hs.to("a.txt")
 	hs.keys("m")
 	hs.a.shutdown()

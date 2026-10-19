@@ -1,7 +1,7 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.7.4），畫面建在家族共用的
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.8.0），畫面建在家族共用的
 [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.1.13）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
@@ -80,7 +80,7 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 - **tab 的標記** —— 第一個 tab 是啟動的 glyph（它永遠開在啟動的目錄），其餘各一隻動物（`look.go` 的 `tabMarks`）。標記是 panel 的
   tab 名稱（lib 的膠囊串），固定寬，不跟目錄名綁動（tdp L2）。上限五個（`maxTabs`）：到上限時 New tab 停用。
 - **zoom** —— `z` 切換 lib 的 `ForceNarrow`：只畫 focus 的 panel、佔滿畫面。`[1]` 在 zoom 時把每個 tab 畫成等寬並排的欄（`drawColumns`，
-  欄間一條 Overlay0 的 `│`），`h|l` 換到的那一欄是亮的，其他的淡化（tdp P6）—— 這是偏離，見「偏離 tdp」。zoom 是版面的切換，
+  欄間一條 Overlay0 的 `│`），`h|l` 換到的那一欄是亮的，其他的淡化（tdp P6），見「設計決定」。zoom 是版面的切換，
   不是模式：沒有鍵換意思，`Esc` 照樣回上一層目錄。
 - **icon 與配色** —— 檔案類型的 glyph 取自 eza 完整的 icon 表（`ezadata.go`）；顏色來自烘進 binary 的
   `vivid generate catppuccin-mocha` `LS_COLORS`，依 eza 的優先序解析（目錄 → symlink → executable → 最長 suffix → 副檔名，`theme.go`）。
@@ -89,8 +89,9 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 - **session** —— 第一個以外的 tab（目錄與 cursor）、marks、最愛、tasks、每個目錄的排序存進 `state.yaml`（`persist.go`、`session.go`）；
   第一個 tab 永遠開在啟動的目錄，啟動時 focus 在 `[1]`。
 - **設定與 state 分開** —— `config.yaml` 是使用者手改的，`state.yaml` 每次變動都重寫。位置照 tdp E3：`$XDG_CONFIG_HOME/filu`，
-  否則 `~/.config/filu`；`FILU__CONFIG`、`FILU__STATE` 各指定一個目錄。`TODO(tdp FL5)`：v0.4.0 以前 macOS 用
-  `~/Library/Application Support/filu`；新目錄不存在、舊的存在時，繼續讀寫舊的（`filuConfigDir`）。`config.yaml` 除了 filu 自己的
+  否則 `~/.config/filu`；`FILU__CONFIG`、`FILU__STATE` 各指定一個目錄。v0.4.0 以前 macOS 用 `~/Library/Application Support/filu`：
+  第一次啟動時整個目錄搬到新位置、Info toast 說從哪搬到哪；搬不動就照舊用舊的、開 error popup 寫出兩個路徑（`moveOldSettings`）。
+  最愛與 task 紀錄放 `~/.filu/data.yaml`（`FILU__DATA`），以前在 `state.yaml` 的第一次啟動時搬過去（`loadState`）。`config.yaml` 除了 filu 自己的
   `finder_cap`、`ignore_dirs`、`open_with`，還收家族共用的 `input_tab_width`、`hide_secrets_in_preview`，交給 lib。
 - **檔名裡的控制字元** —— 檔名可能含控制字元（macOS 的 `Icon\r`）。`safeName`（`list.go`）在顯示時剝掉，檔案操作仍用真實名。
   使用者打的值由 lib 的 input 處理：控制字元畫成紅色的名字、送出時擋下。
@@ -126,19 +127,29 @@ filu/
 - **平台：只支援 macOS / Linux。** 平台分岔的操作（metadata、trash、open）用 build tag，沒有 Windows 實作；`[s]hell` 的 PTY、路徑、
   cd-on-quit 的 POSIX shell function、`rwx` 權限都沒有 Windows 對應。Windows 使用者走 WSL（2026-07-27 拍板）。
 
-### 暫定（2026-10-18 改用 terminu-go 時自己定的，等 user 確認）
+- **zoom 時換 panel 照樣放大**（user 2026-10-19 定案）：zoom 用 lib 的 `ForceNarrow`，`Tab` 換到下一個 panel 時，下一個也是放大的，
+  `z` 才還原。放大是使用者要的版面，換 panel 不代表不要了；跟窄寬時一次只看一個 panel 的走法一樣。
+- **zoom 時 `[1]` 的 tab 並排**（user 2026-10-19 定案：tdp 的 zoom 給預設，怎麼放大由 app 決定）：filu 在 zoom 時把每個 tab 畫成一欄
+  （`files.go` 的 `drawColumns`）：zoom 本來就是要更多空間，在好幾個目錄之間比對、搬檔時，一次看到全部的 tab 比一頁一頁切好用；`h|l`
+  照樣換 tab，有 focus 的那一欄亮、其他的淡化（tdp P6），欄間的線用 Overlay0（跟 menu 的分隔線一樣）。
+- **長時間工作的進度寫在 Tasks 的列裡**（user 2026-10-19 定案）：filu 是單畫面、沒有 statusbar，進度是 app 的內容（`3/10`，執行中的 glyph
+  Green）；開著 shell 時看不到，接受。
+- **設定、狀態、資料分開**（tdp E3）：用「刪掉會怎樣」分。tab、marks、每個目錄的排序刪了只是回到預設，是狀態（`state.yaml`，在設定目錄）；
+  最愛與 task 紀錄刪了找不回來、會想備份，是資料（`~/.filu/data.yaml`）。
 
-- **zoom 時換 panel 照樣放大**：zoom 用 lib 的 `ForceNarrow`，`Tab` 換到下一個 panel 時，下一個也是放大的；以前 focus 一換就還原。
-  理由：放大是使用者要的版面，換 panel 不代表不要了；跟窄寬時一次只看一個 panel 的走法一樣，`z` 才是還原的鍵。
-- **執行中的 task 用固定的 glyph**（nf-md-timer_sand 加 `3/10`）：lib 的 loading icon 沒有公開給一列用；panel 的 loading icon 指的是
-  「整個 panel 還在載入」，不合用。
-- **檔案資訊用 viewer**：lib 的 note 有 viewer、error popup、key reference 三種，資訊是唯讀可捲動的內容，用 viewer（左邊有行號）。
+### 暫定（自己定的，等 user 確認）
+
 - **`[3]` 的欄位**：Marks、Favorites 是 `NAME` 與 `IN`（所在目錄，從前面截）；Tasks 是 `WHEN` 與 `TASK`。理由：名稱與所在目錄分兩欄，
   名稱不會被長路徑擠掉，`IN` 從前面截、留下最近的幾層；Tasks 照時間讀，所以時間放前面。
-- **排序選了方向就整個收起來**：lib 的 menu 執行一列會關掉整疊；要疊第二層就再按一次 `S`。以前方向框收起、欄位框留著。
-- **離開的 confirm 寫出 shell 會停在哪**，`[Q]uit to` 在 global operation popup 裡選別的目錄（`TODO(lib FL1)`）。
-- **Zip 的名字**：灰字提議只能是舊值（components/input/README），新 zip 沒有舊值，建議的名字寫在說明列，使用者自己打
-  （`TODO(tdp FL9)`）。
+
+### 定案了、等 terminu-go 下一版的（user 2026-10-19）
+
+- **`q` 回到選目錄的 menu**（FL1）：現在是 confirm 加 global 的 `[Q]uit to`。
+- **內容搜尋邊打邊找，`/`、`~/` 開頭的路徑搜尋回來**（FL2）。
+- **Zip 的名字是灰字的建議值**（FL9，tdp S6）：不碰就按 `Enter` 用它；現在寫在說明列。
+- **執行中的 task 轉家族的 loading icon**（FL11）：現在是固定的 nf-md-timer_sand。
+- **檔案資訊的 viewer 不畫行號**（FL12，tdp S66），照樣能選取複製。
+- **排序選了方向只收方向那一步、欄位 menu 留著**（FL13，tdp S4 的 T1 表：選一個值寫回 picker 保留 source）；現在整疊收起。
 
 ## 已否決，不要重提
 
@@ -155,8 +166,8 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
 - **`[s]hell` 裡的 icon**：shell 裡的程式照 lib 設給它的 `TERMINU__ICON_WIDTH` 排版；不讀這個變數的程式（例：`eza --icons`）自己認定
   icon 佔一格，在 icon 畫成兩格的字型上那一列會歪。
 - **等 lib 或規範的**（程式裡的 `TODO(lib FLn)`、`TODO(tdp FLn)`，已回報 terminu）：FL1 離開流程不能是選單；FL2 finder 拿不到打的字
-  （內容搜尋先問字、沒有路徑搜尋）；FL3 panel 用的檔案預覽；FL4 照 ID 設標記；FL5 macOS 舊的設定目錄；FL6 排序時目錄在前、
-  整欄收掉；FL7 key reference 沒列 `Shift-Tab`；FL8 finder 在很小的畫面上當掉（測試跳過那一格）；FL9 新值的建議名字；
+  （內容搜尋先問字、沒有路徑搜尋）；FL3 panel 用的檔案預覽；FL4 照 ID 設標記；FL6 排序時目錄在前、
+  整欄收掉；FL7 key reference 沒列 `Shift-Tab`；FL8 finder 在很小的畫面上當掉（測試跳過那一格）；FL9、FL11、FL12、FL13 見「設計決定」；
   FL14 menu 的標題不能照原樣放名稱（`Open with`、`Open in` 只寫動作）；FL15 confirm 的問句不能跟著 cursor 那一項；FL16 內容搜尋的
   預覽不能用 lib 的檔案預覽。
 - **未做**：Mouse；每列的錯誤標示（broken symlink、沒有權限）；zoxide 式的目錄索引；chmod、解壓縮、真的圖（kitty / sixel）、續傳。
@@ -164,12 +175,8 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
 
 ## 偏離 tdp
 
-- **zoom 時 `[1]` 的 tab 並排**（components/layout/panel 的 tab；`files.go` 的 `drawColumns`）：panel 的 tab 一次只顯示一頁，
-  components 沒有「幾頁並排」的方案。filu 在 zoom 時把每個 tab 畫成一欄：zoom 本來就是要更多空間，在好幾個目錄之間比對、搬檔時，
-  一次看到全部的 tab 比一頁一頁切好用；`h|l` 照樣換 tab，有 focus 的那一欄亮、其他的淡化（tdp P6），欄間的線用 Overlay0（跟 menu 的
-  分隔線一樣）。已回報成 components 的缺漏（FL17）。
-
-`[1]` 的路徑列、`[3]` 各清單的欄位是 panel 的內容，不是 tdp 規定的元件；排序的標示照 components/layout/panel 的寫法。
+目前沒有。zoom 時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 的路徑列、`[3]` 各清單的欄位是 panel
+的內容；排序的標示照 components/layout/panel 的寫法（`TODO(lib FL6)`，等 lib 的群與收欄）。
 
 ## 設計文件導讀
 

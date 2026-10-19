@@ -63,12 +63,15 @@ type App struct {
 
 	quitDir     string   // where the shell goes when filu ends (cd-on-quit)
 	startupErrs []string // problems found while starting (a bad config.yaml, a broken state.yaml), shown once it runs
+	startupNews []string // what filu did while starting (moved the settings), said once it runs
+	moveFailed  string   // moving the old settings directory failed: why, with both paths
 	keepState   bool     // state.yaml could not be read: leave it as it is rather than write over it
 }
 
 // NewApp builds filu over startDir (the current directory when empty). With
 // focusName set (`filu <file>`), the cursor starts on that entry of startDir.
 func NewApp(startDir, focusName string) *App {
+	from, to, moveErr := moveOldSettings()
 	cfgErr := loadConfig()
 	dir := startDir
 	if dir == "" {
@@ -84,6 +87,13 @@ func NewApp(startDir, focusName string) *App {
 		taskCh:    make(chan landMsg, 64),
 		finds:     make(chan finderMsg, 16),
 		watched:   map[string]bool{},
+	}
+	switch {
+	case moveErr != nil:
+		a.moveFailed = opFailedText("move filu's settings from "+from+" to "+to, moveErr) +
+			"\n\nfilu goes on using " + from + ". Move it to " + to + " yourself to switch."
+	case from != "":
+		a.startupNews = append(a.startupNews, "Moved filu's settings from "+shortPath(from)+" to "+shortPath(to))
 	}
 	if cfgErr != nil {
 		a.startupErrs = append(a.startupErrs, opFailedText("read config.yaml", cfgErr)+" (using the defaults)")
@@ -105,15 +115,22 @@ func NewApp(startDir, focusName string) *App {
 		first.focus(focusName)
 	}
 	a.tabs = []*tab{first}
-	st, ok, err := loadState()
+	st, ok, moved, err := loadState()
 	switch {
 	case err != nil:
 		// Said, and left alone: writing over it would lose the tabs, marks,
 		// favorites and sorts in it without a word (tdp F5).
 		a.keepState = true
-		a.startupErrs = append(a.startupErrs, opFailedText("read state.yaml", err)+" (the session is not saved until it is fixed or moved away)")
+		a.startupErrs = append(a.startupErrs, opFailedText("read the session", err)+" (it is not saved until state.yaml and data.yaml are fixed or moved away)")
 	case ok:
 		a.applyState(st)
+	}
+	if moved {
+		if err := saveState(a.snapshotState()); err != nil {
+			a.startupErrs = append(a.startupErrs, opFailedText("move the favorites and the task log", err))
+		} else if p, ok := dataFilePath(); ok {
+			a.startupNews = append(a.startupNews, "Moved the favorites and the task log to "+shortPath(p))
+		}
 	}
 	a.build()
 	a.refreshAll()
@@ -186,11 +203,16 @@ func (a *App) Run() error {
 // start reads the background channels and says what went wrong while starting.
 func (a *App) start() tea.Cmd {
 	cmds := []tea.Cmd{a.waitLand(), a.waitWatch(), a.waitFind()}
-	switch len(a.startupErrs) {
-	case 0:
-	case 1:
+	if len(a.startupNews) > 0 {
+		cmds = append(cmds, a.t.Toast(terminu.Info, strings.Join(a.startupNews, "; ")))
+	}
+	switch {
+	case a.moveFailed != "":
+		// Both paths, for the user to move it by hand (tdp E3).
+		cmds = append(cmds, a.t.Error("Moving the settings failed", strings.Join(append([]string{a.moveFailed}, a.startupErrs...), "\n\n")))
+	case len(a.startupErrs) == 1:
 		cmds = append(cmds, a.t.Toast(terminu.Error, a.startupErrs[0]))
-	default:
+	case len(a.startupErrs) > 1:
 		cmds = append(cmds, a.t.Error("Starting filu", strings.Join(a.startupErrs, "\n\n")))
 	}
 	return tea.Batch(cmds...)

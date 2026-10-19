@@ -67,9 +67,7 @@ var configPathOverride string // tests redirect config I/O here
 
 // filuConfigDir resolves the directory that holds config.yaml and state.yaml:
 // $XDG_CONFIG_HOME/filu, else ~/.config/filu, the same on every platform (tdp
-// E3).
-// TODO(tdp FL5): up to v0.4.0 macOS used ~/Library/Application Support/filu;
-// while ~/.config/filu does not exist and that one does, filu keeps using it.
+// E3). After a move from the old place that failed, the old place.
 func filuConfigDir() (string, bool) {
 	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
 		return filepath.Join(x, "filu"), true
@@ -78,11 +76,47 @@ func filuConfigDir() (string, bool) {
 	if err != nil || home == "" {
 		return "", false
 	}
-	dir := filepath.Join(home, ".config", "filu")
-	if old := legacyConfigDir(home); old != "" && !isDir(dir) && isDir(old) {
-		return old, true
+	if stuckInOld {
+		if old := legacyConfigDir(home); old != "" {
+			return old, true
+		}
 	}
-	return dir, true
+	return filepath.Join(home, ".config", "filu"), true
+}
+
+// stuckInOld says moving the old settings directory failed: filu keeps using
+// it until the user moves it (tdp E3).
+var stuckInOld bool
+
+// moveOldSettings moves the settings directory older versions used on macOS
+// (Application Support) to tdp E3's place, the first time filu starts without
+// one there. It reports where from and where to when there was one to move;
+// err says why it could not, and filu then keeps using the old one. A
+// directory named by FILU__CONFIG or XDG_CONFIG_HOME is the user's choice, and
+// is left alone.
+func moveOldSettings() (from, to string, err error) {
+	if configPathOverride != "" || os.Getenv("FILU__CONFIG") != "" || os.Getenv("XDG_CONFIG_HOME") != "" {
+		return "", "", nil
+	}
+	home, herr := os.UserHomeDir()
+	if herr != nil || home == "" {
+		return "", "", nil
+	}
+	from = legacyConfigDir(home)
+	if from == "" || !isDir(from) {
+		return "", "", nil
+	}
+	to = filepath.Join(home, ".config", "filu")
+	if _, serr := os.Lstat(to); serr == nil {
+		return "", "", nil // already there: the old one is left alone
+	}
+	if err = os.MkdirAll(filepath.Dir(to), 0o755); err == nil {
+		err = os.Rename(from, to)
+	}
+	if err != nil {
+		stuckInOld = true
+	}
+	return from, to, err
 }
 
 // legacyConfigDir is where filu kept its settings before tdp E3, when that was

@@ -86,7 +86,7 @@ func taskText(t landTask) string {
 
 // The glyphs of a task's state.
 const (
-	glyphRunning = "\U000F051F" // nf-md-timer_sand
+	glyphRunning = "\U000F051F" // nf-md-timer_sand; TODO(lib FL11): the family's turning loading icon
 	glyphDone    = "\U0000F00C" // nf-fa-check
 	glyphPending = "\U0000F017" // nf-fa-clock_o
 	glyphFailed  = "\U0000F00D" // nf-fa-times
@@ -358,7 +358,7 @@ func (a *App) zip() tea.Cmd {
 	return a.t.Text(terminu.TextInput{
 		// A grey suggestion is only ever the value now (components/input/README);
 		// a new zip has none, so the name filu would choose is in the prompt.
-		// TODO(tdp FL9): a suggested name for a new value.
+		// TODO(lib FL9): the suggested name goes in grey, Enter takes it (tdp S6).
 		Title: "Zip", Glyph: glyphZip, Name: "The name", Verb: "zip",
 		Prompt: zipPrompt(len(items)) + ": a name for the zip, like " + suggestZipName(items),
 		Check: func(v string) error {

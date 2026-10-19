@@ -62,6 +62,7 @@ In filu, Space lists what you can do and ? lists the keys.
 Environment:
   FILU__CONFIG               the settings directory (config.yaml, state.yaml)
   FILU__STATE                the directory of state.yaml, when not the settings one
+  FILU__DATA                 the directory of data.yaml: your favorites and the task log
   FILU__ICON_WIDTH           1 or 2: the cells a Nerd Font icon takes, instead of asking
                              the terminal
   FILU__POWERLINE_WIDTH      1 or 2: the same for a powerline symbol

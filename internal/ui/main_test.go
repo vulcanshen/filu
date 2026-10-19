@@ -12,6 +12,7 @@ func TestMain(m *testing.M) {
 	dir, err := os.MkdirTemp("", "filu-test")
 	if err == nil {
 		statePathOverride = filepath.Join(dir, "state.yaml")
+		dataPathOverride = filepath.Join(dir, "data.yaml")
 	}
 	code := m.Run()
 	if dir != "" {

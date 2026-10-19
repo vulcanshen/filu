@@ -102,7 +102,9 @@ eval "$(filu shell)"
 
 Then start filu as **`filu`** (not `./filu`). When you quit with `q`, filu says which directory your shell goes to — the one the tab you are on shows. To choose another, open `Space` → **Global operation** → `[Q]uit to` (or press `Q`): the directory you started in, or any tab's. Without the line, filu works the same — quitting just leaves your shell where it was.
 
-## The screen
+## Usage
+
+### The screen
 
 Three panels:
 
@@ -112,9 +114,9 @@ Three panels:
 
 `Tab` (or `1`–`3`) moves between panels, `h|l` switches a panel's tabs, and `z` zooms the panel you are on to the whole screen — zoomed, `[1]` shows all its tabs side by side.
 
-## What you can do
+### What you can do
 
-### Browse
+#### Browse
 
 - `Enter` goes into a directory; on a file it shows the details: full path, type, size, times, permissions, owner. `Esc` goes up; `j|k`, `u|d` for half a page, `gg|G` for top and bottom.
 - `b` jumps up to any of the directories this one is in. `.` shows or hides hidden files.
@@ -122,37 +124,37 @@ Three panels:
 - `t` opens a new tab (the same directory, a favorite, or a search), `w` closes the one you are on.
 - Files changed by other programs show up on their own.
 
-### Gather, copy, move
+#### Gather, copy, move
 
 - `m` marks a file. Marks stay put while you move around, so you can gather from several directories and tabs.
 - Go where the files belong and press `c` to copy or `v` to move them there. Copying keeps your marks, so you can land them in more than one place.
 - In the **Marks** tab: `Enter` shows the file in `[1]` (in the tab already on its directory, or a new one), `p` picks some of them so that only the picks land, `m` unmarks one, `C` clears them all, `y` copies a path, and `Z` packs what would land — the picks, or every mark — into a zip that you then land with `c` or `v`.
 - Copies, moves and zips run in the background; the **Tasks** tab logs them in plain words, and `Enter` on one takes `[1]` to where it landed. A task cut short by quitting comes back marked as interrupted.
 
-### Find
+#### Find
 
 - **`[/] Search`** — `[f] File names`: everything under the directory, narrowed as you type (every word you type must appear, in any order). `[c] Contents` (ripgrep): type the text to find, then you get the files that hold it, each previewed at its first match.
 - **`[go]to`** — jump to a favorite, or search every directory under your home (hidden ones too).
 - Results appear as they're found — start typing right away. While you type, `↑|↓` move among the results; `Enter` or `Tab` goes to the list, where `j|k` move and `Enter` opens the one you are on; `Tab` or `/` goes back to typing; `Esc` closes.
 
-### Favorites
+#### Favorites
 
 - `f` stars the directory under the cursor; `F` stars the one you're in. A star shows after a starred directory's name, and after the path when you are in one.
 - The **Favorites** tab lists them: `Enter` goes there (its tab, or a new one), `o` lets you choose the tab, `D` takes the star off (it asks first). `[go]to` → `[f] Favorite` jumps there too.
 
-### Preview and copy
+#### Preview and copy
 
 - The preview shows text with syntax highlighting and line numbers, directory trees, archive contents, PDFs (their text), images (as a data: URI), SVG source, and hex for binaries.
 - In `[2]`, `Enter` opens the preview in a scrollable view: `v` brings out a cursor, `v` again starts selecting, move with `h|j|k|l`, by word with `w|b|e` and to the line ends with `0|$`, and `y` copies the selection. Without the cursor `y` copies all of it — as `y` on `[2]` itself does.
 - `y` on a file in `[1]` copies its full path. Copying works through tmux and SSH.
 
-### Open, edit, and everything else
+#### Open, edit, and everything else
 
 - `o` opens a file or directory with its default app (it asks first). `O` lets you choose the app — add your own (VSCode, IntelliJ IDEA, …) in the config.
 - `s` drops you into your shell in the current directory (it asks first); type `exit` to come back, or press `Alt-Esc`: filu asks, then `Enter` ends the shell (whatever is running in it) and `Esc` takes you back to it.
 - `r` renames (the old name shows in grey: `Tab` takes it to edit, or just type a new one), `a` creates a file (end the name with `/` for a directory), `D` moves to the trash after asking. A name that is empty, already taken, outside the current directory or holding a control character is refused on the spot — the box stays open and says why.
 
-## Key reference
+### Key reference
 
 | Key | `[1]` Files |
 |---|---|
@@ -180,9 +182,9 @@ Every panel's `Space` menu lists what you can do to the item under the cursor, t
 
 ## Configuration
 
-Your settings live in `config.yaml`, in `$XDG_CONFIG_HOME/filu/` (or `~/.config/filu/`); `FILU__CONFIG` names another directory. filu writes a commented copy the first time it runs and never overwrites yours. Next to it, `state.yaml` holds your session — leave that one to filu (`FILU__STATE` puts it in another directory).
+Your settings live in `config.yaml`, in `$XDG_CONFIG_HOME/filu/` (or `~/.config/filu/`); `FILU__CONFIG` names another directory. filu writes a commented copy the first time it runs and never overwrites yours. Next to it, `state.yaml` holds where you were — the tabs, the marks, each directory's sort — leave that one to filu (`FILU__STATE` puts it in another directory). Your favorites and the task log are in `~/.filu/data.yaml` (`FILU__DATA` names another directory): that is the one to back up.
 
-On macOS, versions up to 0.4.0 kept both files in `~/Library/Application Support/filu/`. filu keeps using that directory until `~/.config/filu/` exists; move the files over to switch.
+On macOS, versions up to 0.4.0 kept everything in `~/Library/Application Support/filu/`. The first time this version starts, it moves that directory to `~/.config/filu/` and says so; if it cannot, it keeps using the old one and shows you both paths, to move it yourself. Favorites and the task log move out of `state.yaml` into `~/.filu/data.yaml` the same way.
 
 ```yaml
 # How many entries a finder scans before it stops. Goto walks all of $HOME,

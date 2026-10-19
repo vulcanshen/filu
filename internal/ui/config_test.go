@@ -32,13 +32,18 @@ func TestConfigPathEnvOverride(t *testing.T) {
 }
 
 // The settings directory is ~/.config/filu on every platform (tdp E3); the
-// Application Support one older versions used on macOS is still read while the
-// new one does not exist (FL5).
+// first start moves the Application Support one older versions used on macOS
+// there, and only a move that fails leaves filu using the old one.
 func TestE3ConfigDir(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", "")
-	if got, _ := filuConfigDir(); got != filepath.Join(home, ".config", "filu") {
+	t.Setenv("FILU__CONFIG", "")
+	oldC := configPathOverride
+	configPathOverride = ""
+	defer func() { configPathOverride, stuckInOld = oldC, false }()
+	newDir := filepath.Join(home, ".config", "filu")
+	if got, _ := filuConfigDir(); got != newDir {
 		t.Fatalf("the settings directory is %s", got)
 	}
 	old := legacyConfigDir(home)
@@ -48,14 +53,37 @@ func TestE3ConfigDir(t *testing.T) {
 	if err := os.MkdirAll(old, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := filuConfigDir(); got != old {
-		t.Fatalf("with only the old directory there, it is %s", got)
-	}
-	if err := os.MkdirAll(filepath.Join(home, ".config", "filu"), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(old, "config.yaml"), []byte("finder_cap: 7\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := filuConfigDir(); got != filepath.Join(home, ".config", "filu") {
-		t.Fatalf("with both there, it is %s", got)
+	from, to, err := moveOldSettings()
+	if err != nil || from != old || to != newDir {
+		t.Fatalf("moved %q → %q: %v", from, to, err)
+	}
+	if _, err := os.Stat(filepath.Join(newDir, "config.yaml")); err != nil || isDir(old) {
+		t.Fatalf("config.yaml is not in the new place, or the old one is still there: %v", err)
+	}
+	if from, _, _ := moveOldSettings(); from != "" {
+		t.Fatal("a second start moved something again")
+	}
+
+	// A move that fails: filu keeps the old one.
+	if err := os.RemoveAll(newDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	os.RemoveAll(filepath.Join(home, ".config"))
+	if err := os.WriteFile(filepath.Join(home, ".config"), nil, 0o644); err != nil { // a file: nothing goes under it
+
+		t.Fatal(err)
+	}
+	if _, _, err := moveOldSettings(); err == nil {
+		t.Fatal("moving under a file worked")
+	}
+	if got, _ := filuConfigDir(); got != old {
+		t.Fatalf("after a failed move the settings directory is %s", got)
 	}
 }
 

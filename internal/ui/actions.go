@@ -145,6 +145,7 @@ func (a *App) info() tea.Cmd {
 	for _, r := range rows {
 		lines = append(lines, label.Render(fmt.Sprintf("%-*s", w, strings.ToUpper(r.label)))+"  "+r.value)
 	}
+	// TODO(lib FL12): without line numbers, once a viewer can leave them out.
 	return a.t.Viewer(&terminu.Viewer{Title: "Info", Subject: safeName(it.name), Glyph: glyphInfo, Lines: lines})
 }
 
@@ -439,6 +440,8 @@ func (a *App) sortMenu() tea.Cmd {
 	return a.t.Menu("Sort", terminu.MenuSection{Title: "column", Actions: cols}, terminu.MenuSection{Title: "the whole sort", Actions: []terminu.Action{reset}})
 }
 
+// TODO(lib FL13): choosing a direction should close this step only and leave
+// the column menu showing the new sort (tdp T1, S4).
 func (a *App) sortDirMenu(dir string, d sortColDef) tea.Cmd {
 	in := sortRuleIndex(sortRulesFor(dir), d.col) >= 0
 	acts := []terminu.Action{

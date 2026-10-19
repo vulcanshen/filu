@@ -11,10 +11,12 @@ shell are the family's own, and look and work the same as in every terminu
 app. What changes for you:
 
 **On macOS the settings move to `~/.config/filu`** (or
-`$XDG_CONFIG_HOME/filu`), as on Linux and in every family app. Until that
-directory exists, filu keeps reading and writing
-`~/Library/Application Support/filu`; move `config.yaml` and `state.yaml` over
-to switch.
+`$XDG_CONFIG_HOME/filu`), as on Linux and in every family app: the first time
+this version starts, it moves `~/Library/Application Support/filu` there and
+says so; if it cannot, it keeps using the old directory and shows both paths
+for you to move it. **Your favorites and the task log move to
+`~/.filu/data.yaml`** (`FILU__DATA` names another directory), the file to back
+up; `state.yaml` keeps only where you were.
 
 ### Added
 
