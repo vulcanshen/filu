@@ -264,8 +264,8 @@ still leaves you in the directory you picked.
 
 ### Changed
 - Refreshed the product icon: the gold letters take a new arrangement inside the
-  navy frame. The mark filu draws for itself follows the same layout, as do the
-  READMEs and the GitHub social-preview card.
+  navy frame. The READMEs and the GitHub social-preview card follow the same
+  layout.
 
 ## [0.3.1] — 2026-08-31
 
