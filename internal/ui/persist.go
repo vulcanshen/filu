@@ -136,7 +136,9 @@ func writeYAML(path string, v any) error {
 // neither (the first run), err when one cannot be read or makes no sense.
 // moved reports favorites or tasks that were still in state.yaml, where
 // versions before the data directory kept them: the next save moves them.
+// When data.yaml has its own, those in state.yaml stay there (leftInState).
 func loadState() (st sessionState, ok bool, moved bool, err error) {
+	leftInState = dataState{}
 	if path, found := stateFilePath(); found {
 		if ok, err = readYAML(path, &st); err != nil {
 			return sessionState{}, false, false, err
@@ -152,11 +154,19 @@ func loadState() (st sessionState, ok bool, moved bool, err error) {
 	case err != nil:
 		return sessionState{}, false, false, err
 	case has:
+		if len(st.Pinned) > 0 || len(st.Tasks) > 0 {
+			leftInState = dataState{Favorites: st.Pinned, Tasks: st.Tasks}
+		}
 		st.Pinned, st.Tasks = d.Favorites, d.Tasks
 		return st, true, false, nil
 	}
 	return st, ok, len(st.Pinned) > 0 || len(st.Tasks) > 0, nil
 }
+
+// leftInState are the favorites and tasks state.yaml still holds while
+// data.yaml has its own: left there for the user to put together, not
+// deleted (tdp E3), and so written back with every save.
+var leftInState dataState
 
 // saveState writes the session and the data and reports a failure, so the
 // caller can show it (tdp F5): a save that silently fails loses tabs, marks,
@@ -167,7 +177,7 @@ func saveState(st sessionState) error {
 		if err := writeYAML(path, dataState{Favorites: st.Pinned, Tasks: st.Tasks}); err != nil {
 			return err
 		}
-		st.Pinned, st.Tasks = nil, nil // in data.yaml, not in the state
+		st.Pinned, st.Tasks = leftInState.Favorites, leftInState.Tasks // in data.yaml, not in the state
 	}
 	if path, ok := stateFilePath(); ok {
 		return writeYAML(path, st)

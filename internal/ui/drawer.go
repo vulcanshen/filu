@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,13 +24,27 @@ const (
 func (a *App) drawerTab(i int) tea.Cmd {
 	switch i {
 	case drawerTasks:
-		a.drawer.Body = a.tasksL
+		a.drawer.Body = a.tb
 	case drawerFavs:
 		a.drawer.Body = a.favsL
 	default:
 		a.drawer.Body = a.marksL
 	}
 	return nil
+}
+
+// tasksBody is the Tasks tab: its list, a running task's loading icon turning
+// as it is drawn (App.Spinning keeps the frames coming).
+type tasksBody struct {
+	*terminu.List
+	app *App
+}
+
+func (b *tasksBody) Draw(w, h int, focused bool) []string {
+	if b.app.anyRunning() {
+		b.app.fillTasks()
+	}
+	return b.List.Draw(w, h, focused)
 }
 
 // refreshDrawer fills [3]'s three lists from the model.
@@ -39,14 +54,13 @@ func (a *App) refreshDrawer() {
 		rows = append(rows, terminu.Row{ID: p, Cells: []string{pathIcon(p) + " " + safeName(filepath.Base(p)), safeName(shortPath(filepath.Dir(p)))}})
 	}
 	a.marksL.SetRows(rows)
-	syncMarks(a.marksL, a.marks.picked)
-
-	rows = nil
-	for _, t := range a.tasks {
-		rows = append(rows, terminu.Row{ID: strconv.Itoa(t.id), Cells: []string{
-			terminu.Fg(terminu.Overlay0).Render(taskTime(t.at)), taskText(t)}})
+	var picked []string
+	for p := range a.marks.picked {
+		picked = append(picked, p)
 	}
-	a.tasksL.SetRows(rows)
+	a.marksL.SetMarked(picked)
+
+	a.fillTasks()
 
 	rows = nil
 	for _, f := range a.favs.pinned {
@@ -54,6 +68,16 @@ func (a *App) refreshDrawer() {
 			safeName(shortPath(filepath.Dir(f.path)))}})
 	}
 	a.favsL.SetRows(rows)
+}
+
+// fillTasks fills the Tasks tab from the task log.
+func (a *App) fillTasks() {
+	var rows []terminu.Row
+	for _, t := range a.tasks {
+		rows = append(rows, terminu.Row{ID: strconv.Itoa(t.id), Cells: []string{
+			terminu.Fg(terminu.Overlay0).Render(taskTime(t.at)), taskText(t)}})
+	}
+	a.tasksL.SetRows(rows)
 }
 
 // taskText is a task in plain words: what it did to what, and where.
@@ -72,8 +96,8 @@ func taskText(t landTask) string {
 	to := " → " + safeName(t.dest)
 	grey := terminu.Fg(terminu.Overlay0)
 	switch t.status {
-	case taskRunning: // a row that is still going, the app's to show (tdp F7)
-		return terminu.Fg(terminu.Green).Render(glyphRunning) + " " + verbing + " " + subject + to + "  " + grey.Render(fmt.Sprintf("%d/%d", t.done, t.total))
+	case taskRunning: // a row that is still going, the app's to show (tdp F7, S67)
+		return terminu.Fg(terminu.Green).Render(terminu.LoadingFrame()) + " " + verbing + " " + subject + to + "  " + grey.Render(fmt.Sprintf("%d/%d", t.done, t.total))
 	case taskDone:
 		return terminu.Fg(terminu.Green).Render(glyphDone) + " " + verbed + " " + subject + to
 	case taskPending:
@@ -84,9 +108,8 @@ func taskText(t landTask) string {
 	return verb + " " + subject + to
 }
 
-// The glyphs of a task's state.
+// The glyphs of a task's state; a running one has the turning loading icon.
 const (
-	glyphRunning = "\U000F051F" // nf-md-timer_sand; TODO(lib FL11): the family's turning loading icon
 	glyphDone    = "\U0000F00C" // nf-fa-check
 	glyphPending = "\U0000F017" // nf-fa-clock_o
 	glyphFailed  = "\U0000F00D" // nf-fa-times
@@ -103,7 +126,7 @@ func (a *App) drawerActions() []terminu.Action {
 				r, _ := a.marksL.Current()
 				return a.showInTabs(filepath.Dir(r.ID), r.ID)
 			}},
-		{Key: "p", Label: "pick", Desc: "it: when you pick some, only the picks land", Scope: item, Hint: "pick",
+		{Key: "p", Label: "Pick", Desc: "it: when you pick some, only the picks land", Scope: item, Hint: "pick",
 			Hidden: not(drawerMarks), Do: func() tea.Cmd {
 				r, _ := a.marksL.Current()
 				a.marks.cursor = max(indexOf(a.marks.items, r.ID), 0)
@@ -111,12 +134,12 @@ func (a *App) drawerActions() []terminu.Action {
 				a.marksChanged()
 				return a.persist()
 			}},
-		{Key: "y", Label: "yank", Desc: "its full path, to the clipboard", Scope: item,
+		{Key: "y", Label: "Yank", Desc: "its full path, to the clipboard", Scope: item,
 			Hidden: not(drawerMarks), Do: func() tea.Cmd {
 				r, _ := a.marksL.Current()
 				return copyToClipboardCmd(r.ID, "Copied "+safeName(r.ID))
 			}},
-		{Key: "m", Label: "unmark", Desc: "it: out of the marks", Scope: item, Hint: "unmark",
+		{Key: "m", Label: "Unmark", Desc: "it: out of the marks", Scope: item, Hint: "unmark",
 			Hidden: not(drawerMarks), Do: func() tea.Cmd {
 				r, _ := a.marksL.Current()
 				a.marks.removeItem(r.ID)
@@ -126,10 +149,10 @@ func (a *App) drawerActions() []terminu.Action {
 		{Key: "Z", Label: "Zip", Desc: "the picks, or every mark, into one zip to land", Scope: panel, Hint: "zip",
 			Hidden: not(drawerMarks), Disabled: a.nothingMarked, Do: a.zip},
 		{Key: "C", Label: "Clear", Desc: "every mark; the files stay where they are", Scope: panel, Hint: "clear",
-			Hidden: not(drawerMarks), Ask: a.clearAsk,
-			Disabled: asking(a.clearAsk, func(k *terminu.Ask) {
-				k.Question = fmt.Sprintf("Clear all %d marks?", len(a.marks.items))
-			}, func() bool { return len(a.marks.items) == 0 }),
+			Hidden: not(drawerMarks), Disabled: func() bool { return len(a.marks.items) == 0 },
+			AskFor: func() *terminu.Ask {
+				return &terminu.Ask{Title: "Clear", Question: fmt.Sprintf("Clear all %d marks?", len(a.marks.items)), Verb: "clear"}
+			},
 			Do: func() tea.Cmd {
 				a.marks.clear()
 				a.marksChanged()
@@ -139,7 +162,7 @@ func (a *App) drawerActions() []terminu.Action {
 		{Key: "Enter", Label: "Go to", Desc: "where it landed, in the tab [1] shows", Scope: item, Hint: "go",
 			Hidden: not(drawerTasks), Do: func() tea.Cmd {
 				if t := a.currentTask(); t != nil {
-					return tea.Batch(a.cd(t.destPath, ""), a.t.Toast(terminu.Info, "[1] is on "+safeName(shortPath(t.destPath))))
+					return tea.Batch(a.cd(t.destPath, ""), a.t.Focus(a.files))
 				}
 				return nil
 			}},
@@ -159,18 +182,18 @@ func (a *App) drawerActions() []terminu.Action {
 				r, _ := a.favsL.Current()
 				return a.showInTabs(r.ID, "")
 			}},
-		{Key: "o", Label: "open in", Desc: "the tab you choose, or a new one", Scope: item, Hint: "open in",
+		{Key: "o", Label: "Open in", Desc: "the tab you choose, or a new one", Scope: item, Hint: "open in",
 			Hidden: not(drawerFavs), Do: func() tea.Cmd {
 				r, _ := a.favsL.Current()
 				return a.openInMenu(r.ID)
 			}},
 		{Key: "D", Label: "Unfavorite", Desc: "it: take its star off", Scope: item,
-			Hidden: not(drawerFavs), Ask: a.unfavAsk,
-			Disabled: asking(a.unfavAsk, func(k *terminu.Ask) {
+			Hidden: not(drawerFavs),
+			AskFor: func() *terminu.Ask {
 				r, _ := a.favsL.Current()
 				where := safeName(shortPath(r.ID))
-				k.Subject, k.Question = where, "Take the star off "+where+"?"
-			}, nil),
+				return &terminu.Ask{Title: "Unfavorite", Subject: where, Question: "Take the star off " + where + "?", Verb: "unfavorite"}
+			},
 			Do: func() tea.Cmd {
 				r, _ := a.favsL.Current()
 				return a.toggleFavorite(r.ID)
@@ -212,8 +235,8 @@ func (a *App) removeTask(id int) {
 
 // showInTabs brings dir up in [1]: the tab on it if there is one, else a new
 // tab there; with every tab in use it says so. With focus set (a path) the
-// cursor goes there. The focus stays where it is (tdp K3): a toast says
-// where to look.
+// cursor goes there, and the focus goes to [1], as the user going there
+// expects (tdp K3).
 func (a *App) showInTabs(dir, focus string) tea.Cmd {
 	at := -1
 	for i, t := range a.tabs {
@@ -241,13 +264,14 @@ func (a *App) showInTabs(dir, focus string) tea.Cmd {
 		t.list.Select(focus)
 	}
 	a.refreshPreview()
-	return tea.Batch(a.t.Toast(terminu.Info, "In [1]: "+safeName(shortPath(dir))), a.persist())
+	return tea.Batch(a.t.Focus(a.files), a.persist())
 }
 
-// openInMenu puts a favorite in the tab chosen, or a new one.
+// openInMenu puts a favorite in the tab chosen, or a new one; the focus goes
+// to [1], to it.
 func (a *App) openInMenu(dir string) tea.Cmd {
 	acts := []terminu.Action{{Key: "n", Label: "New tab", Desc: "a tab of its own", Disabled: func() bool { return len(a.tabs) >= maxTabs },
-		Do: func() tea.Cmd { return a.openTab(dir, "") }}}
+		Do: func() tea.Cmd { return tea.Batch(a.openTab(dir, ""), a.t.Focus(a.files)) }}}
 	for i, t := range a.tabs {
 		i, t := i, t
 		desc := "now on " + safeName(shortPath(t.dir))
@@ -258,11 +282,10 @@ func (a *App) openInMenu(dir string) tea.Cmd {
 			Do: func() tea.Cmd {
 				a.switchTab(i)
 				a.syncTabs()
-				return a.cd(dir, "")
+				return tea.Batch(a.cd(dir, ""), a.t.Focus(a.files))
 			}})
 	}
-	return a.t.Menu("Open in", // TODO(lib FL14): a menu title cannot keep a name as it is
-		terminu.MenuSection{Actions: acts})
+	return a.t.MenuAbout("Open in", safeName(shortPath(dir)), terminu.MenuSection{Actions: acts})
 }
 
 // --- tasks: copies, moves and zips in the background --------------------------
@@ -339,7 +362,7 @@ func (a *App) handleLand(msg landMsg) tea.Cmd {
 		a.marksChanged()
 		a.refreshPreview()
 		a.syncQuit()
-		toast := a.t.Toast(terminu.Info, terminu.StripStyles(taskText(*t)))
+		toast := a.t.Toast(terminu.Success, terminu.StripStyles(taskText(*t)))
 		if t.status == taskError {
 			toast = a.t.Toast(terminu.Error, terminu.StripStyles(taskText(*t)))
 		}
@@ -355,24 +378,28 @@ func (a *App) zip() tea.Cmd {
 	if len(items) == 0 {
 		return nil
 	}
+	var dir string // the temporary directory the zip goes in
 	return a.t.Text(terminu.TextInput{
-		// A grey suggestion is only ever the value now (components/input/README);
-		// a new zip has none, so the name filu would choose is in the prompt.
-		// TODO(lib FL9): the suggested name goes in grey, Enter takes it (tdp S6).
+		// The name filu would choose, in grey: Enter takes it (tdp S6).
 		Title: "Zip", Glyph: glyphZip, Name: "The name", Verb: "zip",
-		Prompt: zipPrompt(len(items)) + ": a name for the zip, like " + suggestZipName(items),
+		Prompt: zipPrompt(len(items)) + ": a name for the zip", Suggest: suggestZipName(items),
 		Check: func(v string) error {
 			if zipFileName(v) == "" {
 				return fmt.Errorf("Not a name for a zip file")
 			}
 			return nil
 		},
+		// No temporary directory keeps the input open with the name in it (tdp F4).
+		Commit: func(string) error {
+			d, err := os.MkdirTemp("", "filu-zip-")
+			if err != nil {
+				return errors.New(opFailedText("make a temporary directory", err))
+			}
+			dir = d
+			return nil
+		},
 		Done: func(v string) tea.Cmd {
 			name := zipFileName(v)
-			dir, err := os.MkdirTemp("", "filu-zip-")
-			if err != nil {
-				return a.t.Error("Zip failed", opFailedText("make a temporary directory", err))
-			}
 			id := a.addTask("zip", name, dir, items)
 			go runZip(id, items, filepath.Join(dir, name), a.taskCh)
 			return a.persist()
@@ -382,28 +409,25 @@ func (a *App) zip() tea.Cmd {
 
 // --- quitting ------------------------------------------------------------------
 
-// syncQuit writes into the quit confirm where the shell will be, and warns
-// while a task is still running (tdp K9: the quit flow is the app's).
+// syncQuit sets the quit flow (tdp K9: the app's). Run by a shell that goes
+// where filu leaves it (FILU__LAST_DIR_FILE), q is a menu of where that is;
+// otherwise it confirms, warning while a task is still running.
 func (a *App) syncQuit() {
-	ask := &terminu.Ask{Title: "Quit", Question: "Quit filu?", Verb: "quit"}
 	if os.Getenv(envLastDirFile) != "" {
-		ask.Details = []string{"Your shell goes to " + safeName(shortPath(a.cur().dir)) + ".",
-			"[Q]uit to chooses another directory."}
+		a.t.QuitFlow, a.t.QuitDesc = a.quitMenu, "leave filu, your shell in the directory you choose"
+		return
 	}
+	ask := &terminu.Ask{Title: "Quit", Question: "Quit filu?", Verb: "quit"}
 	if a.anyRunning() {
-		if len(ask.Details) > 0 {
-			ask.Details = append(ask.Details, "")
-		}
-		ask.Warn = []int{len(ask.Details)}
-		ask.Details = append(ask.Details, "A task is still running: quitting stops it.")
+		ask.Details, ask.Warn = []string{"A task is still running: quitting stops it."}, []int{0}
 	}
 	a.t.Quit = ask
 }
 
-// quitToMenu chooses where the shell goes, then leaves: the directory filu
-// started in, then each tab's.
-// TODO(lib FL1): this is what q would open if the quit flow could be a menu.
-func (a *App) quitToMenu() tea.Cmd {
+// quitMenu chooses where the shell goes, then leaves: the directory filu
+// started in, then each tab's. While a task is still running, the one chosen
+// asks first.
+func (a *App) quitMenu() tea.Cmd {
 	var acts []terminu.Action
 	seen := map[string]bool{}
 	add := func(dir, from string) {
@@ -411,7 +435,15 @@ func (a *App) quitToMenu() tea.Cmd {
 			return
 		}
 		seen[dir] = true
-		acts = append(acts, terminu.Action{Key: strconv.Itoa(len(acts) + 1), Label: safeName(shortPath(dir)), Desc: from,
+		where := safeName(shortPath(dir))
+		acts = append(acts, terminu.Action{Key: strconv.Itoa(len(acts) + 1), Label: where, Desc: from, EnterHint: "quit",
+			AskFor: func() *terminu.Ask {
+				if !a.anyRunning() {
+					return nil
+				}
+				return &terminu.Ask{Title: "Quit", Subject: where, Question: "Quit filu, your shell in " + where + "?", Verb: "quit",
+					Details: []string{"A task is still running: quitting stops it."}, Warn: []int{0}}
+			},
 			Do: func() tea.Cmd {
 				a.quitDir = dir
 				return tea.Quit
@@ -421,10 +453,5 @@ func (a *App) quitToMenu() tea.Cmd {
 	for i, t := range a.tabs {
 		add(t.dir, "tab "+strconv.Itoa(i+1))
 	}
-	sections := []terminu.MenuSection{{Title: "your shell goes to", Actions: acts}}
-	if a.anyRunning() {
-		return a.t.Confirm(terminu.Ask{Title: "Quit to", Question: "A task is still running. Quit anyway?", Verb: "choose",
-			Details: []string{"Quitting stops it."}, Warn: []int{0}}, func() tea.Cmd { return a.t.Menu("Quit to", sections...) })
-	}
-	return a.t.Menu("Quit to", sections...)
+	return a.t.Menu("Quit", terminu.MenuSection{Title: "your shell goes to", Actions: acts})
 }

@@ -34,18 +34,40 @@ func TestEnterOnAFileShowsItsFacts(t *testing.T) {
 	hs.to("notes.md")
 	hs.keys("Enter")
 	hs.has("INFO — notes.md", "PATH", "TYPE", "Text", "PERMISSIONS", "OWNER")
+	hs.hasNot("1 PATH") // a table of facts, without line numbers (tdp S66)
 	hs.keys("Esc")
 	hs.hasNot("INFO — notes.md")
 }
 
+// The sort glyphs of components/layout/panel, as the list's header draws them.
+const (
+	glyphSortAsc  = "\U0000F160" // nf-fa-sort_amount_asc
+	glyphSortDesc = "\U0000F161" // nf-fa-sort_amount_desc
+)
+
+// tabLines is [1]'s list as the current tab draws it, without its styles.
+func tabLines(hs *harness, w int) []string {
+	var out []string
+	for _, l := range hs.a.cur().list.Draw(w, 20, true) {
+		out = append(out, terminu.StripStyles(l))
+	}
+	return out
+}
+
 // The list is directories first, then files; a sort keeps the directories
 // first, the header carrying the sort's glyph and place (components/layout/panel).
+// Choosing a direction goes back to the column menu, to sort by another column
+// too (tdp T1).
 func TestSortKeepsDirectoriesFirst(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"big.txt": strings.Repeat("x", 3000), "small.txt": "x", "zdir/": "", "adir/": ""})
 	names := func() []string {
 		var out []string
-		for _, r := range hs.a.cur().list.Rows() {
-			out = append(out, filepath.Base(r.ID))
+		for _, l := range tabLines(hs, 100) {
+			for _, n := range []string{"adir", "zdir", "big.txt", "small.txt"} {
+				if strings.Contains(l, " "+n) {
+					out = append(out, n)
+				}
+			}
 		}
 		return out
 	}
@@ -56,11 +78,13 @@ func TestSortKeepsDirectoriesFirst(t *testing.T) {
 	if got := names(); !slices.Equal(got, []string{"adir", "zdir", "big.txt", "small.txt"}) {
 		t.Fatalf("size descending: %v", got)
 	}
-	hs.keys("S", "n", "D") // then the name, descending
+	hs.has("SORT", "1st, descending")
+	hs.keys("n", "D", "Esc") // then the name, descending
 	if got := names(); !slices.Equal(got, []string{"zdir", "adir", "big.txt", "small.txt"}) {
 		t.Fatalf("size then name descending: %v", got)
 	}
 	hs.has("SIZE (1) "+glyphSortDesc, "NAME (2) "+glyphSortDesc)
+	hs.hasNot("1st, descending")
 	hs.keys("S", "r")
 	if got := names(); !slices.Equal(got, []string{"adir", "zdir", "big.txt", "small.txt"}) {
 		t.Fatalf("after Reset: %v", got)
@@ -68,23 +92,48 @@ func TestSortKeepsDirectoriesFirst(t *testing.T) {
 	hs.hasNot(glyphSortDesc)
 }
 
-// As the panel narrows the columns go in order — the owner, the size, the
-// modified time, the permissions — and the name stays.
+// As the panel narrows the columns go whole and in order — the owner, the
+// size, the modified time, the permissions — and the name stays.
 func TestColumnsLeaveInOrder(t *testing.T) {
-	cases := []struct {
-		w    int
-		want []fileCol
-	}{
-		{100, []fileCol{colModified, colOwner, colPerms, colSize, colName}},
-		{60, []fileCol{colModified, colPerms, colSize, colName}},
-		{45, []fileCol{colModified, colPerms, colName}},
-		{30, []fileCol{colPerms, colName}},
-		{15, []fileCol{colName}},
+	hs := newHarness(t, 120, 40, map[string]string{"notes.md": "hello"})
+	steps := [][]string{
+		{"MODIFIED", "OWNER", "PERMS", "SIZE", "NAME"},
+		{"MODIFIED", "PERMS", "SIZE", "NAME"},
+		{"MODIFIED", "PERMS", "NAME"},
+		{"PERMS", "NAME"},
+		{"NAME"},
 	}
-	for _, c := range cases {
-		if got := fitCols(c.w); !slices.Equal(got, c.want) {
-			t.Errorf("fitCols(%d) = %v, want %v", c.w, got, c.want)
+	at := 0
+	for w := 120; w >= 16; w-- {
+		header := tabLines(hs, w)[1]
+		var shown []string
+		for _, title := range steps[0] {
+			if strings.Contains(header, title) {
+				shown = append(shown, title)
+			}
 		}
+		for at < len(steps) && !slices.Equal(shown, steps[at]) {
+			at++
+		}
+		if at == len(steps) {
+			t.Fatalf("at %d cells the header is %q", w, header)
+		}
+	}
+	if at != len(steps)-1 {
+		t.Fatalf("at 16 cells the columns are %v", steps[at])
+	}
+}
+
+// The list's first row is where the tab is, a star after it when the
+// directory is a favorite (components/layout/panel, location row).
+func TestLocationRow(t *testing.T) {
+	hs := newHarness(t, 120, 40, map[string]string{"proj/": ""})
+	if got := tabLines(hs, 60)[0]; !strings.Contains(got, "~/work") || strings.Contains(got, iconPin) {
+		t.Fatalf("the location row: %q", got)
+	}
+	hs.keys("F")
+	if got := tabLines(hs, 60)[0]; !strings.Contains(got, "~/work "+iconPin) {
+		t.Fatalf("a favorite's location row: %q", got)
 	}
 }
 
@@ -231,6 +280,27 @@ func TestRename(t *testing.T) {
 	}
 	if hs.cursor() != "new.txt" {
 		t.Fatalf("the cursor is on %q, not the renamed file", hs.cursor())
+	}
+}
+
+// A rename that fails says so over the input, which keeps the name typed
+// (tdp F4).
+func TestRenameThatFails(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root renames in a read-only directory too")
+	}
+	hs := newHarness(t, 120, 40, map[string]string{"old.txt": ""})
+	hs.to("old.txt")
+	if err := os.Chmod(hs.root, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(hs.root, 0o755) })
+	hs.keys("r", "new.txt", "Enter")
+	hs.has("RENAME FAILED: old.txt")
+	hs.keys("Esc")
+	hs.has("RENAME: old.txt", "new.txt")
+	if !hs.exists("old.txt") {
+		t.Fatal("old.txt is gone")
 	}
 }
 

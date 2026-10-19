@@ -21,6 +21,9 @@ type harness struct {
 	home string       // $HOME for the test: the settings, the session and the trash are under it
 	quit bool         // filu asked to quit
 	clip bytes.Buffer // what was copied to the clipboard (OSC 52)
+	// late are the messages of filu's background channels that a read the
+	// harness stopped waiting for got after all, to be handled still.
+	late chan tea.Msg
 }
 
 // newHarness is filu on a w × h screen over a fresh directory holding files
@@ -39,7 +42,7 @@ func newHarness(t *testing.T, w, h int, files map[string]string) *harness {
 	t.Setenv("HOME", home) // the trash, ~ in paths and Goto stay in here
 	t.Setenv("XDG_CONFIG_HOME", "")
 	oldClip := clipboardOut
-	hs0 := &harness{}
+	hs0 := &harness{late: make(chan tea.Msg, 256)}
 	clipboardOut = &hs0.clip
 	t.Cleanup(func() { clipboardOut = oldClip })
 	resetGlobals()
@@ -106,6 +109,9 @@ func (hs *harness) run(cmd tea.Cmd) {
 		case m := <-hs.a.taskCh:
 			_, next := hs.a.t.Update(m)
 			queue = append(queue, next)
+		case m := <-hs.late:
+			_, next := hs.a.t.Update(m)
+			queue = append(queue, next)
 		default:
 		}
 		c := queue[0]
@@ -119,6 +125,14 @@ func (hs *harness) run(cmd tea.Cmd) {
 		select {
 		case msg = <-done:
 		case <-time.After(longTimer):
+			// A read of a background channel goes on reading: what it gets is
+			// handled later, not lost. A timer's message is let go.
+			go func() {
+				switch m := (<-done).(type) {
+				case finderMsg, landMsg, watchMsg:
+					hs.late <- m
+				}
+			}()
 			continue
 		}
 		switch msg := msg.(type) {
@@ -168,6 +182,8 @@ func (hs *harness) drain() {
 		case m := <-hs.a.finds:
 			hs.send(m)
 		case m := <-hs.a.taskCh:
+			hs.send(m)
+		case m := <-hs.late:
 			hs.send(m)
 		case <-time.After(300 * time.Millisecond):
 			return

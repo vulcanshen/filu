@@ -3,6 +3,7 @@ package ui
 import (
 	_ "embed"
 	"os"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -33,6 +34,7 @@ type App struct {
 	files, preview, drawer *terminu.Panel
 	fb                     *filesBody
 	pb                     *previewBody
+	tb                     *tasksBody
 	marksL, tasksL, favsL  *terminu.List
 
 	tabs      []*tab
@@ -51,27 +53,27 @@ type App struct {
 	watchCh chan watchMsg
 	watched map[string]bool
 
-	finds   chan finderMsg // finder results from their goroutines
-	findGen int            // the finder open now; older batches are dropped
-	finder  *terminu.Finder
-	hits    map[string]int // a content search's first matching line of each file
+	finds    chan finderMsg // finder results from their goroutines
+	findGen  int            // the search running now; older batches are dropped
+	findStop func()         // ends the search running now
+	finder   *terminu.Finder
+	found    []terminu.FinderItem          // all the search running now has listed
+	keep     func(terminu.FinderItem) bool // which of found the finder shows; nil for all
 
-	// The confirms of the actions that ask first, filled in when they run
-	// (asking).
-	openAsk, deleteAsk, shellAsk, clearAsk, unfavAsk *terminu.Ask
-	term                                             *terminu.Terminal // the shell, when one was opened
+	term *terminu.Terminal // the shell, when one was opened
 
 	quitDir     string   // where the shell goes when filu ends (cd-on-quit)
 	startupErrs []string // problems found while starting (a bad config.yaml, a broken state.yaml), shown once it runs
 	startupNews []string // what filu did while starting (moved the settings), said once it runs
-	moveFailed  string   // moving the old settings directory failed: why, with both paths
+	moveTitle   string   // the error popup's title for moveFailed
+	moveFailed  string   // moving the old settings failed, or some were in both places: why, with both paths
 	keepState   bool     // state.yaml could not be read: leave it as it is rather than write over it
 }
 
 // NewApp builds filu over startDir (the current directory when empty). With
 // focusName set (`filu <file>`), the cursor starts on that entry of startDir.
 func NewApp(startDir, focusName string) *App {
-	from, to, moveErr := moveOldSettings()
+	mv := moveOldSettings()
 	cfgErr := loadConfig()
 	dir := startDir
 	if dir == "" {
@@ -89,24 +91,34 @@ func NewApp(startDir, focusName string) *App {
 		watched:   map[string]bool{},
 	}
 	switch {
-	case moveErr != nil:
-		a.moveFailed = opFailedText("move filu's settings from "+from+" to "+to, moveErr) +
-			"\n\nfilu goes on using " + from + ". Move it to " + to + " yourself to switch."
-	case from != "":
-		a.startupNews = append(a.startupNews, "Moved filu's settings from "+shortPath(from)+" to "+shortPath(to))
+	case mv.err != nil:
+		a.moveTitle = "Moving the settings failed"
+		a.moveFailed = opFailedText("move filu's settings from "+mv.from+" to "+mv.to, mv.err) +
+			"\n\nfilu goes on using " + mv.from + ". Move it to " + mv.to + " yourself to switch."
+	case len(mv.left) > 0:
+		a.moveTitle = "Found in two places"
+		var both []string
+		for _, name := range mv.left {
+			both = append(both, filepath.Join(mv.from, name)+"\n"+filepath.Join(mv.to, name))
+		}
+		a.moveFailed = "These were in " + mv.from + " and in " + mv.to + " too. filu uses the ones in " + mv.to +
+			" and left the others where they were: put what you need of them into " + mv.to + ", then delete " + mv.from +
+			".\n\n" + strings.Join(both, "\n\n")
+	}
+	if mv.moved {
+		a.startupNews = append(a.startupNews, "Moved filu's settings from "+shortPath(mv.from)+" to "+shortPath(mv.to))
 	}
 	if cfgErr != nil {
 		a.startupErrs = append(a.startupErrs, opFailedText("read config.yaml", cfgErr)+" (using the defaults)")
 	}
-	a.openAsk = &terminu.Ask{Title: "Open", Verb: "open"}
-	a.deleteAsk = &terminu.Ask{Title: "Delete", Verb: "delete"}
-	a.shellAsk = &terminu.Ask{Title: "Shell", Verb: "open"}
-	a.clearAsk = &terminu.Ask{Title: "Clear", Verb: "clear"}
-	a.unfavAsk = &terminu.Ask{Title: "Unfavorite", Verb: "unfavorite"}
 	a.t.InputTabWidth = inputTabWidth
 	a.t.HideSecretsInPreview = hideSecretsInPreview
-	a.t.ShiftTab = true // TODO(lib FL7): the key reference does not list Shift-Tab
-	a.t.QuitDesc = "leave filu, your shell in the directory it says"
+	a.t.ShiftTab = true
+	// 80 × 24, most terminals' size when they open, has room for every task;
+	// so does 60 columns, [1], [2] and [3] then one at a time (dev-remarks).
+	a.t.MinWidth, a.t.MinHeight = 60, 24
+	a.t.Spinning = func() bool { return a.drawer.Tab == drawerTasks && a.anyRunning() }
+	a.t.QuitDesc = "leave filu"
 
 	first := newTab(dir)
 	if focusName != "" && !first.focus(focusName) {
@@ -124,6 +136,16 @@ func NewApp(startDir, focusName string) *App {
 		a.startupErrs = append(a.startupErrs, opFailedText("read the session", err)+" (it is not saved until state.yaml and data.yaml are fixed or moved away)")
 	case ok:
 		a.applyState(st)
+	}
+	if len(leftInState.Favorites) > 0 || len(leftInState.Tasks) > 0 {
+		sp, _ := stateFilePath()
+		dp, _ := dataFilePath()
+		if a.moveTitle == "" {
+			a.moveTitle = "Found in two places"
+		}
+		a.moveFailed = strings.TrimPrefix(a.moveFailed+"\n\n", "\n\n") + "Favorites or tasks were in " + sp + " and in " + dp +
+			" too. filu uses the ones in " + dp + " and left the others in " + sp +
+			": put what you need of them into " + dp + ", then take them out of " + sp + "."
 	}
 	if moved {
 		if err := saveState(a.snapshotState()); err != nil {
@@ -155,18 +177,19 @@ func (a *App) build() {
 	a.preview = &terminu.Panel{Label: "Preview", Body: a.pb}
 	a.preview.Actions = a.previewActions()
 	a.files.Details = a.preview
-	a.marksL = &terminu.List{Columns: []terminu.Column{{Title: "Name"}, {Title: "In", Path: true, Flex: true}}, Marks: true,
+	a.marksL = &terminu.List{Columns: []terminu.Column{{Title: "Name"}, {Title: "In", Path: true}}, Marks: true,
 		EmptyFact: "No marks yet", EmptyHint: "Press [m] on a file in [1] to mark it"}
-	a.tasksL = &terminu.List{Columns: []terminu.Column{{Title: "When"}, {Title: "Task", Flex: true}},
+	// Narrow, a task's time goes before its words are cut.
+	a.tasksL = &terminu.List{Columns: []terminu.Column{{Title: "When", Drop: 1}, {Title: "Task"}},
 		EmptyFact: "No tasks yet", EmptyHint: "Mark files, then press [c] or [v] in [1] to copy or move them there"}
-	a.favsL = &terminu.List{Columns: []terminu.Column{{Title: "Name"}, {Title: "In", Path: true, Flex: true}},
+	a.tb = &tasksBody{List: a.tasksL, app: a}
+	a.favsL = &terminu.List{Columns: []terminu.Column{{Title: "Name"}, {Title: "In", Path: true}},
 		EmptyFact: "No favorites yet", EmptyHint: "Press [f] on a directory in [1] to star it"}
 	a.drawer = &terminu.Panel{Label: "Marks", Tabs: []string{"Tasks", "Favorites"}, Body: a.marksL, OnTab: a.drawerTab}
 	a.drawer.Actions = a.drawerActions()
 	a.screen = &terminu.Screen{Name: "Files", Panels: []*terminu.Panel{a.files, a.preview, a.drawer},
 		Layout: layout, NarrowBelow: 72}
 	t.AddScreen(a.screen)
-	t.Global = a.globalActions()
 	t.OnMsg = a.onMsg
 	t.Start = a.start
 	t.Splash = splash()
@@ -208,8 +231,8 @@ func (a *App) start() tea.Cmd {
 	}
 	switch {
 	case a.moveFailed != "":
-		// Both paths, for the user to move it by hand (tdp E3).
-		cmds = append(cmds, a.t.Error("Moving the settings failed", strings.Join(append([]string{a.moveFailed}, a.startupErrs...), "\n\n")))
+		// Both paths, for the user to move it, or put the two together, by hand (tdp E3).
+		cmds = append(cmds, a.t.Error(a.moveTitle, strings.Join(append([]string{a.moveFailed}, a.startupErrs...), "\n\n")))
 	case len(a.startupErrs) == 1:
 		cmds = append(cmds, a.t.Toast(terminu.Error, a.startupErrs[0]))
 	case len(a.startupErrs) > 1:
@@ -249,7 +272,7 @@ func (a *App) onMsg(msg tea.Msg) tea.Cmd {
 		a.handleFind(msg)
 		return a.waitFind()
 	case clipboardCopiedMsg:
-		return a.t.Toast(terminu.Info, msg.note)
+		return a.t.Toast(terminu.Success, msg.note)
 	case clipboardFailedMsg:
 		return a.t.Toast(terminu.Error, "Could not copy to the clipboard")
 	case opFailedMsg:

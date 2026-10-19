@@ -21,12 +21,11 @@ type tab struct {
 	err        error // why the directory could not be read
 	showHidden bool
 	list       *terminu.List
-	cols       []fileCol // the columns that fit the last time it was drawn
-	fav        bool      // the directory is a favorite, for the path row's star
+	fav        bool // the directory is a favorite, for the location row's star
 }
 
 func newTab(dir string) *tab {
-	t := &tab{dir: dir, cols: allFileCols}
+	t := &tab{dir: dir}
 	t.list = &terminu.List{Marks: true}
 	t.reload()
 	return t
@@ -94,78 +93,50 @@ const (
 	colName
 )
 
-// allFileCols are the columns in the order they are drawn; the name is last
-// and always there.
+// allFileCols are the columns in the order they are drawn; the name is last.
 var allFileCols = []fileCol{colModified, colOwner, colPerms, colSize, colName}
 
-// fileColWidth is how wide a column's values are at most; the name has no
-// most, only a least it keeps before a column is left out.
-var fileColWidth = map[fileCol]int{colModified: 16, colOwner: 13, colPerms: 10, colSize: 5, colName: 12}
-
-// fitCols are the columns that fit in w cells: as the panel narrows the owner
-// goes first, then the size, the modified time and the permissions; the name
-// stays.
-func fitCols(w int) []fileCol {
-	cols := slices.Clone(allFileCols)
-	for _, drop := range []fileCol{colOwner, colSize, colModified, colPerms} {
-		need := 2 * (len(cols) - 1)
-		for _, c := range cols {
-			need += fileColWidth[c]
-		}
-		if need <= w {
-			break
-		}
-		cols = slices.DeleteFunc(cols, func(c fileCol) bool { return c == drop })
-	}
-	return cols
+// fileColumns are the list's columns, as allFileCols draws them. As the panel
+// narrows they go whole — the owner, then the size, the modified time and the
+// permissions — and the name stays (components/layout/panel).
+// TODO(lib FL23): a column is as wide as its widest value, so one long name
+// takes every other column away.
+var fileColumns = []terminu.Column{
+	{Title: "Modified", Drop: 3},
+	{Title: "Owner", Drop: 1},
+	{Title: "Perms", Drop: 4},
+	{Title: "Size", Number: true, Drop: 2},
+	{Title: "Name"},
 }
 
-// sortColOf is the sort column a list column sorts by.
-var sortColOf = map[fileCol]sortCol{colModified: sortMtime, colOwner: sortOwner, colPerms: sortPerm, colSize: sortSize, colName: sortName}
+// colOfSort is the column a sort column sorts.
+var colOfSort = map[sortCol]int{sortMtime: 0, sortOwner: 1, sortPerm: 2, sortSize: 3, sortName: 4}
 
-// fileColumns are the list's columns for cols. The sort chain of the directory
-// is written into the titles the way terminu writes its own (the place in a
-// chain of more than one, then the direction's glyph, components/layout/panel):
-// filu sorts the entries itself, directories first, which a List's sort keeps
-// no hold of.
-// TODO(lib FL6): drop this once a List can keep directories first under a
-// sort and leave out the columns that do not fit.
-func fileColumns(cols []fileCol, rules []sortRule) []terminu.Column {
-	names := map[fileCol]string{colModified: "Modified", colOwner: "Owner", colPerms: "Perms", colSize: "Size", colName: "Name"}
-	out := make([]terminu.Column, len(cols))
-	for i, c := range cols {
-		title := names[c]
-		if k := sortRuleIndex(rules, sortColOf[c]); k >= 0 {
-			if len(rules) > 1 {
-				title += " (" + strconv.Itoa(k+1) + ")"
-			}
-			if rules[k].asc {
-				title += " " + glyphSortAsc
-			} else {
-				title += " " + glyphSortDesc
-			}
-		}
-		out[i] = terminu.Column{Title: title, Number: c == colSize, Flex: c == colName}
+// sortKeys are a directory's sort chain as the list sorts it.
+func sortKeys(rules []sortRule) []terminu.SortKey {
+	keys := make([]terminu.SortKey, len(rules))
+	for i, r := range rules {
+		keys[i] = terminu.SortKey{Col: colOfSort[r.col], Desc: !r.asc}
 	}
-	return out
+	return keys
 }
 
-// The sort glyphs of components/layout/panel.
-const (
-	glyphSortAsc  = "\U0000F160" // nf-fa-sort_amount_asc
-	glyphSortDesc = "\U0000F161" // nf-fa-sort_amount_desc
-)
-
-// fileRows are the list's rows for the tab's entries, in the tab's columns.
+// fileRows are the list's rows for the tab's entries, the directories a group
+// before the files, so that a sort keeps them first.
 func fileRows(t *tab, favs map[string]bool) []terminu.Row {
 	rows := make([]terminu.Row, len(t.items))
 	for i, it := range t.items {
 		path := filepath.Join(t.dir, it.name)
-		cells := make([]string, len(t.cols))
-		for j, c := range t.cols {
+		cells := make([]string, len(allFileCols))
+		for j, c := range allFileCols {
 			cells[j] = fileCell(it, c, favs[path])
 		}
-		rows[i] = terminu.Row{ID: path, Cells: cells}
+		group := 1
+		if it.isDir {
+			group = 0
+		}
+		rows[i] = terminu.Row{ID: path, Cells: cells, SortGroup: group,
+			Sort: []string{it.mtime.UTC().Format("2006-01-02T15:04:05.000000000"), it.owner, it.perm, strconv.FormatInt(it.size, 10), it.name}}
 	}
 	return rows
 }
@@ -178,7 +149,7 @@ func fileCell(it fileItem, c fileCol, fav bool) string {
 	case colModified:
 		return terminu.Fg(terminu.Overlay0).Render(fmtMtime(it.mtime))
 	case colOwner:
-		return colorOwner(terminu.Truncate(it.owner, fileColWidth[colOwner]))
+		return colorOwner(terminu.Truncate(it.owner, colOwnerW))
 	case colPerms:
 		return colorPerm(clipMode(it.perm))
 	case colSize:
@@ -192,16 +163,28 @@ func fileCell(it fileItem, c fileCol, fav bool) string {
 	return name
 }
 
-// fillTab sets a tab's rows from its entries: the columns, the marks from the
-// bucket, the stars from the favorites.
+// fillTab sets a tab's rows from its entries: the directory's sort, the marks
+// from the bucket, the stars from the favorites.
 func (a *App) fillTab(t *tab) {
 	favs := a.favs.pinnedSet()
 	t.fav = favs[t.dir]
-	t.list.Columns = fileColumns(t.cols, sortRulesFor(t.dir))
+	t.list.Columns = fileColumns
+	t.list.Location = location(t)
 	t.list.OnMove = func(terminu.Row) tea.Cmd { a.refreshPreview(); return nil }
 	t.list.SetRows(fileRows(t, favs))
+	t.list.SortBy(sortKeys(sortRulesFor(t.dir))...)
 	t.list.EmptyFact, t.list.EmptyHint = emptyDir(t)
-	syncMarks(t.list, a.marks.inBucket())
+	t.list.SetMarked(a.marks.items)
+}
+
+// location is a tab's location row: where it is, with a star after it when
+// the directory is a favorite (content, the app's; components/layout/panel).
+func location(t *tab) string {
+	loc := safeName(shortPath(t.dir))
+	if t.fav {
+		loc += " " + terminu.Fg(terminu.Yellow).Render(iconPin)
+	}
+	return loc
 }
 
 // emptyDir is what an empty directory says (components/layout/screen).
@@ -213,31 +196,10 @@ func emptyDir(t *tab) (fact, hint string) {
 	return "Nothing here", "Press [a] to add a file, or [Space] to see what you can do here"
 }
 
-// syncMarks marks the rows whose ID is in want and unmarks the rest, keeping
-// the cursor where it is.
-// TODO(lib FL4): a List cannot set its marks by ID; this walks the cursor over
-// every row that has to change.
-func syncMarks(l *terminu.List, want map[string]bool) {
-	cur, hasCur := l.Current()
-	have := map[string]bool{}
-	for _, id := range l.Marked() {
-		have[id] = true
-	}
-	for _, r := range l.Rows() {
-		if have[r.ID] != want[r.ID] {
-			l.Select(r.ID)
-			l.ToggleMark()
-		}
-	}
-	if hasCur {
-		l.Select(cur.ID)
-	}
-}
-
-// filesBody is [1]'s inside: the path of the tab's directory over its list.
-// Zoomed with several tabs it shows every tab side by side, the one the keys go
-// to lit. It embeds the current tab's list, so moving its cursor updates the
-// preview the way a list's OnMove does.
+// filesBody is [1]'s inside: the current tab's list. Zoomed with several tabs
+// it shows every tab side by side, the one the keys go to lit. It embeds the
+// current tab's list, so moving its cursor updates the preview the way a
+// list's OnMove does.
 type filesBody struct {
 	*terminu.List
 	app *App
@@ -251,28 +213,21 @@ func (b *filesBody) Draw(w, h int, focused bool) []string {
 	return a.drawTab(a.cur(), w, h, focused)
 }
 
-// Empty: [1] draws its own empty state under the path, so the panel does not
-// put one in its middle.
+// Empty: [1]'s list draws its own empty state under the location row, so the
+// panel does not put one in its middle.
 func (b *filesBody) Empty() bool { return false }
 
-// drawTab is one tab in w × h: its path, then the list (or why the directory
-// could not be read). Nothing is drawn between them: a panel draws no line
-// under its header or its typing row either (components/layout/panel).
+// drawTab is one tab in w × h: its list, or under its location row why the
+// directory could not be read.
 func (a *App) drawTab(t *tab, w, h int, focused bool) []string {
-	out := []string{pathRow(t, w)}
-	rest := h - len(out)
-	if rest <= 0 {
-		return terminu.Pad2(out, w, h)
+	if t.err == nil {
+		return t.list.Draw(w, h, focused)
 	}
-	if t.err != nil {
-		return append(out, failRows(w, rest, "Cannot read this directory: "+friendlyErr(t.err), "Press [Esc] to go up")...)
+	out := t.list.Draw(w, 1, focused) // the location row: an unread directory lists nothing
+	if h > 1 {
+		out = append(out, failRows(w, h-1, "Cannot read this directory: "+friendlyErr(t.err), "Press [Esc] to go up")...)
 	}
-	cols := fitCols(w - 1 - terminu.PowerlineWidth() - (terminu.IconWidth() + 1))
-	if !slices.Equal(cols, t.cols) {
-		t.cols = cols
-		a.fillTab(t)
-	}
-	return append(out, t.list.Draw(w, rest, focused)...)
+	return terminu.Pad2(out, w, h)
 }
 
 // failRows are a panel's error, centred: the fact in Red, the hint in Overlay0
@@ -284,16 +239,6 @@ func failRows(w, h int, fact, hint string) []string {
 		out[top] = terminu.Center(terminu.Fg(terminu.Red).Render(terminu.Truncate(fact, w)), w)
 	}
 	return out
-}
-
-// pathRow is a tab's directory: Lavender, the user's footprint, the slashes
-// quiet; a star after it when the directory is a favorite.
-func pathRow(t *tab, w int) string {
-	star := ""
-	if t.fav {
-		star = " " + terminu.Fg(terminu.Yellow).Render(iconPin)
-	}
-	return terminu.Pad(crumbRow(t.dir, w-terminu.Width(star))+star, w)
 }
 
 // drawColumns is every tab side by side, a quiet line between (Overlay0, as

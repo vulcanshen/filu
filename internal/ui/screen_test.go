@@ -60,11 +60,12 @@ func openPopup(t *testing.T, hs *harness, name string) {
 }
 
 // sizesFor are the screen sizes each pair of widths is drawn at: the sizes
-// filu has to work at and narrower, then the widest.
+// filu has to work at down to its least size, 60 × 24, then smaller, then the
+// widest.
 var sizesFor = map[[2]int][][2]int{
-	{1, 1}: {{80, 40}, {120, 40}, {200, 50}, {72, 24}, {60, 30}, {40, 12}},
-	{2, 1}: {{80, 40}, {120, 40}},
-	{2, 2}: {{80, 40}, {120, 40}},
+	{1, 1}: {{80, 40}, {120, 40}, {200, 50}, {80, 24}, {72, 24}, {60, 30}, {60, 24}, {40, 12}},
+	{2, 1}: {{80, 40}, {120, 40}, {60, 24}},
+	{2, 2}: {{80, 40}, {120, 40}, {60, 24}},
 }
 
 // Every row of the screen is exactly as wide as the terminal (tdp L4), at
@@ -86,16 +87,12 @@ func TestL4EveryRowIsTheScreenWidth(t *testing.T) {
 }
 
 // A popup opened on a larger screen stays put while the terminal shrinks under
-// it — wider than the screen, taller, or both — and nothing breaks (tdp E5).
+// it — to the least size, wider than the screen and taller; then under it,
+// down to 1 × 1 — and nothing breaks (tdp E5, L1).
 func TestE5PopupLargerThanTheScreen(t *testing.T) {
 	for _, iw := range [][2]int{{1, 1}, {2, 2}} {
 		for name := range popups {
-			for _, to := range [][2]int{{30, 40}, {120, 8}, {24, 6}} {
-				if name == "name finder" && to == [2]int{24, 6} {
-					// TODO(lib FL8): a finder with file facts panics drawing them on a
-					// screen this small.
-					continue
-				}
+			for _, to := range [][2]int{{60, 24}, {30, 40}, {120, 8}, {80, 5}, {24, 6}, {1, 1}} {
 				t.Run(fmt.Sprintf("icon%d-pl%d/%s/%dx%d", iw[0], iw[1], name, to[0], to[1]), func(t *testing.T) {
 					hs := newHarness(t, 120, 40, fixture)
 					terminu.SetIconWidth(iw[0], iw[1])
@@ -108,9 +105,37 @@ func TestE5PopupLargerThanTheScreen(t *testing.T) {
 	}
 }
 
+// Under its least size, 60 × 24, filu shows only its name and the size it
+// needs; no key does anything but Ctrl-C twice, and as the terminal grows the
+// screen is back as it was (tdp L1).
+func TestL1UnderTheLeastSize(t *testing.T) {
+	for _, sz := range [][2]int{{59, 24}, {60, 23}, {40, 12}, {80, 5}} {
+		hs := newHarness(t, 120, 40, fixture)
+		hs.to("notes.md")
+		hs.keys("r") // a popup open as it shrinks
+		hs.send(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
+		hs.has("filu")
+		if sz[1] > 2 {
+			hs.has("needs a terminal of at least 60×24")
+		}
+		hs.hasNot("RENAME")
+		hs.keys("Esc", "q", "Ctrl-C")
+		if hs.quit {
+			t.Fatalf("%dx%d: q and one Ctrl-C quit", sz[0], sz[1])
+		}
+		hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
+		hs.has("RENAME: notes.md")
+		hs.send(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
+		hs.keys("Ctrl-C", "Ctrl-C")
+		if !hs.quit {
+			t.Fatalf("%dx%d: Ctrl-C twice did not quit", sz[0], sz[1])
+		}
+	}
+}
+
 // The zoomed list with every tab side by side fits too.
 func TestL4ZoomedTabs(t *testing.T) {
-	for _, sz := range [][2]int{{80, 40}, {200, 50}, {60, 20}} {
+	for _, sz := range [][2]int{{80, 40}, {200, 50}, {60, 24}} {
 		hs := newHarness(t, sz[0], sz[1], fixture)
 		hs.keys("t", "s", "t", "s", "z")
 		checkWidths(t, hs, sz[0], sz[1])

@@ -59,17 +59,6 @@ func (m *marksModel) togglePick() {
 	m.picked[p] = true
 }
 
-// inBucket is the set of paths currently in the bucket. The list marks these
-// with a tick, so a Mark shows up the same way it does in the Marks panel —
-// which doubles as multi-select.
-func (m marksModel) inBucket() map[string]bool {
-	s := make(map[string]bool, len(m.items))
-	for _, p := range m.items {
-		s[p] = true
-	}
-	return s
-}
-
 // landSet is the set of paths a Land acts on: the picked subset, or everything
 // when nothing is picked.
 func (m marksModel) landSet() map[string]bool {

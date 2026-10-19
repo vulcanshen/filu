@@ -3,11 +3,9 @@ package ui
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	terminu "github.com/vulcanshen/terminu-go"
 )
 
 // A confirm opened from the Space menu sits over it: Esc goes back to the
@@ -28,6 +26,48 @@ func TestConfirmFromTheMenuKeepsTheMenu(t *testing.T) {
 	if hs.exists("a.txt") {
 		t.Fatal("Enter did not delete it")
 	}
+}
+
+// The key reference lists Shift-Tab, which goes to the previous panel
+// (tdp K2, K6).
+func TestKeyReferenceListsShiftTab(t *testing.T) {
+	hs := newHarness(t, 120, 40, nil)
+	hs.keys("?")
+	hs.has("Tab|Shift-Tab")
+	hs.keys("Esc", "Shift-Tab")
+	if hs.a.screen.Focused() != hs.a.drawer {
+		t.Fatal("Shift-Tab on [1] did not go to [3]")
+	}
+}
+
+// From the Space menu, what writes a value back leaves the menu to come back
+// to; a drill-down and a shell clear it (tdp T1).
+func TestWhatTheMenuIsLeftWith(t *testing.T) {
+	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "", "sub/": ""})
+	hs.to("a.txt")
+	hs.keys("Space", "r", "b.txt", "Enter")
+	if !hs.exists("b.txt") {
+		t.Fatal("the rename did not happen")
+	}
+	hs.has("ITEM OPERATION")
+	hs.keys("Esc")
+
+	hs.keys("Space", "g", "o", "/")
+	hs.drain()
+	hs.keys("sub", "Enter", "Enter")
+	if hs.a.cur().dir != hs.path("sub") {
+		t.Fatalf("[1] is on %s", hs.a.cur().dir)
+	}
+	hs.hasNot("OPERATION", "GOTO") // sub is empty: its menu would have only the panel's section
+
+	t.Setenv("SHELL", "/bin/sh")
+	hs.keys("Space", "s", "Enter")
+	if hs.a.term == nil {
+		t.Fatal("no shell")
+	}
+	hs.send(tea.KeyMsg{Type: tea.KeyEsc, Alt: true}) // the terminal's exit key, which asks first
+	hs.keys("Enter")
+	hs.hasNot("OPERATION", "SHELL")
 }
 
 // The question names the item under the cursor as it is when the action runs.
@@ -99,32 +139,25 @@ func TestEmptyStatesNameAKey(t *testing.T) {
 	hs.has("No tasks yet", "press [c] or [v]")
 }
 
-// A content search's preview keeps secrets out when hide_secrets_in_preview
-// is on, and names control characters in Red (components/input/file-picker).
-func TestHitPreview(t *testing.T) {
+// With hide_secrets_in_preview in config.yaml a finder's preview keeps a
+// private key out (components/input/file-picker).
+func TestHideSecretsInPreview(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{
 		"id_ed25519": "-----BEGIN OPENSSH PRIVATE KEY-----\nsecretsecret\n-----END OPENSSH PRIVATE KEY-----\n",
-		"own.txt":    "mine\n",
-		"bell.txt":   "ding\x07dong\n",
 	})
-	if err := os.Chmod(hs.path("own.txt"), 0o600); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configPathOverride), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	hs.a.t.HideSecretsInPreview = true
-	key := strings.Join(hs.a.hitPreview(hs.path("id_ed25519")), "\n")
-	if strings.Contains(key, "secretsecret") || !strings.Contains(key, "(sensitive content not shown)") {
-		t.Fatalf("the key's preview: %q", key)
+	if err := os.WriteFile(configPathOverride, []byte("hide_secrets_in_preview: true\n"), 0o644); err != nil {
+		t.Fatal(err)
 	}
-	if got := strings.Join(hs.a.hitPreview(hs.path("own.txt")), "\n"); strings.Contains(got, "mine") {
-		t.Fatalf("a file only its owner reads: %q", got)
-	}
-	hs.a.t.HideSecretsInPreview = false
-	if got := terminu.StripStyles(strings.Join(hs.a.hitPreview(hs.path("bell.txt")), "\n")); !strings.Contains(got, `ding\x07dong`) {
-		t.Fatalf("a control character: %q", got)
-	}
-	if got := terminu.StripStyles(hs.a.hitPreview(hs.path("gone.txt"))[0]); got != "(unreadable)" {
-		t.Fatalf("a file that is not there: %q", got)
-	}
+	hs.a = NewApp(hs.root, "")
+	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
+	hs.keys("/", "f")
+	hs.drain()
+	hs.keys("id_ed")
+	hs.has("(sensitive content not shown)")
+	hs.hasNot("secretsecret")
 }
 
 // The viewer gets the file as it is: a copy of all of it gives back the tabs

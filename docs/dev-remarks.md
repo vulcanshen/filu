@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.8.0），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.1.13）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.8.1），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.2.0）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -16,16 +16,17 @@ toast、finder、viewer、PTY、splash、icon 與 powerline 符號的寬度探�
 - **一個畫面、三個 panel**（`filu.go` 的 `build`）：`[1]` 與 `[2]` 在上面 2:1 並排、佔三分之二高，`[3]` 橫跨下面（`layout`）；
   寬度 `< 72` 時 lib 只畫 focus 的那一個（`Screen.NarrowBelow`）。
 - **每個 panel 的動作**（`terminu.Action`：鍵、名稱、說明、範圍、hint、能不能按、做什麼）：`actions.go` 的 `filesActions`、
-  `previewpanel.go` 的 `previewActions`、`drawer.go` 的 `drawerActions`；global 的在 `globalActions`。Space menu、key reference、
-  熱鍵與下框 hint 都由這一份產生，不會對不上。
-- **panel 的內容**：`[1]` 是每個 tab 一份 `terminu.List`，外面包一層 `filesBody` 畫路徑列（`files.go`）；`[2]` 是 `terminu.Pager`
-  外面包一層 `previewBody`，放 filu 自己的預覽（`previewpanel.go`）；`[3]` 是三份 `terminu.List`，`OnTab` 換 `Body`（`drawer.go`）。
+  `previewpanel.go` 的 `previewActions`、`drawer.go` 的 `drawerActions`。Space menu、key reference、熱鍵與下框 hint 都由這一份產生，
+  不會對不上。global 的只有 lib 自己的離開那一列；離開流程是 `drawer.go` 的 `syncQuit`。
+- **panel 的內容**：`[1]` 是每個 tab 一份 `terminu.List`，外面包一層 `filesBody`（zoom 時並排、讀不到目錄時畫錯誤，`files.go`）；
+  `[2]` 是 `terminu.Pager` 外面包一層 `previewBody`，放 filu 自己的預覽（`previewpanel.go`）；`[3]` 是三份 `terminu.List`，`OnTab`
+  換 `Body`，Tasks 外面包一層 `tasksBody` 讓執行中的 icon 轉（`drawer.go`）。
 - **背景的工作**：複製、搬移、打包（`tasks.go`、`zip.go`）、fd 與 ripgrep（`finders.go`）、目錄監看（`watch.go`）都跑在 goroutine，
   經 channel 送回 `App.OnMsg`（`filu.go` 的 `onMsg`）。
 
 `filesBody` 嵌入目前那個 tab 的 `*terminu.List`：lib 每個訊息之後呼叫 body 的 `moved()`（沒公開的 method，嵌入才拿得到），清單的
 `OnMove` 因此照樣會跑，`[2]` 跟著 cursor 換（components/layout/panel 的「明細」；`[1]` 的 `Details` 是 `[2]`）。換 tab 時把嵌入的
-List 換成那個 tab 的。
+List 換成那個 tab 的。`tasksBody` 也是同一個做法。
 
 ### cd-on-quit 為什麼需要一行 shell 設定
 
@@ -33,43 +34,49 @@ List 換成那個 tab 的。
 shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell cwd 的是 shell **內建指令**，而 filu 是外部 binary。
 
 所以採兩段式 handshake：`filu shell` 印出一個 shell function，它透過 `FILU__LAST_DIR_FILE` 給 filu 一個暫存檔；filu 結束時
-（`App.shutdown`）把目錄寫進去，function 再讀檔 `cd`。目錄是 `[Q]uit to` 選的那一個，沒選就是結束時所在 tab 的目錄。這也是為什麼
+（`App.shutdown`）把目錄寫進去，function 再讀檔 `cd`。目錄是 `q` 的 menu 選的那一個（`quitMenu`，lib 的 `App.QuitFlow`），用
+`Ctrl-C` 兩次直接離開時是當時所在 tab 的目錄。有這個變數時 `q` 才是選目錄的 menu，沒有就只是一個 confirm。這也是為什麼
 要用 `filu` 而不是 `./filu` 啟動 —— wrapper 攔截的是指令名 `filu`，帶路徑的呼叫會繞過它。
 
 ### 各功能的實作備註
 
 - **檔案清單的欄位** —— `Modified`、`Owner`（user:group）、`Perms`（eza 配色：`r` 黃、`w` 紅、`x` 綠）、`Size`（eza 的
-  color-scale，越大越暖；目錄顯示 `-`，絕不遞迴加總）、icon + 檔名，前面是 lib 的標記欄。panel 變窄時依 owner → size → modified
-  → perms 的順序整欄收掉，檔名永遠留著（`fitCols`）；畫的時候欄位組合變了才重算列（`drawTab`）。
-- **排序** —— filu 自己排（`sortItems`）：目錄一律在前，再照這個目錄的排序鏈（`sortByDir`，每個目錄各自記住、存進 `state.yaml`），
-  最後依名稱。lib 的 `List.SortBy` 會把目錄打散，所以不用它；表頭的排序標示照 lib 的寫法自己寫進欄名（順位 `(2)`、U+F160 升冪、
-  U+F161 降冪，`fileColumns`）。`TODO(lib FL6)`。
-- **路徑列** —— `[1]` 的第一列：Lavender 純文字、斜線暗（`header.go` 的 `crumbRow`），下面直接接表頭、不畫線（panel 的表頭與
-  打字列下面也不畫）；太長時前段縮成字首（`~/Documents/x` → `~/D/x`），再不夠中間縮 `…`，永不折行（`fitPathSegments`）。目錄是
-  最愛時後面加一顆星。
-- **先問的動作** —— Open、Delete、Shell、Clear、Unfavorite 用 `Action.Ask`：lib 把 confirm 疊在開它的 Space menu 上（`Esc` 回到
-  menu），接受後才整疊收掉（tdp F4、T1）。問句要寫 cursor 那一項的名字，`Ask` 卻是固定的指標：lib 執行動作時先問 `Disabled`、
-  再讀 `Ask`，所以 `Disabled` 順手把問句填好（`actions.go` 的 `asking`，`TODO(lib FL15)`）。
+  color-scale，越大越暖；目錄顯示 `-`，絕不遞迴加總）、icon + 檔名，前面是 lib 的標記欄。放不下時 lib 依 `Column.Drop` 整欄收掉：
+  owner → size → modified → perms，檔名永遠留著；剩下的還放不下才照比例縮（`files.go` 的 `fileColumns`）。
+- **排序** —— lib 排（`List.SortBy`）：每一列的 `Row.SortGroup` 讓目錄在前、排序只在群裡；`Row.Sort` 給排序用的值（大小是 bytes、
+  時間是固定寬的 UTC 字串、名稱是原名）。filu 只交出照名稱排好的列（`sortItems`，不分大小寫），沒有排序時 lib 照這個順序；排序鏈
+  每個目錄各自記住、存進 `state.yaml`（`sortByDir`）。表頭的順位與方向 glyph 是 lib 畫的。
+- **位置列** —— `[1]` 的第一列是 lib 的 `List.Location`：Lavender、太長從前面截、空目錄也留著。目錄是最愛時後面加一顆 Yellow 的星
+  （`files.go` 的 `location`）。
+- **先問的動作** —— Open、Delete、Shell、Clear、Unfavorite、有工作在跑時的離開用 `Action.AskFor`：執行時才做問句，寫 cursor 那一項的
+  名字；從 Space menu 跑時 lib 把 confirm 疊在 menu 上，`Esc` 回到 menu（tdp F4、T1）。
+- **menu 做完之後留不留**（tdp T1）—— lib 預設：開了東西的保留開它的 menu、什麼都沒開的整疊收掉。filu 另外做的：Shell 用
+  `Action.Clear`（開 shell 清掉 source）；finder 選了東西就進去，`Done` 先 `App.CloseAll`（drill-down 清掉 source，`revealFound`）；
+  排序選了方向用 `Stay` 加 `App.CloseTop(1)` 只關方向那一步，欄位 menu 的說明是 `Action.Live`，回去就看得到新的排序。
 - **錯誤** —— `config.yaml` 讀不懂、`state.yaml` 讀不到或讀不懂、目錄監看起不來，啟動後立刻說（一個用 toast、好幾個用 error popup）。
   `state.yaml` 壞掉時不覆寫它（`keepState`）：寫回去就是把裡面的 tabs、marks、最愛、排序無聲丟掉。`[2]` 讀不到的檔是 panel 的錯誤
-  （`Panel.Fail`：Red 的事實加點名按鍵的提示）。動作失敗開 error popup，標題寫「哪件事失敗」（`Rename failed`）。
+  （`Panel.Fail`：Red 的事實加點名按鍵的提示）。Rename、Add、Zip 寫入時失敗用 input 的 `Commit`：input 留著、打的字還在，error popup
+  疊在上面；其他動作失敗開 error popup，標題寫「哪件事失敗」與對象（`App.ErrorAbout`：`DELETE FAILED: notes.md`）。
 - **marks** —— 一個跨目錄、跨 tab 的 bucket（`marks.go` 的 `marksModel`），存在 `state.yaml`。清單上的勾是 lib 的標記欄，換目錄、
-  bucket 變動時用 `syncMarks` 照 bucket 重勾（`TODO(lib FL4)`：List 只能動 cursor 那一列）。`[3]` Marks 清單自己的標記就是 pick：
-  有 pick 時只有 pick 的會落地（`landItems`）。複製保留 bucket；搬移把搬走的移出 bucket。
-- **Zip** —— 打包「會落地的那些」到 `os.MkdirTemp` 的暫存目錄，成為 bucket 裡唯一的 pick，再走既有的 `c` / `v`。每個 pick 以自己的
-  名字放進壓縮檔（目錄保留內部結構），同名的兩個都留。名字過 `zipFileName`（取 basename + 補 `.zip`）。
-- **Tasks** —— 同磁碟搬移是瞬間 `rename`；跨磁碟、複製才逐項回報。log 是帶時間的白話（`taskText`）；中斷的任務存進 `state.yaml`、
-  下次啟動標成 interrupted。執行中那一列用一個固定的 glyph 加 `3/10`（暫定，見下面）。
-- **Finder** —— lib 的 `terminu.Finder`：檔名搜尋與 Goto 用 `Files: true`（lib 的檔案預覽與四列資訊），結果由 `fd` 串流進 `Items`
-  （`streamFinder`，走訪序、不排序；沒有 `fd` 時退回 Go 的 walk），到 `finder_cap` 為止。Goto 一律掃隱藏目錄，噪音靠 `ignore_dirs`
-  擋。比對照 components/input/finder（包含、不分大小寫、每個詞都要出現、順序不變），是 lib 做的。內容搜尋先用 text input 問要找
-  什麼，再把 `rg` 找到的檔（一個檔一列、記下第一個符合的行）串流進 finder，預覽從那一行的上面幾行開始（`hitPreview`，照
-  file-picker 的預覽：`hide_secrets_in_preview`、控制字元畫成 Red 的名字、讀不到寫灰字 `(unreadable)`）。
-  `TODO(lib FL2)`：finder 不告訴 app 打了什麼，所以內容搜尋不能邊打邊找，以前 `/`、`~/` 開頭的路徑搜尋也拿掉了。
-  `TODO(lib FL16)`：lib 的檔案預覽不能從某一行開始，所以內容搜尋的預覽是 filu 自己畫的，下面少了檔案的四列資訊。
+  bucket 變動時照 bucket 重勾（`List.SetMarked`）。`[3]` Marks 清單自己的標記就是 pick：有 pick 時只有 pick 的會落地（`landItems`）。
+  複製保留 bucket；搬移把搬走的移出 bucket。
+- **Zip** —— 打包「會落地的那些」到 `os.MkdirTemp` 的暫存目錄（input 的 `Commit` 建，建不了 input 留著），成為 bucket 裡唯一的 pick，
+  再走既有的 `c` / `v`。名字的建議值是 `TextInput.Suggest`（`suggestZipName`：一項用它的名字、同一個目錄的用目錄名、其他用時間）。
+  每個 pick 以自己的名字放進壓縮檔（目錄保留內部結構），同名的兩個都留。名字過 `zipFileName`（取 basename + 補 `.zip`）。
+- **Tasks** —— 同磁碟搬移是瞬間 `rename`；跨磁碟、複製才逐項回報。log 是帶時間的白話（`taskText`）；中斷的任務存進 `data.yaml`、
+  下次啟動標成 interrupted。執行中那一列是 lib 的 loading icon（`LoadingFrame`）加 `3/10`：`tasksBody` 畫的時候重做這幾列，
+  `App.Spinning` 在 Tasks 開著、有工作在跑時讓 lib 繼續送畫面。做完是 Success toast，失敗是 Error toast。
+- **Finder** —— lib 的 `terminu.Finder`，三個都用 `Files: true`（lib 的檔案預覽與四列資訊）與 `Finder.Search`（filu 自己搜、自己篩）：
+  - 檔名搜尋與 Goto（`pathFinder`）：`fd` 把 tab 的目錄（Goto 是家目錄）下的東西串流進來（`streamFinder`，走訪序、不排序；沒有
+    `fd` 時退回 Go 的 walk），到 `finder_cap` 為止，用 `terminu.Matches` 照打的字篩（包含、不分大小寫、每個詞都要出現、順序不變，
+    跟 lib 自己篩的一樣）。打的字以 `/` 或 `~/` 開頭就是路徑：從它寫到的最深的那個目錄往下三層重新列（`absAnchor`；以 `/` 結尾只列
+    那一層），剩下的字拿來篩，列出來的寫完整路徑 —— 可以出 tab 的目錄、出家目錄。Goto 一律掃隱藏目錄，噪音靠 `ignore_dirs` 擋。
+  - 內容搜尋（`contentSearch`）：邊打邊找，每次停 150ms 才跑 `rg`（舊的那次取消），一個檔一列、`FinderItem.Line` 是第一個符合的行，
+    lib 的預覽從那一行附近開始；什麼都沒打時列出全部，跟檔名搜尋一樣。
+  - 選了就進去：`[1]` 到那個目錄、cursor 停在那一項，開它的 menu 一起收掉。
 - **預覽** —— 讀 magic bytes 判型別：目錄 → 三層的樹、壓縮包 → 內容清單、圖片 → base64 `data:` URI、PDF → 抽出的文字與頁數、
   文字 → Chroma（catppuccin-mocha）上色 + 行號、二進位 → hex + ASCII（`preview.go`）。Tab 畫成 `input_tab_width` 格。行依寬度產生
-  （圖片的 data URI 照寬度折），所以在 `previewBody.Draw` 時才做。`TODO(lib FL3)`：lib 的檔案預覽只有 finder 用得到。
+  （圖片的 data URI 照寬度折），所以在 `previewBody.Draw` 時才做。不用 lib 的 `FilePreview`，見「設計決定」。
 - **檢視與複製** —— `[2]` 的 `Enter` 用 lib 的 `Viewer` 打開預覽。文字檔交出去的是檔案原本的文字（最多 4 MB）：Tab、控制字元、
   CRLF、太長的行都由 lib 畫（`Lang` 是檔名，跟預覽一樣上色），複製出來是原樣；`[2]` 的 sanitize 只給 panel 用。選取模式是 lib 的
   （`v` 兩次、vim 的移動、`y` 複製）；`y` 在選取以外複製全部。圖片的 data URI 合回一行再交出去，lib 自己折行，複製出來不會斷。
@@ -90,14 +97,16 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
   第一個 tab 永遠開在啟動的目錄，啟動時 focus 在 `[1]`。
 - **設定與 state 分開** —— `config.yaml` 是使用者手改的，`state.yaml` 每次變動都重寫。位置照 tdp E3：`$XDG_CONFIG_HOME/filu`，
   否則 `~/.config/filu`；`FILU__CONFIG`、`FILU__STATE` 各指定一個目錄。v0.4.0 以前 macOS 用 `~/Library/Application Support/filu`：
-  第一次啟動時整個目錄搬到新位置、Info toast 說從哪搬到哪；搬不動就照舊用舊的、開 error popup 寫出兩個路徑（`moveOldSettings`）。
-  最愛與 task 紀錄放 `~/.filu/data.yaml`（`FILU__DATA`），以前在 `state.yaml` 的第一次啟動時搬過去（`loadState`）。`config.yaml` 除了 filu 自己的
+  第一次啟動時裡面的東西一項一項搬到新位置、Info toast 說從哪搬到哪（`moveOldSettings`，tdp E3）：新位置沒有的搬過去；新位置已經有的
+  兩邊都不動，開 error popup 寫出兩個路徑讓使用者自己合；搬空的舊目錄刪掉。有一項搬不動就把搬過去的搬回來、照舊用舊的，error popup
+  寫出兩個路徑。最愛與 task 紀錄放 `~/.filu/data.yaml`（`FILU__DATA`），以前在 `state.yaml` 的第一次啟動時搬過去（`loadState`）；
+  `data.yaml` 已經有了的話，`state.yaml` 裡的留著、每次存檔照樣寫回去（`leftInState`），一樣開 error popup。`config.yaml` 除了 filu 自己的
   `finder_cap`、`ignore_dirs`、`open_with`，還收家族共用的 `input_tab_width`、`hide_secrets_in_preview`，交給 lib。
 - **檔名裡的控制字元** —— 檔名可能含控制字元（macOS 的 `Icon\r`）。`safeName`（`list.go`）在顯示時剝掉，檔案操作仍用真實名。
   使用者打的值由 lib 的 input 處理：控制字元畫成紅色的名字、送出時擋下。
 - **名稱的檢查** —— Rename、Add、Zip 的 `Check`（`actions.go` 的 `renameProblem`、`addProblem`）：空的、撞名、Rename 含 `/`、Add 在
   目前目錄外面（`filepath.Clean` 後以 `/` 開頭、是 `..` 或以 `../` 開頭）、Zip 取不出檔名，都留在框裡、寫在錯誤列。寫入時才失敗的
-  （權限等）開 error popup。
+  （權限等）在 `Commit` 裡失敗：error popup 疊在框上，關掉回到框、打的字還在。
 
 ### 程式碼目錄
 
@@ -115,8 +124,8 @@ filu/
 - **`Enter` 在目錄上是進入，在檔案上是看資訊，從不交給外部程式。** 開檔是 `[o]pen`（預設 app，先 confirm）與 `[O]pen with`
   （選 app）的事：「進入」與「交給外部程式」代價不同（tdp P4）。2026-09-28 user 裁定。
 - **其他 panel 的 `Enter`**：`[2]` 打開檢視；`[3]` Marks、Favorites 在 `[1]` 找已經開著那個目錄的 tab、沒有就開新的（Marks 的
-  cursor 停在那個檔；tab 滿了跳 toast，不擠掉別的 tab）；Tasks 讓 `[1]` 到任務落地的地方。focus 留在 `[3]`（tdp K3：只有明細可以
-  用 `Enter` 換 panel），toast 說在 `[1]` 的哪裡。
+  cursor 停在那個檔；tab 滿了跳 toast，不擠掉別的 tab）；Tasks 讓 `[1]` 到任務落地的地方。focus 跟著到 `[1]`（`App.Focus`），
+  Favorites 的 `o` 選了 tab 也是：使用者按它就是要去那裡，預期 focus 會換（tdp K3 v0.8.0：focus 只在使用者預期時換；S19）。
 - **會改變磁碟、或把控制權交出去的動作先 confirm**：`D` Delete、`D` Unfavorite、`o` Open、`s` Shell、shell 裡的 `Alt-Esc`、`C` Clear。
   `m` mark、`p` pick、`f` favorite 是可逆的開關，不問。`O` 的選單裡挑一個 app 就算確認過（tdp F6 允許），連 `Default` 也不另外問。
 - **Zip 打到 temp，再走既有的落地路徑。** 使用情境是「打包完再搬去某個目錄」，輸出位置不等於目的地；打包範圍就是 `landItems()`。
@@ -136,20 +145,27 @@ filu/
   Green）；開著 shell 時看不到，接受。
 - **設定、狀態、資料分開**（tdp E3）：用「刪掉會怎樣」分。tab、marks、每個目錄的排序刪了只是回到預設，是狀態（`state.yaml`，在設定目錄）；
   最愛與 task 紀錄刪了找不回來、會想備份，是資料（`~/.filu/data.yaml`）。
+- **離開**（user 2026-10-19 定案，FL1）：用 `filu shell` 的 function 跑時（有 `FILU__LAST_DIR_FILE`），`q` 是選 shell 停在哪裡的 menu：
+  啟動的目錄、再來每個 tab 的（重複的只列一次），選了就離開；有工作在跑時選了先 confirm（`Esc` 回到 menu）。沒有這個變數時選了也
+  沒有差別，所以只是一個 confirm（有工作在跑時多一句 Peach 的警告）。
+- **檔案資訊的 viewer 不畫行號**（user 2026-10-19 定案，tdp S66）：是一張事實的表，不是檔案的內容；照樣能選取複製。
+- **排序選了方向只關方向那一步**（tdp T1：選一個值寫回 picker，保留 source）：欄位 menu 留著、寫出新的排序，可以接著疊下一欄；
+  `Esc` 收起。
+- **最低尺寸 60×24**（tdp L1：app 可以調低）：80×24 是大多數終端機打開時的大小，在 filu 的版面裡每件事都做得完（上面兩個 panel
+  16 列、`[3]` 8 列）；寬度到 60 欄也一樣：`< 72` 時一次只畫一個 panel，finder、menu、confirm 的列都放得下。比它小就是 lib 的
+  「只畫名稱與要多大」，`screen_test.go` 量到 1×1。
+- **`[2]` 用 filu 自己的預覽、不用 lib 的 `FilePreview`**：`FilePreview` 不收鍵、不捲，`[2]` 要能捲、`Enter` 打開檢視、`y` 複製，
+  圖片的 data URI 也要照寬度折，所以 `[2]` 是 `Pager` 加 filu 的預覽。
+- **Tasks 窄的時候先收 `WHEN`**（`Column.Drop`）：任務的白話比時間重要，放不下時時間整欄先走，再縮任務。
 
 ### 暫定（自己定的，等 user 確認）
 
 - **`[3]` 的欄位**：Marks、Favorites 是 `NAME` 與 `IN`（所在目錄，從前面截）；Tasks 是 `WHEN` 與 `TASK`。理由：名稱與所在目錄分兩欄，
   名稱不會被長路徑擠掉，`IN` 從前面截、留下最近的幾層；Tasks 照時間讀，所以時間放前面。
-
-### 定案了、等 terminu-go 下一版的（user 2026-10-19）
-
-- **`q` 回到選目錄的 menu**（FL1）：現在是 confirm 加 global 的 `[Q]uit to`。
-- **內容搜尋邊打邊找，`/`、`~/` 開頭的路徑搜尋回來**（FL2）。
-- **Zip 的名字是灰字的建議值**（FL9，tdp S6）：不碰就按 `Enter` 用它；現在寫在說明列。
-- **執行中的 task 轉家族的 loading icon**（FL11）：現在是固定的 nf-md-timer_sand。
-- **檔案資訊的 viewer 不畫行號**（FL12，tdp S66），照樣能選取複製。
-- **排序選了方向只收方向那一步、欄位 menu 留著**（FL13，tdp S4 的 T1 表：選一個值寫回 picker 保留 source）；現在整疊收起。
+- **`[1]` 的欄位照 lib 收**（FL23，已回報 terminu，`TODO(lib FL23)`）：lib 量欄寬用「最寬的那個值」，目錄裡只要有一個很長的檔名，
+  其他欄就全部收掉，只剩 NAME（排序的那一欄也可能被收掉，看不到排序）；以前檔名至少留 12 格、其他欄留著。先照 lib。
+- **`[go]to` 的 label 寫成小寫 `goto`**（FL24，已回報 terminu，`TODO(lib FL24)`）：lib 只在 label 以兩個字母的熱鍵開頭、大小寫也一樣時
+  原地包，`Goto` 會畫成 `[go] Goto`；寫小寫，畫面就是 tdp S9 要的 `[go]to`。
 
 ## 已否決，不要重提
 
@@ -165,18 +181,13 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
 - **目錄大小**：size 欄對目錄畫 `-`，不遞迴加總。
 - **`[s]hell` 裡的 icon**：shell 裡的程式照 lib 設給它的 `TERMINU__ICON_WIDTH` 排版；不讀這個變數的程式（例：`eza --icons`）自己認定
   icon 佔一格，在 icon 畫成兩格的字型上那一列會歪。
-- **等 lib 或規範的**（程式裡的 `TODO(lib FLn)`、`TODO(tdp FLn)`，已回報 terminu）：FL1 離開流程不能是選單；FL2 finder 拿不到打的字
-  （內容搜尋先問字、沒有路徑搜尋）；FL3 panel 用的檔案預覽；FL4 照 ID 設標記；FL6 排序時目錄在前、
-  整欄收掉；FL7 key reference 沒列 `Shift-Tab`；FL8 finder 在很小的畫面上當掉（測試跳過那一格）；FL9、FL11、FL12、FL13 見「設計決定」；
-  FL14 menu 的標題不能照原樣放名稱（`Open with`、`Open in` 只寫動作）；FL15 confirm 的問句不能跟著 cursor 那一項；FL16 內容搜尋的
-  預覽不能用 lib 的檔案預覽。
 - **未做**：Mouse；每列的錯誤標示（broken symlink、沒有權限）；zoxide 式的目錄索引；chmod、解壓縮、真的圖（kitty / sixel）、續傳。
 - **拿掉的**：`FILU__REPAINT`（每次導覽整頁重畫，給把 glyph 畫得比游標前進更寬的終端機用）：畫到終端機是 lib 的事。
 
 ## 偏離 tdp
 
-目前沒有。zoom 時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 的路徑列、`[3]` 各清單的欄位是 panel
-的內容；排序的標示照 components/layout/panel 的寫法（`TODO(lib FL6)`，等 lib 的群與收欄）。
+目前沒有；還沒符合 tdp、在等 lib 的地方也沒有（`docs/filu-terminu-fix.md` 已經刪掉），等 lib 的兩件（FL23、FL24）見「暫定」。zoom
+時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 位置列後面的星、`[3]` 各清單的欄位是 panel 的內容。
 
 ## 設計文件導讀
 
@@ -186,7 +197,6 @@ tdp 在 [terminu](https://github.com/vulcanshen/terminu)（`principle/`、`compo
 
 | 檔案 | 內容 |
 |---|---|
-| [`filu-terminu-fix.md`](filu-terminu-fix.md) | 還沒符合 tdp、在等 lib 或規範的地方（tdp E7；全部修完就刪掉） |
 | [`icon.svg`](icon.svg) | 家族 mark 的正本；`V` 的 splash 照它畫（程式裡的副本是 `internal/ui/icon.svg`，`TestIconMatchesDocs` 守住兩份一樣） |
 | [`social-preview.png`](social-preview.png) | GitHub 的 social preview |
 
@@ -218,8 +228,12 @@ make build        # → ./filu（CGO_ENABLED=0 靜態；版本是 dev）
 測試是 programmatic 的（不靠真終端）：`harness_test.go` 照 terminu-go 的 app 的做法，把按鍵送進 `App.Update`、跑完它發出的
 command（動畫、背景的 channel）、讀 `Frame()`。session、設定、垃圾桶、剪貼簿都指到測試自己的暫存目錄。
 
-- **tdp L4 與 E5**：`screen_test.go` 在幾種尺寸、「icon 一格 / 兩格、powerline 符號一格 / 兩格」下，每一類 popup 各開一次，量每一列；
-  再把畫面縮到比 popup 小（比畫面寬、比畫面高、兩邊都大）。popup 的開關動畫是真的 32ms 一格，所以這組測試要幾十秒。
+- **tdp L4、E5 與 L1**：`screen_test.go` 在幾種尺寸（到最低尺寸 60×24 為止，再小一點）、「icon 一格 / 兩格、powerline 符號一格 / 兩格」
+  下，每一類 popup 各開一次，量每一列；再把畫面縮到比 popup 小（最低尺寸、比畫面寬、比畫面高、兩邊都大，再到最低尺寸以下、1×1）。
+  最低尺寸以下只畫名稱與要多大、鍵沒有作用、`Ctrl-C` 兩次才離開，拉大後畫面跟原本一樣（`TestL1UnderTheLeastSize`）。popup 的開關動畫
+  是真的 32ms 一格，所以這組測試要幾十秒。
+- **背景的 channel**：harness 執行讀 channel 的 command（`waitFind` 之類）最多等 150ms；等不到時那個讀還在，之後讀到的訊息放進
+  `harness.late` 再交給 filu，不會掉。搜尋是邊打邊找的，少了這一步，打字後的第一批結果會被上一次留下來的讀拿走。
 - **lib 的檢查**：`terminu.App` 在登記時就拒絕佔用 core key 或移動字母的熱鍵（popup 裡也一樣，例：menu 不能用 `d`）—— 新加的
   menu 要在測試裡打開過一次，才知道沒踩到。
 

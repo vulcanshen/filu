@@ -3,7 +3,6 @@ package ui
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,12 +14,11 @@ import (
 	terminu "github.com/vulcanshen/terminu-go"
 )
 
-// finderMsg is a batch of a finder's results from its goroutine; gen says
-// which finder they are for.
+// finderMsg is a batch of a search's results from its goroutine; gen says
+// which search they are for.
 type finderMsg struct {
 	gen   int
 	items []terminu.FinderItem
-	lines map[string]int // a content search's first matching line of each file
 	done  bool
 }
 
@@ -29,29 +27,58 @@ func (a *App) waitFind() tea.Cmd {
 	return func() tea.Msg { return <-ch }
 }
 
-// handleFind adds a batch to the finder open now; one for a finder already
-// gone is dropped.
+// handleFind adds a batch to what the search running has found, and the ones
+// that match what is typed to the finder; one for a search already over is
+// dropped.
 func (a *App) handleFind(msg finderMsg) {
 	if msg.gen != a.findGen || a.finder == nil {
 		return
 	}
-	a.finder.Items = append(a.finder.Items, msg.items...)
-	for k, v := range msg.lines {
-		a.hits[k] = v
+	a.found = append(a.found, msg.items...)
+	for _, it := range msg.items {
+		if a.keep == nil || a.keep(it) {
+			a.finder.Items = append(a.finder.Items, it)
+		}
 	}
 	if msg.done {
 		a.finder.Loading = false
 	}
 }
 
-// openFinder opens f and starts filling it.
-func (a *App) openFinder(f *terminu.Finder, fill func(gen int, ch chan<- finderMsg)) tea.Cmd {
-	a.findGen++
-	a.finder = f
-	a.hits = map[string]int{}
-	f.Loading = true
-	go fill(a.findGen, a.finds)
+// openFinder opens f: the searches started from now on fill it.
+func (a *App) openFinder(f *terminu.Finder) tea.Cmd {
+	a.finder, a.keep = f, nil
 	return a.t.Find(f)
+}
+
+// search runs fill on a goroutine for the finder open now, in place of the
+// search running: what that one found goes.
+func (a *App) search(fill func(ctx context.Context, gen int, ch chan<- finderMsg)) {
+	if a.findStop != nil {
+		a.findStop()
+	}
+	a.findGen++
+	ctx, stop := context.WithCancel(context.Background())
+	a.findStop = stop
+	a.found, a.finder.Items, a.finder.Loading = nil, nil, true
+	go fill(ctx, a.findGen, a.finds)
+}
+
+// refilter shows again the ones found that match what is typed.
+func (a *App) refilter() {
+	var items []terminu.FinderItem
+	for _, it := range a.found {
+		if a.keep == nil || a.keep(it) {
+			items = append(items, it)
+		}
+	}
+	a.finder.Items = items
+}
+
+// revealFound goes to what a finder found. Going there clears the menus the
+// finder was opened from (tdp T1: a drill-down clears its source).
+func (a *App) revealFound(it terminu.FinderItem) tea.Cmd {
+	return tea.Batch(a.t.CloseAll(), a.reveal(it.ID))
 }
 
 // searchMenu is / on [1]: by name or by content, under the tab's directory.
@@ -63,20 +90,18 @@ func (a *App) searchMenu() tea.Cmd {
 }
 
 // nameFinder lists everything under the tab's directory as fd finds it; the
-// typing row narrows it.
-// TODO(lib FL2): a query starting with / or ~/ searched from that path; the
-// finder cannot tell filu what is typed.
+// typing row narrows it, or names a path of its own (pathFinder).
 func (a *App) nameFinder() tea.Cmd {
 	root := a.cur().dir
 	f := &terminu.Finder{Title: "Search", Subject: safeName(shortPath(root)), Glyph: glyphSearch, Verb: "open", Files: true,
-		Done: func(it terminu.FinderItem) tea.Cmd { return a.reveal(it.ID) }}
-	return a.openFinder(f, func(gen int, ch chan<- finderMsg) { streamFinder(gen, root, false, ch) })
+		Done: a.revealFound}
+	return a.pathFinder(f, root, false)
 }
 
 // gotoMenu is go on [1]: a favorite, or any directory under the home.
 func (a *App) gotoMenu() tea.Cmd {
 	return a.t.Menu("Goto", terminu.MenuSection{Actions: []terminu.Action{
-		{Key: "f", Label: "Favorite", Desc: "one of your starred directories", Stay: true,
+		{Key: "f", Label: "Favorite", Desc: "one of your starred directories",
 			Disabled: func() bool { return len(a.favs.pinned) == 0 },
 			Do:       func() tea.Cmd { return a.favoriteMenu(false) }},
 		{Key: "/", Label: "Search", Desc: "any directory under your home, hidden ones too", Do: func() tea.Cmd { return a.gotoFinder(false) }},
@@ -118,118 +143,135 @@ func (a *App) gotoFinder(newTab bool) tea.Cmd {
 	f := &terminu.Finder{Title: title, Subject: safeName(shortPath(home)), Glyph: glyphGoto, Verb: "go", Files: true,
 		Done: func(it terminu.FinderItem) tea.Cmd {
 			if newTab {
-				return a.openTab(it.ID, "")
+				return tea.Batch(a.t.CloseAll(), a.openTab(it.ID, ""))
 			}
-			return a.cd(it.ID, "")
+			return tea.Batch(a.t.CloseAll(), a.cd(it.ID, ""))
 		}}
-	return a.openFinder(f, func(gen int, ch chan<- finderMsg) { streamFinder(gen, home, true, ch) })
+	return a.pathFinder(f, home, true)
 }
 
-// contentSearch asks what to look for, then lists the files under the tab's
-// directory that hold it, each previewed at its first match.
-// TODO(lib FL2): the finder cannot tell filu what is typed, so the text is
-// asked for first instead of searched as it is typed.
+// pathFinder opens f on everything under base as fd finds it (directories
+// only for Goto), narrowed by what is typed. What is typed starting with / or
+// ~/ is a path: f then lists what is under the deepest directory it names, a
+// few levels down, matched by the rest of it — outside base too.
+func (a *App) pathFinder(f *terminu.Finder, base string, dirsOnly bool) tea.Cmd {
+	root, depth := base, 0
+	scan := func(r string, d int) {
+		root, depth = r, d
+		a.search(func(ctx context.Context, gen int, ch chan<- finderMsg) {
+			streamFinder(ctx, gen, r, d, r != base, dirsOnly, ch)
+		})
+	}
+	f.Search = func(typed string) tea.Cmd {
+		r, d, words := base, 0, typed
+		if q := expandHome(typed); strings.HasPrefix(q, "/") {
+			r, d = absAnchor(q)
+			words = strings.TrimPrefix(strings.TrimPrefix(q, r), "/")
+		}
+		a.keep = func(it terminu.FinderItem) bool { return terminu.Matches(it.Match, words) }
+		if r != root || d != depth {
+			scan(r, d)
+		} else {
+			a.refilter()
+		}
+		return nil
+	}
+	cmd := a.openFinder(f)
+	scan(base, 0)
+	return cmd
+}
+
+// absAnchorDepth is how far under the directory a typed path names its search
+// goes: fd over / three levels down takes about a second.
+const absAnchorDepth = 3
+
+// absAnchor is where the search for a typed path lists from: the deepest
+// directory the path names, its last part always left to match ("/usr/lo"
+// lists under /usr, matching "lo"). Ending in / it lists that directory alone;
+// otherwise absAnchorDepth levels down.
+func absAnchor(query string) (root string, depth int) {
+	root = "/"
+	rest := strings.TrimPrefix(query, "/")
+	for {
+		seg, tail, ok := strings.Cut(rest, "/")
+		if !ok {
+			break
+		}
+		cand := filepath.Join(root, seg)
+		if fi, err := os.Stat(cand); err != nil || !fi.IsDir() {
+			break
+		}
+		root, rest = cand, tail
+	}
+	if rest == "" {
+		return root, 1
+	}
+	return root, absAnchorDepth
+}
+
+// expandHome is what is typed with a leading ~ as the home directory.
+func expandHome(typed string) string {
+	if typed == "~" || strings.HasPrefix(typed, "~/") {
+		if home, err := os.UserHomeDir(); err == nil && home != "" {
+			return home + strings.TrimPrefix(typed, "~")
+		}
+	}
+	return typed
+}
+
+// grepPause is how long the content search waits after a key before it
+// searches, so that a word typed quickly is searched for once.
+const grepPause = 150 * time.Millisecond
+
+// contentSearch lists the files under the tab's directory that hold what is
+// typed, as ripgrep finds them, each previewed from its first match; with
+// nothing typed, everything under it, as File names does.
 func (a *App) contentSearch() tea.Cmd {
 	if _, err := lookPath("rg"); err != nil {
 		return a.t.Error("Search failed", "Cannot search file contents: ripgrep (rg) is not installed")
 	}
 	root := a.cur().dir
-	where := safeName(shortPath(root))
-	return a.t.Text(terminu.TextInput{Title: "Search contents", Subject: where, Glyph: glyphSearch, Name: "The text",
-		Prompt: "The text to find in the files under " + where, Verb: "search",
-		Check: func(v string) error {
-			if v == "" {
-				return fmt.Errorf("Type the text to find first")
-			}
+	f := &terminu.Finder{Title: "Contents", Subject: safeName(shortPath(root)), Glyph: glyphSearch, Verb: "open", Files: true,
+		Done: a.revealFound}
+	f.Search = func(typed string) tea.Cmd {
+		if strings.TrimSpace(typed) == "" {
+			a.search(func(ctx context.Context, gen int, ch chan<- finderMsg) {
+				streamFinder(ctx, gen, root, 0, false, false, ch)
+			})
 			return nil
-		},
-		Done: func(q string) tea.Cmd {
-			f := &terminu.Finder{Title: "Contents", Subject: q, Glyph: glyphSearch, Verb: "open",
-				Done: func(it terminu.FinderItem) tea.Cmd { return a.reveal(it.ID) }}
-			f.Preview = func(it terminu.FinderItem) (string, []string) { return it.Text, a.hitPreview(it.ID) }
-			return a.openFinder(f, func(gen int, ch chan<- finderMsg) { streamGrep(gen, root, q, ch) })
-		}})
+		}
+		a.search(func(ctx context.Context, gen int, ch chan<- finderMsg) {
+			select {
+			case <-time.After(grepPause):
+			case <-ctx.Done():
+				return
+			}
+			streamGrep(ctx, gen, root, typed, ch)
+		})
+		return nil
+	}
+	cmd := a.openFinder(f)
+	f.Search("")
+	return cmd
 }
 
-// hitPreview is a file from a few lines above its first match, numbered, as
-// components/input/file-picker previews a text file: secrets kept out when
-// hide_secrets_in_preview is on, control characters named in Red, a file
-// that cannot be read in grey.
-// TODO(lib FL16): a finder's file preview cannot start at a line, nor show
-// the file's facts under it from here.
-func (a *App) hitPreview(path string) []string {
-	grey := func(s string) []string { return []string{terminu.Fg(terminu.Overlay0).Render(s)} }
-	st, err := os.Stat(path)
-	if err != nil {
-		return grey("(unreadable)")
+// send hands a batch to the main loop, unless the search is over.
+func send(ctx context.Context, ch chan<- finderMsg, msg finderMsg) {
+	select {
+	case ch <- msg:
+	case <-ctx.Done():
 	}
-	data, err := readCapped(path, previewCap)
-	if err != nil {
-		return grey("(unreadable)")
-	}
-	if a.t.HideSecretsInPreview {
-		first, _, _ := strings.Cut(string(data), "\n")
-		first = strings.TrimRight(first, "\r")
-		if strings.HasPrefix(first, "-----BEGIN") && strings.Contains(first, "PRIVATE KEY") || strings.HasPrefix(first, "PuTTY-User-Key-File-") {
-			return []string{terminu.Fg(terminu.Text).Render(first), terminu.Fg(terminu.Overlay0).Render("(sensitive content not shown)")}
-		}
-		if st.Mode().Perm()&0o044 == 0 {
-			return grey("(sensitive content not shown)")
-		}
-	}
-	raw := strings.Split(string(data), "\n")
-	lines := make([]string, len(raw))
-	control := false
-	for i, l := range raw {
-		lines[i] = strings.ReplaceAll(strings.TrimSuffix(l, "\r"), "\t", strings.Repeat(" ", inputTabWidth))
-		control = control || strings.ContainsFunc(lines[i], isControl)
-	}
-	if control {
-		for i, l := range lines {
-			lines[i] = namedControls(l)
-		}
-	} else if hl, ok := highlight(filepath.Base(path), strings.Join(lines, "\n")); ok {
-		lines = hl
-	}
-	from := max(a.hits[path]-4, 0)
-	numW := max(len(strconv.Itoa(len(lines))), 3)
-	var out []string
-	for i := from; i < len(lines); i++ {
-		out = append(out, terminu.Fg(terminu.Overlay0).Render(fmt.Sprintf("%*d", numW, i+1))+" "+lines[i])
-	}
-	return out
-}
-
-// isControl reports a control character: C0, DEL, C1.
-func isControl(r rune) bool { return r < 0x20 || r == 0x7f || r >= 0x80 && r < 0xa0 }
-
-// namedControls draws a line's control characters as their names in Red
-// (\r, \x07), the rest in Text (components/input/README, pasted control
-// characters).
-func namedControls(l string) string {
-	var b strings.Builder
-	for _, r := range l {
-		switch {
-		case r == '\r':
-			b.WriteString(terminu.Fg(terminu.Red).Render(`\r`))
-		case r == '\n':
-			b.WriteString(terminu.Fg(terminu.Red).Render(`\n`))
-		case isControl(r):
-			b.WriteString(terminu.Fg(terminu.Red).Render(fmt.Sprintf(`\x%02x`, r)))
-		default:
-			b.WriteString(terminu.Fg(terminu.Text).Render(string(r)))
-		}
-	}
-	return b.String()
 }
 
 // streamFinder sends what fd finds under root to ch in batches (directories
-// only for Goto, hidden ones too), up to finderCap; without fd a Go walk does
-// it in one go. It always ends with a done batch.
-func streamFinder(gen int, root string, dirsOnly bool, ch chan<- finderMsg) {
+// only for Goto, hidden ones too), depth levels down when depth is set, up to
+// finderCap; without fd a Go walk does it in one go. Each is shown by its path
+// under root, or with abs by its whole path, and matched by its path under
+// root. It always ends with a done batch.
+func streamFinder(ctx context.Context, gen int, root string, depth int, abs, dirsOnly bool, ch chan<- finderMsg) {
 	var batch []terminu.FinderItem
-	send := func(done bool) {
-		ch <- finderMsg{gen: gen, items: batch, done: done}
+	flush := func(done bool) {
+		send(ctx, ch, finderMsg{gen: gen, items: batch, done: done})
 		batch = nil
 	}
 	add := func(rel string) {
@@ -240,45 +282,51 @@ func streamFinder(gen int, root string, dirsOnly bool, ch chan<- finderMsg) {
 		}
 		it := fileItem{name: filepath.Base(p), isDir: fi.IsDir(), isLink: fi.Mode()&os.ModeSymlink != 0,
 			isExec: !fi.IsDir() && fi.Mode()&0o111 != 0}
-		batch = append(batch, terminu.FinderItem{ID: p, Text: safeName(rel), Icon: fileIcon(it), IconColor: terminu.Hex(string(fileColor(it)))})
+		text := safeName(rel)
+		if abs {
+			text = safeName(shortPath(p))
+		}
+		batch = append(batch, terminu.FinderItem{ID: p, Text: text, Match: safeName(rel), Icon: fileIcon(it), IconColor: terminu.Hex(string(fileColor(it)))})
 		if len(batch) >= streamBatch {
-			send(false)
+			flush(false)
 		}
 	}
 	if _, err := exec.LookPath("fd"); err != nil {
-		for _, rel := range walkDirFiles(root, dirsOnly, 0) {
+		for _, rel := range walkDirFiles(root, dirsOnly, depth) {
 			add(rel)
 		}
-		send(true)
+		flush(true)
 		return
 	}
 	args := []string{"--type", "f", "--type", "d", "--hidden"}
 	if dirsOnly {
 		args = []string{"--type", "d", "--hidden"}
 	}
+	if depth > 0 {
+		args = append(args, "--max-depth", strconv.Itoa(depth))
+	}
 	args = append(args, "--strip-cwd-prefix")
 	for _, ig := range finderIgnoreDirs {
 		args = append(args, "--exclude", ig)
 	}
-	lines(root, 15*time.Second, "fd", args, func(line string) bool {
+	lines(ctx, root, 15*time.Second, "fd", args, func(line string) bool {
 		add(line)
 		return true
 	})
-	send(true)
+	flush(true)
 }
 
 // streamGrep sends the files under root that hold q to ch, one per file with
 // its first matching line, in the order ripgrep finds them.
-func streamGrep(gen int, root, q string, ch chan<- finderMsg) {
+func streamGrep(ctx context.Context, gen int, root, q string, ch chan<- finderMsg) {
 	var batch []terminu.FinderItem
-	hits := map[string]int{}
-	send := func(done bool) {
-		ch <- finderMsg{gen: gen, items: batch, lines: hits, done: done}
-		batch, hits = nil, map[string]int{}
+	flush := func(done bool) {
+		send(ctx, ch, finderMsg{gen: gen, items: batch, done: done})
+		batch = nil
 	}
 	seen := map[string]bool{}
 	args := []string{"--line-number", "--no-heading", "--color", "never", "--smart-case", "--", q}
-	lines(root, 30*time.Second, "rg", args, func(line string) bool {
+	lines(ctx, root, 30*time.Second, "rg", args, func(line string) bool {
 		rel, n, ok := parseGrepLine(line)
 		if !ok || seen[rel] {
 			return true
@@ -286,20 +334,20 @@ func streamGrep(gen int, root, q string, ch chan<- finderMsg) {
 		seen[rel] = true
 		p := filepath.Join(root, rel)
 		it := fileItem{name: filepath.Base(p)}
-		batch = append(batch, terminu.FinderItem{ID: p, Text: safeName(rel), Icon: fileIcon(it), IconColor: terminu.Hex(string(fileColor(it)))})
-		hits[p] = n
+		batch = append(batch, terminu.FinderItem{ID: p, Text: safeName(rel), Icon: fileIcon(it), IconColor: terminu.Hex(string(fileColor(it))), Line: n})
 		if len(batch) >= streamBatch {
-			send(false)
+			flush(false)
 		}
 		return true
 	})
-	send(true)
+	flush(true)
 }
 
 // lines runs name with args in dir and hands each line of its output to each,
-// up to finderCap lines or until each says to stop; then the program is ended.
-func lines(dir string, limit time.Duration, name string, args []string, each func(string) bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), limit)
+// up to finderCap lines, until each says to stop or the search is over; then
+// the program is ended.
+func lines(ctx context.Context, dir string, limit time.Duration, name string, args []string, each func(string) bool) {
+	ctx, cancel := context.WithTimeout(ctx, limit)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir

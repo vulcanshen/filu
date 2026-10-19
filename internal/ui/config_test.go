@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // FILU__CONFIG names a config directory, config.yaml inside it (tdp E2: an
@@ -32,8 +34,10 @@ func TestConfigPathEnvOverride(t *testing.T) {
 }
 
 // The settings directory is ~/.config/filu on every platform (tdp E3); the
-// first start moves the Application Support one older versions used on macOS
-// there, and only a move that fails leaves filu using the old one.
+// first start moves what is in the Application Support one older versions used
+// on macOS there, one item at a time: what the new place has already stays in
+// the old one, the old one goes once empty, and only a move that fails leaves
+// filu using the old one.
 func TestE3ConfigDir(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -50,41 +54,87 @@ func TestE3ConfigDir(t *testing.T) {
 	if old == "" {
 		return // only macOS had another place
 	}
-	if err := os.MkdirAll(old, 0o755); err != nil {
-		t.Fatal(err)
+	write := func(dir, name, body string) {
+		t.Helper()
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := os.WriteFile(filepath.Join(old, "config.yaml"), []byte("finder_cap: 7\n"), 0o644); err != nil {
-		t.Fatal(err)
+	read := func(dir, name string) string {
+		b, _ := os.ReadFile(filepath.Join(dir, name))
+		return string(b)
 	}
-	from, to, err := moveOldSettings()
-	if err != nil || from != old || to != newDir {
-		t.Fatalf("moved %q → %q: %v", from, to, err)
+	write(old, "config.yaml", "finder_cap: 7\n")
+	write(old, "state.yaml", "tabs: []\n")
+	m := moveOldSettings()
+	if m.err != nil || !m.moved || m.from != old || m.to != newDir || len(m.left) != 0 {
+		t.Fatalf("moved %+v", m)
 	}
-	if _, err := os.Stat(filepath.Join(newDir, "config.yaml")); err != nil || isDir(old) {
-		t.Fatalf("config.yaml is not in the new place, or the old one is still there: %v", err)
+	if read(newDir, "config.yaml") != "finder_cap: 7\n" || read(newDir, "state.yaml") != "tabs: []\n" || isDir(old) {
+		t.Fatal("not everything is in the new place, or the old one is still there")
 	}
-	if from, _, _ := moveOldSettings(); from != "" {
+	if m := moveOldSettings(); m.from != "" {
 		t.Fatal("a second start moved something again")
 	}
 
-	// A move that fails: filu keeps the old one.
-	if err := os.RemoveAll(newDir); err != nil {
+	// The new place has config.yaml already: it stays as it is, and so does
+	// the old one; state.yaml moves.
+	write(old, "config.yaml", "finder_cap: 8\n")
+	write(old, "state.yaml", "tabs: []\n")
+	if err := os.Remove(filepath.Join(newDir, "state.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(old, 0o755); err != nil {
-		t.Fatal(err)
+	m = moveOldSettings()
+	if m.err != nil || !m.moved || len(m.left) != 1 || m.left[0] != "config.yaml" {
+		t.Fatalf("moved %+v", m)
 	}
-	os.RemoveAll(filepath.Join(home, ".config"))
-	if err := os.WriteFile(filepath.Join(home, ".config"), nil, 0o644); err != nil { // a file: nothing goes under it
+	if read(newDir, "config.yaml") != "finder_cap: 7\n" || read(old, "config.yaml") != "finder_cap: 8\n" ||
+		read(newDir, "state.yaml") != "tabs: []\n" || read(old, "state.yaml") != "" {
+		t.Fatal("an item in both places was moved or deleted, or one in the old place only was not moved")
+	}
 
+	// A move that fails: filu keeps the old one.
+	if err := os.RemoveAll(filepath.Join(home, ".config")); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := moveOldSettings(); err == nil {
-		t.Fatal("moving under a file worked")
+	if err := os.WriteFile(filepath.Join(home, ".config"), nil, 0o644); err != nil { // a file: nothing goes under it
+		t.Fatal(err)
+	}
+	if m := moveOldSettings(); m.err == nil || read(old, "config.yaml") != "finder_cap: 8\n" {
+		t.Fatalf("moving under a file: %+v", m)
 	}
 	if got, _ := filuConfigDir(); got != old {
 		t.Fatalf("after a failed move the settings directory is %s", got)
 	}
+}
+
+// Started on settings in both places, filu says so with both paths
+// (tdp E3).
+func TestE3FoundInTwoPlaces(t *testing.T) {
+	if legacyConfigDir("/") == "" {
+		t.Skip("only macOS had another place")
+	}
+	hs := newHarness(t, 120, 40, nil)
+	t.Setenv("FILU__CONFIG", "")
+	oldC := configPathOverride
+	configPathOverride = ""
+	defer func() { configPathOverride = oldC }()
+	old, cur := legacyConfigDir(hs.home), filepath.Join(hs.home, ".config", "filu")
+	for _, dir := range []string{old, cur} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("finder_cap: 7\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	hs.a = NewApp(hs.root, "")
+	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
+	hs.run(hs.a.start())
+	hs.has("FOUND IN TWO PLACES", "Support/filu/config.yaml", ".config/filu/config.yaml")
 }
 
 // config.yaml takes the family's shared settings (tdp E3).

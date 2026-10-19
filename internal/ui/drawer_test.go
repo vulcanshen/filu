@@ -2,6 +2,7 @@ package ui
 
 import (
 	"archive/zip"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -24,6 +25,9 @@ func TestMarksPickUnmarkClear(t *testing.T) {
 	hs.keys("p")
 	if got := hs.a.marks.landItems(); !slices.Equal(got, []string{hs.path("b.txt")}) {
 		t.Fatalf("the picks: %v", got)
+	}
+	if got := hs.a.marksL.Marked(); !slices.Equal(got, []string{hs.path("b.txt")}) {
+		t.Fatalf("[3] Marks ticks %v", got)
 	}
 	hs.keys("1")
 	hs.to("dest")
@@ -50,7 +54,7 @@ func TestMarksPickUnmarkClear(t *testing.T) {
 }
 
 // Enter on a mark shows it in [1]: the tab on its directory, or a new one;
-// the focus stays in [3] (tdp K3) and a toast says where to look.
+// the focus goes there, as the user going there expects (tdp K3).
 func TestMarkShowInTabs(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"sub/deep.txt": "", "top.txt": ""})
 	hs.a.cd(hs.path("sub"), "")
@@ -61,10 +65,9 @@ func TestMarkShowInTabs(t *testing.T) {
 	if len(hs.a.tabs) != 2 || hs.a.cur().dir != hs.path("sub") || hs.cursor() != "deep.txt" {
 		t.Fatalf("Enter on the mark: %d tabs, on %s, cursor on %q", len(hs.a.tabs), hs.a.cur().dir, hs.cursor())
 	}
-	if hs.a.screen.Focused() != hs.a.drawer {
-		t.Fatal("Enter moved the focus")
+	if hs.a.screen.Focused() != hs.a.files {
+		t.Fatal("Enter left the focus in [3]")
 	}
-	hs.has("In [1]")
 }
 
 // Z packs the picks into a zip that becomes the only pick, to land with c.
@@ -98,7 +101,43 @@ func TestZip(t *testing.T) {
 	}
 }
 
-// Tasks: Enter takes [1] to where it landed; D takes it out of the log.
+// Zip offers the name filu would give the zip in grey; Enter with nothing
+// typed takes it (tdp S6).
+func TestZipSuggestsAName(t *testing.T) {
+	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "A", "b.txt": "B"})
+	for _, n := range []string{"a.txt", "b.txt"} {
+		hs.to(n)
+		hs.keys("m")
+	}
+	hs.keys("3", "Z")
+	hs.has("work.zip")
+	hs.keys("Enter")
+	hs.drain()
+	if len(hs.a.tasks) != 1 || hs.a.tasks[0].dest != "work.zip" {
+		t.Fatalf("the tasks: %+v", hs.a.tasks)
+	}
+}
+
+// A running task's row has the turning loading icon: filu keeps the frames
+// coming while the Tasks tab shows one.
+func TestRunningTaskSpins(t *testing.T) {
+	hs := newHarness(t, 120, 40, nil)
+	hs.a.addTask("cp", "x", hs.root, []string{"a"})
+	if hs.a.t.Spinning() {
+		t.Fatal("spinning with the Tasks tab hidden")
+	}
+	hs.keys("3", "l")
+	if !hs.a.t.Spinning() {
+		t.Fatal("not spinning with a running task shown")
+	}
+	hs.a.tasks[0].status = taskDone
+	if hs.a.t.Spinning() {
+		t.Fatal("spinning with no task running")
+	}
+}
+
+// Tasks: Enter takes [1] to where it landed, and the focus with it; D takes
+// it out of the log.
 func TestTasks(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "A", "dest/": ""})
 	hs.to("a.txt")
@@ -110,26 +149,26 @@ func TestTasks(t *testing.T) {
 	hs.keys("3", "l")
 	hs.has("Copied a.txt → dest")
 	hs.keys("Enter")
-	if hs.a.cur().dir != hs.path("dest") {
+	if hs.a.cur().dir != hs.path("dest") || hs.a.screen.Focused() != hs.a.files {
 		t.Fatalf("Enter on the task: [1] is on %s", hs.a.cur().dir)
 	}
-	hs.keys("D")
+	hs.keys("3", "D")
 	if len(hs.a.tasks) != 0 {
 		t.Fatal("D did not take the task out of the log")
 	}
 }
 
-// Favorites: Enter goes there, o chooses the tab, D asks and takes the star
-// off.
+// Favorites: Enter goes there, and the focus with it; o chooses the tab, D
+// asks and takes the star off.
 func TestFavoritesTab(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"proj/": ""})
 	hs.to("proj")
 	hs.keys("f", "3", "l", "l", "Enter")
-	if hs.a.cur().dir != hs.path("proj") {
+	if hs.a.cur().dir != hs.path("proj") || hs.a.screen.Focused() != hs.a.files {
 		t.Fatalf("Enter on the favorite: [1] is on %s", hs.a.cur().dir)
 	}
-	hs.keys("o")
-	hs.has("OPEN IN", "a tab of its own", "already there")
+	hs.keys("3", "o")
+	hs.has("OPEN IN: ~/work/proj", "a tab of its own", "already there")
 	hs.keys("Esc", "Esc", "D") // the first Esc takes the toast (tdp K4)
 	hs.has("Take the star off")
 	hs.keys("Enter")
@@ -190,46 +229,104 @@ func TestFavoritesAndTasksAreData(t *testing.T) {
 	}
 }
 
-// Quitting asks, says where the shell goes, and tells the shell function
-// (cd-on-quit); Quit to chooses another directory.
+// Favorites in state.yaml while data.yaml has its own stay in state.yaml, not
+// deleted, and filu says so with both paths (tdp E3).
+func TestFavoritesInTwoPlaces(t *testing.T) {
+	hs := newHarness(t, 120, 40, map[string]string{"proj/": "", "other/": ""})
+	for path, body := range map[string]string{
+		statePathOverride: "pinned:\n  - " + hs.path("other") + "\n",
+		dataPathOverride:  "favorites:\n  - " + hs.path("proj") + "\n",
+	} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	hs.a = NewApp(hs.root, "")
+	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
+	hs.run(hs.a.start())
+	hs.has("FOUND IN TWO PLACES", "state.yaml", "data.yaml")
+	if set := hs.a.favs.pinnedSet(); !set[hs.path("proj")] || set[hs.path("other")] {
+		t.Fatalf("favorites %v", hs.a.favs.pinned)
+	}
+	hs.a.shutdown()
+	if state, _ := os.ReadFile(statePathOverride); !strings.Contains(string(state), hs.path("other")) {
+		t.Fatalf("a save took the old favorites out of state.yaml:\n%s", state)
+	}
+}
+
+// Quitting confirms; run by a shell that goes where filu leaves it, q is a
+// menu of where: the directory filu started in, then each tab's.
 func TestQuit(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"sub/": ""})
-	last := filepath.Join(hs.home, "lastdir")
-	t.Setenv(envLastDirFile, last)
-	hs.a.syncQuit()
-	hs.to("sub")
-	hs.keys("Enter", "q")
-	hs.has("Quit filu?", "Your shell goes to ~/work/sub.")
+	hs.keys("q")
+	hs.has("Quit filu?")
 	hs.keys("Enter")
 	if !hs.quit {
 		t.Fatal("Enter on the quit confirm did not quit")
 	}
-	hs.a.shutdown()
-	if b, _ := os.ReadFile(last); string(b) != hs.path("sub") {
-		t.Fatalf("the shell is told %q", b)
-	}
 
-	hs = newHarness(t, 120, 40, map[string]string{"sub/": ""})
-	t.Setenv(envLastDirFile, last)
-	hs.to("sub")
-	hs.keys("Enter", "Q")
-	hs.has("QUIT TO", "where filu started")
-	hs.keys("1")
-	if !hs.quit {
-		t.Fatal("choosing a directory did not quit")
-	}
-	hs.a.shutdown()
-	if b, _ := os.ReadFile(last); string(b) != hs.root {
-		t.Fatalf("the shell is told %q", b)
+	for _, c := range []struct {
+		key  string
+		want func(*harness) string
+	}{
+		{"1", func(hs *harness) string { return hs.root }},
+		{"2", func(hs *harness) string { return hs.path("sub") }},
+	} {
+		hs := newHarness(t, 120, 40, map[string]string{"sub/": ""})
+		last := filepath.Join(hs.home, "lastdir")
+		t.Setenv(envLastDirFile, last)
+		hs.a.syncQuit()
+		hs.to("sub")
+		hs.keys("Enter", "q")
+		hs.has("QUIT", "YOUR SHELL GOES TO", "~/work", "where filu started", "~/work/sub", "tab 1", "Enter:quit")
+		hs.keys(c.key)
+		if !hs.quit {
+			t.Fatalf("%s on the quit menu did not quit", c.key)
+		}
+		hs.a.shutdown()
+		if b, _ := os.ReadFile(last); string(b) != c.want(hs) {
+			t.Fatalf("%s: the shell is told %q", c.key, b)
+		}
 	}
 }
 
-// A running task makes the quit confirm warn.
+// A second Ctrl-C during the quit menu leaves at once (tdp K9).
+func TestQuitMenuSecondCtrlC(t *testing.T) {
+	hs := newHarness(t, 120, 40, nil)
+	t.Setenv(envLastDirFile, filepath.Join(hs.home, "lastdir"))
+	hs.a.syncQuit()
+	hs.keys("Ctrl-C")
+	hs.has("YOUR SHELL GOES TO")
+	hs.keys("Ctrl-C")
+	if !hs.quit {
+		t.Fatal("a second Ctrl-C did not quit")
+	}
+}
+
+// A running task makes quitting warn: the confirm, or choosing in the menu.
 func TestQuitWarnsOfARunningTask(t *testing.T) {
 	hs := newHarness(t, 120, 40, nil)
 	hs.a.addTask("cp", "x", hs.root, []string{"a"})
 	hs.keys("q")
 	hs.has("A task is still running")
+
+	hs = newHarness(t, 120, 40, nil)
+	t.Setenv(envLastDirFile, filepath.Join(hs.home, "lastdir"))
+	hs.a.addTask("cp", "x", hs.root, []string{"a"})
+	hs.keys("q", "1")
+	hs.has("A task is still running", "Quit filu, your shell in ~/work?")
+	if hs.quit {
+		t.Fatal("quit without asking while a task runs")
+	}
+	hs.keys("Esc")
+	hs.has("YOUR SHELL GOES TO") // back to the menu (tdp T1)
+	hs.keys("1", "Enter")
+	if !hs.quit {
+		t.Fatal("quitting once asked did not quit")
+	}
 }
 
 // The search finder lists what is under the directory; choosing a file
@@ -243,6 +340,27 @@ func TestNameFinder(t *testing.T) {
 	hs.keys("Enter", "Enter")
 	if hs.a.cur().dir != hs.path("deep/er") || hs.cursor() != "needle.txt" {
 		t.Fatalf("[1] is on %s, the cursor on %q", hs.a.cur().dir, hs.cursor())
+	}
+	hs.hasNot("SEARCH") // the menu it was opened from is gone too (tdp T1)
+}
+
+// What is typed starting with / or ~/ is a path: the finder lists what is
+// under the deepest directory it names, outside the tab's directory too.
+func TestPathSearch(t *testing.T) {
+	for _, typed := range []string{"~/work/h", "<root>/h"} {
+		hs := newHarness(t, 120, 40, map[string]string{"deep/er/needle.txt": "", "hay.txt": ""})
+		hs.a.cd(hs.path("deep"), "")
+		hs.keys("/", "f")
+		hs.drain()
+		hs.hasNot("hay.txt")
+		hs.keys(strings.Replace(typed, "<root>", hs.root, 1))
+		hs.drain()
+		hs.has("~/work/hay.txt")
+		hs.hasNot("needle.txt")
+		hs.keys("Enter", "Enter")
+		if hs.a.cur().dir != hs.root || hs.cursor() != "hay.txt" {
+			t.Fatalf("%s: [1] is on %s, the cursor on %q", typed, hs.a.cur().dir, hs.cursor())
+		}
 	}
 }
 
@@ -269,18 +387,31 @@ func TestContentSearchWithoutRipgrep(t *testing.T) {
 	hs.has("ripgrep (rg) is not installed")
 }
 
-// Content search asks for the text, then lists the files that hold it.
+// Content search lists the files that hold what is typed, as it is typed,
+// each previewed from its first match.
 func TestContentSearch(t *testing.T) {
 	if _, err := lookPath("rg"); err != nil {
 		t.Skip("ripgrep is not installed")
 	}
-	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "nothing\n", "b.txt": "one\ntwo needle\n"})
-	hs.keys("/", "c", "needle", "Enter")
+	var long []string
+	for i := 1; i <= 100; i++ {
+		long = append(long, fmt.Sprintf("alpha%02d", i))
+	}
+	long[14] = "a needle here"
+	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "nothing\n", "c.txt": strings.Join(long, "\n") + "\n"})
+	hs.keys("/", "c")
 	hs.drain()
-	hs.has("b.txt")
-	hs.hasNot("a.txt   ")
-	if hs.a.hits[hs.path("b.txt")] != 2 {
-		t.Fatalf("the hit is on line %d", hs.a.hits[hs.path("b.txt")])
+	hs.has("a.txt") // nothing typed: everything
+	hs.keys("needle")
+	hs.drain()
+	hs.has("c.txt", "a needle here", "alpha13")
+	hs.hasNot("a.txt   ", "alpha01")
+	if it := hs.a.finder.Items; len(it) != 1 || it[0].Line != 15 {
+		t.Fatalf("found %+v", it)
+	}
+	hs.keys("Enter", "Enter")
+	if hs.cursor() != "c.txt" {
+		t.Fatalf("the cursor is on %q", hs.cursor())
 	}
 }
 

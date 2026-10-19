@@ -3,7 +3,6 @@ package ui
 import (
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -55,30 +54,6 @@ func cleanDir(dir string) string { return filepath.Clean(dir) }
 // sortRulesFor is the sort chain stored for dir (nil = the default order).
 func sortRulesFor(dir string) []sortRule { return sortByDir[cleanDir(dir)] }
 
-// sort arrows (Nerd Font, so the display-width layer counts them correctly).
-var (
-	sortAscGlyph  = string(rune(0xf161)) // nf-fa-sort_amount_asc
-	sortDescGlyph = string(rune(0xf160)) // nf-fa-sort_amount_desc
-)
-
-func sortColByKey(key string) (sortCol, bool) {
-	for _, d := range sortCols {
-		if d.key == key {
-			return d.col, true
-		}
-	}
-	return 0, false
-}
-
-func sortColTitle(c sortCol) string {
-	for _, d := range sortCols {
-		if d.col == c {
-			return d.title
-		}
-	}
-	return ""
-}
-
 // sortRuleIndex finds col within a chain (-1 when absent).
 func sortRuleIndex(rules []sortRule, c sortCol) int {
 	for i, r := range rules {
@@ -119,83 +94,11 @@ func unsetSortFor(dir string, c sortCol) {
 // resetSortFor clears dir's chain entirely (back to the default order).
 func resetSortFor(dir string) { delete(sortByDir, cleanDir(dir)) }
 
-// sortItems orders entries in place by the given chain: directories first, then
-// each active tier in order, with a case-insensitive name-ascending final
-// tiebreak. A nil/empty chain is just the default (dirs first, name asc).
-func sortItems(items []fileItem, rules []sortRule) {
-	sort.SliceStable(items, func(i, j int) bool {
-		a, b := items[i], items[j]
-		if a.isDir != b.isDir {
-			return a.isDir
-		}
-		for _, r := range rules {
-			c := compareCol(a, b, r.col)
-			if !r.asc {
-				c = -c
-			}
-			if c != 0 {
-				return c < 0
-			}
-		}
-		return strings.ToLower(a.name) < strings.ToLower(b.name)
-	})
-}
-
-func compareCol(a, b fileItem, c sortCol) int {
-	switch c {
-	case sortSize:
-		return cmpInt64(a.size, b.size)
-	case sortMtime:
-		switch {
-		case a.mtime.Before(b.mtime):
-			return -1
-		case a.mtime.After(b.mtime):
-			return 1
-		default:
-			return 0
-		}
-	case sortExt:
-		return strings.Compare(fileExt(a.name), fileExt(b.name))
-	case sortPerm:
-		return strings.Compare(a.perm, b.perm)
-	case sortOwner:
-		return strings.Compare(a.owner, b.owner)
-	default: // sortName
-		return strings.Compare(strings.ToLower(a.name), strings.ToLower(b.name))
-	}
-}
-
-func cmpInt64(a, b int64) int {
-	switch {
-	case a < b:
-		return -1
-	case a > b:
-		return 1
-	default:
-		return 0
-	}
-}
-
-func fileExt(name string) string {
-	return strings.ToLower(strings.TrimPrefix(filepath.Ext(name), "."))
-}
-
-// sortBadgeText is the ASCII tier badge shown in the picker popup (kept ASCII so
-// it can't break the popup's lipgloss-width layout): "asc" / "desc", prefixed
-// "(n) " when more than one tier is active.
-func sortBadgeText(rules []sortRule, c sortCol) string {
-	i := sortRuleIndex(rules, c)
-	if i < 0 {
-		return ""
-	}
-	dir := "asc"
-	if !rules[i].asc {
-		dir = "desc"
-	}
-	if len(rules) > 1 {
-		return "(" + strconv.Itoa(i+1) + ") " + dir
-	}
-	return dir
+// sortItems orders entries by name, A to Z whatever the case: a directory's
+// own order, which the list keeps when it is not sorted. The list keeps the
+// directories first and sorts by the directory's chain (fileRows, sortKeys).
+func sortItems(items []fileItem) {
+	sort.SliceStable(items, func(i, j int) bool { return strings.ToLower(items[i].name) < strings.ToLower(items[j].name) })
 }
 
 // --- sort picker flow (kbu: column → direction → back to the columns, Esc to close) ---

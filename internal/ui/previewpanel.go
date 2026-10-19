@@ -10,8 +10,9 @@ import (
 
 // previewBody is [2]: the preview of the entry under [1]'s cursor, its details
 // (components/layout/panel). The lines depend on the width (an image's data URI
-// folds to it), so they are made when it is drawn.
-// TODO(lib FL3): terminu's file preview is the finder's only; [2] keeps filu's.
+// folds to it), so they are made when it is drawn. It is filu's own rather than
+// terminu's FilePreview, which does not scroll: [2] scrolls, and copies what
+// it shows (dev-remarks).
 type previewBody struct {
 	*terminu.Pager
 	app    *App
@@ -111,7 +112,7 @@ func (a *App) previewActions() []terminu.Action {
 	return []terminu.Action{
 		{Key: "Enter", Label: "View", Desc: "the preview in a viewer, to scroll and copy from", Scope: terminu.PanelScope, Hint: "view",
 			Disabled: func() bool { return !a.hasPreview() }, Do: a.viewPreview},
-		{Key: "y", Label: "yank", Desc: "all of the preview, to the clipboard", Scope: terminu.PanelScope, Hint: "yank",
+		{Key: "y", Label: "Yank", Desc: "all of the preview, to the clipboard", Scope: terminu.PanelScope, Hint: "yank",
 			Disabled: func() bool { return !a.hasPreview() },
 			Do: func() tea.Cmd {
 				return copyToClipboardCmd(plainJoin(a.pb.previewText()), "Copied the preview of "+safeName(a.pb.item.name))

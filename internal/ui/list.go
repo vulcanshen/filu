@@ -25,7 +25,7 @@ type fileItem struct {
 	owner  string    // "user:group" (Owner column + owner sort)
 }
 
-// readEntries lists a directory: directories first, alphabetical, dotfiles
+// readEntries lists a directory: alphabetical (the list puts the directories first), dotfiles
 // hidden unless showHidden. The error (e.g. permission denied) is returned so
 // callers can distinguish "empty" from "unreadable".
 func readEntries(dir string, showHidden bool) ([]fileItem, int, error) {
@@ -60,7 +60,7 @@ func readEntries(dir string, showHidden bool) ([]fileItem, int, error) {
 		}
 		items = append(items, it)
 	}
-	sortItems(items, sortRulesFor(dir)) // directories first, then this dir's sort chain
+	sortItems(items) // by name: the list puts the directories first and sorts by the dir's chain
 	return items, hidden, nil
 }
 

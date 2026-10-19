@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-filu now follows tdp v0.7.4 and is built on terminu-go, the terminu
+filu now follows tdp v0.8.1 and is built on terminu-go, the terminu
 family's shared library: the screen, the `Space` menu, `?`, the popups and
 their animations, confirms, inputs, toasts, the finders, the viewer and the
 shell are the family's own, and look and work the same as in every terminu
@@ -12,11 +12,13 @@ app. What changes for you:
 
 **On macOS the settings move to `~/.config/filu`** (or
 `$XDG_CONFIG_HOME/filu`), as on Linux and in every family app: the first time
-this version starts, it moves `~/Library/Application Support/filu` there and
-says so; if it cannot, it keeps using the old directory and shows both paths
-for you to move it. **Your favorites and the task log move to
-`~/.filu/data.yaml`** (`FILU__DATA` names another directory), the file to back
-up; `state.yaml` keeps only where you were.
+this version starts, it moves what is in `~/Library/Application Support/filu`
+there, one file at a time, says so, and removes the emptied old directory. A
+file the new place already has is left in both places, and filu shows you
+both paths to put them together; if it cannot move them, it keeps using the
+old directory and shows both paths for you to move it. **Your favorites and
+the task log move to `~/.filu/data.yaml`** (`FILU__DATA` names another
+directory), the file to back up; `state.yaml` keeps only where you were.
 
 ### Added
 
@@ -28,44 +30,43 @@ up; `state.yaml` keeps only where you were.
 - `FILU__POWERLINE_WIDTH` and `TERMINU__POWERLINE_WIDTH` set how many cells a
   powerline symbol takes, as the icon ones do; `filu iconwidth` prints both,
   and where each came from. filu's shell gets both family variables.
-- **Quit to** (`Q`, in the global operation popup) chooses where your shell
-  goes and leaves.
 - The finders preview a file with its type, size, modified time and mode
-  under it.
+  under it; a content search's preview starts at the match.
 
 ### Changed
 
-- `q` asks before quitting and says which directory your shell goes to (the
-  tab's you are on); choosing another is **Quit to**.
-- Content search asks for the text first, then lists the files that hold it.
-  Starting a search with `/` or `~/` to search from that path is gone for now.
+- Without the shell function from `filu shell`, `q` asks before quitting
+  instead of listing directories that make no difference. With it, `q` lists
+  where your shell can go as before; while a copy or a move is still running,
+  choosing one asks once more.
 - A finder narrows by the words you type, each as typed and in any order,
   instead of fuzzily; `Enter` on the typing row goes to the list, and `Enter`
   there opens.
 - Rename shows the old name in grey: `Tab` takes it to edit, or type a new
-  one. Zip no longer fills in a name: the box says the one it would choose.
-- `Enter` on a mark, a favorite or a task leaves you in `[3]`; a short message
-  says where `[1]` went.
+  one. Zip suggests its name in grey: `Enter` takes it, or type another.
+- A rename, a new file or a zip that fails as it is written says why over its
+  box, and the box keeps what you typed.
 - `[2]` dims when it does not have the focus, as the other panels do.
-- The sort's direction is chosen with `a` or `D`, and choosing it closes the
-  sort; sort again to add a tie-break. The ascending and descending glyphs in
-  the header were the wrong way round.
+- The sort's direction is chosen with `a` or `D`. The ascending and descending
+  glyphs in the header were the wrong way round.
 - Zoomed, `Tab` moves to the next panel, zoomed too, instead of zooming out.
 - A marked file shows the family's tick; a starred directory shows its star
   after its name, and after the path when you are in it. `[3]` lists have
   column headers.
+- `[1]`'s path is cut from the front when it is too long, instead of
+  shortening the directories to their initials; Breadcrumb is not offered at
+  `/`.
 - In the viewer the selection mode is called Visual; `y` outside it copies
   everything.
-- A running task shows a timer glyph and its count instead of a spinner.
+- A message saying something is done — copied, moved to the trash, starred, a
+  task finished — is green.
+- On a terminal smaller than 60×24 filu shows only how big a terminal it
+  needs, and comes back as it was when the window grows.
 - A `state.yaml` filu cannot read is said when it starts, and left as it is
   instead of being written over with an empty session; so is a directory
   watch that cannot start.
 - `[2]` says in red why it cannot read a file. The viewer shows a text file
   as it is — tabs, control characters, long lines — and copies it unchanged.
-- The content search's preview keeps private keys out with
-  `hide_secrets_in_preview` and names control characters in red.
-- The path row in `[1]` has no line under it; Breadcrumb is not offered at
-  `/`.
 
 ### Removed
 

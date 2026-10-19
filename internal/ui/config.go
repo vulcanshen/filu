@@ -88,35 +88,63 @@ func filuConfigDir() (string, bool) {
 // it until the user moves it (tdp E3).
 var stuckInOld bool
 
-// moveOldSettings moves the settings directory older versions used on macOS
-// (Application Support) to tdp E3's place, the first time filu starts without
-// one there. It reports where from and where to when there was one to move;
-// err says why it could not, and filu then keeps using the old one. A
-// directory named by FILU__CONFIG or XDG_CONFIG_HOME is the user's choice, and
-// is left alone.
-func moveOldSettings() (from, to string, err error) {
+// settingsMove is what moveOldSettings did.
+type settingsMove struct {
+	from, to string
+	moved    bool     // something was moved
+	left     []string // the names the new place had already: left in the old one
+	err      error    // why it could not move them: filu goes on using the old place
+}
+
+// moveOldSettings moves what is in the settings directory older versions used
+// on macOS (Application Support) to tdp E3's place, one item at a time: what
+// the new place has already stays where it is, for the user to put together,
+// and the old directory goes once it is empty. When an item cannot be moved
+// the ones moved go back, and filu keeps using the old place. A directory
+// named by FILU__CONFIG or XDG_CONFIG_HOME is the user's choice, and is left
+// alone.
+func moveOldSettings() settingsMove {
 	if configPathOverride != "" || os.Getenv("FILU__CONFIG") != "" || os.Getenv("XDG_CONFIG_HOME") != "" {
-		return "", "", nil
+		return settingsMove{}
 	}
-	home, herr := os.UserHomeDir()
-	if herr != nil || home == "" {
-		return "", "", nil
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return settingsMove{}
 	}
-	from = legacyConfigDir(home)
-	if from == "" || !isDir(from) {
-		return "", "", nil
+	m := settingsMove{from: legacyConfigDir(home), to: filepath.Join(home, ".config", "filu")}
+	if m.from == "" || !isDir(m.from) {
+		return settingsMove{}
 	}
-	to = filepath.Join(home, ".config", "filu")
-	if _, serr := os.Lstat(to); serr == nil {
-		return "", "", nil // already there: the old one is left alone
+	entries, err := os.ReadDir(m.from)
+	if err == nil {
+		err = os.MkdirAll(m.to, 0o755)
 	}
-	if err = os.MkdirAll(filepath.Dir(to), 0o755); err == nil {
-		err = os.Rename(from, to)
+	var done []string
+	for _, e := range entries {
+		if err != nil {
+			break
+		}
+		old, cur := filepath.Join(m.from, e.Name()), filepath.Join(m.to, e.Name())
+		if _, serr := os.Lstat(cur); serr == nil {
+			m.left = append(m.left, e.Name())
+			continue
+		}
+		if err = os.Rename(old, cur); err == nil {
+			done = append(done, e.Name())
+		}
 	}
 	if err != nil {
+		for _, name := range done { // back, so that filu reads one place
+			_ = os.Rename(filepath.Join(m.to, name), filepath.Join(m.from, name))
+		}
 		stuckInOld = true
+		return settingsMove{from: m.from, to: m.to, err: err}
 	}
-	return from, to, err
+	m.moved = len(done) > 0
+	if len(m.left) == 0 {
+		_ = os.Remove(m.from) // empty now
+	}
+	return m
 }
 
 // legacyConfigDir is where filu kept its settings before tdp E3, when that was

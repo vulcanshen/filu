@@ -23,7 +23,7 @@
 - **Copy and move like a desktop.** Mark files as you browse, walk to the destination, press `c` or `v`. Mark across directories and tabs, land the same files in several places, or zip them up first.
 - **Find it fast.** Search file names, search file contents with ripgrep, or jump to any directory under your home — results appear as they are found, with a preview beside them.
 - **Look before you open.** Syntax-highlighted text, archive contents, directory trees, PDFs (their text), images (as a data: URI), hex for binaries. Select part of it and copy it to your clipboard — even over SSH.
-- **Leave where you're working.** Quit and your shell lands in the directory you were in, or one you choose.
+- **Leave where you're working.** Quit and choose where your shell lands: the directory you started in, or any tab's.
 - **Picks up where you left off.** Tabs, marks, favorites, tasks and per-directory sorts survive a restart.
 
 ## Install
@@ -90,7 +90,7 @@ filu opens with the file list focused. These keys cover the rest:
 | **`Enter`** | Go into a directory, see a file's details, or do what the row you are on is for |
 | **`Esc`** | Back out: close the popup on top, or go up a directory |
 | **`Tab`** | The next panel (`Shift-Tab` the one before, `1`–`3` jump to one) |
-| **`q`** | Quit (it asks first) |
+| **`q`** | Quit (it asks first — with the line below, it asks where your shell goes) |
 
 ### Let quitting change your shell's directory
 
@@ -100,7 +100,7 @@ Add this line to `~/.zshrc` or `~/.bashrc`:
 eval "$(filu shell)"
 ```
 
-Then start filu as **`filu`** (not `./filu`). When you quit with `q`, filu says which directory your shell goes to — the one the tab you are on shows. To choose another, open `Space` → **Global operation** → `[Q]uit to` (or press `Q`): the directory you started in, or any tab's. Without the line, filu works the same — quitting just leaves your shell where it was.
+Then start filu as **`filu`** (not `./filu`). `q` then asks where your shell goes: the directory you started in, or any tab's — press its number, or move to it and press `Enter`. While a copy or a move is still running, filu asks once more, since quitting stops it. Without the line, filu works the same — quitting just asks first and leaves your shell where it was.
 
 ## Usage
 
@@ -120,7 +120,8 @@ Three panels:
 
 - `Enter` goes into a directory; on a file it shows the details: full path, type, size, times, permissions, owner. `Esc` goes up; `j|k`, `u|d` for half a page, `gg|G` for top and bottom.
 - `b` jumps up to any of the directories this one is in. `.` shows or hides hidden files.
-- `S` sorts by name, modified time, permissions, owner or size — choose a column, then a direction; sort again to add a tie-break. Directories stay first. The sort sticks to that directory only; `[r] Reset` goes back to names.
+- `S` sorts by name, modified time, permissions, owner or size — choose a column, then a direction. The columns stay open, showing the sort so far, so you can add a tie-break right away; `Esc` closes them. Directories stay first. The sort sticks to that directory only; `[r]eset` goes back to names.
+- As the panel narrows, whole columns make way for the names — the owner first, then the size, the modified time and the permissions.
 - `t` opens a new tab (the same directory, a favorite, or a search), `w` closes the one you are on.
 - Files changed by other programs show up on their own.
 
@@ -128,19 +129,20 @@ Three panels:
 
 - `m` marks a file. Marks stay put while you move around, so you can gather from several directories and tabs.
 - Go where the files belong and press `c` to copy or `v` to move them there. Copying keeps your marks, so you can land them in more than one place.
-- In the **Marks** tab: `Enter` shows the file in `[1]` (in the tab already on its directory, or a new one), `p` picks some of them so that only the picks land, `m` unmarks one, `C` clears them all, `y` copies a path, and `Z` packs what would land — the picks, or every mark — into a zip that you then land with `c` or `v`.
-- Copies, moves and zips run in the background; the **Tasks** tab logs them in plain words, and `Enter` on one takes `[1]` to where it landed. A task cut short by quitting comes back marked as interrupted.
+- In the **Marks** tab: `Enter` shows the file in `[1]` (in the tab already on its directory, or a new one) and takes you there, `p` picks some of them so that only the picks land, `m` unmarks one, `C` clears them all, `y` copies a path, and `Z` packs what would land — the picks, or every mark — into a zip that you then land with `c` or `v`. filu suggests the zip's name in grey: `Enter` takes it, or type your own.
+- Copies, moves and zips run in the background; the **Tasks** tab logs them in plain words, with a spinner and a count on the ones still going, and `Enter` on one takes you to where it landed. A task cut short by quitting comes back marked as interrupted.
 
 #### Find
 
-- **`[/] Search`** — `[f] File names`: everything under the directory, narrowed as you type (every word you type must appear, in any order). `[c] Contents` (ripgrep): type the text to find, then you get the files that hold it, each previewed at its first match.
+- **`[/] Search`** — `[f]ile names`: everything under the directory, narrowed as you type (every word you type must appear, in any order). `[c]ontents` (ripgrep): the files that hold what you type, searched again as you type, each previewed from its first match.
 - **`[go]to`** — jump to a favorite, or search every directory under your home (hidden ones too).
-- Results appear as they're found — start typing right away. While you type, `↑|↓` move among the results; `Enter` or `Tab` goes to the list, where `j|k` move and `Enter` opens the one you are on; `Tab` or `/` goes back to typing; `Esc` closes.
+- In File names and Goto, type a path starting with `/` or `~/` to search from there instead: what is under the deepest directory it names, a few levels down, narrowed by the rest of what you typed — anywhere on the disk (`/usr/lo` finds `/usr/local`; `~/proj/` lists `~/proj`).
+- Results appear as they're found — start typing right away. While you type, `↑|↓` move among the results; `Enter` or `Tab` goes to the list, where `j|k` move and `Enter` opens the one you are on; `Tab` or `/` goes back to typing; `Esc` closes. Each result is previewed beside the list, with its type, size, modified time and mode.
 
 #### Favorites
 
 - `f` stars the directory under the cursor; `F` stars the one you're in. A star shows after a starred directory's name, and after the path when you are in one.
-- The **Favorites** tab lists them: `Enter` goes there (its tab, or a new one), `o` lets you choose the tab, `D` takes the star off (it asks first). `[go]to` → `[f] Favorite` jumps there too.
+- The **Favorites** tab lists them: `Enter` goes there (its tab, or a new one), `o` lets you choose the tab, `D` takes the star off (it asks first). `[go]to` → `[f]avorite` jumps there too.
 
 #### Preview and copy
 
@@ -152,7 +154,7 @@ Three panels:
 
 - `o` opens a file or directory with its default app (it asks first). `O` lets you choose the app — add your own (VSCode, IntelliJ IDEA, …) in the config.
 - `s` drops you into your shell in the current directory (it asks first); type `exit` to come back, or press `Alt-Esc`: filu asks, then `Enter` ends the shell (whatever is running in it) and `Esc` takes you back to it.
-- `r` renames (the old name shows in grey: `Tab` takes it to edit, or just type a new one), `a` creates a file (end the name with `/` for a directory), `D` moves to the trash after asking. A name that is empty, already taken, outside the current directory or holding a control character is refused on the spot — the box stays open and says why.
+- `r` renames (the old name shows in grey: `Tab` takes it to edit, or just type a new one), `a` creates a file (end the name with `/` for a directory), `D` moves to the trash after asking. A name that is empty, already taken, outside the current directory or holding a control character is refused on the spot — the box stays open and says why. If renaming or creating fails all the same (say, no permission), filu says why over the box, and closing that brings you back to what you typed.
 
 ### Key reference
 
@@ -175,16 +177,15 @@ Three panels:
 | Key | Anywhere |
 |---|---|
 | `?` | The keys you can press here; `?` or `Esc` closes the list |
-| `q` · `Ctrl-C` | Quit (asks first); `Ctrl-C` works while typing too, and pressed again it leaves at once |
-| `Q` | Quit to a directory you choose |
+| `q` · `Ctrl-C` | Quit (asks first, or asks where your shell goes); `Ctrl-C` works while typing too, and pressed again it leaves at once |
 
-Every panel's `Space` menu lists what you can do to the item under the cursor, then to the panel, and ends with **Global operation**: the app-wide actions (`[Q]uit to`, `[q] Quit`). A row that can't run right now — say, `[w] Close tab` with only one tab open — is shown dimmed.
+Every panel's `Space` menu lists what you can do to the item under the cursor, then to the panel, and ends with **Global operation**: the app-wide actions (`[q]uit`). A row that can't run right now — say, `[w] Close tab` with only one tab open — is shown dimmed.
 
 ## Configuration
 
 Your settings live in `config.yaml`, in `$XDG_CONFIG_HOME/filu/` (or `~/.config/filu/`); `FILU__CONFIG` names another directory. filu writes a commented copy the first time it runs and never overwrites yours. Next to it, `state.yaml` holds where you were — the tabs, the marks, each directory's sort — leave that one to filu (`FILU__STATE` puts it in another directory). Your favorites and the task log are in `~/.filu/data.yaml` (`FILU__DATA` names another directory): that is the one to back up.
 
-On macOS, versions up to 0.4.0 kept everything in `~/Library/Application Support/filu/`. The first time this version starts, it moves that directory to `~/.config/filu/` and says so; if it cannot, it keeps using the old one and shows you both paths, to move it yourself. Favorites and the task log move out of `state.yaml` into `~/.filu/data.yaml` the same way.
+On macOS, versions up to 0.4.0 kept everything in `~/Library/Application Support/filu/`. The first time this version starts, it moves what is in there to `~/.config/filu/` and says so, and removes the emptied old directory. A file `~/.config/filu/` already has is left alone in both places, and filu shows you both paths so you can put the two together yourself. If filu cannot move them, it keeps using the old directory and shows you both paths, to move it yourself. Favorites and the task log move out of `state.yaml` into `~/.filu/data.yaml` the same way: if `data.yaml` already has its own, the ones in `state.yaml` stay there, and filu tells you.
 
 ```yaml
 # How many entries a finder scans before it stops. Goto walks all of $HOME,
@@ -226,6 +227,7 @@ Not there, on purpose:
 - **the mouse** — everything is on the keyboard
 - **directory sizes** — a directory's size shows as `-`; filu never adds up a whole tree
 - **pictures** — an image shows as its data: URI, not drawn
+- **a terminal smaller than 60×24** — filu shows only how big a terminal it needs; make the window larger and everything is back as it was
 
 ## Links
 
