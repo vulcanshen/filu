@@ -92,8 +92,9 @@ func TestSortKeepsDirectoriesFirst(t *testing.T) {
 	hs.hasNot(glyphSortDesc)
 }
 
-// As the panel narrows the columns go whole and in order — the owner, the
-// size, the modified time, the permissions — and the name stays.
+// As the panel narrows, once the name is down to its least width the columns
+// go whole and in order — the owner, the size, the modified time, the
+// permissions — and the name stays.
 func TestColumnsLeaveInOrder(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"notes.md": "hello"})
 	steps := [][]string{
@@ -121,6 +122,22 @@ func TestColumnsLeaveInOrder(t *testing.T) {
 	}
 	if at != len(steps)-1 {
 		t.Fatalf("at 16 cells the columns are %v", steps[at])
+	}
+}
+
+// One long name is cut short and the other columns stay whole: the name gives
+// way down to 12 cells before any column goes (components/layout/panel).
+func TestALongNameIsCutShort(t *testing.T) {
+	long := "a-rather-long-file-name-that-will-not-fit-in-a-narrow-panel.go"
+	hs := newHarness(t, 120, 40, map[string]string{long: "", "b.txt": ""})
+	lines := tabLines(hs, 80)
+	for _, title := range []string{"MODIFIED", "OWNER", "PERMS", "SIZE", "NAME"} {
+		if !strings.Contains(lines[1], title) {
+			t.Fatalf("at 80 cells the header is %q", lines[1])
+		}
+	}
+	if s := strings.Join(lines, "\n"); strings.Contains(s, long) || !strings.Contains(s, "a-rather-long") || !strings.Contains(s, "…") {
+		t.Fatalf("the long name is not cut short:\n%s", s)
 	}
 }
 

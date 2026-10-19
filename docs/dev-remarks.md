@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.8.1），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.2.0）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.8.2），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.2.1）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -41,8 +41,10 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 ### 各功能的實作備註
 
 - **檔案清單的欄位** —— `Modified`、`Owner`（user:group）、`Perms`（eza 配色：`r` 黃、`w` 紅、`x` 綠）、`Size`（eza 的
-  color-scale，越大越暖；目錄顯示 `-`，絕不遞迴加總）、icon + 檔名，前面是 lib 的標記欄。放不下時 lib 依 `Column.Drop` 整欄收掉：
-  owner → size → modified → perms，檔名永遠留著；剩下的還放不下才照比例縮（`files.go` 的 `fileColumns`）。
+  color-scale，越大越暖；目錄顯示 `-`，絕不遞迴加總）、icon + 檔名，前面是 lib 的標記欄。欄寬照 tdp S13（v0.8.2）：檔名是可以截短的欄
+  （`Column.Shrink`），吃其他欄留下的寬度；其他欄照最寬的值、不縮。放不下時檔名先縮到 12 格（`MinWidth`），還放不下 lib 才依
+  `Column.Drop` 整欄收掉：owner → size → modified → perms，檔名永遠留著（`files.go` 的 `fileColumns`）。一個很長的檔名只會被截短，
+  不會把其他欄擠掉。`[3]` 的名稱、路徑、task 的白話也標成可以截短。
 - **排序** —— lib 排（`List.SortBy`）：每一列的 `Row.SortGroup` 讓目錄在前、排序只在群裡；`Row.Sort` 給排序用的值（大小是 bytes、
   時間是固定寬的 UTC 字串、名稱是原名）。filu 只交出照名稱排好的列（`sortItems`，不分大小寫），沒有排序時 lib 照這個順序；排序鏈
   每個目錄各自記住、存進 `state.yaml`（`sortByDir`）。表頭的順位與方向 glyph 是 lib 畫的。
@@ -156,21 +158,12 @@ filu/
   「只畫名稱與要多大」，`screen_test.go` 量到 1×1。
 - **`[2]` 用 filu 自己的預覽、不用 lib 的 `FilePreview`**：`FilePreview` 不收鍵、不捲，`[2]` 要能捲、`Enter` 打開檢視、`y` 複製，
   圖片的 data URI 也要照寬度折，所以 `[2]` 是 `Pager` 加 filu 的預覽。
-- **Tasks 窄的時候先收 `WHEN`**（`Column.Drop`）：任務的白話比時間重要，放不下時時間整欄先走，再縮任務。
+- **Tasks 窄的時候先截任務、再收 `WHEN`**（`Column.Shrink`、`Drop`）：任務的白話先截到最少寬度，還放不下時間整欄走；白話比時間重要。
 
 ### 暫定（自己定的，等 user 確認）
 
 - **`[3]` 的欄位**：Marks、Favorites 是 `NAME` 與 `IN`（所在目錄，從前面截）；Tasks 是 `WHEN` 與 `TASK`。理由：名稱與所在目錄分兩欄，
   名稱不會被長路徑擠掉，`IN` 從前面截、留下最近的幾層；Tasks 照時間讀，所以時間放前面。
-
-### 定案了、等 terminu-go 下一版的
-
-- **`[1]` 的名稱欄可以截短，先縮名稱、再整欄收**（FL23，user 2026-10-19 定 A，`TODO(lib FL23)`）：tdp S13 改寫成 app 標出可以截短的欄
-  （名稱），它吃剩下的寬度、照自己的截法截，短欄照最寬的值不縮；放不下時先把可以截短的縮到最少寬度（filu 是 12 格），還放不下才照
-  `Drop` 整欄收。現在照 lib 的舊做法：欄寬是最寬的那個值，目錄裡只要有一個很長的檔名，其他欄就全部收掉、只剩 NAME（排序的那一欄
-  也可能被收掉，看不到排序）。
-- **`[go]to` 的 label 改回 `Goto`**（FL24，terminu：lib 的錯，修正版會修，`TODO(lib FL24)`）：lib 只在 label 以兩個字母的熱鍵開頭、
-  大小寫也一樣時原地包，`Goto` 會畫成 `[go] Goto`；現在寫小寫 `goto`，畫面就是 tdp S9 要的 `[go]to`。
 
 ## 已否決，不要重提
 
@@ -191,8 +184,8 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
 
 ## 偏離 tdp
 
-目前沒有；還沒符合 tdp、在等 lib 的地方也沒有（`docs/filu-terminu-fix.md` 已經刪掉），等 lib 的兩件（FL23、FL24）見「定案了、等 terminu-go 下一版的」。zoom
-時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 位置列後面的星、`[3]` 各清單的欄位是 panel 的內容。
+目前沒有；還沒符合 tdp、在等 lib 的地方也沒有（`docs/filu-terminu-fix.md` 已經刪掉，最後兩件 FL23、FL24 在 terminu-go v0.2.1 修好）。
+zoom 時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 位置列後面的星、`[3]` 各清單的欄位是 panel 的內容。
 
 ## 設計文件導讀
 
@@ -239,6 +232,8 @@ command（動畫、背景的 channel）、讀 `Frame()`。session、設定、垃
   是真的 32ms 一格，所以這組測試要幾十秒。
 - **背景的 channel**：harness 執行讀 channel 的 command（`waitFind` 之類）最多等 150ms；等不到時那個讀還在，之後讀到的訊息放進
   `harness.late` 再交給 filu，不會掉。搜尋是邊打邊找的，少了這一步，打字後的第一批結果會被上一次留下來的讀拿走。
+- **背景讀的預覽**：lib 的 finder 預覽在畫的時候記下要讀什麼、下一次 update 才開始讀（tdp file-picker 的「在背景讀」）。harness 的
+  `has`、`hasNot` 先 `settle`（畫一次、送一次 update，三回），像終端機接下來的幾格畫面，讀完的預覽才會在畫面上。
 - **lib 的檢查**：`terminu.App` 在登記時就拒絕佔用 core key 或移動字母的熱鍵（popup 裡也一樣，例：menu 不能用 `d`）—— 新加的
   menu 要在測試裡打開過一次，才知道沒踩到。
 

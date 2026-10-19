@@ -177,13 +177,15 @@ func (a *App) build() {
 	a.preview = &terminu.Panel{Label: "Preview", Body: a.pb}
 	a.preview.Actions = a.previewActions()
 	a.files.Details = a.preview
-	a.marksL = &terminu.List{Columns: []terminu.Column{{Title: "Name"}, {Title: "In", Path: true}}, Marks: true,
+	// The names and the paths are long values, cut short as [3] narrows
+	// (components/layout/panel).
+	a.marksL = &terminu.List{Columns: []terminu.Column{{Title: "Name", Shrink: true}, {Title: "In", Path: true, Shrink: true}}, Marks: true,
 		EmptyFact: "No marks yet", EmptyHint: "Press [m] on a file in [1] to mark it"}
-	// Narrow, a task's time goes before its words are cut.
-	a.tasksL = &terminu.List{Columns: []terminu.Column{{Title: "When", Drop: 1}, {Title: "Task"}},
+	// Narrow, a task's words are cut short first, then its time goes.
+	a.tasksL = &terminu.List{Columns: []terminu.Column{{Title: "When", Drop: 1}, {Title: "Task", Shrink: true}},
 		EmptyFact: "No tasks yet", EmptyHint: "Mark files, then press [c] or [v] in [1] to copy or move them there"}
 	a.tb = &tasksBody{List: a.tasksL, app: a}
-	a.favsL = &terminu.List{Columns: []terminu.Column{{Title: "Name"}, {Title: "In", Path: true}},
+	a.favsL = &terminu.List{Columns: []terminu.Column{{Title: "Name", Shrink: true}, {Title: "In", Path: true, Shrink: true}},
 		EmptyFact: "No favorites yet", EmptyHint: "Press [f] on a directory in [1] to star it"}
 	a.drawer = &terminu.Panel{Label: "Marks", Tabs: []string{"Tasks", "Favorites"}, Body: a.marksL, OnTab: a.drawerTab}
 	a.drawer.Actions = a.drawerActions()

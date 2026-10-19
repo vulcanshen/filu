@@ -203,9 +203,20 @@ func (hs *harness) frame() []string {
 // screen is the frame in one string, to search and to show on a failure.
 func (hs *harness) screen() string { return strings.Join(hs.frame(), "\n") }
 
+// settle lets what a frame sets off reading come in, as a terminal's next
+// frames would: a finder's preview is read off the update loop, asked for when
+// it is drawn and started by the update after.
+func (hs *harness) settle() {
+	for range 3 {
+		hs.a.t.Frame()
+		hs.send(nil)
+	}
+}
+
 // has fails the test unless the screen shows every one of want.
 func (hs *harness) has(want ...string) {
 	hs.t.Helper()
+	hs.settle()
 	s := hs.screen()
 	for _, w := range want {
 		if !strings.Contains(s, w) {
@@ -217,6 +228,7 @@ func (hs *harness) has(want ...string) {
 // hasNot fails the test when the screen shows any of these.
 func (hs *harness) hasNot(not ...string) {
 	hs.t.Helper()
+	hs.settle()
 	s := hs.screen()
 	for _, w := range not {
 		if strings.Contains(s, w) {

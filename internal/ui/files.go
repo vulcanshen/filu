@@ -96,17 +96,16 @@ const (
 // allFileCols are the columns in the order they are drawn; the name is last.
 var allFileCols = []fileCol{colModified, colOwner, colPerms, colSize, colName}
 
-// fileColumns are the list's columns, as allFileCols draws them. As the panel
-// narrows they go whole — the owner, then the size, the modified time and the
-// permissions — and the name stays (components/layout/panel).
-// TODO(lib FL23): a column is as wide as its widest value, so one long name
-// takes every other column away.
+// fileColumns are the list's columns, as allFileCols draws them. The name takes
+// what the others leave, cut short down to 12 cells; past that the others go
+// whole — the owner, then the size, the modified time and the permissions —
+// and the name stays (components/layout/panel).
 var fileColumns = []terminu.Column{
 	{Title: "Modified", Drop: 3},
 	{Title: "Owner", Drop: 1},
 	{Title: "Perms", Drop: 4},
 	{Title: "Size", Number: true, Drop: 2},
-	{Title: "Name"},
+	{Title: "Name", Shrink: true, MinWidth: 12},
 }
 
 // colOfSort is the column a sort column sorts.

@@ -66,8 +66,7 @@ func (a *App) filesActions() []terminu.Action {
 		{Key: "v", Label: "Move here", Desc: "the marked files, into this directory", Scope: panel, Hint: "move",
 			Disabled: a.nothingMarked, Do: func() tea.Cmd { return a.land(true) }},
 		{Key: "/", Label: "Search", Desc: "file names or contents, under this directory", Scope: panel, Do: a.searchMenu},
-		// TODO(lib FL24): "Goto" once a two-letter hotkey meets its label in either case ([go]to, tdp S9).
-		{Key: "go", Label: "goto", Desc: "a favorite, or any directory under your home", Scope: panel, Do: a.gotoMenu},
+		{Key: "go", Label: "Goto", Desc: "a favorite, or any directory under your home", Scope: panel, Do: a.gotoMenu},
 		{Key: "F", Label: "Favorite here", Desc: "the directory you are in, or take its star off", Scope: panel,
 			Do: func() tea.Cmd { return a.toggleFavorite(a.cur().dir) }},
 		{Key: "b", Label: "Breadcrumb", Desc: "up to one of the directories this one is in", Scope: panel,

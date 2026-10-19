@@ -121,7 +121,7 @@ Three panels:
 - `Enter` goes into a directory; on a file it shows the details: full path, type, size, times, permissions, owner. `Esc` goes up; `j|k`, `u|d` for half a page, `gg|G` for top and bottom.
 - `b` jumps up to any of the directories this one is in. `.` shows or hides hidden files.
 - `S` sorts by name, modified time, permissions, owner or size — choose a column, then a direction. The columns stay open, showing the sort so far, so you can add a tie-break right away; `Esc` closes them. Directories stay first. The sort sticks to that directory only; `[r]eset` goes back to names.
-- As the panel narrows, whole columns make way for the names — the owner first, then the size, the modified time and the permissions.
+- A long name is cut short so the other columns stay. As the panel narrows further, whole columns make way for the names — the owner first, then the size, the modified time and the permissions.
 - `t` opens a new tab (the same directory, a favorite, or a search), `w` closes the one you are on.
 - Files changed by other programs show up on their own.
 

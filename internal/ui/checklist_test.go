@@ -40,6 +40,15 @@ func TestKeyReferenceListsShiftTab(t *testing.T) {
 	}
 }
 
+// A hotkey goes in place in its label, in either case: [go]to, Mo[v]e here
+// (tdp M5, S9).
+func TestHotkeysInTheirLabels(t *testing.T) {
+	hs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
+	hs.to("a.txt")
+	hs.keys("Space")
+	hs.has("[go]to", "Mo[v]e here", "[o]pen", "New [t]ab", "[w] Close tab")
+}
+
 // From the Space menu, what writes a value back leaves the menu to come back
 // to; a drill-down and a shell clear it (tdp T1).
 func TestWhatTheMenuIsLeftWith(t *testing.T) {
