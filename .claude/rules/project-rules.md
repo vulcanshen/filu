@@ -1,31 +1,46 @@
 ---
-description: filu project conventions (Go / Bubble Tea)
+description: filu project conventions (Go / Bubble Tea / terminu-go)
 globs: *
 ---
 
 # filu Project Rules
 
-filu 是 terminu family 的成員,遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)(tdp),與 kbu 共用技術棧。設計權威見 `.forge/meta/IDEA.md`;開發者備忘(運作方式、設計決定、偏離 tdp)在 `docs/dev-remarks.md`,尚未符合 tdp 的地方在 `docs/filu-terminu-fix.md`。
+filu 是 terminu family 的成員，遵循 [terminu design](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.8.0），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go) 上（Bubble Tea v1）。現行的權威是 `docs/dev-remarks.md`（運作方式、設計決定、
+暫定、等 lib 的事）與 README；`.forge/meta/IDEA.md` 停在 v0.2.0 以前，只當演化史讀。還沒符合 tdp、在等 lib 或規範的地方在
+`docs/filu-terminu-fix.md`（tdp E7；全部修完就刪掉）。
 
 ## Code Quality
-- `gofmt` / `go vet` 乾淨才算完成。
-- 遵循 Effective Go 慣例;命名、錯誤處理比照 kbu 既有 code。
-- 平台分岔操作(metadata / hidden / roots / trash / open)一律走 platform interface,unix 實作用 build tag(`_darwin.go` / `_linux.go` 或 `//go:build darwin || linux`);**不寫 Windows 實作**(`GOOS=windows` 應編譯失敗,這是刻意的)。
-- 保持 `CGO_ENABLED=0` 可靜態編譯(同 kbu);需要 cgo 的方案(如 macOS Cocoa trash)先討論。
+- `make check` 通過才算完成：fmt-check、vet、`go test -race`，有 `go.work` 時加 `check-lib`（關掉 `go.work`、照 `go.mod` 的 terminu-go 版本編譯與測試）。
+- 遵循 Effective Go 慣例；命名、錯誤處理比照 filu 既有的 code。
+- 平台分岔操作（metadata / trash / open）一律用 build tag（`_darwin.go` / `_linux.go` 或 `//go:build darwin || linux`）；**不寫 Windows 實作**（`GOOS=windows` 應編譯失敗，這是刻意的）。
+- 保持 `CGO_ENABLED=0` 可靜態編譯；需要 cgo 的方案（如 macOS Cocoa trash）先討論。
+- `go.mod` 寫發布過的 terminu-go 版本，不用 `replace`；本機用不進版控的 `go.work` 接 `../terminu-go`。
 
 ## Testing
-- 用 table-driven test(比照 kbu),`go test ./...` 綠燈。
-- Bubble Tea model 用 programmatic model test(送 msg、斷言 state / render),不靠真終端。
+- 用 table-driven test，`make check` 綠燈。
+- 畫面用 programmatic test：`internal/ui/harness_test.go` 把按鍵送進 `App.Update`、跑完它發出的 command、讀 `Frame()`，不靠真終端。
+- 整個畫面的跨尺寸、跨寬度測試是 app 的事（`screen_test.go`：每一列都剛好是終端機寬，icon 一格／兩格、powerline 符號一格／兩格，
+  filu 會開的每一類 popup）；單獨量 popup 的框歸 lib（tdp L4、E5、E8）。
+- 修一個錯先寫會紅的測試；改動行為時做 mutation（改回舊行為要紅）。
 
 ## Commits
-- Conventional Commits(`feat:` / `fix:` / `refactor:` / `docs:` …,比照 kbu)。
-- 每次改動可追溯到 IDEA.md 的某個功能或決定。
+- Conventional Commits（`feat:` / `fix:` / `refactor:` / `docs:` …）。
+- 每次改動可追溯到 tdp 的條目、`docs/dev-remarks.md` 的決定，或 user 的要求。
 
 ## Async / UI
-- 長時操作(複製、搬移、watch)跑 goroutine,進度/事件經 channel → `tea.Msg` 餵回 UI,比照 kbu 的 log-stream / watch / PTY 套路。
+- 長時操作（複製、搬移、打包、fd、ripgrep、目錄監看）跑 goroutine，結果經 channel 送回 `App.OnMsg`（terminu-go），不在 update 裡等。
 
 ## tdp 紀律
-- core key(`Tab` / `Enter` / `Esc` / `Space` / `?` / `q`)的意義全 app 不變(tdp K1);新動作先依作用對象判 item / panel / global operation(tdp P3),item / panel 放進 Space menu 對應的區,global 放進 Space menu 最後那一列打開的 global operation popup(tdp M2、M4);`?` 只讀,是 key reference(tdp K6)。
-- letter hotkey 是 menu 某一列的捷徑,只能靠熱鍵觸發的動作是違反(tdp M3)。
-- 一元素一語意(tdp P4);明度當 z-axis(tdp D2);每個 popup 只屬於一類(tdp F1)。
-- 有意不照 tdp 做的,寫進 `docs/dev-remarks.md`「偏離 tdp」並附理由;沒寫理由的列進 `docs/filu-terminu-fix.md`。
+- **畫面是 terminu-go 的**（tdp E8）：Space menu、key reference、popup、confirm、input、toast、finder、viewer、PTY、splash、寬度都用
+  lib 的，lib 做得到的不自己再做一份。lib 做不到或做錯，先用最合理的暫時做法，程式標 `TODO(lib FL<n>)`、`TODO(tdp FL<n>)`，寫進
+  dev-remarks，並回報 terminu。
+- core key（`Tab` / `Enter` / `Esc` / `Space` / `?` / `q` / `1`–`9`）的意義全 app 不變（tdp K1）；`j k u d g G h l` 留給移動，任何動作都不佔（tdp K12）。
+- 新動作先依作用對象判 item / panel / global operation（tdp P3），登記成 `terminu.Action`：item、panel 放在 panel 的 Actions，global 放在
+  `App.Global`（tdp M2、M4）；每個動作都要能從 menu 找到，letter hotkey 只是 menu 某一列的捷徑（tdp M3）；label 照 tdp M5 寫。
+- 會先問的動作用 `Action.Ask`，confirm 才會疊在開它的 Space menu 上（tdp F4、T1）。
+- 一元素一語意（tdp P4）；亮的地方就是有 focus 的地方（tdp P6、F8）；每個 popup 只屬於一類（tdp F1）。
+- 設定、狀態、資料、快取照 tdp E3 放（用「刪掉會怎樣」分）；環境變數寫成 `FILU__<名字>`（tdp E2）。
+- splash 不揭露：不寫進 README、CHANGELOG、release notes、menu、key reference（tdp S2）。
+- 文件與程式註解引用 tdp 一律寫 `tdp X`（例：`tdp K3`），不寫 `Rules X`。
+- 有意不照 tdp 做的，寫進 `docs/dev-remarks.md`「偏離 tdp」並附理由；沒寫理由的列進 `docs/filu-terminu-fix.md`（tdp E7）。
