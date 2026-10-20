@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.0），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.0）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.1），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.1）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -44,19 +44,21 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
   color-scale，越大越暖；目錄顯示 `-`，絕不遞迴加總）、icon + 檔名，前面是 lib 的標記欄。欄寬照 tdp S13（v0.8.2）：檔名是可以截短的欄
   （`Column.Shrink`），吃其他欄留下的寬度；其他欄照最寬的值、不縮。放不下時檔名先縮到 12 格（`MinWidth`），還放不下 lib 才依
   `Column.Drop` 整欄收掉：owner → size → modified → perms，檔名永遠留著（`files.go` 的 `fileColumns`）。一個很長的檔名只會被截短，
-  不會把其他欄擠掉。`[3]` 的名稱、路徑、task 的白話也標成可以截短。
+  不會把其他欄擠掉。最後一欄是最愛的星（Yellow，沒有表頭，也不收）：以前接在檔名後面，檔名一截短星就跟著不見。`[3]` 的名稱、路徑、
+  task 的白話也標成可以截短。
 - **排序** —— lib 排（`List.SortBy`）：每一列的 `Row.SortGroup` 讓目錄在前、排序只在群裡；`Row.Sort` 給排序用的值（大小是 bytes、
   時間是固定寬的 UTC 字串、名稱是原名）。filu 只交出照名稱排好的列（`sortItems`，不分大小寫），沒有排序時 lib 照這個順序；排序鏈
   每個目錄各自記住、存進 `state.yaml`（`sortByDir`）。表頭的順位與方向 glyph 是 lib 畫的。
-- **位置列** —— `[1]` 的第一列是 lib 的 `List.Location`：Lavender、太長從前面截、空目錄也留著。目錄是最愛時後面加一顆 Yellow 的星
-  （`files.go` 的 `location`）。
+- **位置列** —— `[1]` 的第一列是 lib 的 `List.Location`：只寫你在哪裡，整列 Lavender、太長從前面截、空目錄也留著（tdp v0.9.1，FL25）。
+  你在的目錄是不是最愛，看上一層的清單或 `[3]` Favorites。
 - **先問的動作** —— Open、Delete、Shell、Clear、Unfavorite、有工作在跑時的離開用 `Action.AskFor`：執行時才做問句，寫 cursor 那一項的
   名字；從 Space menu 跑時 lib 把 confirm 疊在 menu 上，`Esc` 回到 menu（tdp F4、T1）。
 - **menu 做完之後留不留**（tdp T1）—— lib 預設：開了東西的保留開它的 menu、什麼都沒開的整疊收掉。filu 另外做的：Shell 用
   `Action.Clear`（開 shell 清掉 source）；finder 選了東西就進去，`Done` 先 `App.CloseAll`（drill-down 清掉 source，`revealFound`）；
   排序選了方向用 `Stay` 加 `App.CloseTop(1)` 只關方向那一步，欄位 menu 的說明是 `Action.Live`，回去就看得到新的排序。
-- **讀不了自己的檔** —— `config.yaml`、`state.yaml`、`data.yaml` 讀不到或讀不懂，啟動時一個一個問（tdp E3「讀不了時」，lib 的
-  `App.MoveAside`；`filu.go` 的 `unread`、`askUnread`）：`Enter` 改名成 `.bak`（已有就 `.bak.1`……）再開始 —— 設定寫一份新的範本，
+- **讀不了自己的檔** —— `config.yaml`、`state.yaml`、`data.yaml`、`open_with.yaml`、`ignore_dirs.yaml` 讀不到或讀不懂，啟動時一個
+  一個問（tdp E3「讀不了時」，lib 的 `App.MoveAside`；`filu.go` 的 `unread`、`askUnread`）：`Enter` 改名成 `.bak`（已有就
+  `.bak.1`……）再開始 —— 設定與兩份清單各寫一份新的範本（清單的範本是預設值：`open_with` 空的、`ignore_dirs` 是預設的那一串），
   session 重讀（`reopenSession`，`data.yaml` 也壞了就接著問）；`Esc` 離開，`Run` 回傳路徑與原因，`main` 印到 stderr。問之前不寫回去
   （`keepState`）：寫回去就是把裡面的 tabs、marks、最愛、排序無聲丟掉。filu 沒有快取。
 - **錯誤** —— 目錄監看起不來、搬舊設定失敗，啟動後立刻說（一個用 toast、好幾個用 error popup）。error popup 是一段散文，裡面的
@@ -112,8 +114,14 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
   第一次啟動時裡面的東西一項一項搬到新位置、Info toast 說從哪搬到哪（`moveOldSettings`，tdp E3）：新位置沒有的搬過去；新位置已經有的
   兩邊都不動，開 error popup 寫出兩個路徑讓使用者自己合；搬空的舊目錄刪掉。有一項搬不動就把搬過去的搬回來、照舊用舊的，error popup
   寫出兩個路徑。最愛與 task 紀錄放 `~/.filu/data.yaml`（`FILU__DATA`），以前在 `state.yaml` 的第一次啟動時搬過去（`loadState`）；
-  `data.yaml` 已經有了的話，`state.yaml` 裡的留著、每次存檔照樣寫回去（`leftInState`），一樣開 error popup。`config.yaml` 除了 filu 自己的
-  `finder_cap`、`ignore_dirs`、`open_with`，還收家族共用的 `input_tab_width`、`hide_secrets_in_preview`，交給 lib。
+  `data.yaml` 已經有了的話，`state.yaml` 裡的留著、每次存檔照樣寫回去（`leftInState`），一樣開 error popup。`config.yaml` 只收單一的
+  選項：filu 自己的 `finder_cap`，與家族共用的 `input_tab_width`、`hide_secrets_in_preview`（交給 lib）。
+- **使用者寫的清單** —— `open_with`、`ignore_dirs` 是資料（tdp v0.9.1 E3，FL26）：各一個檔，放在 `data.yaml` 旁邊，檔名就是以前的 key
+  （`lists.go` 的 `userLists`）。沒有檔時寫一份帶註解的預設值（`loadLists`），之後只讀不寫。以前的版本放在 `config.yaml`：啟動時
+  `moveLists` 用 yaml.v3 的 `Node` 讀 `config.yaml`，一項一項搬 —— 那個 key 的值連同它上面的註解寫成新檔，從 `config.yaml` 拿掉，再把
+  filu 範本裡講那一項的段落（`# open_with:` 到下一個 `#` 行）從剩下的註解拿掉，其餘原樣寫回；排在第一個的 key 上面掛的是整份檔的開頭
+  註解，留在原檔。新檔已經在的那一項留在 `config.yaml`、filu 用新檔，開 error popup 寫兩個路徑；`config.yaml` 寫不回去就把寫出的新檔
+  刪掉、照舊從 `config.yaml` 讀（所以 `fileConfig` 還認得這兩個 key），error popup 寫兩個路徑。Info toast 說從哪搬到哪，App Log 每項一行。
 - **檔名裡的控制字元** —— 檔名可能含控制字元（macOS 的 `Icon\r`）。filu 原樣交給 lib：清單的格子、位置列、menu、標題、toast、
   confirm、finder 的列是「名字與短字」，lib 把每個控制字元畫成紅色的名字（`\r`、`\n`、`\x1b`），不丟、不換成空白（components/README
   「控制字元」）。filu 要上色的格子給 `Row.Styled`（`[]terminu.Span`，字照樣留在 `Cells` 讓篩選與排序用；`look.go` 的 `colorPerm`、
@@ -161,7 +169,10 @@ filu/
 - **長時間工作的進度寫在 Tasks 的列裡**（user 2026-10-19 定案）：filu 是單畫面、沒有 statusbar，進度是 app 的內容（`3/10`，執行中的 glyph
   Green）；開著 shell 時看不到，接受。
 - **設定、狀態、資料分開**（tdp E3）：用「刪掉會怎樣」分。tab、marks、每個目錄的排序刪了只是回到預設，是狀態（`state.yaml`，在設定目錄）；
-  最愛與 task 紀錄刪了找不回來、會想備份，是資料（`~/.filu/data.yaml`）。
+  最愛與 task 紀錄刪了找不回來、會想備份，是資料（`~/.filu/data.yaml`）；使用者寫的 `open_with`、`ignore_dirs` 也是，就算內容是 filu
+  怎麼運作（tdp v0.9.1，user 定，FL26）。設定只剩 filu 自己一個一個的選項。
+- **最愛的星在 `[1]` 清單的最後一欄**（user 2026-10-20 定，FL25）：位置列只寫你在哪裡（tdp v0.9.1）；星放在哪是 filu 自己的設計。放在
+  名稱後面時，名稱一截短星就不見；一欄自己的、不收，窄的時候也看得到。
 - **離開**（user 2026-10-19 定案，FL1）：用 `filu shell` 的 function 跑時（有 `FILU__LAST_DIR_FILE`），`q` 是選 shell 停在哪裡的 menu：
   啟動的目錄、再來每個 tab 的（重複的只列一次），選了就離開；有工作在跑時選了先 confirm（`Esc` 回到 menu）。沒有這個變數時選了也
   沒有差別，所以只是一個 confirm（有工作在跑時多一句 Peach 的警告）。
@@ -179,10 +190,12 @@ filu/
 
 - **`[3]` 的欄位**：Marks、Favorites 是 `NAME` 與 `IN`（所在目錄，從前面截）；Tasks 是 `WHEN` 與 `TASK`。理由：名稱與所在目錄分兩欄，
   名稱不會被長路徑擠掉，`IN` 從前面截、留下最近的幾層；Tasks 照時間讀，所以時間放前面。
-- **位置列的星不上色**（FL25，已回報 terminu，`TODO(tdp FL25)`）：lib 的位置列只收純文字、整列 Lavender，以前塞進去的 Yellow 顏色碼
-  現在會畫成名字。先讓星跟位置列同色；位置列能不能接 app 自己的標示與顏色，等規範定。
-- **`open_with`、`ignore_dirs` 留在 `config.yaml`**（FL26，已回報 terminu）：tdp E3 說使用者寫給 app 的清單是資料；這兩份是使用者寫的
-  清單，但內容是 filu 怎麼運作（`[O]pen with` 列哪些 app、搜尋略過哪些目錄），不是使用者的東西，所以先算設定。
+- **`[3]` Favorites 的星照舊在名稱前面**（FL25 讓 filu 自己判斷）：那個清單每一列都是最愛，星是那一列的 icon，跟 Marks 分頁在名稱前面
+  畫檔案類型的 icon 同一個位置；`[1]` 的星是「一堆項目裡哪幾個加了星」的旗標，才放到最後一欄。
+- **兩份清單一份一個檔、檔名照以前的 key**（FL26 的做法）：`open_with.yaml`、`ignore_dirs.yaml` 各自是使用者手寫的清單，彼此無關；
+  `data.yaml` 是 filu 每次存檔都重寫的，手寫的東西放進去，註解會被洗掉、filu 開著時改的也會被蓋掉。
+- **讀不了的 `ignore_dirs.yaml` 移開後，新的一份是預設的那一串、不是空的**：tdp E3 說資料從空的開始，但空的 `ignore_dirs` 是「什麼都
+  不略過」，Goto 會掃進 `node_modules`、`.git`；新的一份跟第一次啟動寫的一樣，比較像「一份新的」。
 
 ## 已否決，不要重提
 
@@ -204,7 +217,7 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
 ## 偏離 tdp
 
 目前沒有；還沒符合 tdp、在等 lib 的地方也沒有（`docs/filu-terminu-fix.md` 已經刪掉，最後兩件 FL23、FL24 在 terminu-go v0.2.1 修好）。
-zoom 時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 位置列後面的星、`[3]` 各清單的欄位是 panel 的內容。
+zoom 時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 清單最後一欄的星、`[3]` 各清單的欄位是 panel 的內容。
 
 ## 設計文件導讀
 

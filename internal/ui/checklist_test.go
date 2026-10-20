@@ -3,6 +3,7 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -141,9 +142,12 @@ func broken(t *testing.T, hs *harness, path string) {
 // why; meanwhile nothing writes over it. Enter moves it to .bak (.bak.1 when
 // that is taken) and filu starts without it (tdp E3-17, E3-18, E3-19).
 func TestE3UnreadableFileIsMovedAside(t *testing.T) {
-	for _, which := range []string{"state", "data", "config"} {
+	for _, which := range []string{"state", "data", "config", "open_with", "ignore_dirs"} {
 		hs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
 		path := map[string]string{"state": statePathOverride, "data": dataPathOverride, "config": configPathOverride}[which]
+		if path == "" { // a list the user writes, next to data.yaml
+			path = filepath.Join(filepath.Dir(dataPathOverride), which+".yaml")
+		}
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -156,6 +160,7 @@ func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 		if b, _ := os.ReadFile(path); string(b) != "tabs: [::" {
 			t.Fatalf("%s: written over before the user said: %q", which, b)
 		}
+		finderIgnoreDirs = nil // the new ignore_dirs.yaml's default should come back
 		hs.keys("Enter")
 		hs.hasNot("MOVE ASIDE")
 		if b, _ := os.ReadFile(path + ".bak.1"); string(b) != "tabs: [::" {
@@ -166,12 +171,22 @@ func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 		}
 		hs.to("a.txt")
 		hs.keys("m")
-		if which == "config" {
+		switch which {
+		case "config":
 			if b, _ := os.ReadFile(path); !strings.Contains(string(b), "finder_cap") {
 				t.Fatalf("no new config.yaml: %q", b)
 			}
-		} else if hs.a.keepState {
-			t.Fatalf("%s: filu still does not save", which)
+		case "open_with", "ignore_dirs":
+			if b, _ := os.ReadFile(path); !strings.HasPrefix(string(b), "# The ") {
+				t.Fatalf("no new %s.yaml: %q", which, b)
+			}
+			if !slices.Equal(finderIgnoreDirs, defaultIgnoreDirs) && which == "ignore_dirs" {
+				t.Fatalf("the new ignore_dirs.yaml is not used: %v", finderIgnoreDirs)
+			}
+		default:
+			if hs.a.keepState {
+				t.Fatalf("%s: filu still does not save", which)
+			}
 		}
 	}
 }

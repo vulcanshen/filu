@@ -137,7 +137,7 @@ func (a *App) open() tea.Cmd {
 	return openFileCmd(p)
 }
 
-// openWith lists the default app and the ones config.yaml names; choosing one
+// openWith lists the default app and the ones open_with.yaml names; choosing one
 // is the confirmation (tdp F6: a choice made in a picker).
 func (a *App) openWith() tea.Cmd {
 	_, p, ok := a.item()

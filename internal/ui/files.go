@@ -21,7 +21,6 @@ type tab struct {
 	err        error // why the directory could not be read
 	showHidden bool
 	list       *terminu.List
-	fav        bool   // the directory is a favorite, for the location row's star
 	logged     string // the read error last put in the App Log, so it goes in once
 }
 
@@ -92,21 +91,27 @@ const (
 	colPerms
 	colSize
 	colName
+	colStar
 )
 
-// allFileCols are the columns in the order they are drawn; the name is last.
-var allFileCols = []fileCol{colModified, colOwner, colPerms, colSize, colName}
+// allFileCols are the columns in the order they are drawn: the name, then the
+// star, last.
+var allFileCols = []fileCol{colModified, colOwner, colPerms, colSize, colName, colStar}
 
 // fileColumns are the list's columns, as allFileCols draws them. The name takes
 // what the others leave, cut short down to 12 cells; past that the others go
 // whole — the owner, then the size, the modified time and the permissions —
-// and the name stays (components/layout/panel).
+// and the name stays (components/layout/panel). So does the star: a favorite
+// directory's flag, content, the app's (components/layout/panel, marked rows),
+// in a column of its own at the end, so that it is not lost after a long name
+// cut short.
 var fileColumns = []terminu.Column{
 	{Title: "Modified", Drop: 3},
 	{Title: "Owner", Drop: 1},
 	{Title: "Perms", Drop: 4},
 	{Title: "Size", Number: true, Drop: 2},
 	{Title: "Name", Shrink: true, MinWidth: 12},
+	{Title: ""},
 }
 
 // colOfSort is the column a sort column sorts.
@@ -145,8 +150,9 @@ func fileRows(t *tab, favs map[string]bool) []terminu.Row {
 
 // fileCell is one entry's value in a column, in its colours: the type's for
 // the name (as eza and ls colour it), eza's for the owner, the permissions and
-// the size. The name is as it is: terminu draws a control character in it by
-// its name, in Red (components/README, control characters).
+// the size, Yellow for a favorite's star. The name is as it is: terminu draws
+// a control character in it by its name, in Red (components/README, control
+// characters).
 func fileCell(it fileItem, c fileCol, fav bool) []terminu.Span {
 	switch c {
 	case colModified:
@@ -157,12 +163,13 @@ func fileCell(it fileItem, c fileCol, fav bool) []terminu.Span {
 		return colorPerm(clipMode(it.perm))
 	case colSize:
 		return colorSize(it)
+	case colStar:
+		if fav {
+			return []terminu.Span{{Text: iconPin, Style: terminu.Fg(terminu.Yellow)}}
+		}
+		return nil
 	}
-	name := []terminu.Span{{Text: fileIcon(it) + " " + it.name, Style: terminu.Fg(terminu.Hex(string(fileColor(it))))}}
-	if fav {
-		name = append(name, terminu.Span{Text: " "}, terminu.Span{Text: iconPin, Style: terminu.Fg(terminu.Yellow)}) // a favorite directory: content, the app's (components/layout/panel)
-	}
-	return name
+	return []terminu.Span{{Text: fileIcon(it) + " " + it.name, Style: terminu.Fg(terminu.Hex(string(fileColor(it))))}}
 }
 
 // fillTab sets a tab's rows from its entries: the directory's sort, the marks
@@ -176,27 +183,13 @@ func (a *App) fillTab(t *tab) {
 		t.logged = why
 		a.t.Log(terminu.Error, "Cannot read the directory "+why)
 	}
-	favs := a.favs.pinnedSet()
-	t.fav = favs[t.dir]
 	t.list.Columns = fileColumns
-	t.list.Location = location(t)
+	t.list.Location = shortPath(t.dir) // where you are, and only that (components/layout/panel, location row)
 	t.list.OnMove = func(terminu.Row) tea.Cmd { a.refreshPreview(); return nil }
-	t.list.SetRows(fileRows(t, favs))
+	t.list.SetRows(fileRows(t, a.favs.pinnedSet()))
 	t.list.SortBy(sortKeys(sortRulesFor(t.dir))...)
 	t.list.EmptyFact, t.list.EmptyHint = emptyDir(t)
 	t.list.SetMarked(a.marks.items)
-}
-
-// location is a tab's location row: where it is, with a star after it when
-// the directory is a favorite (content, the app's; components/layout/panel).
-// TODO(tdp FL25): the star in Yellow, as after a starred name in the list,
-// once a location row can take spans.
-func location(t *tab) string {
-	loc := shortPath(t.dir)
-	if t.fav {
-		loc += " " + iconPin
-	}
-	return loc
 }
 
 // emptyDir is what an empty directory says (components/layout/screen).

@@ -62,7 +62,7 @@ go install github.com/vulcanshen/filu/cmd/filu@latest
 
 ### 第一次啟動
 
-filu 會在設定目錄（見[設定](#設定)）寫一份帶註解的 `config.yaml`，然後打開你啟動它的目錄。沒有別的要設定。
+filu 會在設定目錄寫一份帶註解的 `config.yaml`，在 `~/.filu/` 寫兩份清單 `open_with.yaml`、`ignore_dirs.yaml`（見[設定](#設定)），然後打開你啟動它的目錄。沒有別的要設定。
 
 ### 移除
 
@@ -143,7 +143,7 @@ eval "$(filu shell)"
 
 #### 最愛
 
-- `f` 替 cursor 所在的目錄加星號；`F` 替你所在的目錄加。加了星號的目錄，名稱後面有一顆星；你在那個目錄裡時，路徑後面也有。
+- `f` 替 cursor 所在的目錄加星號；`F` 替你所在的目錄加。加了星號的目錄，那一列最後面有一顆星。
 - **Favorites** tab 列出它們：`Enter` 到那裡（它的 tab，或一個新的），`o` 自己選 tab，`D` 拿掉星號（先問）。`[go]to` → `[f]avorite` 也能跳過去。
 
 #### 預覽與複製
@@ -186,33 +186,17 @@ eval "$(filu shell)"
 
 ## 設定
 
-設定在 `config.yaml`，放在 `$XDG_CONFIG_HOME/filu/`（或 `~/.config/filu/`）；`FILU__CONFIG` 可以指定另一個目錄。filu 第一次執行時會寫一份帶註解的，之後不會蓋掉你的。旁邊的 `state.yaml` 存你上次在哪裡 —— tab、marks、每個目錄的排序 —— 交給 filu 就好（`FILU__STATE` 把它放到另一個目錄）。最愛與 task 紀錄在 `~/.filu/data.yaml`（`FILU__DATA` 可以指定另一個目錄）：要備份的是這一份。
+設定在 `config.yaml`，放在 `$XDG_CONFIG_HOME/filu/`（或 `~/.config/filu/`）；`FILU__CONFIG` 可以指定另一個目錄。filu 第一次執行時會寫一份帶註解的，之後不會蓋掉你的。旁邊的 `state.yaml` 存你上次在哪裡 —— tab、marks、每個目錄的排序 —— 交給 filu 就好（`FILU__STATE` 把它放到另一個目錄）。不想弄丟的都在 `~/.filu/`（`FILU__DATA` 可以指定另一個目錄），要備份的是這個目錄：`data.yaml` 存最愛與 task 紀錄；你寫給 filu 的兩份清單各是一個檔 —— `open_with.yaml` 是 Open with 的 app，`ignore_dirs.yaml` 是 finder 略過的目錄。filu 第一次執行時兩份都會寫一份帶註解的，之後不會蓋掉你的。
 
-這三個檔有一個讀不了時 —— 格式壞了、沒有權限 —— filu 啟動時會問：`Enter` 把它改名成旁邊的 `.bak`（`.bak.1` 依序往下，不蓋掉舊的），用新的一份開始；`Esc` 離開，並寫出是哪個檔、為什麼。
+這些檔有一個讀不了時 —— 格式壞了、沒有權限 —— filu 啟動時會問：`Enter` 把它改名成旁邊的 `.bak`（`.bak.1` 依序往下，不蓋掉舊的），用新的一份開始；`Esc` 離開，並寫出是哪個檔、為什麼。
 
-macOS 上，0.4.0 以前的版本把全部放在 `~/Library/Application Support/filu/`。這一版第一次啟動時，會把裡面的東西搬到 `~/.config/filu/` 並告訴你，搬空的舊目錄刪掉。`~/.config/filu/` 已經有的檔兩邊都不動，filu 寫出兩個路徑，讓你自己把兩份合起來。搬不動時照舊用舊的，並寫出兩個路徑讓你自己搬。最愛與 task 紀錄也同樣從 `state.yaml` 搬到 `~/.filu/data.yaml`：`data.yaml` 已經有自己的時，`state.yaml` 裡的留著，filu 會告訴你。
+macOS 上，0.4.0 以前的版本把全部放在 `~/Library/Application Support/filu/`。這一版第一次啟動時，會把裡面的東西搬到 `~/.config/filu/` 並告訴你，搬空的舊目錄刪掉。`~/.config/filu/` 已經有的檔兩邊都不動，filu 寫出兩個路徑，讓你自己把兩份合起來。搬不動時照舊用舊的，並寫出兩個路徑讓你自己搬。最愛與 task 紀錄也同樣從 `state.yaml` 搬到 `~/.filu/data.yaml`：`data.yaml` 已經有自己的時，`state.yaml` 裡的留著，filu 會告訴你。那些版本把 `open_with`、`ignore_dirs` 放在 `config.yaml`：這一版第一次啟動時，會把它們連同你寫的註解，一個一個搬到 `~/.filu/` 裡各自的檔，並告訴你。那個檔已經有了的，留在 `config.yaml`，filu 寫出兩個路徑；`config.yaml` 寫不進去、拿不掉它們時，filu 照舊從 `config.yaml` 讀，並寫出兩個路徑。
+
+`config.yaml`：
 
 ```yaml
 # finder 掃描幾筆就停。Goto 會走遍整個 $HOME，靠這個設上限。
 finder_cap: 50000
-
-# finder 略過的目錄 —— 快取、建置產物、IDE 的資料、容器的資料，都是不會 cd
-# 進去的地方。只寫名字的在任何深度都符合；帶斜線的（例：go/pkg）比對路徑。
-# 設成 [] 就什麼都不略過。
-ignore_dirs:
-  - node_modules
-  - .git
-  - Library
-  - go/pkg
-  # …
-
-# Open with 選單裡的 app（在檔案或目錄上按 [O]；[o] 用系統預設的開）。
-# filu 執行 `<cmd> <path>`。
-open_with:
-  - name: VSCode
-    cmd: code
-  - name: IntelliJ IDEA
-    cmd: idea
 
 # 預覽與檢視裡，一個 Tab 佔幾格。
 input_tab_width: 4
@@ -222,6 +206,25 @@ hide_secrets_in_preview: false
 ```
 
 `input_tab_width` 與 `hide_secrets_in_preview` 在 terminu 家族每個 app 都是同一個設定。
+
+`~/.filu/open_with.yaml`，Open with 選單裡的 app（在檔案或目錄上按 `[O]`；`[o]` 用系統預設的開）—— filu 執行 `<cmd> <path>`：
+
+```yaml
+- name: VSCode
+  cmd: code
+- name: IntelliJ IDEA
+  cmd: idea
+```
+
+`~/.filu/ignore_dirs.yaml`，finder 略過的目錄 —— 快取、建置產物、IDE 的資料、容器的資料，都是不會去的地方。只寫名字的在任何深度都符合；帶斜線的（例：`go/pkg`）比對路徑；空的清單（`[]`）什麼都不略過：
+
+```yaml
+- node_modules
+- .git
+- Library
+- go/pkg
+# …
+```
 
 ## 限制
 

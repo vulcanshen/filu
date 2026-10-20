@@ -20,7 +20,7 @@ const defaultFinderCap = 50000
 // into — dependency caches, build output, IDE metadata, container data. Finders
 // skip them so Goto over $HOME (and Search / Find over a project) isn't flooded.
 // An entry matches a directory of that name anywhere; an entry with a slash (e.g.
-// "go/pkg") matches that path segment. Users edit the list in config.yaml.
+// "go/pkg") matches that path segment. Users edit the list in ignore_dirs.yaml.
 var defaultIgnoreDirs = []string{
 	"node_modules", ".git", "Library", "OrbStack", "go/pkg", "vendor",
 	"target", "__pycache__", "Pods", "bower_components",
@@ -29,7 +29,7 @@ var defaultIgnoreDirs = []string{
 }
 
 // finderCap / finderIgnoreDirs are the live values, overridden from config.yaml
-// at startup by loadConfig.
+// at startup by loadConfig, and from the lists' files by loadLists.
 var (
 	finderCap        = defaultFinderCap
 	finderIgnoreDirs = defaultIgnoreDirs
@@ -44,17 +44,20 @@ const defaultInputTabWidth = 4
 
 // fileConfig is the user-editable configuration (config.yaml, hand-edited) — kept
 // separate from the auto-managed state.yaml so tuning knobs never mix with
-// session state. IgnoreDirs is a pointer so an absent key falls back to the
-// default while an explicit empty list means "exclude nothing".
+// session state. IgnoreDirs and OpenWith are the lists versions before tdp
+// v0.9.1 kept here: read only while they are still here, when moving them to
+// their own files failed or found those there already (moveLists). IgnoreDirs
+// is a pointer so an absent key falls back to the default while an explicit
+// empty list means "exclude nothing".
 type fileConfig struct {
 	FinderCap            int           `yaml:"finder_cap"`
-	IgnoreDirs           *[]string     `yaml:"ignore_dirs"`
-	OpenWith             []openWithApp `yaml:"open_with"`
+	IgnoreDirs           *[]string     `yaml:"ignore_dirs,omitempty"`
+	OpenWith             []openWithApp `yaml:"open_with,omitempty"`
 	InputTabWidth        int           `yaml:"input_tab_width"`
 	HideSecretsInPreview bool          `yaml:"hide_secrets_in_preview"`
 }
 
-// openWithApp is one entry in config.yaml's open_with: a display name and the
+// openWithApp is one entry in open_with.yaml: a display name and the
 // command filu runs as `<cmd> <path>` when it is picked from the [o]pen menu.
 // The command may carry args (e.g. "code -n"); the path is appended as the last
 // argument.
@@ -222,22 +225,6 @@ const configHeader = `# filu configuration — hand-edited, and separate from th
 #   reachable, but a slower fuzzy filter per keystroke on a big home. Lower it if
 #   Goto feels laggy, raise it if you want more reach.
 #
-# ignore_dirs: directory names the finders skip entirely — dependency caches,
-#   build output, IDE metadata, container data: nowhere you'd cd to navigate. An
-#   entry matches that name anywhere in the tree; an entry with a slash (e.g.
-#   go/pkg) matches that path. Add or remove freely.
-#
-# open_with: apps for the [O]pen-with picker (press [O] on a file or directory;
-#   plain [o] just opens with the OS default). Each entry has a name and a command;
-#   filu runs "<cmd> <path>" when you pick it. The picker always offers "Default"
-#   (the OS default app) first, then these — handy for opening a folder in your
-#   IDE. Example (edit to the tools you have):
-#     open_with:
-#       - name: VSCode
-#         cmd: code
-#       - name: IntelliJ IDEA
-#         cmd: idea
-#
 # input_tab_width: how many cells a tab takes in the preview and the viewer.
 #
 # hide_secrets_in_preview: true keeps private keys, and files only their owner
@@ -245,17 +232,25 @@ const configHeader = `# filu configuration — hand-edited, and separate from th
 #
 # The last two are the same setting in every terminu family app.
 #
+# The apps of Open with and the directories the finders skip are lists you
+# write: they are in open_with.yaml and ignore_dirs.yaml, next to filu's
+# data.yaml (~/.filu).
+#
 `
 
 func defaultConfigBytes() []byte {
-	body, _ := yaml.Marshal(fileConfig{FinderCap: defaultFinderCap, IgnoreDirs: &defaultIgnoreDirs, OpenWith: []openWithApp{},
-		InputTabWidth: defaultInputTabWidth})
+	body, _ := yaml.Marshal(fileConfig{FinderCap: defaultFinderCap, InputTabWidth: defaultInputTabWidth})
 	return append([]byte(configHeader), body...)
 }
 
 func writeDefaultConfig(path string) error {
+	return writeFileIn(path, defaultConfigBytes())
+}
+
+// writeFileIn writes b to path, making its directory.
+func writeFileIn(path string, b []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(path, defaultConfigBytes(), 0o644)
+	return os.WriteFile(path, b, 0o644)
 }

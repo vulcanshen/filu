@@ -62,7 +62,7 @@ Needs Go 1.26+. Install `ripgrep` and `fd` yourself for content search and fast 
 
 ### The first time
 
-filu writes a commented `config.yaml` into its settings directory (see [Configuration](#configuration)) and opens on the directory you started it in. Nothing else is set up.
+filu writes a commented `config.yaml` into its settings directory, and the lists `open_with.yaml` and `ignore_dirs.yaml` into `~/.filu/` (see [Configuration](#configuration)), and opens on the directory you started it in. Nothing else is set up.
 
 ### Uninstall
 
@@ -143,7 +143,7 @@ Three panels:
 
 #### Favorites
 
-- `f` stars the directory under the cursor; `F` stars the one you're in. A star shows after a starred directory's name, and after the path when you are in one.
+- `f` stars the directory under the cursor; `F` stars the one you're in. A starred directory shows a star at the end of its row.
 - The **Favorites** tab lists them: `Enter` goes there (its tab, or a new one), `o` lets you choose the tab, `D` takes the star off (it asks first). `[go]to` → `[f]avorite` jumps there too.
 
 #### Preview and copy
@@ -186,34 +186,18 @@ Every panel's `Space` menu lists what you can do to the item under the cursor, t
 
 ## Configuration
 
-Your settings live in `config.yaml`, in `$XDG_CONFIG_HOME/filu/` (or `~/.config/filu/`); `FILU__CONFIG` names another directory. filu writes a commented copy the first time it runs and never overwrites yours. Next to it, `state.yaml` holds where you were — the tabs, the marks, each directory's sort — leave that one to filu (`FILU__STATE` puts it in another directory). Your favorites and the task log are in `~/.filu/data.yaml` (`FILU__DATA` names another directory): that is the one to back up.
+Your settings live in `config.yaml`, in `$XDG_CONFIG_HOME/filu/` (or `~/.config/filu/`); `FILU__CONFIG` names another directory. filu writes a commented copy the first time it runs and never overwrites yours. Next to it, `state.yaml` holds where you were — the tabs, the marks, each directory's sort — leave that one to filu (`FILU__STATE` puts it in another directory). What you would not want to lose is in `~/.filu/` (`FILU__DATA` names another directory), the one to back up: `data.yaml` keeps your favorites and the task log, and the two lists you write for filu are a file each — `open_with.yaml`, the apps of Open with, and `ignore_dirs.yaml`, the directories the finders skip. filu writes both, commented, the first time and never overwrites yours.
 
-If one of these three files can't be read — a broken format, no permission — filu asks when it starts: `Enter` moves it aside to a `.bak` next to it (`.bak.1` and on, never over an older one) and starts with a new one; `Esc` quits and says which file and why.
+If one of these files can't be read — a broken format, no permission — filu asks when it starts: `Enter` moves it aside to a `.bak` next to it (`.bak.1` and on, never over an older one) and starts with a new one; `Esc` quits and says which file and why.
 
-On macOS, versions up to 0.4.0 kept everything in `~/Library/Application Support/filu/`. The first time this version starts, it moves what is in there to `~/.config/filu/` and says so, and removes the emptied old directory. A file `~/.config/filu/` already has is left alone in both places, and filu shows you both paths so you can put the two together yourself. If filu cannot move them, it keeps using the old directory and shows you both paths, to move it yourself. Favorites and the task log move out of `state.yaml` into `~/.filu/data.yaml` the same way: if `data.yaml` already has its own, the ones in `state.yaml` stay there, and filu tells you.
+On macOS, versions up to 0.4.0 kept everything in `~/Library/Application Support/filu/`. The first time this version starts, it moves what is in there to `~/.config/filu/` and says so, and removes the emptied old directory. A file `~/.config/filu/` already has is left alone in both places, and filu shows you both paths so you can put the two together yourself. If filu cannot move them, it keeps using the old directory and shows you both paths, to move it yourself. Favorites and the task log move out of `state.yaml` into `~/.filu/data.yaml` the same way: if `data.yaml` already has its own, the ones in `state.yaml` stay there, and filu tells you. Those versions kept `open_with` and `ignore_dirs` in `config.yaml`: the first start moves each, with your comments, to its file in `~/.filu/` and says so. One whose file is already there stays in `config.yaml`, and filu shows you both paths; if filu cannot write `config.yaml` without them, it goes on reading them from there and shows you both paths.
+
+`config.yaml`:
 
 ```yaml
 # How many entries a finder scans before it stops. Goto walks all of $HOME,
 # so this bounds it.
 finder_cap: 50000
-
-# Directories the finders skip — caches, build output, IDE metadata, container
-# data you never cd into. A bare name matches at any depth; a name with a slash
-# (e.g. go/pkg) matches a path. Set to [] to exclude nothing.
-ignore_dirs:
-  - node_modules
-  - .git
-  - Library
-  - go/pkg
-  # …
-
-# Apps for the Open with picker ([O] on a file or directory; [o] opens with the
-# system's default). filu runs `<cmd> <path>`.
-open_with:
-  - name: VSCode
-    cmd: code
-  - name: IntelliJ IDEA
-    cmd: idea
 
 # How many cells a tab takes in the preview and the viewer.
 input_tab_width: 4
@@ -224,6 +208,25 @@ hide_secrets_in_preview: false
 ```
 
 `input_tab_width` and `hide_secrets_in_preview` are the same settings in every terminu family app.
+
+`~/.filu/open_with.yaml`, the apps of Open with (`[O]` on a file or a directory; `[o]` opens it with the system's default) — filu runs `<cmd> <path>`:
+
+```yaml
+- name: VSCode
+  cmd: code
+- name: IntelliJ IDEA
+  cmd: idea
+```
+
+`~/.filu/ignore_dirs.yaml`, the directories the finders skip — caches, build output, IDE metadata, container data you never go to. A bare name matches at any depth; a name with a slash (e.g. `go/pkg`) matches a path; an empty list (`[]`) skips nothing:
+
+```yaml
+- node_modules
+- .git
+- Library
+- go/pkg
+# …
+```
 
 ## Limits
 

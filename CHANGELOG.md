@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-filu now follows tdp v0.9.0 and is built on terminu-go, the terminu
+filu now follows tdp v0.9.1 and is built on terminu-go, the terminu
 family's shared library: the screen, the `Space` menu, `?`, the popups and
 their animations, confirms, inputs, toasts, the finders, the viewer and the
 shell are the family's own, and look and work the same as in every terminu
@@ -19,6 +19,12 @@ both paths to put them together; if it cannot move them, it keeps using the
 old directory and shows both paths for you to move it. **Your favorites and
 the task log move to `~/.filu/data.yaml`** (`FILU__DATA` names another
 directory), the file to back up; `state.yaml` keeps only where you were.
+**`open_with` and `ignore_dirs` move out of `config.yaml` to `~/.filu`**, each
+a file of its own with your comments (`open_with.yaml`, `ignore_dirs.yaml`):
+lists you write are kept with your data, and `config.yaml` keeps filu's own
+settings. One whose file is already there stays in `config.yaml`, and filu
+shows you both paths; if `config.yaml` cannot be written, filu goes on reading
+them from it and shows both paths.
 
 ### Added
 
@@ -35,9 +41,10 @@ directory), the file to back up; `state.yaml` keeps only where you were.
 - `!` opens the App Log: what filu did and what went wrong, newest last —
   every message, your renames and copies, what it could not read. The footer
   counts the errors you have not seen.
-- When filu cannot read its `config.yaml`, `state.yaml` or `data.yaml`, it
-  asks when it starts: move the file aside to a `.bak` and start with a new
-  one, or quit, the file and the reason printed.
+- When filu cannot read its `config.yaml`, `state.yaml`, `data.yaml`,
+  `open_with.yaml` or `ignore_dirs.yaml`, it asks when it starts: move the
+  file aside to a `.bak` and start with a new one, or quit, the file and the
+  reason printed.
 - In the shell, `PgUp` scrolls back through what went off the top, and
   `Alt-v` selects some of it to copy.
 
@@ -63,8 +70,8 @@ directory), the file to back up; `state.yaml` keeps only where you were.
   glyphs in the header were the wrong way round.
 - Zoomed, `Tab` moves to the next panel, zoomed too, instead of zooming out.
 - A marked file shows the family's tick; a starred directory shows its star
-  after its name, and after the path when you are in it. `[3]` lists have
-  column headers.
+  at the end of its row, where a long name cut short keeps it, and no longer
+  after the path when you are in it. `[3]` lists have column headers.
 - `[1]`'s path is cut from the front when it is too long, instead of
   shortening the directories to their initials; Breadcrumb is not offered at
   `/`.

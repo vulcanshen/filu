@@ -141,16 +141,42 @@ func TestALongNameIsCutShort(t *testing.T) {
 	}
 }
 
-// The list's first row is where the tab is, a star after it when the
-// directory is a favorite (components/layout/panel, location row).
+// The list's first row is where the tab is, and only that, a favorite or not
+// (components/layout/panel, location row).
 func TestLocationRow(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"proj/": ""})
-	if got := tabLines(hs, 60)[0]; !strings.Contains(got, "~/work") || strings.Contains(got, iconPin) {
-		t.Fatalf("the location row: %q", got)
-	}
 	hs.keys("F")
-	if got := tabLines(hs, 60)[0]; !strings.Contains(got, "~/work "+iconPin) {
+	if got := tabLines(hs, 60)[0]; !strings.Contains(got, "~/work") || strings.Contains(got, iconPin) {
 		t.Fatalf("a favorite's location row: %q", got)
+	}
+}
+
+// A favorite's star is in the list's last column, apart from its name: a long
+// name cut short keeps it (components/layout/panel, columns).
+func TestStarColumn(t *testing.T) {
+	long := "proj-" + strings.Repeat("x", 80)
+	hs := newHarness(t, 120, 40, map[string]string{"proj/": "", long + "/": "", "a.txt": ""})
+	for _, name := range []string{"proj", long} {
+		hs.to(name)
+		hs.keys("f")
+	}
+	for _, w := range []int{120, 60} {
+		var starred int
+		for _, l := range tabLines(hs, w) {
+			l = strings.TrimRight(l, " ") // the cursor's arrow
+			switch {
+			case strings.Contains(l, "a.txt") && strings.Contains(l, iconPin):
+				t.Fatalf("a file has a star: %q", l)
+			case strings.Contains(l, "proj"):
+				if !strings.HasSuffix(l, "  "+iconPin) || strings.Contains(l, "proj "+iconPin) {
+					t.Fatalf("at %d cells a favorite's star is not at the end, apart: %q", w, l)
+				}
+				starred++
+			}
+		}
+		if starred != 2 {
+			t.Fatalf("at %d cells %d favorites", w, starred)
+		}
 	}
 }
 
@@ -360,7 +386,7 @@ func TestDeleteAsksFirst(t *testing.T) {
 }
 
 // f stars a directory (not a file: the row is not there), F stars the one
-// [1] is on; [3] Favorites lists them, the list and the path row show a star.
+// [1] is on; [3] Favorites lists them, the list shows a star (TestStarColumn).
 func TestFavorites(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"proj/": "", "a.txt": ""})
 	hs.to("a.txt")
@@ -373,7 +399,7 @@ func TestFavorites(t *testing.T) {
 	if !hs.a.favs.pinnedSet()[hs.path("proj")] {
 		t.Fatal("f did not star proj")
 	}
-	hs.has("proj " + iconPin)
+	hs.has(iconPin)
 	hs.keys("F")
 	if !hs.a.favs.pinnedSet()[hs.root] {
 		t.Fatal("F did not star the directory [1] is on")

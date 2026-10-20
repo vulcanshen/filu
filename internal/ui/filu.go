@@ -83,6 +83,7 @@ type unreadFile struct {
 // focusName set (`filu <file>`), the cursor starts on that entry of startDir.
 func NewApp(startDir, focusName string) *App {
 	mv := moveOldSettings()
+	lm := moveLists()
 	madeConfig, cfgErr := loadConfig()
 	dir := startDir
 	if dir == "" {
@@ -134,6 +135,10 @@ func NewApp(startDir, focusName string) *App {
 				return nil
 			}})
 		}
+	}
+	a.sayListsMove(lm)
+	if lm.err == nil { // moved, or nothing to move: the lists are read from their files
+		a.loadLists()
 	}
 	a.t.InputTabWidth = inputTabWidth
 	a.t.HideSecretsInPreview = hideSecretsInPreview

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"gopkg.in/yaml.v3"
 )
 
 // FILU__CONFIG names a config directory, config.yaml inside it (tdp E2: an
@@ -207,14 +208,16 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatalf("first run should write a template config: %v", err)
 	}
 
-	// 1b. that written template is valid and loads back to the defaults
-	finderCap, finderIgnoreDirs = 999, nil
+	// 1b. that written template is valid, loads back to the defaults, and
+	// holds no list: those are data, in files of their own (tdp E3)
+	finderCap = 999
 	loadConfig()
 	if finderCap != defaultFinderCap {
 		t.Errorf("the template should load back to the default cap, got %d", finderCap)
 	}
-	if len(finderIgnoreDirs) != len(defaultIgnoreDirs) {
-		t.Errorf("the template should carry the default ignore list, got %v", finderIgnoreDirs)
+	var c fileConfig
+	if b, _ := os.ReadFile(path); yaml.Unmarshal(b, &c) != nil || c.IgnoreDirs != nil || c.OpenWith != nil {
+		t.Errorf("the template should hold no list:\n%s", b)
 	}
 
 	// 2. explicit values override
