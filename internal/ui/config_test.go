@@ -3,11 +3,9 @@ package ui
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vulcanshen/terminu-go/tdptest"
 )
 
 // FILU__CONFIG names a config directory, config.yaml inside it (tdp E2: an
@@ -151,16 +149,14 @@ func TestSharedSettings(t *testing.T) {
 	if err := os.WriteFile(configPathOverride, []byte("input_tab_width: 2\nhide_secrets_in_preview: true\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	a := NewApp(hs.root, "")
-	if inputTabWidth != 2 || !hideSecretsInPreview || a.t.InputTabWidth != 2 || !a.t.HideSecretsInPreview {
+	hs.a = NewApp(hs.root, "")
+	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
+	if inputTabWidth != 2 || !hideSecretsInPreview || hs.a.t.InputTabWidth != 2 || !hs.a.t.HideSecretsInPreview {
 		t.Fatalf("input_tab_width %d, hide_secrets_in_preview %v", inputTabWidth, hideSecretsInPreview)
 	}
-	// Run sets how wide terminu draws a tab: tdptest starts filu as Run does.
-	d := tdptest.Start(t, a.t, 120, 40)
-	t.Cleanup(func() { resetGlobals(); tdptest.Start(t, NewApp(hs.root, "").t, 120, 40) }) // back to 4 for the tests after
-	if !d.Has(" 1   x ") || d.Has(" 1     x") {
-		t.Fatalf("a tab in the preview is not 2 cells:\n%s", strings.Join(d.Screen(), "\n"))
-	}
+	hs.to("t.txt")
+	hs.has(" 1   x ")
+	hs.hasNot(" 1     x")
 }
 
 // TestConfigDirHonoursXDG: XDG_CONFIG_HOME redirects both config.yaml and

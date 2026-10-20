@@ -254,12 +254,12 @@ command（動畫、背景的 channel）、讀 `Frame()`。session、設定、垃
 - **背景讀的預覽**：lib 的 finder 預覽在畫的時候記下要讀什麼、下一次 update 才開始讀（tdp file-picker 的「在背景讀」）。harness 的
   `has`、`hasNot` 先 `settle`（畫一次、送一次 update，三回），像終端機接下來的幾格畫面，讀完的預覽才會在畫面上。
 - **tdptest**（terminu-go 的）：`tdp_test.go` 的 `TestFirstLaunch` 用 `tdptest.Check` 在很多種尺寸與 icon 寬度下跑第一次啟動（每次一個新的
-  沙盒當 HOME，`seedTricky` 在裡面放用 `tdptest.Tricky` 命名的檔與目錄），每個 panel 開 Space menu、global operation、App Log 與 `?`，
-  再縮到最低尺寸以下又拉回來；每一格畫面都驗 tdp L4 與有沒有控制字元送到終端機。`go test -short` 只跑最低尺寸與 80×24。
-- **顏色碼塞錯地方**：塞進格子的顏色碼不會送到終端機（lib 把它畫成名字），所以 tdptest 抓不到；`screen_test.go` 的 `checkWidths`
-  另外看畫面上有沒有 `\x1b` 這幾個字（fixture 的檔名沒有 ESC，出現了就是 filu 自己的顏色碼放錯地方）。
-- **Tab 的寬度**：lib 在 `Run`（與 tdptest 啟動 app 時）才照 `input_tab_width` 設定 Tab 畫幾格；harness 不走 `Run`，Tab 一律 4 格。
-  要驗 `input_tab_width` 的測試用 `tdptest.Start`（`TestSharedSettings`）。
+  沙盒當 HOME），每個 panel 開 Space menu、global operation、App Log 與 `?`，再縮到最低尺寸以下又拉回來；每一格畫面都驗 tdp L4、有沒有
+  控制字元送到終端機、有沒有顏色碼被畫成字。`go test -short` 只跑最低尺寸與 80×24。`TestTrickyNames` 把 `tdptest.Tricky` 當檔名與
+  目錄名，cursor 一個一個走過去、看資訊、mark、搜尋（外面來的字本來就可能含顏色碼，所以這裡不驗「顏色碼被畫成字」）。
+- **顏色碼塞錯地方**：塞進格子的顏色碼不會送到終端機（lib 把它畫成名字）；`tdptest.Check` 抓得到被畫成字的顏色碼，`screen_test.go`
+  的 `checkWidths` 也在 harness 開的每一類 popup 上看畫面有沒有 `\x1b` 這幾個字（fixture 的檔名沒有 ESC，出現了就是 filu 自己的顏色碼
+  放錯地方）。
 - **lib 的檢查**：`terminu.App` 在登記時就拒絕佔用 core key 或移動字母的熱鍵（popup 裡也一樣，例：menu 不能用 `d`）—— 新加的
   menu 要在測試裡打開過一次，才知道沒踩到。
 
