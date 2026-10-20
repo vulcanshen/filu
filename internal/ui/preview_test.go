@@ -8,22 +8,13 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-func TestSanitizeLine(t *testing.T) {
-	cases := map[string]string{
-		"a\tb":         "a    b",    // tab → 4 spaces
-		"a\rb":         "ab",        // CR dropped
-		"a\x1b[31mred": "a [31mred", // ESC → space (no raw escape leaks)
-		"plain":        "plain",
-		"nul\x00byte":  "nul byte",
-	}
-	for in, want := range cases {
-		if got := sanitizeLine(in); got != want {
-			t.Errorf("sanitizeLine(%q) = %q, want %q", in, got, want)
-		}
-	}
-	// pathological long line is capped
-	if got := sanitizeLine(strings.Repeat("x", 5000)); len(got) > 2000 {
-		t.Errorf("long line not capped: len=%d", len(got))
+// A text's lines are as it has them: only a CRLF line's \r goes with the
+// line break; tabs, control characters and colour codes are terminu's to draw.
+func TestTextLines(t *testing.T) {
+	got := textLines("a\tb\r\nc\x1b[31mred\nd\x00e\r10%\r100%")
+	want := []string{"a\tb", "c\x1b[31mred", "d\x00e\r10%\r100%"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("textLines = %q, want %q", got, want)
 	}
 }
 

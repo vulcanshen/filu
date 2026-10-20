@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -151,6 +152,32 @@ func checkWidths(t *testing.T, hs *harness, w, h int) {
 	for i, l := range lines {
 		if got := terminu.Width(l); got != w {
 			t.Fatalf("row %d is %d cells on a screen %d wide:\n%s", i, got, w, hs.screen())
+		}
+	}
+	// No name in the fixture has an ESC: one drawn by its name is a colour of
+	// filu's own put in a text terminu draws as it is (components/README).
+	if s := hs.screen(); strings.Contains(s, `\x1b`) {
+		t.Fatalf("a colour code drawn by its name:\n%s", s)
+	}
+}
+
+// A file's name holding control characters shows them by their names — in
+// [1], the location row, [2]'s tree and the file's facts — never dropped or
+// sent to the terminal (tdp panel-136, components-27).
+func TestControlCharactersInAName(t *testing.T) {
+	hs := newHarness(t, 120, 40, map[string]string{"line\nbreak.txt": "x", "esc\x1b[31m.txt": "x", "dir\tname/inside.txt": "x"})
+	hs.has(`line\nbreak.txt`, `esc\x1b[31m.txt`, `dir\tname`)
+	hs.a.cd(hs.path("dir\tname"), "")
+	hs.has(`~/work/dir\tname`)
+	hs.keys("Esc")
+	hs.to("dir\tname")
+	hs.has(`inside.txt`) // [2]'s tree of it
+	hs.to("line\nbreak.txt")
+	hs.keys("Enter")
+	hs.has(`work/line\nbreak.txt`) // the facts
+	for _, l := range hs.a.t.Frame() {
+		if strings.ContainsAny(terminu.StripStyles(l), "\n\t") {
+			t.Fatalf("a control character reached the screen: %q", l)
 		}
 	}
 }

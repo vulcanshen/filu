@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	terminu "github.com/vulcanshen/terminu-go"
 )
 
 // metaRow is one fact about a file: a label and its value.
@@ -18,7 +20,7 @@ func fileFacts(path string) []metaRow {
 	if err != nil {
 		abs = path
 	}
-	rows := []metaRow{{"Path", safeName(abs)}}
+	rows := []metaRow{{"Path", terminu.Escape(abs)}}
 	fi, err := os.Lstat(path)
 	if err != nil {
 		return append(rows, metaRow{"Error", opFailedText("read it", err)})
@@ -28,7 +30,7 @@ func fileFacts(path string) []metaRow {
 		if lerr != nil {
 			target = opFailedText("read the link", lerr)
 		}
-		rows = append(rows, metaRow{"Link to", safeName(target)})
+		rows = append(rows, metaRow{"Link to", terminu.Escape(target)})
 	}
 	rows = append(rows,
 		metaRow{"Type", fileType(path, fi)},

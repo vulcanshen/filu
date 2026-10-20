@@ -3,9 +3,11 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/vulcanshen/terminu-go/tdptest"
 )
 
 // FILU__CONFIG names a config directory, config.yaml inside it (tdp E2: an
@@ -70,7 +72,7 @@ func TestE3ConfigDir(t *testing.T) {
 	write(old, "config.yaml", "finder_cap: 7\n")
 	write(old, "state.yaml", "tabs: []\n")
 	m := moveOldSettings()
-	if m.err != nil || !m.moved || m.from != old || m.to != newDir || len(m.left) != 0 {
+	if m.err != nil || len(m.moved) == 0 || m.from != old || m.to != newDir || len(m.left) != 0 {
 		t.Fatalf("moved %+v", m)
 	}
 	if read(newDir, "config.yaml") != "finder_cap: 7\n" || read(newDir, "state.yaml") != "tabs: []\n" || isDir(old) {
@@ -88,7 +90,7 @@ func TestE3ConfigDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	m = moveOldSettings()
-	if m.err != nil || !m.moved || len(m.left) != 1 || m.left[0] != "config.yaml" {
+	if m.err != nil || len(m.moved) == 0 || len(m.left) != 1 || m.left[0] != "config.yaml" {
 		t.Fatalf("moved %+v", m)
 	}
 	if read(newDir, "config.yaml") != "finder_cap: 7\n" || read(old, "config.yaml") != "finder_cap: 8\n" ||
@@ -134,27 +136,30 @@ func TestE3FoundInTwoPlaces(t *testing.T) {
 	hs.a = NewApp(hs.root, "")
 	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
 	hs.run(hs.a.start())
-	hs.has("FOUND IN TWO PLACES", "Support/filu/config.yaml", ".config/filu/config.yaml")
+	// One paragraph, the two paths of each: a \n would be drawn by its name.
+	hs.has("FOUND IN TWO PLACES", "Support/filu and in", "/config.yaml and")
+	hs.hasNot(`\n`)
 }
 
-// config.yaml takes the family's shared settings (tdp E3).
+// config.yaml takes the family's shared settings (tdp E3): a tab in [2]'s
+// preview takes input_tab_width cells.
 func TestSharedSettings(t *testing.T) {
-	dir := t.TempDir()
-	old := configPathOverride
-	configPathOverride = filepath.Join(dir, "config.yaml")
-	defer func() { configPathOverride = old }()
-	defer resetGlobals()
+	hs := newHarness(t, 120, 40, map[string]string{"t.txt": "\tx\n"})
+	if err := os.MkdirAll(filepath.Dir(configPathOverride), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(configPathOverride, []byte("input_tab_width: 2\nhide_secrets_in_preview: true\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := loadConfig(); err != nil {
-		t.Fatal(err)
-	}
-	if inputTabWidth != 2 || !hideSecretsInPreview {
+	a := NewApp(hs.root, "")
+	if inputTabWidth != 2 || !hideSecretsInPreview || a.t.InputTabWidth != 2 || !a.t.HideSecretsInPreview {
 		t.Fatalf("input_tab_width %d, hide_secrets_in_preview %v", inputTabWidth, hideSecretsInPreview)
 	}
-	if got := sanitizeLine("\tx"); got != "  x" {
-		t.Fatalf("a tab in the preview is %q", got)
+	// Run sets how wide terminu draws a tab: tdptest starts filu as Run does.
+	d := tdptest.Start(t, a.t, 120, 40)
+	t.Cleanup(func() { resetGlobals(); tdptest.Start(t, NewApp(hs.root, "").t, 120, 40) }) // back to 4 for the tests after
+	if !d.Has(" 1   x ") || d.Has(" 1     x") {
+		t.Fatalf("a tab in the preview is not 2 cells:\n%s", strings.Join(d.Screen(), "\n"))
 	}
 }
 

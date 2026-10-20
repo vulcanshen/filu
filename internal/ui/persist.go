@@ -133,34 +133,35 @@ func writeYAML(path string, v any) error {
 }
 
 // loadState reads the saved session and the data: ok false when there is
-// neither (the first run), err when one cannot be read or makes no sense.
-// moved reports favorites or tasks that were still in state.yaml, where
-// versions before the data directory kept them: the next save moves them.
-// When data.yaml has its own, those in state.yaml stay there (leftInState).
-func loadState() (st sessionState, ok bool, moved bool, err error) {
+// neither (the first run), err when one cannot be read or makes no sense,
+// failed being that one. moved reports favorites or tasks that were still in
+// state.yaml, where versions before the data directory kept them: the next
+// save moves them. When data.yaml has its own, those in state.yaml stay there
+// (leftInState).
+func loadState() (st sessionState, ok, moved bool, failed string, err error) {
 	leftInState = dataState{}
 	if path, found := stateFilePath(); found {
 		if ok, err = readYAML(path, &st); err != nil {
-			return sessionState{}, false, false, err
+			return sessionState{}, false, false, path, err
 		}
 	}
 	path, found := dataFilePath()
 	if !found {
-		return st, ok, false, nil
+		return st, ok, false, "", nil
 	}
 	var d dataState
 	has, err := readYAML(path, &d)
 	switch {
 	case err != nil:
-		return sessionState{}, false, false, err
+		return sessionState{}, false, false, path, err
 	case has:
 		if len(st.Pinned) > 0 || len(st.Tasks) > 0 {
 			leftInState = dataState{Favorites: st.Pinned, Tasks: st.Tasks}
 		}
 		st.Pinned, st.Tasks = d.Favorites, d.Tasks
-		return st, true, false, nil
+		return st, true, false, "", nil
 	}
-	return st, ok, len(st.Pinned) > 0 || len(st.Tasks) > 0, nil
+	return st, ok, len(st.Pinned) > 0 || len(st.Tasks) > 0, "", nil
 }
 
 // leftInState are the favorites and tasks state.yaml still holds while

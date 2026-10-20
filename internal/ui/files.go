@@ -21,7 +21,8 @@ type tab struct {
 	err        error // why the directory could not be read
 	showHidden bool
 	list       *terminu.List
-	fav        bool // the directory is a favorite, for the location row's star
+	fav        bool   // the directory is a favorite, for the location row's star
+	logged     string // the read error last put in the App Log, so it goes in once
 }
 
 func newTab(dir string) *tab {
@@ -127,14 +128,16 @@ func fileRows(t *tab, favs map[string]bool) []terminu.Row {
 	for i, it := range t.items {
 		path := filepath.Join(t.dir, it.name)
 		cells := make([]string, len(allFileCols))
+		styled := make([][]terminu.Span, len(allFileCols))
 		for j, c := range allFileCols {
-			cells[j] = fileCell(it, c, favs[path])
+			styled[j] = fileCell(it, c, favs[path])
+			cells[j] = spansText(styled[j])
 		}
 		group := 1
 		if it.isDir {
 			group = 0
 		}
-		rows[i] = terminu.Row{ID: path, Cells: cells, SortGroup: group,
+		rows[i] = terminu.Row{ID: path, Cells: cells, Styled: styled, SortGroup: group,
 			Sort: []string{it.mtime.UTC().Format("2006-01-02T15:04:05.000000000"), it.owner, it.perm, strconv.FormatInt(it.size, 10), it.name}}
 	}
 	return rows
@@ -142,11 +145,12 @@ func fileRows(t *tab, favs map[string]bool) []terminu.Row {
 
 // fileCell is one entry's value in a column, in its colours: the type's for
 // the name (as eza and ls colour it), eza's for the owner, the permissions and
-// the size.
-func fileCell(it fileItem, c fileCol, fav bool) string {
+// the size. The name is as it is: terminu draws a control character in it by
+// its name, in Red (components/README, control characters).
+func fileCell(it fileItem, c fileCol, fav bool) []terminu.Span {
 	switch c {
 	case colModified:
-		return terminu.Fg(terminu.Overlay0).Render(fmtMtime(it.mtime))
+		return []terminu.Span{{Text: fmtMtime(it.mtime), Style: terminu.Fg(terminu.Overlay0)}}
 	case colOwner:
 		return colorOwner(terminu.Truncate(it.owner, colOwnerW))
 	case colPerms:
@@ -154,10 +158,9 @@ func fileCell(it fileItem, c fileCol, fav bool) string {
 	case colSize:
 		return colorSize(it)
 	}
-	color := terminu.Hex(string(fileColor(it)))
-	name := terminu.Fg(color).Render(fileIcon(it) + " " + safeName(it.name))
+	name := []terminu.Span{{Text: fileIcon(it) + " " + it.name, Style: terminu.Fg(terminu.Hex(string(fileColor(it))))}}
 	if fav {
-		name += " " + terminu.Fg(terminu.Yellow).Render(iconPin) // a favorite directory: content, the app's (components/layout/panel)
+		name = append(name, terminu.Span{Text: " "}, terminu.Span{Text: iconPin, Style: terminu.Fg(terminu.Yellow)}) // a favorite directory: content, the app's (components/layout/panel)
 	}
 	return name
 }
@@ -165,6 +168,14 @@ func fileCell(it fileItem, c fileCol, fav bool) string {
 // fillTab sets a tab's rows from its entries: the directory's sort, the marks
 // from the bucket, the stars from the favorites.
 func (a *App) fillTab(t *tab) {
+	// What could not be read is the panel's error; its details go in the App
+	// Log, once (tdp E3, F5).
+	if t.err == nil {
+		t.logged = ""
+	} else if why := t.dir + ": " + t.err.Error(); why != t.logged {
+		t.logged = why
+		a.t.Log(terminu.Error, "Cannot read the directory "+why)
+	}
 	favs := a.favs.pinnedSet()
 	t.fav = favs[t.dir]
 	t.list.Columns = fileColumns
@@ -178,10 +189,12 @@ func (a *App) fillTab(t *tab) {
 
 // location is a tab's location row: where it is, with a star after it when
 // the directory is a favorite (content, the app's; components/layout/panel).
+// TODO(tdp FL25): the star in Yellow, as after a starred name in the list,
+// once a location row can take spans.
 func location(t *tab) string {
-	loc := safeName(shortPath(t.dir))
+	loc := shortPath(t.dir)
 	if t.fav {
-		loc += " " + terminu.Fg(terminu.Yellow).Render(iconPin)
+		loc += " " + iconPin
 	}
 	return loc
 }
@@ -332,7 +345,7 @@ func (a *App) up() tea.Cmd {
 func (a *App) reveal(path string) tea.Cmd {
 	info, err := os.Stat(path)
 	if err != nil {
-		return a.t.Toast(terminu.Error, opFailedText("open "+safeName(filepath.Base(path)), err))
+		return a.t.Toast(terminu.Error, opFailedText("open "+filepath.Base(path), err))
 	}
 	if info.IsDir() {
 		return a.cd(path, "")
@@ -371,7 +384,7 @@ func (a *App) isDirItem() bool {
 // itemName is the entry under [1]'s cursor as it is shown.
 func (a *App) itemName() string {
 	it, _, _ := a.item()
-	return safeName(it.name)
+	return it.name
 }
 
 // noTrailingSlash keeps a path's last element whole.

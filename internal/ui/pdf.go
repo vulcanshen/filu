@@ -61,5 +61,5 @@ func pdfLines(text string, pages int) []string {
 	if strings.TrimSpace(text) == "" {
 		return []string{head, "", dim.Render("(no extractable text)")}
 	}
-	return append([]string{head, ""}, sanitizeLines(strings.Split(text, "\n"))...)
+	return append([]string{head, ""}, textLines(text)...)
 }

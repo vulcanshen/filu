@@ -58,8 +58,8 @@ var (
 
 // colorPerm paints a mode string (drwxr-xr-x) as eza does: the type Blue,
 // read yellow, write red, execute green, a bare - quiet.
-func colorPerm(perm string) string {
-	var b strings.Builder
+func colorPerm(perm string) []terminu.Span {
+	var out []terminu.Span
 	for i, r := range perm {
 		c := terminu.Overlay0
 		switch {
@@ -72,17 +72,17 @@ func colorPerm(perm string) string {
 		case r == 'x' || r == 's' || r == 't' || r == 'S' || r == 'T':
 			c = ezaGreen
 		}
-		b.WriteString(terminu.Fg(c).Render(string(r)))
+		out = append(out, terminu.Span{Text: string(r), Style: terminu.Fg(c)})
 	}
-	return b.String()
+	return out
 }
 
 // colorSize paints a file's size warmer as it grows, as eza's colour scale: green
 // under 1 MiB, yellow under 1 GiB, peach under 1 TiB, red beyond. A directory
 // has no size (filu never adds up a tree): a quiet dash.
-func colorSize(it fileItem) string {
+func colorSize(it fileItem) []terminu.Span {
 	if it.isDir {
-		return terminu.Fg(terminu.Overlay0).Render("-")
+		return []terminu.Span{{Text: "-", Style: terminu.Fg(terminu.Overlay0)}}
 	}
 	c := ezaGreen
 	switch {
@@ -93,13 +93,23 @@ func colorSize(it fileItem) string {
 	case it.size >= 1<<20:
 		c = ezaYellow
 	}
-	return terminu.Fg(c).Render(compactSize(it.size))
+	return []terminu.Span{{Text: compactSize(it.size), Style: terminu.Fg(c)}}
 }
 
 // colorOwner paints "owner:group" as eza does.
-func colorOwner(s string) string {
+func colorOwner(s string) []terminu.Span {
 	if o, g, ok := strings.Cut(s, ":"); ok {
-		return terminu.Fg(ezaYellow).Render(o) + terminu.Fg(terminu.Overlay0).Render(":") + terminu.Fg(ezaGroup).Render(g)
+		return []terminu.Span{{Text: o, Style: terminu.Fg(ezaYellow)}, {Text: ":", Style: terminu.Fg(terminu.Overlay0)}, {Text: g, Style: terminu.Fg(ezaGroup)}}
 	}
-	return terminu.Fg(ezaYellow).Render(s)
+	return []terminu.Span{{Text: s, Style: terminu.Fg(ezaYellow)}}
+}
+
+// spansText is spans as plain text: a cell's words, for the filter and the
+// sort (Row.Cells).
+func spansText(spans []terminu.Span) string {
+	var b strings.Builder
+	for _, s := range spans {
+		b.WriteString(s.Text)
+	}
+	return b.String()
 }

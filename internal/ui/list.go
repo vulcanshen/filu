@@ -64,26 +64,6 @@ func readEntries(dir string, showHidden bool) ([]fileItem, int, error) {
 	return items, hidden, nil
 }
 
-// safeName strips control characters from a name before it is displayed, so an
-// embedded CR (macOS "Icon\r" custom-icon files), ESC, NUL, tab, etc. can't
-// reset the cursor / inject ANSI and shatter the layout. Apply to the RAW name
-// before any lipgloss styling — never to an already-styled string. The real
-// name (with the control byte) is kept for file operations.
-func safeName(s string) string {
-	if !strings.ContainsFunc(s, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
-		return s // fast path: the common case has no control chars
-	}
-	var b strings.Builder
-	b.Grow(len(s))
-	for _, r := range s {
-		if r < 0x20 || r == 0x7f {
-			continue
-		}
-		b.WriteRune(r)
-	}
-	return b.String()
-}
-
 // friendlyErr turns a read error into a short label.
 func friendlyErr(err error) string {
 	switch {

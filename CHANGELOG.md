@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-filu now follows tdp v0.8.3 and is built on terminu-go, the terminu
+filu now follows tdp v0.9.0 and is built on terminu-go, the terminu
 family's shared library: the screen, the `Space` menu, `?`, the popups and
 their animations, confirms, inputs, toasts, the finders, the viewer and the
 shell are the family's own, and look and work the same as in every terminu
@@ -32,8 +32,20 @@ directory), the file to back up; `state.yaml` keeps only where you were.
   and where each came from. filu's shell gets both family variables.
 - The finders preview a file with its type, size, modified time and mode
   under it; a content search's preview starts at the match.
+- `!` opens the App Log: what filu did and what went wrong, newest last —
+  every message, your renames and copies, what it could not read. The footer
+  counts the errors you have not seen.
+- When filu cannot read its `config.yaml`, `state.yaml` or `data.yaml`, it
+  asks when it starts: move the file aside to a `.bak` and start with a new
+  one, or quit, the file and the reason printed.
+- In the shell, `PgUp` scrolls back through what went off the top, and
+  `Alt-v` selects some of it to copy.
 
 ### Changed
+
+- A file name holding control characters (a newline, a tab, an escape)
+  shows them by their names in red instead of leaving them out. In a text
+  file's preview, the file's own colour codes colour it.
 
 - Without the shell function from `filu shell`, `q` asks before quitting
   instead of listing directories that make no difference. With it, `q` lists

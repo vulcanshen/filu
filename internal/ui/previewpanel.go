@@ -21,6 +21,7 @@ type previewBody struct {
 	key    string // the entry and width the lines are for
 	w      int    // the width it was last drawn at
 	model  previewModel
+	logged string // the unreadable file last put in the App Log
 }
 
 func (b *previewBody) Draw(w, h int, focused bool) []string {
@@ -54,11 +55,16 @@ func (b *previewBody) load(w int) {
 	case b.item.name == "":
 		b.EmptyFact, b.EmptyHint = "Nothing to preview", "Move the cursor in [1] onto a file or a directory"
 	case b.model.kind == previewNone:
-		fact := "Cannot read " + safeName(b.item.name)
-		if _, err := readCapped(filepath.Join(b.parent, b.item.name), 1); err != nil {
-			fact = opFailedText("read "+safeName(b.item.name), err)
+		path := filepath.Join(b.parent, b.item.name)
+		fact := "Cannot read " + b.item.name
+		if _, err := readCapped(path, 1); err != nil {
+			fact = opFailedText("read "+b.item.name, err)
 		}
 		b.app.preview.Fail = &terminu.Failure{Fact: fact, Hint: "Press [1], then [Enter] on it for what filu knows about it"}
+		if path != b.logged { // its details in the App Log, once (tdp E3, F5)
+			b.logged = path
+			b.app.t.Log(terminu.Error, "Cannot preview "+shortPath(path)+": "+fact)
+		}
 	}
 	if b.model.kind == previewNone {
 		b.SetLines(nil)
@@ -115,7 +121,7 @@ func (a *App) previewActions() []terminu.Action {
 		{Key: "y", Label: "Yank", Desc: "all of the preview, to the clipboard", Scope: terminu.PanelScope, Hint: "yank",
 			Disabled: func() bool { return !a.hasPreview() },
 			Do: func() tea.Cmd {
-				return copyToClipboardCmd(plainJoin(a.pb.previewText()), "Copied the preview of "+safeName(a.pb.item.name))
+				return copyToClipboardCmd(plainJoin(a.pb.previewText()), "Copied the preview of "+a.pb.item.name)
 			}},
 		a.zoomAction(),
 	}
@@ -140,7 +146,7 @@ func (a *App) viewPreview() tea.Cmd {
 			lines = strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
 		}
 	}
-	name := safeName(b.item.name)
+	name := b.item.name
 	all := plainJoin(lines) // filu's own lines carry its colours
 	if lang != "" {
 		all = strings.Join(lines, "\n") // the file as it is

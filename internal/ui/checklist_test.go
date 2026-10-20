@@ -3,6 +3,7 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -89,21 +90,101 @@ func TestConfirmNamesTheItemNow(t *testing.T) {
 	hs.has("Move b.txt to the trash?")
 }
 
-// A state.yaml that cannot be read is said, and not written over (tdp F5).
-func TestBrokenStateIsSaidAndKept(t *testing.T) {
-	hs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
-	if err := os.MkdirAll(filepath.Dir(statePathOverride), 0o755); err != nil {
+// The App Log: ! opens it; what the user did and how it ended is in it, and a
+// directory that cannot be read is an error in it, counted in the footer until
+// it is seen (tdp K1-9, note-77, F5-3, screen-35).
+func TestAppLog(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads a directory without permissions too")
+	}
+	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "", "shut/": ""})
+	hs.has("!:log")
+	hs.to("a.txt")
+	hs.keys("r", "b.txt", "Enter")
+	if err := os.Chmod(hs.path("shut"), 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(statePathOverride, []byte("tabs: [::"), 0o644); err != nil {
+	t.Cleanup(func() { os.Chmod(hs.path("shut"), 0o755) })
+	hs.a.cd(hs.path("shut"), "")
+	hs.has("!:1 error")
+	hs.keys("!")
+	hs.has("APP LOG", "OK", "Renamed ~/work/a.txt to b.txt", "ERR", "Cannot read the directory")
+	hs.keys("Esc")
+	hs.has("!:log")
+}
+
+// The shell is an interactive terminal: History on PgUp, the selection on
+// Alt-v, both shown with the exit key (tdp terminal-18, M1-2).
+func TestShellIsInteractive(t *testing.T) {
+	t.Setenv("SHELL", "/bin/sh")
+	hs := newHarness(t, 120, 40, nil)
+	hs.keys("s", "Enter")
+	t.Cleanup(func() { hs.a.term.Stop() })
+	hs.has("Alt-Esc:exit", "Alt-v:select", "PgUp:history")
+}
+
+// broken writes a file filu cannot make sense of, and starts filu again.
+func broken(t *testing.T, hs *harness, path string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("tabs: [::"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	hs.a = NewApp(hs.root, "")
 	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
 	hs.run(hs.a.start())
-	hs.has("Cannot read the session")
-	hs.to("a.txt")
-	hs.keys("m")
+}
+
+// A file of filu's own it cannot read is asked about at the start, its path and
+// why; meanwhile nothing writes over it. Enter moves it to .bak (.bak.1 when
+// that is taken) and filu starts without it (tdp E3-17, E3-18, E3-19).
+func TestE3UnreadableFileIsMovedAside(t *testing.T) {
+	for _, which := range []string{"state", "data", "config"} {
+		hs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
+		path := map[string]string{"state": statePathOverride, "data": dataPathOverride, "config": configPathOverride}[which]
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path+".bak", []byte("an older one"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		broken(t, hs, path)
+		hs.has("MOVE ASIDE", filepath.Base(path)+" can't be read:", "Move it to "+filepath.Base(path)+".bak.1", "Enter:move", "Esc:quit")
+		hs.a.persist()
+		if b, _ := os.ReadFile(path); string(b) != "tabs: [::" {
+			t.Fatalf("%s: written over before the user said: %q", which, b)
+		}
+		hs.keys("Enter")
+		hs.hasNot("MOVE ASIDE")
+		if b, _ := os.ReadFile(path + ".bak.1"); string(b) != "tabs: [::" {
+			t.Fatalf("%s: the .bak.1 holds %q", which, b)
+		}
+		if b, _ := os.ReadFile(path + ".bak"); string(b) != "an older one" {
+			t.Fatalf("%s: the older .bak was written over: %q", which, b)
+		}
+		hs.to("a.txt")
+		hs.keys("m")
+		if which == "config" {
+			if b, _ := os.ReadFile(path); !strings.Contains(string(b), "finder_cap") {
+				t.Fatalf("no new config.yaml: %q", b)
+			}
+		} else if hs.a.keepState {
+			t.Fatalf("%s: filu still does not save", which)
+		}
+	}
+}
+
+// Esc on that question quits, leaving the file as it is (tdp E3-20; main
+// writes Run's error, the path and why, to stderr).
+func TestE3UnreadableFileQuits(t *testing.T) {
+	hs := newHarness(t, 120, 40, nil)
+	broken(t, hs, statePathOverride)
+	hs.keys("Esc")
+	if !hs.quit {
+		t.Fatal("Esc did not quit")
+	}
 	hs.a.shutdown()
 	if b, _ := os.ReadFile(statePathOverride); string(b) != "tabs: [::" {
 		t.Fatalf("state.yaml was written over: %q", b)

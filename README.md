@@ -90,6 +90,7 @@ filu opens with the file list focused. These keys cover the rest:
 | **`Enter`** | Go into a directory, see a file's details, or do what the row you are on is for |
 | **`Esc`** | Back out: close the popup on top, or go up a directory |
 | **`Tab`** | The next panel (`Shift-Tab` the one before, `1`–`3` jump to one) |
+| **`!`** | The App Log: what filu did and what went wrong, newest last (the footer counts errors you haven't seen) |
 | **`q`** | Quit (it asks first — with the line below, it asks where your shell goes) |
 
 ### Let quitting change your shell's directory
@@ -124,6 +125,7 @@ Three panels:
 - A long name is cut short so the other columns stay. As the panel narrows further, whole columns make way for the names — the owner first, then the size, the modified time and the permissions.
 - `t` opens a new tab (the same directory, a favorite, or a search), `w` closes the one you are on.
 - Files changed by other programs show up on their own.
+- A name holding control characters — a newline, a tab, an escape — shows them by their names in red (`\n`, `\t`, `\x1b`), so you see the name as it really is.
 
 #### Gather, copy, move
 
@@ -153,7 +155,7 @@ Three panels:
 #### Open, edit, and everything else
 
 - `o` opens a file or directory with its default app (it asks first). `O` lets you choose the app — add your own (VSCode, IntelliJ IDEA, …) in the config.
-- `s` drops you into your shell in the current directory (it asks first); type `exit` to come back, or press `Alt-Esc`: filu asks, then `Enter` ends the shell (whatever is running in it) and `Esc` takes you back to it.
+- `s` drops you into your shell in the current directory (it asks first); type `exit` to come back, or press `Alt-Esc`: filu asks, then `Enter` ends the shell (whatever is running in it) and `Esc` takes you back to it. In the shell, `PgUp` scrolls back through what went off the top (`Esc` back to the live screen), and `Alt-v` lets you select some of it and copy it with `y`.
 - `r` renames (the old name shows in grey: `Tab` takes it to edit, or just type a new one), `a` creates a file (end the name with `/` for a directory), `D` moves to the trash after asking. A name that is empty, already taken, outside the current directory or holding a control character is refused on the spot — the box stays open and says why. If renaming or creating fails all the same (say, no permission), filu says why over the box, and closing that brings you back to what you typed.
 
 ### Key reference
@@ -177,6 +179,7 @@ Three panels:
 | Key | Anywhere |
 |---|---|
 | `?` | The keys you can press here; `?` or `Esc` closes the list |
+| `!` | The App Log |
 | `q` · `Ctrl-C` | Quit (asks first, or asks where your shell goes); `Ctrl-C` works while typing too, and pressed again it leaves at once |
 
 Every panel's `Space` menu lists what you can do to the item under the cursor, then to the panel, and ends with **Global operation**: the app-wide actions (`[q]uit`). A row that can't run right now — say, `[w] Close tab` with only one tab open — is shown dimmed.
@@ -184,6 +187,8 @@ Every panel's `Space` menu lists what you can do to the item under the cursor, t
 ## Configuration
 
 Your settings live in `config.yaml`, in `$XDG_CONFIG_HOME/filu/` (or `~/.config/filu/`); `FILU__CONFIG` names another directory. filu writes a commented copy the first time it runs and never overwrites yours. Next to it, `state.yaml` holds where you were — the tabs, the marks, each directory's sort — leave that one to filu (`FILU__STATE` puts it in another directory). Your favorites and the task log are in `~/.filu/data.yaml` (`FILU__DATA` names another directory): that is the one to back up.
+
+If one of these three files can't be read — a broken format, no permission — filu asks when it starts: `Enter` moves it aside to a `.bak` next to it (`.bak.1` and on, never over an older one) and starts with a new one; `Esc` quits and says which file and why.
 
 On macOS, versions up to 0.4.0 kept everything in `~/Library/Application Support/filu/`. The first time this version starts, it moves what is in there to `~/.config/filu/` and says so, and removes the emptied old directory. A file `~/.config/filu/` already has is left alone in both places, and filu shows you both paths so you can put the two together yourself. If filu cannot move them, it keeps using the old directory and shows you both paths, to move it yourself. Favorites and the task log move out of `state.yaml` into `~/.filu/data.yaml` the same way: if `data.yaml` already has its own, the ones in `state.yaml` stay there, and filu tells you.
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	terminu "github.com/vulcanshen/terminu-go"
 )
 
 const (
@@ -172,7 +173,7 @@ func renderArchiveTree(entries []archEntry) []string {
 			}
 			label := lipgloss.NewStyle().
 				Foreground(fileColor(fileItem{name: name, isDir: c.isDir})).
-				Render(icon + " " + safeName(name))
+				Render(icon + " " + terminu.Escape(name))
 			if depth == 1 { // top level: a plain list, no branch guide
 				lines = append(lines, " "+label)
 				if c.isDir {

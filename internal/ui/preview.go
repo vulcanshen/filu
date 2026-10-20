@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
+	terminu "github.com/vulcanshen/terminu-go"
 )
 
 const previewCap = 64 * 1024 // read at most this many bytes for a preview
@@ -64,7 +65,7 @@ func loadPreview(it fileItem, parent string, imgW int) previewModel {
 		return previewModel{note: "(unreadable)"}
 	}
 	if isText(data) {
-		lines := sanitizeLines(strings.Split(string(data), "\n"))
+		lines := textLines(string(data))
 		if hl, ok := highlight(it.name, strings.Join(lines, "\n")); ok {
 			lines = hl
 		}
@@ -88,37 +89,15 @@ func withLineNumbers(lines []string) []string {
 	return out
 }
 
-func sanitizeLines(lines []string) []string {
+// textLines are a text's lines as it has them, a CRLF line's \r going with its
+// line break. Tabs, other control characters and colour codes are terminu's to
+// draw, as content for reading is (components/README, control characters).
+func textLines(text string) []string {
+	lines := strings.Split(text, "\n")
 	for i, l := range lines {
-		lines[i] = sanitizeLine(l)
+		lines[i] = strings.TrimSuffix(l, "\r")
 	}
 	return lines
-}
-
-// sanitizeLine makes a text line safe to draw: tabs → spaces, CR dropped, other
-// control bytes (incl. ESC — would otherwise corrupt the whole terminal) → space.
-// Capped so a pathological long line can't blow up width math.
-func sanitizeLine(s string) string {
-	const maxRunes = 2000
-	var b strings.Builder
-	n := 0
-	for _, r := range s {
-		if n >= maxRunes {
-			break
-		}
-		switch {
-		case r == '\t':
-			b.WriteString(strings.Repeat(" ", inputTabWidth)) // input_tab_width cells (tdp E3)
-		case r == '\r':
-			continue
-		case r < 0x20 || r == 0x7f:
-			b.WriteByte(' ')
-		default:
-			b.WriteRune(r)
-		}
-		n++
-	}
-	return b.String()
 }
 
 // contentLines returns the preview's display lines (a note when empty/unreadable).
@@ -154,8 +133,8 @@ func treeLines(root string, maxDepth int) []string {
 			if it.isDir {
 				icon = iconDir
 			}
-			label := lipgloss.NewStyle().Foreground(fileColor(it)).Render(icon + " " + safeName(it.name)) // eza type colour
-			if depth == 1 {                                                                               // top level: a plain list, no branch guide
+			label := lipgloss.NewStyle().Foreground(fileColor(it)).Render(icon + " " + terminu.Escape(it.name)) // eza type colour
+			if depth == 1 {                                                                                     // top level: a plain list, no branch guide
 				lines = append(lines, " "+label)
 				if it.isDir && depth < maxDepth {
 					walk(filepath.Join(dir, it.name), "  ", depth+1)

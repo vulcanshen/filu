@@ -81,7 +81,7 @@ func (a *App) filesActions() []terminu.Action {
 		// A shell clears the menu it is opened from (tdp T1).
 		{Key: "s", Label: "Shell", Desc: "your shell, in this directory", Scope: panel, Clear: true,
 			AskFor: func() *terminu.Ask {
-				where := safeName(shortPath(a.cur().dir))
+				where := shortPath(a.cur().dir)
 				return &terminu.Ask{Title: "Shell", Subject: where, Question: "Open your shell in " + where + "?", Verb: "open"}
 			},
 			Do: a.shell},
@@ -123,7 +123,7 @@ func (a *App) info() tea.Cmd {
 	for _, r := range rows {
 		lines = append(lines, label.Render(fmt.Sprintf("%-*s", w, strings.ToUpper(r.label)))+"  "+r.value)
 	}
-	return a.t.Viewer(&terminu.Viewer{Title: "Info", Subject: safeName(it.name), Glyph: glyphInfo, Lines: lines, NoNumbers: true})
+	return a.t.Viewer(&terminu.Viewer{Title: "Info", Subject: it.name, Glyph: glyphInfo, Lines: lines, NoNumbers: true})
 }
 
 // open hands the entry to its default app, once asked (openAsk): filu cannot
@@ -133,6 +133,7 @@ func (a *App) open() tea.Cmd {
 	if !ok {
 		return nil
 	}
+	a.t.Log(terminu.Info, "Opened "+shortPath(p)+" with its default app")
 	return openFileCmd(p)
 }
 
@@ -143,10 +144,16 @@ func (a *App) openWith() tea.Cmd {
 	if !ok {
 		return nil
 	}
-	acts := []terminu.Action{{Label: "Default", Desc: "the app the system opens it with", Do: func() tea.Cmd { return openFileCmd(p) }}}
+	acts := []terminu.Action{{Label: "Default", Desc: "the app the system opens it with", Do: func() tea.Cmd {
+		a.t.Log(terminu.Info, "Opened "+shortPath(p)+" with its default app")
+		return openFileCmd(p)
+	}}}
 	for _, app := range openWithApps {
 		app := app
-		acts = append(acts, terminu.Action{Label: app.Name, Desc: "runs " + app.Cmd, Do: func() tea.Cmd { return openWithCmd(app.Cmd, p) }})
+		acts = append(acts, terminu.Action{Label: app.Name, Desc: "runs " + app.Cmd, Do: func() tea.Cmd {
+			a.t.Log(terminu.Info, "Opened "+shortPath(p)+" with "+app.Name+" ("+app.Cmd+")")
+			return openWithCmd(app.Cmd, p)
+		}})
 	}
 	return a.t.MenuAbout("Open with", a.itemName(), terminu.MenuSection{Actions: acts})
 }
@@ -175,7 +182,7 @@ func (a *App) yankItem() tea.Cmd {
 	if !ok {
 		return nil
 	}
-	return copyToClipboardCmd(p, "Copied "+safeName(p))
+	return copyToClipboardCmd(p, "Copied "+p)
 }
 
 // rename renames the entry in place; the old name is offered in grey
@@ -187,19 +194,20 @@ func (a *App) rename() tea.Cmd {
 	}
 	dir := a.cur().dir
 	return a.t.Text(terminu.TextInput{
-		Title: "Rename", Subject: safeName(it.name), Glyph: glyphRename, Name: "The name",
-		Prompt: "A new name for " + safeName(it.name), Verb: "rename", Old: it.name,
+		Title: "Rename", Subject: it.name, Glyph: glyphRename, Name: "The name",
+		Prompt: "A new name for " + it.name, Verb: "rename", Old: it.name,
 		Check: func(v string) error {
 			return checkName(v, func(name string) string { return renameProblem(dir, it.name, name) })
 		},
 		// A rename that fails keeps the input open with the name in it (tdp F4).
 		Commit: func(v string) error {
 			if err := os.Rename(p, filepath.Join(dir, v)); err != nil {
-				return errors.New(opFailedText("rename "+safeName(it.name), err))
+				return errors.New(opFailedText("rename "+it.name, err))
 			}
 			return nil
 		},
 		Done: func(v string) tea.Cmd {
+			a.t.Log(terminu.Success, "Renamed "+shortPath(p)+" to "+v)
 			a.reloadDir(dir)
 			a.cur().list.Select(filepath.Join(dir, v))
 			a.refreshPreview()
@@ -253,11 +261,12 @@ func (a *App) add() tea.Cmd {
 				}
 			}
 			if err != nil {
-				return errors.New(opFailedText("add "+safeName(v), err))
+				return errors.New(opFailedText("add "+v, err))
 			}
 			return nil
 		},
 		Done: func(v string) tea.Cmd {
+			a.t.Log(terminu.Success, "Added "+shortPath(filepath.Join(dir, v)))
 			a.reloadDir(dir)
 			a.cur().list.Select(filepath.Join(dir, firstElem(strings.TrimSuffix(v, "/"))))
 			a.refreshPreview()
@@ -319,7 +328,7 @@ func (a *App) toggleFavorite(dir string) tea.Cmd {
 	if starred {
 		what = "Took the star off "
 	}
-	return tea.Batch(a.t.Toast(terminu.Success, what+safeName(shortPath(dir))), a.persist())
+	return tea.Batch(a.t.Toast(terminu.Success, what+shortPath(dir)), a.persist())
 }
 
 // land copies or moves the marked files (the picks, when there are some) into
@@ -338,7 +347,7 @@ func (a *App) breadcrumb() tea.Cmd {
 		if n > 1 {
 			desc = itoa(n) + " levels up"
 		}
-		acts = append(acts, terminu.Action{Label: safeName(shortPath(d)), Desc: desc, Do: func() tea.Cmd { return a.cd(d, "") }})
+		acts = append(acts, terminu.Action{Label: shortPath(d), Desc: desc, Do: func() tea.Cmd { return a.cd(d, "") }})
 		if filepath.Dir(d) == d {
 			break
 		}
@@ -481,11 +490,16 @@ func direction(asc bool) string {
 }
 
 // shell opens the user's shell in the directory, once asked (shellAsk); when it
-// ends, the directory is read again.
+// ends, the directory is read again. The user types commands of their own in
+// it: an interactive terminal, with History on PgUp and the selection on Alt-v
+// (components/dialog/terminal), copying as filu copies.
 func (a *App) shell() tea.Cmd {
 	dir := a.cur().dir
-	a.term = &terminu.Terminal{Title: "Shell", Subject: safeName(shortPath(dir)), Dir: dir, Ends: true,
+	a.t.Log(terminu.Info, "Opened your shell in "+shortPath(dir))
+	a.term = &terminu.Terminal{Title: "Shell", Subject: shortPath(dir), Dir: dir, Ends: true, Interactive: true,
+		Copy: func(text string) tea.Cmd { return copyToClipboardCmd(text, "Copied the selection") },
 		OnExit: func(error) tea.Cmd {
+			a.t.Log(terminu.Info, "Your shell in "+shortPath(dir)+" ended")
 			a.reloadDir(dir)
 			a.refreshPreview()
 			return nil

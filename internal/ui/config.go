@@ -91,7 +91,7 @@ var stuckInOld bool
 // settingsMove is what moveOldSettings did.
 type settingsMove struct {
 	from, to string
-	moved    bool     // something was moved
+	moved    []string // the names moved
 	left     []string // the names the new place had already: left in the old one
 	err      error    // why it could not move them: filu goes on using the old place
 }
@@ -140,7 +140,7 @@ func moveOldSettings() settingsMove {
 		stuckInOld = true
 		return settingsMove{from: m.from, to: m.to, err: err}
 	}
-	m.moved = len(done) > 0
+	m.moved = done
 	if len(m.left) == 0 {
 		_ = os.Remove(m.from) // empty now
 	}
@@ -176,26 +176,28 @@ func configFilePath() (string, bool) {
 }
 
 // loadConfig applies config.yaml over the defaults. On first run (no file) it
-// drops a commented template so the knobs are discoverable and editable; a file
-// that exists is never overwritten. It never fails startup — an unreadable or
-// malformed file leaves the defaults in place — but it returns that error so
-// the app can say so (tdp F5) instead of silently ignoring the user's settings.
-func loadConfig() error {
+// drops a commented template so the knobs are discoverable and editable, made
+// being where; a file that exists is never overwritten. An unreadable or
+// malformed file leaves the defaults in place, and its error is returned for
+// the app to ask about it (tdp E3: move it aside, or quit).
+func loadConfig() (made string, err error) {
 	path, ok := configFilePath()
 	if !ok {
-		return nil
+		return "", nil
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			writeDefaultConfig(path) // first run → leave a template behind
-			return nil
+			if writeDefaultConfig(path) == nil { // first run → leave a template behind
+				return path, nil
+			}
+			return "", nil
 		}
-		return err
+		return "", err
 	}
 	var c fileConfig
 	if err := yaml.Unmarshal(data, &c); err != nil {
-		return err
+		return "", err
 	}
 	if c.FinderCap > 0 {
 		finderCap = c.FinderCap
@@ -208,7 +210,7 @@ func loadConfig() error {
 		inputTabWidth = c.InputTabWidth
 	}
 	hideSecretsInPreview = c.HideSecretsInPreview
-	return nil
+	return "", nil
 }
 
 // configHeader is the top-of-file comment; the keys themselves are marshalled
@@ -251,9 +253,9 @@ func defaultConfigBytes() []byte {
 	return append([]byte(configHeader), body...)
 }
 
-func writeDefaultConfig(path string) {
+func writeDefaultConfig(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return
+		return err
 	}
-	_ = os.WriteFile(path, defaultConfigBytes(), 0o644)
+	return os.WriteFile(path, defaultConfigBytes(), 0o644)
 }

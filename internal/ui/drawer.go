@@ -51,7 +51,7 @@ func (b *tasksBody) Draw(w, h int, focused bool) []string {
 func (a *App) refreshDrawer() {
 	var rows []terminu.Row
 	for _, p := range a.marks.items {
-		rows = append(rows, terminu.Row{ID: p, Cells: []string{pathIcon(p) + " " + safeName(filepath.Base(p)), safeName(shortPath(filepath.Dir(p)))}})
+		rows = append(rows, terminu.Row{ID: p, Cells: []string{pathIcon(p) + " " + filepath.Base(p), shortPath(filepath.Dir(p))}})
 	}
 	a.marksL.SetRows(rows)
 	var picked []string
@@ -64,8 +64,9 @@ func (a *App) refreshDrawer() {
 
 	rows = nil
 	for _, f := range a.favs.pinned {
-		rows = append(rows, terminu.Row{ID: f.path, Cells: []string{terminu.Fg(terminu.Yellow).Render(iconPin) + " " + safeName(filepath.Base(f.path)),
-			safeName(shortPath(filepath.Dir(f.path)))}})
+		name := []terminu.Span{{Text: iconPin, Style: terminu.Fg(terminu.Yellow)}, {Text: " " + filepath.Base(f.path)}}
+		rows = append(rows, terminu.Row{ID: f.path, Cells: []string{spansText(name), shortPath(filepath.Dir(f.path))},
+			Styled: [][]terminu.Span{name}})
 	}
 	a.favsL.SetRows(rows)
 }
@@ -74,17 +75,20 @@ func (a *App) refreshDrawer() {
 func (a *App) fillTasks() {
 	var rows []terminu.Row
 	for _, t := range a.tasks {
-		rows = append(rows, terminu.Row{ID: strconv.Itoa(t.id), Cells: []string{
-			terminu.Fg(terminu.Overlay0).Render(taskTime(t.at)), taskText(t)}})
+		when := []terminu.Span{{Text: taskTime(t.at), Style: terminu.Fg(terminu.Overlay0)}}
+		task := taskText(t)
+		rows = append(rows, terminu.Row{ID: strconv.Itoa(t.id), Cells: []string{spansText(when), spansText(task)},
+			Styled: [][]terminu.Span{when, task}})
 	}
 	a.tasksL.SetRows(rows)
 }
 
-// taskText is a task in plain words: what it did to what, and where.
-func taskText(t landTask) string {
+// taskText is a task in plain words: what it did to what, and where; the
+// state's glyph and the count in their colours.
+func taskText(t landTask) []terminu.Span {
 	subject := fmt.Sprintf("%d items", t.total)
 	if len(t.srcs) == 1 {
-		subject = safeName(filepath.Base(t.srcs[0]))
+		subject = filepath.Base(t.srcs[0])
 	}
 	verb, verbing, verbed := "Copy", "Copying", "Copied"
 	switch t.action {
@@ -93,19 +97,26 @@ func taskText(t landTask) string {
 	case "zip":
 		verb, verbing, verbed = "Zip", "Zipping", "Zipped"
 	}
-	to := " → " + safeName(t.dest)
+	to := " → " + t.dest
 	grey := terminu.Fg(terminu.Overlay0)
+	line := func(glyph string, c terminu.Color, words, tail string, tailStyle terminu.Style) []terminu.Span {
+		out := []terminu.Span{{Text: glyph, Style: terminu.Fg(c)}, {Text: " " + words + " " + subject + to}}
+		if tail != "" {
+			out = append(out, terminu.Span{Text: "  "}, terminu.Span{Text: tail, Style: tailStyle})
+		}
+		return out
+	}
 	switch t.status {
 	case taskRunning: // a row that is still going, the app's to show (tdp F7, S67)
-		return terminu.Fg(terminu.Green).Render(terminu.LoadingFrame()) + " " + verbing + " " + subject + to + "  " + grey.Render(fmt.Sprintf("%d/%d", t.done, t.total))
+		return line(terminu.LoadingFrame(), terminu.Green, verbing, fmt.Sprintf("%d/%d", t.done, t.total), grey)
 	case taskDone:
-		return terminu.Fg(terminu.Green).Render(glyphDone) + " " + verbed + " " + subject + to
+		return line(glyphDone, terminu.Green, verbed, "", grey)
 	case taskPending:
-		return terminu.Fg(terminu.Peach).Render(glyphPending) + " " + verb + " " + subject + to + "  " + grey.Render("· interrupted")
+		return line(glyphPending, terminu.Peach, verb, "· interrupted", grey)
 	case taskError:
-		return terminu.Fg(terminu.Red).Render(glyphFailed) + " " + verb + " " + subject + to + "  " + terminu.Fg(terminu.Red).Render(fmt.Sprintf("· %d/%d failed", t.failed, t.total))
+		return line(glyphFailed, terminu.Red, verb, fmt.Sprintf("· %d/%d failed", t.failed, t.total), terminu.Fg(terminu.Red))
 	}
-	return verb + " " + subject + to
+	return []terminu.Span{{Text: verb + " " + subject + to}}
 }
 
 // The glyphs of a task's state; a running one has the turning loading icon.
@@ -137,7 +148,7 @@ func (a *App) drawerActions() []terminu.Action {
 		{Key: "y", Label: "Yank", Desc: "its full path, to the clipboard", Scope: item,
 			Hidden: not(drawerMarks), Do: func() tea.Cmd {
 				r, _ := a.marksL.Current()
-				return copyToClipboardCmd(r.ID, "Copied "+safeName(r.ID))
+				return copyToClipboardCmd(r.ID, "Copied "+r.ID)
 			}},
 		{Key: "m", Label: "Unmark", Desc: "it: out of the marks", Scope: item, Hint: "unmark",
 			Hidden: not(drawerMarks), Do: func() tea.Cmd {
@@ -154,6 +165,7 @@ func (a *App) drawerActions() []terminu.Action {
 				return &terminu.Ask{Title: "Clear", Question: fmt.Sprintf("Clear all %d marks?", len(a.marks.items)), Verb: "clear"}
 			},
 			Do: func() tea.Cmd {
+				a.t.Log(terminu.Success, fmt.Sprintf("Cleared %d marks", len(a.marks.items)))
 				a.marks.clear()
 				a.marksChanged()
 				return a.persist()
@@ -191,7 +203,7 @@ func (a *App) drawerActions() []terminu.Action {
 			Hidden: not(drawerFavs),
 			AskFor: func() *terminu.Ask {
 				r, _ := a.favsL.Current()
-				where := safeName(shortPath(r.ID))
+				where := shortPath(r.ID)
 				return &terminu.Ask{Title: "Unfavorite", Subject: where, Question: "Take the star off " + where + "?", Verb: "unfavorite"}
 			},
 			Do: func() tea.Cmd {
@@ -247,7 +259,7 @@ func (a *App) showInTabs(dir, focus string) tea.Cmd {
 	}
 	if at < 0 {
 		if len(a.tabs) >= maxTabs {
-			return a.t.Toast(terminu.Warning, fmt.Sprintf("All %d tabs are in use: close one with [w] to open %s", maxTabs, safeName(filepath.Base(dir))))
+			return a.t.Toast(terminu.Warning, fmt.Sprintf("All %d tabs are in use: close one with [w] to open %s", maxTabs, filepath.Base(dir)))
 		}
 		a.openTab(dir, "")
 		at = len(a.tabs) - 1
@@ -274,7 +286,7 @@ func (a *App) openInMenu(dir string) tea.Cmd {
 		Do: func() tea.Cmd { return tea.Batch(a.openTab(dir, ""), a.t.Focus(a.files)) }}}
 	for i, t := range a.tabs {
 		i, t := i, t
-		desc := "now on " + safeName(shortPath(t.dir))
+		desc := "now on " + shortPath(t.dir)
 		if cleanDir(t.dir) == cleanDir(dir) {
 			desc = "already there"
 		}
@@ -285,7 +297,7 @@ func (a *App) openInMenu(dir string) tea.Cmd {
 				return tea.Batch(a.cd(dir, ""), a.t.Focus(a.files))
 			}})
 	}
-	return a.t.MenuAbout("Open in", safeName(shortPath(dir)), terminu.MenuSection{Actions: acts})
+	return a.t.MenuAbout("Open in", shortPath(dir), terminu.MenuSection{Actions: acts})
 }
 
 // --- tasks: copies, moves and zips in the background --------------------------
@@ -320,6 +332,14 @@ func (a *App) startLand(items []string, destDir string, move bool) tea.Cmd {
 }
 
 func (a *App) addTask(action, dest, destPath string, items []string) int {
+	subject, into := fmt.Sprintf("%d items", len(items)), destPath
+	if len(items) == 1 {
+		subject = filepath.Base(items[0])
+	}
+	if action == "zip" {
+		into = filepath.Join(destPath, dest)
+	}
+	a.t.Log(terminu.Info, map[string]string{"cp": "Copying ", "mv": "Moving ", "zip": "Zipping "}[action]+subject+" to "+shortPath(into))
 	a.nextTaskID++
 	a.tasks = append(a.tasks, landTask{id: a.nextTaskID, action: action, dest: dest, destPath: destPath, srcs: items,
 		total: len(items), at: time.Now(), status: taskRunning})
@@ -362,9 +382,9 @@ func (a *App) handleLand(msg landMsg) tea.Cmd {
 		a.marksChanged()
 		a.refreshPreview()
 		a.syncQuit()
-		toast := a.t.Toast(terminu.Success, terminu.StripStyles(taskText(*t)))
+		toast := a.t.Toast(terminu.Success, spansText(taskText(*t)))
 		if t.status == taskError {
-			toast = a.t.Toast(terminu.Error, terminu.StripStyles(taskText(*t)))
+			toast = a.t.Toast(terminu.Error, spansText(taskText(*t)))
 		}
 		return tea.Batch(toast, a.persist())
 	}
@@ -435,7 +455,7 @@ func (a *App) quitMenu() tea.Cmd {
 			return
 		}
 		seen[dir] = true
-		where := safeName(shortPath(dir))
+		where := shortPath(dir)
 		acts = append(acts, terminu.Action{Key: strconv.Itoa(len(acts) + 1), Label: where, Desc: from, EnterHint: "quit",
 			AskFor: func() *terminu.Ask {
 				if !a.anyRunning() {

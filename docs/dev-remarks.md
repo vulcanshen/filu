@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.8.3），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.2.2）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.0），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.0）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -55,10 +55,17 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 - **menu 做完之後留不留**（tdp T1）—— lib 預設：開了東西的保留開它的 menu、什麼都沒開的整疊收掉。filu 另外做的：Shell 用
   `Action.Clear`（開 shell 清掉 source）；finder 選了東西就進去，`Done` 先 `App.CloseAll`（drill-down 清掉 source，`revealFound`）；
   排序選了方向用 `Stay` 加 `App.CloseTop(1)` 只關方向那一步，欄位 menu 的說明是 `Action.Live`，回去就看得到新的排序。
-- **錯誤** —— `config.yaml` 讀不懂、`state.yaml` 讀不到或讀不懂、目錄監看起不來，啟動後立刻說（一個用 toast、好幾個用 error popup）。
-  `state.yaml` 壞掉時不覆寫它（`keepState`）：寫回去就是把裡面的 tabs、marks、最愛、排序無聲丟掉。`[2]` 讀不到的檔是 panel 的錯誤
-  （`Panel.Fail`：Red 的事實加點名按鍵的提示）。Rename、Add、Zip 寫入時失敗用 input 的 `Commit`：input 留著、打的字還在，error popup
-  疊在上面；其他動作失敗開 error popup，標題寫「哪件事失敗」與對象（`App.ErrorAbout`：`DELETE FAILED: notes.md`）。
+- **讀不了自己的檔** —— `config.yaml`、`state.yaml`、`data.yaml` 讀不到或讀不懂，啟動時一個一個問（tdp E3「讀不了時」，lib 的
+  `App.MoveAside`；`filu.go` 的 `unread`、`askUnread`）：`Enter` 改名成 `.bak`（已有就 `.bak.1`……）再開始 —— 設定寫一份新的範本，
+  session 重讀（`reopenSession`，`data.yaml` 也壞了就接著問）；`Esc` 離開，`Run` 回傳路徑與原因，`main` 印到 stderr。問之前不寫回去
+  （`keepState`）：寫回去就是把裡面的 tabs、marks、最愛、排序無聲丟掉。filu 沒有快取。
+- **錯誤** —— 目錄監看起不來、搬舊設定失敗，啟動後立刻說（一個用 toast、好幾個用 error popup）。error popup 是一段散文，裡面的
+  `\n` 會畫成名字（components/README「控制字元」），所以好幾件事、兩個路徑都接成一段。`[1]` 讀不到的目錄、`[2]` 讀不到的檔是 panel
+  的錯誤（Red 的事實加點名按鍵的提示），細節記進 App Log。Rename、Add、Zip 寫入時失敗用 input 的 `Commit`：input 留著、打的字還在，
+  error popup 疊在上面；其他動作失敗開 error popup，標題寫「哪件事失敗」與對象（`App.ErrorAbout`：`DELETE FAILED: notes.md`）。
+- **App Log** —— lib 的（`!`，footer 的 `!:log`）：每個 toast 與 error popup 自己進去。filu 另外記（`App.Log`）：使用者做的事與結果
+  （改名、新增、開檔、開始複製／搬移／打包、清掉 marks、開 shell 與 shell 結束），背景做的事（搬舊設定的每一項、第一次寫的設定範本），
+  讀不到外面的東西的細節（目錄、預覽，同一件事只記一次：`tab.logged`、`previewBody.logged`）。
 - **marks** —— 一個跨目錄、跨 tab 的 bucket（`marks.go` 的 `marksModel`），存在 `state.yaml`。清單上的勾是 lib 的標記欄，換目錄、
   bucket 變動時照 bucket 重勾（`List.SetMarked`）。`[3]` Marks 清單自己的標記就是 pick：有 pick 時只有 pick 的會落地（`landItems`）。
   複製保留 bucket；搬移把搬走的移出 bucket。
@@ -77,10 +84,13 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
     lib 的預覽從那一行附近開始；什麼都沒打時列出全部，跟檔名搜尋一樣。
   - 選了就進去：`[1]` 到那個目錄、cursor 停在那一項，開它的 menu 一起收掉。
 - **預覽** —— 讀 magic bytes 判型別：目錄 → 三層的樹、壓縮包 → 內容清單、圖片 → base64 `data:` URI、PDF → 抽出的文字與頁數、
-  文字 → Chroma（catppuccin-mocha）上色 + 行號、二進位 → hex + ASCII（`preview.go`）。Tab 畫成 `input_tab_width` 格。行依寬度產生
-  （圖片的 data URI 照寬度折），所以在 `previewBody.Draw` 時才做。不用 lib 的 `FilePreview`，見「設計決定」。
+  文字 → Chroma（catppuccin-mocha）上色 + 行號、二進位 → hex + ASCII（`preview.go`）。文字照檔案原本的樣子交給 lib 的 `Pager`
+  （`textLines` 只拿掉 CRLF 的 `\r`）：`Pager` 是「拿來讀的內容」，Tab 畫成 `input_tab_width` 格、檔案自己的顏色碼上色、一行裡的
+  `\r` 只留最後的樣子、其他控制字元畫成紅色的名字（components/README「控制字元」）。樹與壓縮檔清單裡的檔名用 `terminu.Escape`
+  畫成名字（不然名字裡的顏色碼會上色）。行依寬度產生（圖片的 data URI 照寬度折），所以在 `previewBody.Draw` 時才做。不用 lib 的
+  `FilePreview`，見「設計決定」。
 - **檢視與複製** —— `[2]` 的 `Enter` 用 lib 的 `Viewer` 打開預覽。文字檔交出去的是檔案原本的文字（最多 4 MB）：Tab、控制字元、
-  CRLF、太長的行都由 lib 畫（`Lang` 是檔名，跟預覽一樣上色），複製出來是原樣；`[2]` 的 sanitize 只給 panel 用。選取模式是 lib 的
+  CRLF、太長的行都由 lib 畫（`Lang` 是檔名，跟預覽一樣上色），複製出來是原樣。選取模式是 lib 的
   （`v` 兩次、vim 的移動、`y` 複製）；`y` 在選取以外複製全部。圖片的 data URI 合回一行再交出去，lib 自己折行，複製出來不會斷。
   剪貼簿走 OSC 52（`clipboard.go`），穿得過 tmux 與 SSH。
 - **檔案資訊** —— 檔案上的 `Enter` 用 `Viewer` 顯示 `fileFacts`（`facts.go`）：完整路徑（symlink 多一列目標）、類型（跟預覽同一套判法）、
@@ -104,8 +114,13 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
   寫出兩個路徑。最愛與 task 紀錄放 `~/.filu/data.yaml`（`FILU__DATA`），以前在 `state.yaml` 的第一次啟動時搬過去（`loadState`）；
   `data.yaml` 已經有了的話，`state.yaml` 裡的留著、每次存檔照樣寫回去（`leftInState`），一樣開 error popup。`config.yaml` 除了 filu 自己的
   `finder_cap`、`ignore_dirs`、`open_with`，還收家族共用的 `input_tab_width`、`hide_secrets_in_preview`，交給 lib。
-- **檔名裡的控制字元** —— 檔名可能含控制字元（macOS 的 `Icon\r`）。`safeName`（`list.go`）在顯示時剝掉，檔案操作仍用真實名。
-  使用者打的值由 lib 的 input 處理：控制字元畫成紅色的名字、送出時擋下。
+- **檔名裡的控制字元** —— 檔名可能含控制字元（macOS 的 `Icon\r`）。filu 原樣交給 lib：清單的格子、位置列、menu、標題、toast、
+  confirm、finder 的列是「名字與短字」，lib 把每個控制字元畫成紅色的名字（`\r`、`\n`、`\x1b`），不丟、不換成空白（components/README
+  「控制字元」）。filu 要上色的格子給 `Row.Styled`（`[]terminu.Span`，字照樣留在 `Cells` 讓篩選與排序用；`look.go` 的 `colorPerm`、
+  `colorSize`、`colorOwner`），不再把顏色碼塞進字裡。拿來讀的內容裡（`[2]`、檔案資訊的 viewer）的名字用 `terminu.Escape`。以前的
+  `safeName` 把它們丟掉，已經拿掉。使用者打的值由 lib 的 input 處理：控制字元畫成紅色的名字、送出時擋下。
+- **Shell** —— 互動 terminal（`Terminal.Interactive`）：`PgUp` 進歷史模式、`Alt-v` 進選取模式，選取的複製走 filu 的剪貼簿
+  （`copyToClipboardCmd`，跟 viewer 一樣）。
 - **名稱的檢查** —— Rename、Add、Zip 的 `Check`（`actions.go` 的 `renameProblem`、`addProblem`）：空的、撞名、Rename 含 `/`、Add 在
   目前目錄外面（`filepath.Clean` 後以 `/` 開頭、是 `..` 或以 `../` 開頭）、Zip 取不出檔名，都留在框裡、寫在錯誤列。寫入時才失敗的
   （權限等）在 `Commit` 裡失敗：error popup 疊在框上，關掉回到框、打的字還在。
@@ -164,6 +179,10 @@ filu/
 
 - **`[3]` 的欄位**：Marks、Favorites 是 `NAME` 與 `IN`（所在目錄，從前面截）；Tasks 是 `WHEN` 與 `TASK`。理由：名稱與所在目錄分兩欄，
   名稱不會被長路徑擠掉，`IN` 從前面截、留下最近的幾層；Tasks 照時間讀，所以時間放前面。
+- **位置列的星不上色**（FL25，已回報 terminu，`TODO(tdp FL25)`）：lib 的位置列只收純文字、整列 Lavender，以前塞進去的 Yellow 顏色碼
+  現在會畫成名字。先讓星跟位置列同色；位置列能不能接 app 自己的標示與顏色，等規範定。
+- **`open_with`、`ignore_dirs` 留在 `config.yaml`**（FL26，已回報 terminu）：tdp E3 說使用者寫給 app 的清單是資料；這兩份是使用者寫的
+  清單，但內容是 filu 怎麼運作（`[O]pen with` 列哪些 app、搜尋略過哪些目錄），不是使用者的東西，所以先算設定。
 
 ## 已否決，不要重提
 
@@ -234,6 +253,13 @@ command（動畫、背景的 channel）、讀 `Frame()`。session、設定、垃
   `harness.late` 再交給 filu，不會掉。搜尋是邊打邊找的，少了這一步，打字後的第一批結果會被上一次留下來的讀拿走。
 - **背景讀的預覽**：lib 的 finder 預覽在畫的時候記下要讀什麼、下一次 update 才開始讀（tdp file-picker 的「在背景讀」）。harness 的
   `has`、`hasNot` 先 `settle`（畫一次、送一次 update，三回），像終端機接下來的幾格畫面，讀完的預覽才會在畫面上。
+- **tdptest**（terminu-go 的）：`tdp_test.go` 的 `TestFirstLaunch` 用 `tdptest.Check` 在很多種尺寸與 icon 寬度下跑第一次啟動（每次一個新的
+  沙盒當 HOME，`seedTricky` 在裡面放用 `tdptest.Tricky` 命名的檔與目錄），每個 panel 開 Space menu、global operation、App Log 與 `?`，
+  再縮到最低尺寸以下又拉回來；每一格畫面都驗 tdp L4 與有沒有控制字元送到終端機。`go test -short` 只跑最低尺寸與 80×24。
+- **顏色碼塞錯地方**：塞進格子的顏色碼不會送到終端機（lib 把它畫成名字），所以 tdptest 抓不到；`screen_test.go` 的 `checkWidths`
+  另外看畫面上有沒有 `\x1b` 這幾個字（fixture 的檔名沒有 ESC，出現了就是 filu 自己的顏色碼放錯地方）。
+- **Tab 的寬度**：lib 在 `Run`（與 tdptest 啟動 app 時）才照 `input_tab_width` 設定 Tab 畫幾格；harness 不走 `Run`，Tab 一律 4 格。
+  要驗 `input_tab_width` 的測試用 `tdptest.Start`（`TestSharedSettings`）。
 - **lib 的檢查**：`terminu.App` 在登記時就拒絕佔用 core key 或移動字母的熱鍵（popup 裡也一樣，例：menu 不能用 `d`）—— 新加的
   menu 要在測試裡打開過一次，才知道沒踩到。
 

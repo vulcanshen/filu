@@ -62,19 +62,28 @@ type App struct {
 
 	term *terminu.Terminal // the shell, when one was opened
 
-	quitDir     string   // where the shell goes when filu ends (cd-on-quit)
-	startupErrs []string // problems found while starting (a bad config.yaml, a broken state.yaml), shown once it runs
-	startupNews []string // what filu did while starting (moved the settings), said once it runs
-	moveTitle   string   // the error popup's title for moveFailed
-	moveFailed  string   // moving the old settings failed, or some were in both places: why, with both paths
-	keepState   bool     // state.yaml could not be read: leave it as it is rather than write over it
+	quitDir     string       // where the shell goes when filu ends (cd-on-quit)
+	startupErrs []string     // problems found while starting (no directory watch, a move that failed), shown once it runs
+	startupNews []string     // what filu did while starting (moved the settings), said once it runs
+	moveTitle   string       // the error popup's title for moveFailed
+	moveFailed  string       // moving the old settings failed, or some were in both places: why, with both paths
+	unread      []unreadFile // filu's own files it could not read, asked about once it runs
+	keepState   bool         // state.yaml or data.yaml could not be read: leave them as they are rather than write over them
+}
+
+// unreadFile is one of filu's own files it could not read, to be moved aside
+// or to quit over (tdp E3, when a file cannot be read).
+type unreadFile struct {
+	path  string
+	err   error
+	fresh func() tea.Cmd // the start without it, once it is moved aside
 }
 
 // NewApp builds filu over startDir (the current directory when empty). With
 // focusName set (`filu <file>`), the cursor starts on that entry of startDir.
 func NewApp(startDir, focusName string) *App {
 	mv := moveOldSettings()
-	cfgErr := loadConfig()
+	madeConfig, cfgErr := loadConfig()
 	dir := startDir
 	if dir == "" {
 		wd, err := os.Getwd()
@@ -93,23 +102,38 @@ func NewApp(startDir, focusName string) *App {
 	switch {
 	case mv.err != nil:
 		a.moveTitle = "Moving the settings failed"
+		// One paragraph: an error popup draws a \n by its name (components/README).
 		a.moveFailed = opFailedText("move filu's settings from "+mv.from+" to "+mv.to, mv.err) +
-			"\n\nfilu goes on using " + mv.from + ". Move it to " + mv.to + " yourself to switch."
+			". filu goes on using " + mv.from + ". Move it to " + mv.to + " yourself to switch."
 	case len(mv.left) > 0:
 		a.moveTitle = "Found in two places"
 		var both []string
 		for _, name := range mv.left {
-			both = append(both, filepath.Join(mv.from, name)+"\n"+filepath.Join(mv.to, name))
+			both = append(both, filepath.Join(mv.from, name)+" and "+filepath.Join(mv.to, name))
 		}
-		a.moveFailed = "These were in " + mv.from + " and in " + mv.to + " too. filu uses the ones in " + mv.to +
-			" and left the others where they were: put what you need of them into " + mv.to + ", then delete " + mv.from +
-			".\n\n" + strings.Join(both, "\n\n")
+		a.moveFailed = "These were in " + mv.from + " and in " + mv.to + " too: " + strings.Join(both, "; ") +
+			". filu uses the ones in " + mv.to + " and left the others where they were: put what you need of them into " +
+			mv.to + ", then delete " + mv.from + "."
 	}
-	if mv.moved {
+	if len(mv.moved) > 0 {
 		a.startupNews = append(a.startupNews, "Moved filu's settings from "+shortPath(mv.from)+" to "+shortPath(mv.to))
+		for _, name := range mv.moved {
+			a.t.Log(terminu.Info, "Moved "+shortPath(filepath.Join(mv.from, name))+" to "+shortPath(filepath.Join(mv.to, name)))
+		}
+	}
+	if madeConfig != "" {
+		a.t.Log(terminu.Info, "Wrote a commented config.yaml with the defaults at "+shortPath(madeConfig))
 	}
 	if cfgErr != nil {
-		a.startupErrs = append(a.startupErrs, opFailedText("read config.yaml", cfgErr)+" (using the defaults)")
+		if p, ok := configFilePath(); ok {
+			a.unread = append(a.unread, unreadFile{p, cfgErr, func() tea.Cmd {
+				if err := writeDefaultConfig(p); err != nil {
+					return a.t.Toast(terminu.Error, opFailedText("write a new config.yaml", err))
+				}
+				a.t.Log(terminu.Info, "Wrote a new config.yaml with the defaults at "+shortPath(p))
+				return nil
+			}})
+		}
 	}
 	a.t.InputTabWidth = inputTabWidth
 	a.t.HideSecretsInPreview = hideSecretsInPreview
@@ -127,32 +151,11 @@ func NewApp(startDir, focusName string) *App {
 		first.focus(focusName)
 	}
 	a.tabs = []*tab{first}
-	st, ok, moved, err := loadState()
-	switch {
-	case err != nil:
-		// Said, and left alone: writing over it would lose the tabs, marks,
-		// favorites and sorts in it without a word (tdp F5).
+	if failed, err := a.loadSession(); err != nil {
+		// Left alone until the user says: writing over it would lose the
+		// tabs, marks, favorites and sorts in it without a word (tdp E3, F5).
 		a.keepState = true
-		a.startupErrs = append(a.startupErrs, opFailedText("read the session", err)+" (it is not saved until state.yaml and data.yaml are fixed or moved away)")
-	case ok:
-		a.applyState(st)
-	}
-	if len(leftInState.Favorites) > 0 || len(leftInState.Tasks) > 0 {
-		sp, _ := stateFilePath()
-		dp, _ := dataFilePath()
-		if a.moveTitle == "" {
-			a.moveTitle = "Found in two places"
-		}
-		a.moveFailed = strings.TrimPrefix(a.moveFailed+"\n\n", "\n\n") + "Favorites or tasks were in " + sp + " and in " + dp +
-			" too. filu uses the ones in " + dp + " and left the others in " + sp +
-			": put what you need of them into " + dp + ", then take them out of " + sp + "."
-	}
-	if moved {
-		if err := saveState(a.snapshotState()); err != nil {
-			a.startupErrs = append(a.startupErrs, opFailedText("move the favorites and the task log", err))
-		} else if p, ok := dataFilePath(); ok {
-			a.startupNews = append(a.startupNews, "Moved the favorites and the task log to "+shortPath(p))
-		}
+		a.unread = append(a.unread, unreadFile{failed, err, a.reopenSession})
 	}
 	a.build()
 	a.refreshAll()
@@ -164,6 +167,50 @@ func NewApp(startDir, focusName string) *App {
 		a.startupErrs = append(a.startupErrs, "Cannot watch the directories: what other programs change shows up only when you open the directory again")
 	}
 	return a
+}
+
+// loadSession brings back the session and the data, and moves the favorites
+// and the tasks an older version left in state.yaml to data.yaml; failed is
+// the file it could not read.
+func (a *App) loadSession() (failed string, err error) {
+	st, ok, moved, failed, err := loadState()
+	if err != nil {
+		return failed, err
+	}
+	if ok {
+		a.applyState(st)
+	}
+	if len(leftInState.Favorites) > 0 || len(leftInState.Tasks) > 0 {
+		sp, _ := stateFilePath()
+		dp, _ := dataFilePath()
+		if a.moveTitle == "" {
+			a.moveTitle = "Found in two places"
+		}
+		a.moveFailed = strings.TrimPrefix(a.moveFailed+" ", " ") + "Favorites or tasks were in " + sp + " and in " + dp +
+			" too. filu uses the ones in " + dp + " and left the others in " + sp +
+			": put what you need of them into " + dp + ", then take them out of " + sp + "."
+	}
+	if moved {
+		if err := saveState(a.snapshotState()); err != nil {
+			a.startupErrs = append(a.startupErrs, opFailedText("move the favorites and the task log", err))
+		} else if p, ok := dataFilePath(); ok {
+			a.startupNews = append(a.startupNews, "Moved the favorites and the task log to "+shortPath(p))
+		}
+	}
+	return "", nil
+}
+
+// reopenSession is the start again once an unreadable state.yaml or
+// data.yaml is moved aside; one more that cannot be read is asked about too.
+func (a *App) reopenSession() tea.Cmd {
+	a.keepState = false
+	if failed, err := a.loadSession(); err != nil {
+		a.keepState = true
+		return a.t.MoveAside(failed, err, a.reopenSession)
+	}
+	a.refreshAll()
+	a.syncWatches()
+	return tea.Batch(a.persist(), a.said())
 }
 
 // build lays out the screen: [1] and [2] side by side at 2:1 on top, [3]
@@ -225,22 +272,47 @@ func (a *App) Run() error {
 	return err
 }
 
-// start reads the background channels and says what went wrong while starting.
+// start reads the background channels, says what happened while starting,
+// and asks about the files of filu's own it could not read.
 func (a *App) start() tea.Cmd {
-	cmds := []tea.Cmd{a.waitLand(), a.waitWatch(), a.waitFind()}
+	return tea.Batch(a.waitLand(), a.waitWatch(), a.waitFind(), a.said(), a.askUnread())
+}
+
+// said says, once, what filu did and what went wrong while starting: a toast,
+// or an error popup for several, or for a move's two paths. Both go in the App
+// Log (tdp F5).
+func (a *App) said() tea.Cmd {
+	var cmds []tea.Cmd
 	if len(a.startupNews) > 0 {
 		cmds = append(cmds, a.t.Toast(terminu.Info, strings.Join(a.startupNews, "; ")))
 	}
 	switch {
 	case a.moveFailed != "":
 		// Both paths, for the user to move it, or put the two together, by hand (tdp E3).
-		cmds = append(cmds, a.t.Error(a.moveTitle, strings.Join(append([]string{a.moveFailed}, a.startupErrs...), "\n\n")))
+		text := a.moveFailed
+		if len(a.startupErrs) > 0 {
+			text += " " + strings.Join(a.startupErrs, ". ") + "."
+		}
+		cmds = append(cmds, a.t.Error(a.moveTitle, text))
 	case len(a.startupErrs) == 1:
 		cmds = append(cmds, a.t.Toast(terminu.Error, a.startupErrs[0]))
 	case len(a.startupErrs) > 1:
-		cmds = append(cmds, a.t.Error("Starting filu", strings.Join(a.startupErrs, "\n\n")))
+		cmds = append(cmds, a.t.Error("Starting filu", strings.Join(a.startupErrs, ". ")+"."))
 	}
+	a.startupNews, a.startupErrs, a.moveTitle, a.moveFailed = nil, nil, "", ""
 	return tea.Batch(cmds...)
+}
+
+// askUnread asks about the first file of filu's own it could not read: moved
+// aside, filu starts without it and asks about the next; or filu quits, the
+// reason on stderr (tdp E3).
+func (a *App) askUnread() tea.Cmd {
+	if len(a.unread) == 0 {
+		return nil
+	}
+	u := a.unread[0]
+	a.unread = a.unread[1:]
+	return a.t.MoveAside(u.path, u.err, func() tea.Cmd { return tea.Batch(u.fresh(), a.askUnread()) })
 }
 
 // shutdown saves the session, stops the watcher and the shell, and tells the

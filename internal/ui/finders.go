@@ -93,7 +93,7 @@ func (a *App) searchMenu() tea.Cmd {
 // typing row narrows it, or names a path of its own (pathFinder).
 func (a *App) nameFinder() tea.Cmd {
 	root := a.cur().dir
-	f := &terminu.Finder{Title: "Search", Subject: safeName(shortPath(root)), Glyph: glyphSearch, Verb: "open", Files: true,
+	f := &terminu.Finder{Title: "Search", Subject: shortPath(root), Glyph: glyphSearch, Verb: "open", Files: true,
 		Done: a.revealFound}
 	return a.pathFinder(f, root, false)
 }
@@ -118,7 +118,7 @@ func (a *App) favoriteMenu(newTab bool) tea.Cmd {
 		if i < 9 {
 			key = strconv.Itoa(i + 1)
 		}
-		acts = append(acts, terminu.Action{Key: key, Label: safeName(filepath.Base(dir)), Desc: safeName(shortPath(dir)),
+		acts = append(acts, terminu.Action{Key: key, Label: filepath.Base(dir), Desc: shortPath(dir),
 			Do: func() tea.Cmd {
 				if newTab {
 					return a.openTab(dir, "")
@@ -140,7 +140,7 @@ func (a *App) gotoFinder(newTab bool) tea.Cmd {
 	if newTab {
 		title = "New tab"
 	}
-	f := &terminu.Finder{Title: title, Subject: safeName(shortPath(home)), Glyph: glyphGoto, Verb: "go", Files: true,
+	f := &terminu.Finder{Title: title, Subject: shortPath(home), Glyph: glyphGoto, Verb: "go", Files: true,
 		Done: func(it terminu.FinderItem) tea.Cmd {
 			if newTab {
 				return tea.Batch(a.t.CloseAll(), a.openTab(it.ID, ""))
@@ -231,7 +231,7 @@ func (a *App) contentSearch() tea.Cmd {
 		return a.t.Error("Search failed", "Cannot search file contents: ripgrep (rg) is not installed")
 	}
 	root := a.cur().dir
-	f := &terminu.Finder{Title: "Contents", Subject: safeName(shortPath(root)), Glyph: glyphSearch, Verb: "open", Files: true,
+	f := &terminu.Finder{Title: "Contents", Subject: shortPath(root), Glyph: glyphSearch, Verb: "open", Files: true,
 		Done: a.revealFound}
 	f.Search = func(typed string) tea.Cmd {
 		if strings.TrimSpace(typed) == "" {
@@ -282,11 +282,11 @@ func streamFinder(ctx context.Context, gen int, root string, depth int, abs, dir
 		}
 		it := fileItem{name: filepath.Base(p), isDir: fi.IsDir(), isLink: fi.Mode()&os.ModeSymlink != 0,
 			isExec: !fi.IsDir() && fi.Mode()&0o111 != 0}
-		text := safeName(rel)
+		text := rel
 		if abs {
-			text = safeName(shortPath(p))
+			text = shortPath(p)
 		}
-		batch = append(batch, terminu.FinderItem{ID: p, Text: text, Match: safeName(rel), Icon: fileIcon(it), IconColor: terminu.Hex(string(fileColor(it)))})
+		batch = append(batch, terminu.FinderItem{ID: p, Text: text, Match: rel, Icon: fileIcon(it), IconColor: terminu.Hex(string(fileColor(it)))})
 		if len(batch) >= streamBatch {
 			flush(false)
 		}
@@ -334,7 +334,7 @@ func streamGrep(ctx context.Context, gen int, root, q string, ch chan<- finderMs
 		seen[rel] = true
 		p := filepath.Join(root, rel)
 		it := fileItem{name: filepath.Base(p)}
-		batch = append(batch, terminu.FinderItem{ID: p, Text: safeName(rel), Icon: fileIcon(it), IconColor: terminu.Hex(string(fileColor(it))), Line: n})
+		batch = append(batch, terminu.FinderItem{ID: p, Text: rel, Icon: fileIcon(it), IconColor: terminu.Hex(string(fileColor(it))), Line: n})
 		if len(batch) >= streamBatch {
 			flush(false)
 		}
