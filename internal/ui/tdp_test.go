@@ -2,6 +2,7 @@ package ui
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -26,6 +27,25 @@ func TestFirstLaunch(t *testing.T) {
 	statePathOverride, dataPathOverride = "", "" // the sandbox's, as on a first launch
 	t.Cleanup(func() { statePathOverride, dataPathOverride = oldS, oldD; resetGlobals() })
 	tdptest.Check(t, tdptest.App{Name: "filu", New: newapp})
+}
+
+// The same first launch on a home directory holding the tricky names: they
+// are in [1], [2] and the location row on every size and icon width. A name
+// may hold a colour code, drawn by its name as it should be (Tricky).
+func TestFirstLaunchOnTrickyNames(t *testing.T) {
+	oldS, oldD := statePathOverride, dataPathOverride
+	statePathOverride, dataPathOverride = "", ""
+	t.Cleanup(func() { statePathOverride, dataPathOverride = oldS, oldD; resetGlobals() })
+	tdptest.Check(t, tdptest.App{Name: "filu", New: newapp, Tricky: true, Seed: func(home string) {
+		for name, body := range trickyFiles() {
+			p := filepath.Join(home, name)
+			if strings.HasSuffix(name, "/") {
+				_ = os.MkdirAll(p, 0o755)
+				continue
+			}
+			_ = os.WriteFile(p, []byte(body), 0o644)
+		}
+	}})
 }
 
 // trickyFiles are files and directories named after tdptest.Tricky: names

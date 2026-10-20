@@ -255,8 +255,9 @@ command（動畫、背景的 channel）、讀 `Frame()`。session、設定、垃
   `has`、`hasNot` 先 `settle`（畫一次、送一次 update，三回），像終端機接下來的幾格畫面，讀完的預覽才會在畫面上。
 - **tdptest**（terminu-go 的）：`tdp_test.go` 的 `TestFirstLaunch` 用 `tdptest.Check` 在很多種尺寸與 icon 寬度下跑第一次啟動（每次一個新的
   沙盒當 HOME），每個 panel 開 Space menu、global operation、App Log 與 `?`，再縮到最低尺寸以下又拉回來；每一格畫面都驗 tdp L4、有沒有
-  控制字元送到終端機、有沒有顏色碼被畫成字。`go test -short` 只跑最低尺寸與 80×24。`TestTrickyNames` 把 `tdptest.Tricky` 當檔名與
-  目錄名，cursor 一個一個走過去、看資訊、mark、搜尋（外面來的字本來就可能含顏色碼，所以這裡不驗「顏色碼被畫成字」）。
+  控制字元送到終端機、有沒有顏色碼被畫成字。`go test -short` 只跑最低尺寸與 80×24。`TestFirstLaunchOnTrickyNames` 是同一個 Check，
+  家目錄裡放 `tdptest.Tricky` 命名的檔與目錄（`Tricky: true`：外面來的名字本來就可能含顏色碼，畫成名字是對的）；`TestTrickyNames` 用
+  `tdptest.Start` 讓 cursor 一個一個走過那些名字、看資訊、mark、搜尋，那是 Check 不會走到的地方。
 - **顏色碼塞錯地方**：塞進格子的顏色碼不會送到終端機（lib 把它畫成名字）；`tdptest.Check` 抓得到被畫成字的顏色碼，`screen_test.go`
   的 `checkWidths` 也在 harness 開的每一類 popup 上看畫面有沒有 `\x1b` 這幾個字（fixture 的檔名沒有 ESC，出現了就是 filu 自己的顏色碼
   放錯地方）。
