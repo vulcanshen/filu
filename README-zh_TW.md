@@ -188,7 +188,7 @@ eval "$(filu shell)"
 
 設定在 `config.yaml`，放在 `$XDG_CONFIG_HOME/filu/`（或 `~/.config/filu/`）；`FILU__CONFIG` 可以指定另一個目錄。filu 第一次執行時會寫一份帶註解的，之後不會蓋掉你的。旁邊的 `state.yaml` 存你上次在哪裡 —— tab、marks、每個目錄的排序 —— 交給 filu 就好（`FILU__STATE` 把它放到另一個目錄）。不想弄丟的都在 `~/.filu/`（`FILU__DATA` 可以指定另一個目錄），要備份的是這個目錄：`data.yaml` 存最愛與 task 紀錄；你寫給 filu 的兩份清單各是一個檔 —— `open_with.yaml` 是 Open with 的 app，`ignore_dirs.yaml` 是 finder 略過的目錄。filu 第一次執行時兩份都會寫一份帶註解的，之後不會蓋掉你的。
 
-這些檔有一個讀不了時 —— 格式壞了、沒有權限 —— filu 啟動時會問：`Enter` 把它改名成旁邊的 `.bak`（`.bak.1` 依序往下，不蓋掉舊的），用新的一份開始；`Esc` 離開，並寫出是哪個檔、為什麼。
+這些檔有一個讀不了時 —— 格式壞了、沒有權限 —— filu 啟動時會問：`Enter` 把它改名成旁邊的 `.bak`（`.bak.1` 依序往下，不蓋掉舊的），像第一次打開一樣開始；`Esc` 離開，並寫出是哪個檔、為什麼。
 
 macOS 上，0.4.0 以前的版本把全部放在 `~/Library/Application Support/filu/`。這一版第一次啟動時，會把裡面的東西搬到 `~/.config/filu/` 並告訴你，搬空的舊目錄刪掉。`~/.config/filu/` 已經有的檔兩邊都不動，filu 寫出兩個路徑，讓你自己把兩份合起來。搬不動時照舊用舊的，並寫出兩個路徑讓你自己搬。最愛與 task 紀錄也同樣從 `state.yaml` 搬到 `~/.filu/data.yaml`：`data.yaml` 已經有自己的時，`state.yaml` 裡的留著，filu 會告訴你。那些版本把 `open_with`、`ignore_dirs` 放在 `config.yaml`：這一版第一次啟動時，會把它們連同你寫的註解，一個一個搬到 `~/.filu/` 裡各自的檔，並告訴你。那個檔已經有了的，留在 `config.yaml`，filu 寫出兩個路徑；`config.yaml` 寫不進去、拿不掉它們時，filu 照舊從 `config.yaml` 讀，並寫出兩個路徑。
 

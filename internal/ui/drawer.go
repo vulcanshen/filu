@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -382,11 +383,16 @@ func (a *App) handleLand(msg landMsg) tea.Cmd {
 		a.marksChanged()
 		a.refreshPreview()
 		a.syncQuit()
-		toast := a.t.Toast(terminu.Success, spansText(taskText(*t)))
+		// The row's words without its glyph: the toast's title says how it
+		// ended, and its words start with a capital (components/dialog/toast, note).
+		// One toast: a second one would take the first one's place in the App
+		// Log too, and its animation, the first one's command dropped.
+		words := strings.TrimSpace(spansText(taskText(*t)[1:]))
+		kind := terminu.Success
 		if t.status == taskError {
-			toast = a.t.Toast(terminu.Error, spansText(taskText(*t)))
+			kind = terminu.Error
 		}
-		return tea.Batch(toast, a.persist())
+		return tea.Batch(a.t.Toast(kind, words), a.persist())
 	}
 	return nil
 }

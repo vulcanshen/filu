@@ -138,10 +138,32 @@ func broken(t *testing.T, hs *harness, path string) {
 	hs.run(hs.a.start())
 }
 
+// ownFiles lists filu's own files under home, the ones moved aside left out.
+func ownFiles(t *testing.T, home string) []string {
+	t.Helper()
+	var names []string
+	for _, dir := range []string{"config", "state", "data"} {
+		entries, err := os.ReadDir(filepath.Join(home, dir))
+		if err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		for _, e := range entries {
+			if !strings.Contains(e.Name(), ".bak") {
+				names = append(names, dir+"/"+e.Name())
+			}
+		}
+	}
+	return names
+}
+
 // A file of filu's own it cannot read is asked about at the start, its path and
 // why; meanwhile nothing writes over it. Enter moves it to .bak (.bak.1 when
-// that is taken) and filu starts without it (tdp E3-17, E3-18, E3-19).
+// that is taken) and filu starts as on its first start: what that makes is made
+// again, the rest waits for the first save (tdp E3-17, E3-18, E3-19).
 func TestE3UnreadableFileIsMovedAside(t *testing.T) {
+	fs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
+	fs.run(fs.a.start())
+	first := ownFiles(t, fs.home)
 	for _, which := range []string{"state", "data", "config", "open_with", "ignore_dirs"} {
 		hs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
 		path := map[string]string{"state": statePathOverride, "data": dataPathOverride, "config": configPathOverride}[which]
@@ -160,6 +182,7 @@ func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 		if b, _ := os.ReadFile(path); string(b) != "tabs: [::" {
 			t.Fatalf("%s: written over before the user said: %q", which, b)
 		}
+		before := ownFiles(t, hs.home)
 		finderIgnoreDirs = nil // the new ignore_dirs.yaml's default should come back
 		hs.keys("Enter")
 		hs.hasNot("MOVE ASIDE")
@@ -168,6 +191,18 @@ func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 		}
 		if b, _ := os.ReadFile(path + ".bak"); string(b) != "an older one" {
 			t.Fatalf("%s: the older .bak was written over: %q", which, b)
+		}
+		// Made again only when the first start makes it.
+		rel, _ := filepath.Rel(hs.home, path)
+		want := slices.DeleteFunc(before, func(n string) bool { return n == rel })
+		if slices.Contains(first, rel) {
+			want = append(want, rel)
+		}
+		got := ownFiles(t, hs.home)
+		slices.Sort(want)
+		slices.Sort(got)
+		if !slices.Equal(got, want) {
+			t.Fatalf("%s: after Enter there are %v, not %v (the first start makes %v)", which, got, want, first)
 		}
 		hs.to("a.txt")
 		hs.keys("m")
@@ -187,7 +222,13 @@ func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 			if hs.a.keepState {
 				t.Fatalf("%s: filu still does not save", which)
 			}
+			if _, err := os.Stat(path); err != nil {
+				t.Fatalf("%s: not there after the first save: %v", which, err)
+			}
 		}
+		// The move in the App Log, a capital first (tdp note-78; terminu-go v0.4.3).
+		hs.keys("!")
+		hs.has("INFO Moved ~/" + rel + " to ~/" + rel + ".bak.1")
 	}
 }
 

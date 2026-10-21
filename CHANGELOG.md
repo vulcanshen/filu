@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-filu now follows tdp v0.9.1 and is built on terminu-go, the terminu
+filu now follows tdp v0.9.2 and is built on terminu-go, the terminu
 family's shared library: the screen, the `Space` menu, `?`, the popups and
 their animations, confirms, inputs, toasts, the finders, the viewer and the
 shell are the family's own, and look and work the same as in every terminu
@@ -43,8 +43,8 @@ them from it and shows both paths.
   counts the errors you have not seen.
 - When filu cannot read its `config.yaml`, `state.yaml`, `data.yaml`,
   `open_with.yaml` or `ignore_dirs.yaml`, it asks when it starts: move the
-  file aside to a `.bak` and start with a new one, or quit, the file and the
-  reason printed.
+  file aside to a `.bak` and start as the first time filu ran, or quit, the
+  file and the reason printed.
 - In the shell, `PgUp` scrolls back through what went off the top, and
   `Alt-v` selects some of it to copy.
 

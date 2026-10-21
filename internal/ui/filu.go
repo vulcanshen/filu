@@ -207,6 +207,7 @@ func (a *App) loadSession() (failed string, err error) {
 
 // reopenSession is the start again once an unreadable state.yaml or
 // data.yaml is moved aside; one more that cannot be read is asked about too.
+// As on the first start, the new one is written at the first save (tdp E3).
 func (a *App) reopenSession() tea.Cmd {
 	a.keepState = false
 	if failed, err := a.loadSession(); err != nil {
@@ -215,7 +216,7 @@ func (a *App) reopenSession() tea.Cmd {
 	}
 	a.refreshAll()
 	a.syncWatches()
-	return tea.Batch(a.persist(), a.said())
+	return a.said()
 }
 
 // build lays out the screen: [1] and [2] side by side at 2:1 on top, [3]
