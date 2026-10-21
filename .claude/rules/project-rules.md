@@ -5,7 +5,7 @@ globs: *
 
 # filu Project Rules
 
-filu 是 terminu family 的成員，遵循 [terminu design](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.1），畫面建在家族共用的
+filu 是 terminu family 的成員，遵循 [terminu design](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.2），畫面建在家族共用的
 [terminu-go](https://github.com/vulcanshen/terminu-go) 上（Bubble Tea v1）。現行的權威是 `docs/dev-remarks.md`（運作方式、設計決定、
 暫定）與 README；`.forge/meta/IDEA.md` 停在 v0.2.0 以前，只當演化史讀。還沒符合 tdp、在等 lib 或規範的地方寫在
 `docs/filu-terminu-fix.md`（tdp E7；有的時候才建，全部修完就刪掉，現在沒有）。
