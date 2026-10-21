@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.2），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.3）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.3），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.4）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -78,8 +78,9 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 - **Tasks** —— 同磁碟搬移是瞬間 `rename`；跨磁碟、複製才逐項回報。log 是帶時間的白話（`taskText`）；中斷的任務存進 `data.yaml`、
   下次啟動標成 interrupted。執行中那一列是 lib 的 loading icon（`LoadingFrame`）加 `3/10`：`tasksBody` 畫的時候重做這幾列，
   `App.Spinning` 在 Tasks 開著、有工作在跑時讓 lib 繼續送畫面。做完是 Success toast，失敗是 Error toast：字是那一列的字、不帶那一列
-  的 glyph（toast 的標題已經說了結果；App Log 那一筆也才是大寫開頭，tdp v0.9.2 note-78）。只開一個 toast：lib 的動畫只有一條 tick
-  （`App.animate`），第二個 toast 蓋上去時拿不到 tick，第一個的 command 又被丟掉的話，之後的 popup 全部停在一條線、不收按鍵。
+  的 glyph（toast 的標題已經說了結果；App Log 那一筆也才是大寫開頭，tdp v0.9.2 note-78）。只開一個 toast：每個 toast 都記進
+  App Log，先 Success 再 Error 就會多一筆 OK。以前還會卡住：lib 的動畫只有一條 tick（`App.animate`），第二個 toast 拿不到 tick、第一個
+  的 command 又被丟掉，之後的 popup 全部停在一條線、不收按鍵；terminu-go v0.4.4 起 lib 自己送 tick 與 toast 的計時，不會再卡。
 - **Finder** —— lib 的 `terminu.Finder`，三個都用 `Files: true`（lib 的檔案預覽與四列資訊）與 `Finder.Search`（filu 自己搜、自己篩）：
   - 檔名搜尋與 Goto（`pathFinder`）：`fd` 把 tab 的目錄（Goto 是家目錄）下的東西串流進來（`streamFinder`，走訪序、不排序；沒有
     `fd` 時退回 Go 的 walk），到 `finder_cap` 為止，用 `terminu.Matches` 照打的字篩（包含、不分大小寫、每個詞都要出現、順序不變，
@@ -118,7 +119,9 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
   兩邊都不動，開 error popup 寫出兩個路徑讓使用者自己合；搬空的舊目錄刪掉。有一項搬不動就把搬過去的搬回來、照舊用舊的，error popup
   寫出兩個路徑。最愛與 task 紀錄放 `~/.filu/data.yaml`（`FILU__DATA`），以前在 `state.yaml` 的第一次啟動時搬過去（`loadState`）；
   `data.yaml` 已經有了的話，`state.yaml` 裡的留著、每次存檔照樣寫回去（`leftInState`），一樣開 error popup。`config.yaml` 只收單一的
-  選項：filu 自己的 `finder_cap`，與家族共用的 `input_tab_width`、`hide_secrets_in_preview`（交給 lib）。
+  選項：filu 自己的 `finder_cap`，與家族共用的 `input_tab_width`、`hide_secrets_in_preview`（交給 lib）。不再用的檔（tdp v0.9.3
+  E3-23，lib 的 `App.NoLongerUsed`）現在沒有：filu 自己的檔一直是 `config.yaml`、`state.yaml`、`data.yaml`、`open_with.yaml`、
+  `ignore_dirs.yaml` 這五個，都還在用；舊的 macOS 目錄是換位置，照上面的搬家做。哪天不再用其中一個，就在啟動時叫 `NoLongerUsed`。
 - **使用者寫的清單** —— `open_with`、`ignore_dirs` 是資料（tdp v0.9.1 E3，FL26）：各一個檔，放在 `data.yaml` 旁邊，檔名就是以前的 key
   （`lists.go` 的 `userLists`）。沒有檔時寫一份帶註解的預設值（`loadLists`），之後只讀不寫。以前的版本放在 `config.yaml`：啟動時
   `moveLists` 用 yaml.v3 的 `Node` 讀 `config.yaml`，一項一項搬 —— 那個 key 的值連同它上面的註解寫成新檔，從 `config.yaml` 拿掉，再把

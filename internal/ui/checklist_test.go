@@ -177,7 +177,7 @@ func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 			t.Fatal(err)
 		}
 		broken(t, hs, path)
-		hs.has("MOVE ASIDE", filepath.Base(path)+" can't be read:", "Move it to "+filepath.Base(path)+".bak.1", "Enter:move", "Esc:quit")
+		hs.has("MOVE ASIDE", filepath.Base(path)+" can't be read:", "Move it to "+filepath.Base(path)+".bak.1 and start fresh?", "Enter:move", "Esc:quit")
 		hs.a.persist()
 		if b, _ := os.ReadFile(path); string(b) != "tabs: [::" {
 			t.Fatalf("%s: written over before the user said: %q", which, b)
