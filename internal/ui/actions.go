@@ -90,14 +90,13 @@ func (a *App) filesActions() []terminu.Action {
 	}
 }
 
-// zoomAction is z on any panel: it takes the whole screen, or gives it back.
-// Zoom is a change of layout, not a mode: no key changes its meaning and Esc
-// does not end it (the tdp term "mode").
+// zoomAction is z on any panel: it takes the whole screen, or gives it back
+// ([1] leaving [3] in sight, layout). Zoom is a change of layout, not a mode:
+// no key changes its meaning and Esc does not end it (the tdp term "mode").
 func (a *App) zoomAction() terminu.Action {
 	return terminu.Action{Key: "z", Label: "Zoom", Desc: "this panel to the whole screen, or back", Scope: terminu.PanelScope, Hint: "zoom",
 		Do: func() tea.Cmd {
 			a.zoomed = !a.zoomed
-			a.t.ForceNarrow = a.zoomed
 			return nil
 		}}
 }

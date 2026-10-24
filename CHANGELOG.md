@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-filu now follows tdp v0.9.13 and is built on terminu-go, the terminu
+filu now follows tdp v0.9.14 and is built on terminu-go, the terminu
 family's shared library: the screen, the `Space` menu, `?`, the popups and
 their animations, confirms, inputs, toasts, the finders, the viewer and the
 shell are the family's own, and look and work the same as in every terminu
@@ -70,7 +70,9 @@ them from it and shows both paths.
 - `[2]` dims when it does not have the focus, as the other panels do.
 - The sort's direction is chosen with `a` or `D`. The ascending and descending
   glyphs in the header were the wrong way round.
-- Zoomed, `Tab` moves to the next panel, zoomed too, instead of zooming out.
+- Zooming `[1]` gives it the whole top and keeps `[3]` below it, the marks,
+  tasks and favorites in sight. Zoomed, `Tab` moves to the next panel, zoomed
+  too, instead of zooming out.
 - A marked file shows the family's tick; a starred directory shows its star
   at the end of its row, where a long name cut short keeps it, and no longer
   after the path when you are in it. `[3]` lists have column headers.

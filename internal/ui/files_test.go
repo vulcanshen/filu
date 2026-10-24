@@ -431,23 +431,28 @@ func TestYankPath(t *testing.T) {
 	hs.has("Copied")
 }
 
-// z zooms the focused panel to the whole screen and back; zoomed, [1] shows
-// every tab side by side.
+// z zooms the focused panel and back: [1] takes the whole top, every tab side
+// by side, and leaves [3] in sight (user 2026-10-24); [2] and [3] take the
+// whole screen. Changing panels while zoomed zooms the one changed to.
 func TestZoom(t *testing.T) {
 	hs := newHarness(t, 160, 40, map[string]string{"sub/x.txt": ""})
 	hs.keys("t", "s", "z")
-	if !hs.a.t.ForceNarrow {
-		t.Fatal("z did not zoom")
-	}
 	hs.hasNot("[2] PREVIEW")
-	if n := strings.Count(hs.screen(), "/work"); n < 2 {
+	hs.has("[3] MARKS")
+	if n := strings.Count(hs.screen(), "~/work"); n < 2 {
 		t.Fatalf("zoomed, the two tabs are not side by side:\n%s", hs.screen())
 	}
-	hs.keys("z")
-	if hs.a.t.ForceNarrow {
-		t.Fatal("z again did not give the screen back")
-	}
+	hs.keys("3")
+	hs.has("[3] MARKS")
+	hs.hasNot("[2] PREVIEW", "~/work")
+	hs.keys("2")
 	hs.has("[2] PREVIEW")
+	hs.hasNot("[3] MARKS", "~/work")
+	hs.keys("1")
+	hs.has("[3] MARKS", "~/work")
+	hs.hasNot("[2] PREVIEW")
+	hs.keys("z")
+	hs.has("[2] PREVIEW", "[3] MARKS")
 }
 
 // The first tab's mark is the launch glyph, then the animals (components:

@@ -1,7 +1,7 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.13），畫面建在家族共用的
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.14），畫面建在家族共用的
 [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.16）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
@@ -106,7 +106,9 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 - **刪除** —— 移到 OS 垃圾桶：macOS `~/.Trash`、Linux `~/.local/share/Trash/files`（`trash.go`）。
 - **tab 的標記** —— 第一個 tab 是啟動的 glyph（它永遠開在啟動的目錄），其餘各一隻動物（`look.go` 的 `tabMarks`）。標記是 panel 的
   tab 名稱（lib 的膠囊串），固定寬，不跟目錄名綁動（tdp L2）。上限五個（`maxTabs`）：到上限時 New tab 停用。
-- **zoom** —— `z` 切換 lib 的 `ForceNarrow`：只畫 focus 的 panel、佔滿畫面。`[1]` 在 zoom 時把每個 tab 畫成等寬並排的欄（`drawColumns`，
+- **zoom** —— `z` 切換 `App.zoomed`，版面由 `App.layout` 照它與 focus 的 panel 給（lib 每畫一次就問一次 `Screen.Layout`）：`[2]`、
+  `[3]` 佔滿畫面，`[1]` 佔滿上面三分之二、`[3]` 留在下面；不畫的 panel 給空的 `Rect`（lib 不畫小於 2×2 的 panel）。不用 lib 的
+  `ForceNarrow`：它一律只畫 focus 的 panel。`[1]` 在 zoom 時把每個 tab 畫成等寬並排的欄（`drawColumns`，
   欄間一條 Overlay0 的 `│`），`h|l` 換到的那一欄是亮的，其他的淡化（tdp P6），見「設計決定」。zoom 是版面的切換，
   不是模式：沒有鍵換意思，`Esc` 照樣回上一層目錄。
 - **icon 與配色** —— 檔案類型的 glyph 取自 eza 完整的 icon 表（`ezadata.go`）；顏色來自烘進 binary 的
@@ -169,8 +171,10 @@ filu/
 - **平台：只支援 macOS / Linux。** 平台分岔的操作（metadata、trash、open）用 build tag，沒有 Windows 實作；`[s]hell` 的 PTY、路徑、
   cd-on-quit 的 POSIX shell function、`rwx` 權限都沒有 Windows 對應。Windows 使用者走 WSL（2026-07-27 拍板）。
 
-- **zoom 時換 panel 照樣放大**（user 2026-10-19 定案）：zoom 用 lib 的 `ForceNarrow`，`Tab` 換到下一個 panel 時，下一個也是放大的，
+- **zoom 時換 panel 照樣放大**（user 2026-10-19 定案）：`Tab` 換到下一個 panel 時，下一個也是放大的，
   `z` 才還原。放大是使用者要的版面，換 panel 不代表不要了；跟窄寬時一次只看一個 panel 的走法一樣。
+- **zoom `[1]` 時 `[3]` 留著**（user 2026-10-24 定：tdp screen「Zoom」讓 app 決定怎麼放大）：`[1]` 佔掉 `[2]` 的位置、`[3]` 照舊在下面，
+  marks、tasks、最愛一直看得到；`[2]`、`[3]` 照 tdp 的預設佔滿畫面。
 - **zoom 時 `[1]` 的 tab 並排**（user 2026-10-19 定案：tdp 的 zoom 給預設，怎麼放大由 app 決定）：filu 在 zoom 時把每個 tab 畫成一欄
   （`files.go` 的 `drawColumns`）：zoom 本來就是要更多空間，在好幾個目錄之間比對、搬檔時，一次看到全部的 tab 比一頁一頁切好用；`h|l`
   照樣換 tab，有 focus 的那一欄亮、其他的淡化（tdp P6），欄間的線用 Overlay0（跟 menu 的分隔線一樣）。
@@ -225,7 +229,8 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
 
 ## 偏離 tdp
 
-目前沒有；還沒符合 tdp、在等 lib 的地方也沒有（`docs/filu-terminu-fix.md` 已經刪掉，最後兩件 FL23、FL24 在 terminu-go v0.2.1 修好）。
+目前沒有。還沒符合 tdp、在等 lib 的寫在 `docs/filu-terminu-fix.md`：hint 的 `h|l:tab`（FL27，user 2026-10-24 要的，tdp v0.9.14 定成
+全家族由 lib 加，等 terminu-go v0.4.17）。
 zoom 時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 清單最後一欄的星、`[3]` 各清單的欄位是 panel 的內容。
 
 ## 設計文件導讀

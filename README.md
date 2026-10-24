@@ -113,7 +113,7 @@ Three panels:
 - **`[2]` Preview** — whatever the cursor in `[1]` is on.
 - **`[3]` Marks | Tasks | Favorites** — the files you've gathered, the log of copies, moves and zips, and your starred directories.
 
-`Tab` (or `1`–`3`) moves between panels, `h|l` switches a panel's tabs, and `z` zooms the panel you are on to the whole screen — zoomed, `[1]` shows all its tabs side by side.
+`Tab` (or `1`–`3`) moves between panels, `h|l` switches a panel's tabs, and `z` zooms the panel you are on to the whole screen — zoomed, `[1]` takes the whole top with all its tabs side by side, and `[3]` stays below it.
 
 ### What you can do
 
