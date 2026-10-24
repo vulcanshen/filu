@@ -435,17 +435,26 @@ func (a *App) zip() tea.Cmd {
 
 // --- quitting ------------------------------------------------------------------
 
-// syncQuit sets the quit flow (tdp K9: the app's). Run by a shell that goes
-// where filu leaves it (FILU__LAST_DIR_FILE), q is a menu of where that is;
-// otherwise it confirms, warning while a task is still running.
+// syncQuit sets the quit flow (tdp K9: the app's). With one tab q leaves at
+// once, a shell that goes where filu leaves it (FILU__LAST_DIR_FILE) going
+// where that tab is (user 2026-10-24). With more, such a shell makes q a menu
+// of where it goes; otherwise q confirms. A task still running is warned of
+// first, one tab or not.
 func (a *App) syncQuit() {
-	if os.Getenv(envLastDirFile) != "" {
+	a.t.Quit, a.t.QuitFlow, a.t.QuitDesc = nil, nil, "leave filu"
+	shell := os.Getenv(envLastDirFile) != ""
+	if shell && len(a.tabs) > 1 {
 		a.t.QuitFlow, a.t.QuitDesc = a.quitMenu, "leave filu, your shell in the directory you choose"
 		return
+	}
+	if shell {
+		a.t.QuitDesc = "leave filu, your shell where you are"
 	}
 	ask := &terminu.Ask{Title: "Quit", Question: "Quit filu?", Verb: "quit"}
 	if a.anyRunning() {
 		ask.Details, ask.Warn = []string{"A task is still running: quitting stops it."}, []int{0}
+	} else if len(a.tabs) == 1 {
+		return
 	}
 	a.t.Quit = ask
 }

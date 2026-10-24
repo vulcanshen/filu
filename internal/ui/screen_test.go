@@ -22,7 +22,7 @@ var fixture = map[string]string{
 // popups opens each kind of popup filu has, from [1] with the cursor on a
 // file: the Space menu over the global operation popup, the key reference, a
 // menu over a menu, a finder, a viewer, a confirm, a text input, a toast, the
-// quit confirm. Each one is a list of keys.
+// quit confirm (two tabs open). Each one is a list of keys.
 var popups = map[string][]string{
 	"none":        nil,
 	"global":      {"Space", "k", "Enter"},
@@ -34,9 +34,9 @@ var popups = map[string][]string{
 	"delete":      {"D"},
 	"rename":      {"r"},
 	"toast":       {"y"},
-	"quit":        {"q"},
-	"error":       {"/", "c"},     // content search without ripgrep (openPopup)
-	"terminal":    {"s", "Enter"}, // the shell, /bin/sh (openPopup)
+	"quit":        {"t", "s", "q"}, // a second tab: with one, q leaves at once
+	"error":       {"/", "c"},      // content search without ripgrep (openPopup)
+	"terminal":    {"s", "Enter"},  // the shell, /bin/sh (openPopup)
 }
 
 // openPopup opens one of popups on hs: the error popup needs ripgrep missing,

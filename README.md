@@ -91,7 +91,7 @@ filu opens with the file list focused. These keys cover the rest:
 | **`Esc`** | Back out: close the popup on top, or go up a directory |
 | **`Tab`** | The next panel (`Shift-Tab` the one before, `1`–`3` jump to one) |
 | **`!`** | The App Log: what filu did and what went wrong, newest last (the footer counts errors you haven't seen) |
-| **`q`** | Quit (it asks first — with the line below, it asks where your shell goes) |
+| **`q`** | Quit (with one tab at once; with more it asks first — with the line below, it asks where your shell goes) |
 
 ### Let quitting change your shell's directory
 
@@ -101,7 +101,7 @@ Add this line to `~/.zshrc` or `~/.bashrc`:
 eval "$(filu shell)"
 ```
 
-Then start filu as **`filu`** (not `./filu`). `q` then asks where your shell goes: the directory you started in, or any tab's — press its number, or move to it and press `Enter`. While a copy or a move is still running, filu asks once more, since quitting stops it. Without the line, filu works the same — quitting just asks first and leaves your shell where it was.
+Then start filu as **`filu`** (not `./filu`). With one tab, `q` leaves at once and your shell goes where that tab is. With more, `q` asks where your shell goes: the directory you started in, or any tab's — press its number, or move to it and press `Enter`. While a copy or a move is still running, filu asks before it leaves, since quitting stops it. Without the line, filu works the same — your shell just stays where it was, and with more than one tab quitting asks first.
 
 ## Usage
 
@@ -180,7 +180,7 @@ Three panels:
 |---|---|
 | `?` | The keys you can press here; `?` or `Esc` closes the list |
 | `!` | The App Log |
-| `q` · `Ctrl-C` | Quit (asks first, or asks where your shell goes); `Ctrl-C` works while typing too, and pressed again it leaves at once |
+| `q` · `Ctrl-C` | Quit (with one tab at once; with more it asks first, or asks where your shell goes); `Ctrl-C` works while typing too, and pressed again it leaves at once |
 
 Every panel's `Space` menu lists what you can do to the item under the cursor, then to the panel, and ends with **Global operation**: the app-wide actions (`[q]uit`). A row that can't run right now — say, `[w] Close tab` with only one tab open — is shown dimmed.
 

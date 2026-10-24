@@ -281,11 +281,31 @@ func TestFavoritesInTwoPlaces(t *testing.T) {
 	}
 }
 
-// Quitting confirms; run by a shell that goes where filu leaves it, q is a
-// menu of where: the directory filu started in, then each tab's.
+// With one tab q leaves at once, a shell that goes where filu leaves it going
+// where that tab is (user 2026-10-24). With more, quitting confirms; run by
+// such a shell, q is a menu of where: the directory filu started in, then
+// each tab's.
 func TestQuit(t *testing.T) {
+	for _, shell := range []bool{false, true} {
+		hs := newHarness(t, 120, 40, map[string]string{"sub/": ""})
+		last := filepath.Join(hs.home, "lastdir")
+		if shell {
+			t.Setenv(envLastDirFile, last)
+			hs.a.syncQuit()
+		}
+		hs.to("sub")
+		hs.keys("Enter", "q")
+		if !hs.quit {
+			t.Fatalf("q with one tab did not leave at once (shell %v)", shell)
+		}
+		hs.a.shutdown()
+		if b, _ := os.ReadFile(last); shell && string(b) != hs.path("sub") {
+			t.Fatalf("one tab: the shell is told %q", b)
+		}
+	}
+
 	hs := newHarness(t, 120, 40, map[string]string{"sub/": ""})
-	hs.keys("q")
+	hs.keys("t", "s", "q")
 	hs.has("Quit filu?")
 	hs.keys("Enter")
 	if !hs.quit {
@@ -304,7 +324,7 @@ func TestQuit(t *testing.T) {
 		t.Setenv(envLastDirFile, last)
 		hs.a.syncQuit()
 		hs.to("sub")
-		hs.keys("Enter", "q")
+		hs.keys("Enter", "t", "s", "q")
 		hs.has("QUIT", "YOUR SHELL GOES TO", "~/work", "where filu started", "~/work/sub", "tab 1", "Enter:quit")
 		hs.keys(c.key)
 		if !hs.quit {
@@ -317,27 +337,36 @@ func TestQuit(t *testing.T) {
 	}
 }
 
-// With a popup open the first q or Ctrl-C never quits (tdp K9-6): filu's
-// flows ask anyway, the confirm or the menu, and ask only that; Esc goes back
+// With a popup open the first q or Ctrl-C never quits (tdp K9-6). With one
+// tab filu would leave at once, so the lib asks Quit filu?; with two filu's
+// flows ask anyway, the confirm or the menu, and ask only that. Esc goes back
 // to the popup.
 func TestQuitOverAPopup(t *testing.T) {
 	for _, key := range []string{"q", "Ctrl-C"} {
-		for _, menu := range []bool{false, true} {
+		for _, c := range []struct {
+			shell       bool
+			more        []string // keys that open more tabs
+			want, other string
+		}{
+			{false, nil, "Quit filu?", "YOUR SHELL GOES TO"},
+			{true, nil, "Quit filu?", "YOUR SHELL GOES TO"},
+			{false, []string{"t", "s"}, "Quit filu?", "YOUR SHELL GOES TO"},
+			{true, []string{"t", "s"}, "YOUR SHELL GOES TO", "Quit filu?"},
+		} {
 			hs := newHarness(t, 120, 40, nil)
-			want, other := "Quit filu?", "YOUR SHELL GOES TO"
-			if menu {
+			if c.shell {
 				t.Setenv(envLastDirFile, filepath.Join(hs.home, "lastdir"))
 				hs.a.syncQuit()
-				want, other = other, want
 			}
+			hs.keys(c.more...)
 			hs.keys("?", key)
-			hs.has("Tab|Shift-Tab", want)
-			hs.hasNot(other)
+			hs.has("Tab|Shift-Tab", c.want)
+			hs.hasNot(c.other)
 			if hs.quit {
-				t.Fatalf("%s over the key reference quit (menu %v)", key, menu)
+				t.Fatalf("%s over the key reference quit (shell %v, %d tabs)", key, c.shell, len(hs.a.tabs))
 			}
 			hs.keys("Esc")
-			hs.hasNot(want)
+			hs.hasNot(c.want)
 			hs.has("Tab|Shift-Tab")
 		}
 	}
@@ -347,7 +376,7 @@ func TestQuitOverAPopup(t *testing.T) {
 func TestQuitMenuSecondCtrlC(t *testing.T) {
 	hs := newHarness(t, 120, 40, nil)
 	t.Setenv(envLastDirFile, filepath.Join(hs.home, "lastdir"))
-	hs.a.syncQuit()
+	hs.keys("t", "s")
 	hs.keys("Ctrl-C")
 	hs.has("YOUR SHELL GOES TO")
 	hs.keys("Ctrl-C")
@@ -356,15 +385,25 @@ func TestQuitMenuSecondCtrlC(t *testing.T) {
 	}
 }
 
-// A running task makes quitting warn: the confirm, or choosing in the menu.
+// A running task makes quitting warn, one tab too: the confirm, or choosing
+// in the menu.
 func TestQuitWarnsOfARunningTask(t *testing.T) {
-	hs := newHarness(t, 120, 40, nil)
-	hs.a.addTask("cp", "x", hs.root, []string{"a"})
-	hs.keys("q")
-	hs.has("A task is still running")
+	for _, shell := range []bool{false, true} {
+		hs := newHarness(t, 120, 40, nil)
+		if shell {
+			t.Setenv(envLastDirFile, filepath.Join(hs.home, "lastdir"))
+		}
+		hs.a.addTask("cp", "x", hs.root, []string{"a"})
+		hs.keys("q")
+		hs.has("A task is still running", "Quit filu?")
+		if hs.quit {
+			t.Fatalf("one tab: quit without asking while a task runs (shell %v)", shell)
+		}
+	}
 
-	hs = newHarness(t, 120, 40, nil)
+	hs := newHarness(t, 120, 40, nil)
 	t.Setenv(envLastDirFile, filepath.Join(hs.home, "lastdir"))
+	hs.keys("t", "s")
 	hs.a.addTask("cp", "x", hs.root, []string{"a"})
 	hs.keys("q", "1")
 	hs.has("A task is still running", "Quit filu, your shell in ~/work?")

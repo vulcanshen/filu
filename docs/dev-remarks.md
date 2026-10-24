@@ -35,8 +35,9 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 
 所以採兩段式 handshake：`filu shell` 印出一個 shell function，它透過 `FILU__LAST_DIR_FILE` 給 filu 一個暫存檔；filu 結束時
 （`App.shutdown`）把目錄寫進去，function 再讀檔 `cd`。目錄是 `q` 的 menu 選的那一個（`quitMenu`，lib 的 `App.QuitFlow`），用
-`Ctrl-C` 兩次直接離開時是當時所在 tab 的目錄。有這個變數時 `q` 才是選目錄的 menu，沒有就只是一個 confirm。兩種都是第一步就問，
-所以 popup 開著時按 `q`（tdp K9-6）lib 不會再多問一次 `Quit filu?`，照樣只開那個 menu 或 confirm。這也是為什麼
+`Ctrl-C` 兩次直接離開、或只有一個 tab 時 `q` 直接離開，是當時所在 tab 的目錄。有這個變數又有好幾個 tab 時 `q` 才是選目錄的 menu，
+沒有變數就只是一個 confirm（`syncQuit`）。menu 與 confirm 都是第一步就問，所以 popup 開著時按 `q`（tdp K9-6）lib 不會再多問一次
+`Quit filu?`；只有一個 tab、本來會直接離開時，popup 開著就由 lib 問 `Quit filu?`。這也是為什麼
 要用 `filu` 而不是 `./filu` 啟動 —— wrapper 攔截的是指令名 `filu`，帶路徑的呼叫會繞過它。
 
 ### 各功能的實作備註
@@ -182,7 +183,8 @@ filu/
   名稱後面時，名稱一截短星就不見；一欄自己的、不收，窄的時候也看得到。
 - **離開**（user 2026-10-19 定案，FL1）：用 `filu shell` 的 function 跑時（有 `FILU__LAST_DIR_FILE`），`q` 是選 shell 停在哪裡的 menu：
   啟動的目錄、再來每個 tab 的（重複的只列一次），選了就離開；有工作在跑時選了先 confirm（`Esc` 回到 menu）。沒有這個變數時選了也
-  沒有差別，所以只是一個 confirm（有工作在跑時多一句 Peach 的警告）。
+  沒有差別，所以只是一個 confirm（有工作在跑時多一句 Peach 的警告）。**只有一個 tab 時 `q` 不問、直接離開**（user 2026-10-24），
+  shell 停在那個 tab 的目錄；有工作在跑時照樣先問（離開會中斷它，救不回來）。
 - **檔案資訊的 viewer 不畫行號**（user 2026-10-19 定案，tdp S66）：是一張事實的表，不是檔案的內容；照樣能選取複製。
 - **排序選了方向只關方向那一步**（tdp T1：選一個值寫回 picker，保留 source）：欄位 menu 留著、寫出新的排序，可以接著疊下一欄；
   `Esc` 收起。

@@ -55,10 +55,11 @@ them from it and shows both paths.
   shows them by their names in red instead of leaving them out. In a text
   file's preview, the file's own colour codes colour it.
 
-- Without the shell function from `filu shell`, `q` asks before quitting
-  instead of listing directories that make no difference. With it, `q` lists
-  where your shell can go as before; while a copy or a move is still running,
-  choosing one asks once more.
+- With one tab, `q` leaves at once; with the shell function from
+  `filu shell`, your shell goes where that tab is. With more tabs, `q` without
+  the shell function asks before quitting instead of listing directories
+  that make no difference, and with it lists where your shell can go as
+  before. While a copy or a move is still running, quitting asks first.
 - A finder narrows by the words you type, each as typed and in any order,
   instead of fuzzily; `Enter` on the typing row goes to the list, and `Enter`
   there opens.

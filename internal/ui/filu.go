@@ -147,7 +147,6 @@ func NewApp(startDir, focusName string) *App {
 	// so does 60 columns, [1], [2] and [3] then one at a time (dev-remarks).
 	a.t.MinWidth, a.t.MinHeight = 60, 24
 	a.t.Spinning = func() bool { return a.drawer.Tab == drawerTasks && a.anyRunning() }
-	a.t.QuitDesc = "leave filu"
 
 	first := newTab(dir)
 	if focusName != "" && !first.focus(focusName) {
