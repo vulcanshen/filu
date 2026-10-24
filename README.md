@@ -149,13 +149,13 @@ Three panels:
 #### Preview and copy
 
 - The preview shows text with syntax highlighting and line numbers, directory trees, archive contents, PDFs (their text), images (as a data: URI), SVG source, and hex for binaries.
-- In `[2]`, `Enter` opens the preview in a scrollable view: `v` brings out a cursor, `v` again starts selecting, move with `h|j|k|l`, by word with `w|b|e` and to the line ends with `0|$`, and `y` copies the selection. Without the cursor `y` copies all of it — as `y` on `[2]` itself does.
+- In `[2]`, `Enter` opens the preview in a scrollable view: `v` brings out a cursor, `v` again starts selecting, move with `h|j|k|l`, by word with `w|b|e` and to the line ends with `0|$`, and `y` copies the selection; `Esc` lets go of the selection, and `Esc` again puts the cursor away. With the cursor out, `Space` lists what you can do. Without the cursor `y` copies all of it — as `y` on `[2]` itself does.
 - `y` on a file in `[1]` copies its full path. Copying works through tmux and SSH.
 
 #### Open, edit, and everything else
 
 - `o` opens a file or directory with its default app (it asks first). `O` lets you choose the app — add your own (VSCode, IntelliJ IDEA, …) in the config.
-- `s` drops you into your shell in the current directory (it asks first); type `exit` to come back, or press `Alt-Esc`: filu asks, then `Enter` ends the shell (whatever is running in it) and `Esc` takes you back to it. In the shell, `PgUp` scrolls back through what went off the top (`Esc` back to the live screen), and `Alt-v` lets you select some of it and copy it with `y`.
+- `s` drops you into your shell in the current directory (it asks first); type `exit` to come back, or press `Alt-Esc`: filu asks, then `Enter` ends the shell (whatever is running in it) and `Esc` takes you back to it. In the shell, `PgUp` scrolls back through what went off the top (`Esc` back to the live screen), and `Alt-v` lets you select some of it and copy it with `y`; in either, `Space` lists what you can do.
 - `r` renames (the old name shows in grey: `Tab` takes it to edit, or just type a new one), `a` creates a file (end the name with `/` for a directory), `D` moves to the trash after asking. A name that is empty, already taken, outside the current directory or holding a control character is refused on the spot — the box stays open and says why. If renaming or creating fails all the same (say, no permission), filu says why over the box, and closing that brings you back to what you typed.
 
 ### Key reference

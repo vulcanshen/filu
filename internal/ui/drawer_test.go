@@ -317,6 +317,32 @@ func TestQuit(t *testing.T) {
 	}
 }
 
+// With a popup open the first q or Ctrl-C never quits (tdp K9-6): filu's
+// flows ask anyway, the confirm or the menu, and ask only that; Esc goes back
+// to the popup.
+func TestQuitOverAPopup(t *testing.T) {
+	for _, key := range []string{"q", "Ctrl-C"} {
+		for _, menu := range []bool{false, true} {
+			hs := newHarness(t, 120, 40, nil)
+			want, other := "Quit filu?", "YOUR SHELL GOES TO"
+			if menu {
+				t.Setenv(envLastDirFile, filepath.Join(hs.home, "lastdir"))
+				hs.a.syncQuit()
+				want, other = other, want
+			}
+			hs.keys("?", key)
+			hs.has("Tab|Shift-Tab", want)
+			hs.hasNot(other)
+			if hs.quit {
+				t.Fatalf("%s over the key reference quit (menu %v)", key, menu)
+			}
+			hs.keys("Esc")
+			hs.hasNot(want)
+			hs.has("Tab|Shift-Tab")
+		}
+	}
+}
+
 // A second Ctrl-C during the quit menu leaves at once (tdp K9).
 func TestQuitMenuSecondCtrlC(t *testing.T) {
 	hs := newHarness(t, 120, 40, nil)

@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-filu now follows tdp v0.9.3 and is built on terminu-go, the terminu
+filu now follows tdp v0.9.13 and is built on terminu-go, the terminu
 family's shared library: the screen, the `Space` menu, `?`, the popups and
 their animations, confirms, inputs, toasts, the finders, the viewer and the
 shell are the family's own, and look and work the same as in every terminu
@@ -46,7 +46,8 @@ them from it and shows both paths.
   file aside to a `.bak` and start as the first time filu ran, or quit, the
   file and the reason printed.
 - In the shell, `PgUp` scrolls back through what went off the top, and
-  `Alt-v` selects some of it to copy.
+  `Alt-v` selects some of it to copy; in either, `Space` lists what you can
+  do there.
 
 ### Changed
 
@@ -75,8 +76,9 @@ them from it and shows both paths.
 - `[1]`'s path is cut from the front when it is too long, instead of
   shortening the directories to their initials; Breadcrumb is not offered at
   `/`.
-- In the viewer the selection mode is called Visual; `y` outside it copies
-  everything.
+- In the viewer the selection mode is called Visual: `Esc` while selecting
+  lets go of the selection, and `Esc` again leaves; `Space` in it lists what
+  you can do. `y` outside it copies everything.
 - A message saying something is done — copied, moved to the trash, starred, a
   task finished — is green.
 - On a terminal smaller than 60×24 filu shows only how big a terminal it

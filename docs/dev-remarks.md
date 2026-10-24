@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.3），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.4）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.13），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.16）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -35,7 +35,8 @@ shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell c
 
 所以採兩段式 handshake：`filu shell` 印出一個 shell function，它透過 `FILU__LAST_DIR_FILE` 給 filu 一個暫存檔；filu 結束時
 （`App.shutdown`）把目錄寫進去，function 再讀檔 `cd`。目錄是 `q` 的 menu 選的那一個（`quitMenu`，lib 的 `App.QuitFlow`），用
-`Ctrl-C` 兩次直接離開時是當時所在 tab 的目錄。有這個變數時 `q` 才是選目錄的 menu，沒有就只是一個 confirm。這也是為什麼
+`Ctrl-C` 兩次直接離開時是當時所在 tab 的目錄。有這個變數時 `q` 才是選目錄的 menu，沒有就只是一個 confirm。兩種都是第一步就問，
+所以 popup 開著時按 `q`（tdp K9-6）lib 不會再多問一次 `Quit filu?`，照樣只開那個 menu 或 confirm。這也是為什麼
 要用 `filu` 而不是 `./filu` 啟動 —— wrapper 攔截的是指令名 `filu`，帶路徑的呼叫會繞過它。
 
 ### 各功能的實作備註
@@ -250,8 +251,8 @@ make build        # → ./filu（CGO_ENABLED=0 靜態；版本是 dev）
 
 - 需要 **Go 1.26+**。一律 `CGO_ENABLED=0`。
 - `Makefile` 只設 `BINARY`、`TAPES` 再 include 家族共用的 `family.mk`（tdp project 的範本，照原樣複製、不在這裡改）。常用的：
-  `make build`、`make install` / `make uninstall`、`make package`、`make check`（commit 前跑：fmt-check、vet、`go test -race`；有
-  `go.work` 時加 `check-lib`）。跑 `make` 列出全部；filu 自己的 target 放在最後一段 `##@ filu 自己的`（目前沒有）。
+  `make build`、`make dev`（build 完直接跑 `./filu`，讀真正的設定與資料）、`make install` / `make uninstall`、`make package`、
+  `make check`（commit 前跑：fmt-check、vet、`go test -race`；有 `go.work` 時加 `check-lib`）。跑 `make` 列出全部；filu 自己的 target 放在最後一段 `##@ filu 自己的`（目前沒有）。
 - **改 lib 時**：`go.mod` 寫發布的 terminu-go 版本（不用 `replace`）；本機用 gitignore 掉的 `go.work`、`go.work.sum`（`go work init . ../terminu-go`）接上
   lib 的工作目錄。`make check` 的 `check-lib` 關掉 `go.work`、照 `go.mod` 的版本編譯與測試：過不了就是用到了 lib 還沒發版的東西。
 - 本機 build 的版本號是 `dev`；release 版號由 goreleaser 以 `-X` 注入 `internal/version.Version`。
