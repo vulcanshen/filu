@@ -455,6 +455,17 @@ func TestZoom(t *testing.T) {
 	hs.has("[2] PREVIEW", "[3] MARKS")
 }
 
+// h|l:tab is in [1]'s hint after Enter once it has two tabs, and in [3]'s
+// (tdp v0.9.14, FL27: the lib writes it).
+func TestHintNamesTabs(t *testing.T) {
+	hs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
+	hs.to("a.txt")
+	hs.has("h|l:tab Z:zip")
+	hs.hasNot("Enter:info h|l:tab")
+	hs.keys("t", "s")
+	hs.has("Enter:info h|l:tab m:mark")
+}
+
 // The first tab's mark is the launch glyph, then the animals (components:
 // the label of a panel with tabs is its first tab's name).
 func TestTabMarks(t *testing.T) {

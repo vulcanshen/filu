@@ -2,7 +2,7 @@
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.14），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.16）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.17）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -229,8 +229,8 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
 
 ## 偏離 tdp
 
-目前沒有。還沒符合 tdp、在等 lib 的寫在 `docs/filu-terminu-fix.md`：hint 的 `h|l:tab`（FL27，user 2026-10-24 要的，tdp v0.9.14 定成
-全家族由 lib 加，等 terminu-go v0.4.17）。
+目前沒有；還沒符合 tdp 的地方也沒有（`docs/filu-terminu-fix.md` 已經刪掉，最後一件 FL27 —— hint 的 `h|l:tab`，user 2026-10-24
+要的，tdp v0.9.14 定成全家族由 lib 加 —— 在 terminu-go v0.4.17 做好）。
 zoom 時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 清單最後一欄的星、`[3]` 各清單的欄位是 panel 的內容。
 
 ## 設計文件導讀

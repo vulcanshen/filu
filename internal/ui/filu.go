@@ -223,8 +223,6 @@ func (a *App) reopenSession() tea.Cmd {
 func (a *App) build() {
 	t := a.t
 	a.fb = &filesBody{app: a}
-	// TODO(lib FL27): h|l:tab in [1]'s and [3]'s hint (tdp v0.9.14), which
-	// terminu-go adds from v0.4.17 (docs/filu-terminu-fix.md).
 	a.files = &terminu.Panel{Body: a.fb, OnTab: a.switchTab, OnEsc: a.up}
 	a.files.Actions = a.filesActions()
 	a.pb = &previewBody{app: a, Pager: &terminu.Pager{}}

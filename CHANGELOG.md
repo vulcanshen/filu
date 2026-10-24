@@ -73,6 +73,8 @@ them from it and shows both paths.
 - Zooming `[1]` gives it the whole top and keeps `[3]` below it, the marks,
   tasks and favorites in sight. Zoomed, `Tab` moves to the next panel, zoomed
   too, instead of zooming out.
+- The hint under `[1]` with two tabs or more, and under `[3]`, shows
+  `h|l:tab`.
 - A marked file shows the family's tick; a starred directory shows its star
   at the end of its row, where a long name cut short keeps it, and no longer
   after the path when you are in it. `[3]` lists have column headers.
