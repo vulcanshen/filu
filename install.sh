@@ -167,5 +167,6 @@ echo "      profile (https://www.nerdfonts.com) or they render as boxes."
 echo "      It also needs a truecolor (24-bit) terminal; with 256 colours"
 echo "      the dimmed and layered colours can't be told apart."
 echo ""
-echo "Run '$APP' to start."
+echo "Run '$APP' to start, and '$APP shell install' once so that quitting"
+echo "$APP leaves your shell in the directory you pick."
 # --- end of the app's own ---

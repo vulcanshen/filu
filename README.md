@@ -70,7 +70,7 @@ filu writes a commented `config.yaml` into its settings directory, and the lists
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh | sh
 ```
 
-It asks before removing your settings.
+It asks before removing your settings, and takes out what `filu shell install` added to your shell's rc file. Installed with Homebrew, run `filu shell uninstall` before `brew uninstall filu`.
 
 ## Getting started
 
@@ -91,17 +91,17 @@ filu opens with the file list focused. These keys cover the rest:
 | **`Esc`** | Back out: close the popup on top, or go up a directory |
 | **`Tab`** | The next panel (`Shift-Tab` the one before, `1`–`3` jump to one) |
 | **`!`** | The App Log: what filu did and what went wrong, newest last (the footer counts errors you haven't seen) |
-| **`q`** | Quit (with one tab at once; with more it asks first — with the line below, it asks where your shell goes) |
+| **`q`** | Quit (with one tab at once; with more it asks first — after `filu shell install` below, it asks where your shell goes) |
 
 ### Let quitting change your shell's directory
 
-Add this line to `~/.zshrc` or `~/.bashrc`:
-
 ```sh
-eval "$(filu shell)"
+filu shell install
 ```
 
-Then start filu as **`filu`** (not `./filu`). With one tab, `q` leaves at once and your shell goes where that tab is. With more, `q` asks where your shell goes: the directory you started in, or any tab's — press its number, or move to it and press `Enter`. While a copy or a move is still running, filu asks before it leaves, since quitting stops it. Without the line, filu works the same — your shell just stays where it was, and with more than one tab quitting asks first.
+It adds a few lines to your `~/.zshrc` (bash: `~/.bashrc`, or `~/.bash_profile` on macOS); open a new shell for them to take effect. `filu shell uninstall` takes them out. If your rc file has `eval "$(filu shell)"` from an older version, or a copy of a `filu()` function, take that out: `filu shell install` points at what it finds there.
+
+Then start filu as **`filu`** (not `./filu`). With one tab, `q` leaves at once and your shell goes where that tab is. With more, `q` asks where your shell goes: the directory you started in, or any tab's — press its number, or move to it and press `Enter`. While a copy or a move is still running, filu asks before it leaves, since quitting stops it. Without it, filu works the same — your shell just stays where it was, and with more than one tab quitting asks first.
 
 ## Usage
 

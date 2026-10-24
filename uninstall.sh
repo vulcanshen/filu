@@ -28,6 +28,8 @@ if [ -z "$FOUND" ]; then
 fi
 
 # --- app's own: what to undo while the binary is still here (none by default) ---
+# The lines `filu shell install` put in the shell's rc file (cd-on-quit).
+"$FOUND" shell uninstall || true
 # --- end of the app's own ---
 
 rm "$FOUND"

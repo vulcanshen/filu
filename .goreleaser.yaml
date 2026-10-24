@@ -64,8 +64,9 @@ brews:
     # app: what to run first, where the settings and data live, the Nerd
     # Font and truecolor requirements, the platforms.
     caveats: |
-      Run `filu` to start. Add `eval "$(filu shell)"` to your shell rc so
-      that quitting filu leaves your shell in the directory you pick.
+      Run `filu` to start. Run `filu shell install` once so that quitting
+      filu leaves your shell in the directory you pick (`filu shell uninstall`
+      takes it out again, before `brew uninstall filu`).
 
       Settings and state live in ~/.config/filu ($XDG_CONFIG_HOME/filu),
       favorites and the task log in ~/.filu.

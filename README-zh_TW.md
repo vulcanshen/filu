@@ -70,7 +70,7 @@ filu 會在設定目錄寫一份帶註解的 `config.yaml`，在 `~/.filu/` 寫�
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/filu/main/uninstall.sh | sh
 ```
 
-刪除你的設定前會先問。
+刪除你的設定前會先問，也會拿掉 `filu shell install` 加進 shell 設定檔的那幾行。用 Homebrew 裝的，`brew uninstall filu` 之前先跑 `filu shell uninstall`。
 
 ## 快速開始
 
@@ -91,17 +91,17 @@ filu 打開時 focus 在檔案清單上。其他的事靠這幾個鍵：
 | **`Esc`** | 退一步：關掉最上層的 popup，或回上一層目錄 |
 | **`Tab`** | 下一個 panel（`Shift-Tab` 上一個，`1`–`3` 直接跳過去） |
 | **`!`** | App Log：filu 做了什麼、哪裡出錯，最新的在最下面（還沒看過的錯誤，footer 會寫出幾筆） |
-| **`q`** | 離開（只有一個 tab 時直接離開；有好幾個時先問 —— 加了下面那一行時，問 shell 要停在哪裡） |
+| **`q`** | 離開（只有一個 tab 時直接離開；有好幾個時先問 —— 跑過下面的 `filu shell install` 時，問 shell 要停在哪裡） |
 
 ### 讓離開 filu 時 shell 換目錄
 
-在 `~/.zshrc` 或 `~/.bashrc` 加這一行：
-
 ```sh
-eval "$(filu shell)"
+filu shell install
 ```
 
-之後用 **`filu`**（不是 `./filu`）啟動。只有一個 tab 時，按 `q` 直接離開，shell 停在那個 tab 的目錄。有好幾個 tab 時，按 `q` filu 會問 shell 要停在哪裡：你啟動 filu 的目錄，或任何一個 tab 的目錄 —— 按它的數字，或移到它上面按 `Enter`。還有複製或搬移在跑時，filu 離開前會先問，因為離開會中斷它。沒加這一行，filu 照樣能用 —— 只是 shell 停在原地，有好幾個 tab 時離開前先問。
+它會在你的 `~/.zshrc`（bash 是 `~/.bashrc`，macOS 上是 `~/.bash_profile`）加幾行；開一個新的 shell 才生效。`filu shell uninstall` 把它們拿掉。如果你的設定檔裡有舊版的 `eval "$(filu shell)"`，或手抄的 `filu()` function，把它拿掉：`filu shell install` 會指出它在那裡找到的。
+
+之後用 **`filu`**（不是 `./filu`）啟動。只有一個 tab 時，按 `q` 直接離開，shell 停在那個 tab 的目錄。有好幾個 tab 時，按 `q` filu 會問 shell 要停在哪裡：你啟動 filu 的目錄，或任何一個 tab 的目錄 —— 按它的數字，或移到它上面按 `Enter`。還有複製或搬移在跑時，filu 離開前會先問，因為離開會中斷它。沒裝的話 filu 照樣能用 —— 只是 shell 停在原地，有好幾個 tab 時離開前先問。
 
 ## 使用方式
 

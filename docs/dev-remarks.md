@@ -33,12 +33,22 @@ List 換成那個 tab 的。`tasksBody` 也是同一個做法。
 這是 OS 限制、不是偷懶：一個 process 只能改**自己**的工作目錄，沒有任何 syscall 能改**父** process（你的 shell）的 cwd。filu 是
 shell 的子程序，自己 `cd` 影響不到 shell；唯一能原生改 shell cwd 的是 shell **內建指令**，而 filu 是外部 binary。
 
-所以採兩段式 handshake：`filu shell` 印出一個 shell function，它透過 `FILU__LAST_DIR_FILE` 給 filu 一個暫存檔；filu 結束時
+所以採兩段式 handshake：一個 shell function 透過 `FILU__LAST_DIR_FILE` 給 filu 一個暫存檔；filu 結束時
 （`App.shutdown`）把目錄寫進去，function 再讀檔 `cd`。目錄是 `q` 的 menu 選的那一個（`quitMenu`，lib 的 `App.QuitFlow`），用
 `Ctrl-C` 兩次直接離開、或只有一個 tab 時 `q` 直接離開，是當時所在 tab 的目錄。有這個變數又有好幾個 tab 時 `q` 才是選目錄的 menu，
 沒有變數就只是一個 confirm（`syncQuit`）。menu 與 confirm 都是第一步就問，所以 popup 開著時按 `q`（tdp K9-6）lib 不會再多問一次
 `Quit filu?`；只有一個 tab、本來會直接離開時，popup 開著就由 lib 問 `Quit filu?`。這也是為什麼
 要用 `filu` 而不是 `./filu` 啟動 —— wrapper 攔截的是指令名 `filu`，帶路徑的呼叫會繞過它。
+
+**function 怎麼裝**（user 2026-10-24 定，`cmd/filu/shell.go`）：`filu shell install` 照 `$SHELL` 在 rc 檔（zsh 的
+`$ZDOTDIR/.zshrc` 或 `~/.zshrc`；bash 的 `~/.bashrc`，macOS 是 `~/.bash_profile`，那裡的終端機開 login shell）寫一段有頭尾標記的
+區塊，裡面一行：filu 在 PATH 上時 `eval "$(command filu shell init zsh)"`。function 每次開 shell 由當下的 filu 印，升級就跟上 ——
+以前叫使用者把 `eval "$(filu shell)"` 放進 rc，有人照抄 function 本身，v0.4.0 改變數名（`FILU_` → `FILU__`）時抄的那份就悄悄失效
+（user 自己的就是）。再跑一次是「已經裝了」，區塊內容不同就換新；寫回時跟著 symlink（dotfiles repo），保留權限。區塊外看起來是舊做法
+的行（`filu shell`、`LAST_DIR_FILE`、`filu()`）只指出行號、不動。`filu shell uninstall` 從 zsh、bash 可能的三個 rc 檔拿掉區塊；
+`uninstall.sh` 在刪 binary 前呼叫它（Homebrew 的 uninstall 沒有 hook，README 叫使用者先跑）。`filu shell` 本身不再印 function：
+在終端機印說明；被舊的 `eval "$(filu shell)"` 呼叫（stdout 不是終端機）時印一行只往 stderr 說「改用 filu shell install」的 shell
+code，開 shell 不會冒出 `command not found`。`init` 不寫進 usage：只給區塊裡那一行用。
 
 ### 各功能的實作備註
 
@@ -185,7 +195,7 @@ filu/
   怎麼運作（tdp v0.9.1，user 定，FL26）。設定只剩 filu 自己一個一個的選項。
 - **最愛的星在 `[1]` 清單的最後一欄**（user 2026-10-20 定，FL25）：位置列只寫你在哪裡（tdp v0.9.1）；星放在哪是 filu 自己的設計。放在
   名稱後面時，名稱一截短星就不見；一欄自己的、不收，窄的時候也看得到。
-- **離開**（user 2026-10-19 定案，FL1）：用 `filu shell` 的 function 跑時（有 `FILU__LAST_DIR_FILE`），`q` 是選 shell 停在哪裡的 menu：
+- **離開**（user 2026-10-19 定案，FL1）：用 `filu shell install` 裝的 function 跑時（有 `FILU__LAST_DIR_FILE`），`q` 是選 shell 停在哪裡的 menu：
   啟動的目錄、再來每個 tab 的（重複的只列一次），選了就離開；有工作在跑時選了先 confirm（`Esc` 回到 menu）。沒有這個變數時選了也
   沒有差別，所以只是一個 confirm（有工作在跑時多一句 Peach 的警告）。**只有一個 tab 時 `q` 不問、直接離開**（user 2026-10-24），
   shell 停在那個 tab 的目錄；有工作在跑時照樣先問（離開會中斷它，救不回來）。
@@ -263,8 +273,8 @@ make build        # → ./filu（CGO_ENABLED=0 靜態；版本是 dev）
 - **改 lib 時**：`go.mod` 寫發布的 terminu-go 版本（不用 `replace`）；本機用 gitignore 掉的 `go.work`、`go.work.sum`（`go work init . ../terminu-go`）接上
   lib 的工作目錄。`make check` 的 `check-lib` 關掉 `go.work`、照 `go.mod` 的版本編譯與測試：過不了就是用到了 lib 還沒發版的東西。
 - 本機 build 的版本號是 `dev`；release 版號由 goreleaser 以 `-X` 注入 `internal/version.Version`。
-- binary 的子指令：`filu version`（也收 `--version`、`-v`）、`filu help`（也收 `--help`、`-h`）、`filu shell`（印出 cd-on-quit 的 shell
-  function）、`filu iconwidth`（印出 lib 探測到的 icon 與 powerline 符號格數，以及從哪裡來的）。
+- binary 的子指令：`filu version`（也收 `--version`、`-v`）、`filu help`（也收 `--help`、`-h`）、`filu shell install` / `uninstall`
+  （cd-on-quit，見「運作方式」）、`filu iconwidth`（印出 lib 探測到的 icon 與 powerline 符號格數，以及從哪裡來的）。
 - 頂層另有（tdp project 的目錄圖上沒有的）：`CLAUDE.md`（gitignore，給 AI 協作的指引）、`.claude/`（進版控：專案的 Claude Code
   規則、agent 與指令）、`.forge/`（gitignore：forge 的 GOAL.md、PROGRESS.md、IDEA.md、REDESIGN-LIST-AND-NAV.md，內容停在 v0.2.0
   前後）、`.checkpoints/`（自帶 `.gitignore`：AI 協作的 session 紀錄）。

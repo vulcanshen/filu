@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	terminu "github.com/vulcanshen/terminu-go"
 
@@ -20,9 +21,11 @@ func main() {
 		case "help", "--help", "-h":
 			fmt.Print(usage)
 			return
-		case "shell":
-			fmt.Print(shellWrapper) // `eval "$(filu shell)"` in your rc: cd-on-quit
-			return
+		case "shell": // cd-on-quit (shell.go)
+			home, _ := os.UserHomeDir()
+			fi, err := os.Stdout.Stat()
+			tty := err == nil && fi.Mode()&os.ModeCharDevice != 0
+			os.Exit(shellCmd(os.Args[2:], shellEnv{os.Getenv("SHELL"), home, os.Getenv("ZDOTDIR"), runtime.GOOS, tty}, os.Stdout, os.Stderr))
 		case "iconwidth":
 			r := terminu.Probe("filu") // what filu measures at startup (tdp E5)
 			fmt.Printf("icon %d (%s)\npowerline %d (%s)\n", r.IconCells, r.IconFrom, r.PowerlineCells, r.PowerlineFrom)
@@ -51,8 +54,11 @@ Usage:
   filu              open the current directory
   filu <directory>  open that directory
   filu <file>       open its directory, the cursor on it
-  filu shell        print the shell function that lets quitting filu change
-                    your shell's directory: eval "$(filu shell)"
+  filu shell install
+                    let quitting filu change your shell's directory: adds a
+                    few lines to your zsh or bash rc file
+  filu shell uninstall
+                    take them out again
   filu iconwidth    print how many cells an icon and a powerline symbol take
   filu version      print the version (also --version, -v)
   filu help         print this (also --help, -h)
@@ -69,17 +75,4 @@ Environment:
   FILU__POWERLINE_WIDTH      1 or 2: the same for a powerline symbol
   TERMINU__ICON_WIDTH        the same as FILU__ICON_WIDTH, for every terminu family app
   TERMINU__POWERLINE_WIDTH   the same as FILU__POWERLINE_WIDTH, for every terminu family app
-`
-
-// shellWrapper is a shell function that cd's to the directory filu wrote on quit
-// (cd-on-quit). It passes filu a temp file via FILU__LAST_DIR_FILE, then cds to
-// whatever filu recorded there. Enable with: eval "$(filu shell)".
-const shellWrapper = `filu() {
-  local __filu_dir_file __filu_dir
-  __filu_dir_file="$(mktemp -t filu-cwd.XXXXXX)" || return
-  FILU__LAST_DIR_FILE="$__filu_dir_file" command filu "$@"
-  __filu_dir="$(cat -- "$__filu_dir_file" 2>/dev/null)"
-  rm -f -- "$__filu_dir_file"
-  [ -n "$__filu_dir" ] && [ -d "$__filu_dir" ] && cd -- "$__filu_dir"
-}
 `

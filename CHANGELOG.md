@@ -30,6 +30,12 @@ them from it and shows both paths.
 
 - `filu help` (also `--help`, `-h`) prints the usage; `--version` and `-v`
   print the version.
+- `filu shell install` adds to your zsh or bash rc file what lets quitting
+  filu change your shell's directory, and points at an older setup it finds
+  there; `filu shell uninstall`, and the uninstaller, take it out.
+  `filu shell` no longer prints the function to copy or to `eval`: an
+  `eval "$(filu shell)"` line left in your rc file says so when the shell
+  starts.
 - `config.yaml` takes the family's shared `input_tab_width` (how many cells a
   tab takes in the preview and the viewer, 4) and `hide_secrets_in_preview`
   (keep private keys out of the finders' previews, off).
@@ -55,11 +61,11 @@ them from it and shows both paths.
   shows them by their names in red instead of leaving them out. In a text
   file's preview, the file's own colour codes colour it.
 
-- With one tab, `q` leaves at once; with the shell function from
-  `filu shell`, your shell goes where that tab is. With more tabs, `q` without
-  the shell function asks before quitting instead of listing directories
-  that make no difference, and with it lists where your shell can go as
-  before. While a copy or a move is still running, quitting asks first.
+- With one tab, `q` leaves at once; after `filu shell install`, your shell
+  goes where that tab is. With more tabs, `q` without it asks before quitting
+  instead of listing directories that make no difference, and with it lists
+  where your shell can go as before. While a copy or a move is still
+  running, quitting asks first.
 - A finder narrows by the words you type, each as typed and in any order,
   instead of fuzzily; `Enter` on the typing row goes to the list, and `Enter`
   there opens.

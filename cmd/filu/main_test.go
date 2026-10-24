@@ -20,7 +20,7 @@ func TestShellWrapperUsesTheFamilyName(t *testing.T) {
 // filu help names every command, version and help among them with their
 // aliases (tdp E1), and the variables filu reads (tdp E2).
 func TestUsage(t *testing.T) {
-	for _, want := range []string{"filu version", "--version, -v", "filu help", "--help, -h", "filu shell", "filu iconwidth",
+	for _, want := range []string{"filu version", "--version, -v", "filu help", "--help, -h", "filu shell install", "filu shell uninstall", "filu iconwidth",
 		"FILU__CONFIG", "FILU__STATE", "FILU__ICON_WIDTH", "FILU__POWERLINE_WIDTH", "TERMINU__ICON_WIDTH", "TERMINU__POWERLINE_WIDTH"} {
 		if !strings.Contains(usage, want) {
 			t.Errorf("filu help does not say %q", want)
