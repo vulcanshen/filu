@@ -225,15 +225,14 @@ func dropNotes(comment, key string) string {
 // toast for the lists moved, both paths of one it left or could not move
 // (tdp E3).
 func (a *App) sayListsMove(m listsMove) {
-	var text string
 	switch {
 	case m.err != nil:
 		if a.moveTitle == "" {
 			a.moveTitle = "Moving the lists failed"
 		}
-		text = opFailedText("move "+strings.Join(m.moved, " and ")+" from "+m.from+" to "+m.to, m.err) +
-			". filu goes on reading them from " + m.from + ". Put each in a file of its name in " + m.to +
-			" and take it out of " + m.from + " yourself to switch."
+		a.moveRows = append(a.moveRows, opFailedText("move "+strings.Join(m.moved, " and ")+" from "+m.from+" to "+m.to, m.err)+".",
+			"filu goes on reading them from "+m.from+". Put each in a file of its name in "+m.to+
+				" and take it out of "+m.from+" yourself to switch.")
 	case len(m.moved) > 0:
 		a.startupNews = append(a.startupNews, "Moved "+strings.Join(m.moved, " and ")+" from "+shortPath(m.from)+" to "+shortPath(m.to))
 		for _, key := range m.moved {
@@ -248,10 +247,8 @@ func (a *App) sayListsMove(m listsMove) {
 		for _, key := range m.left {
 			both = append(both, key+" in "+m.from+" and in "+filepath.Join(m.to, key+".yaml"))
 		}
-		text = "These were in two places: " + strings.Join(both, "; ") + ". filu uses the ones in " + m.to +
-			" and left the others in " + m.from + ": put what you need of them into those files, then take them out of " + m.from + "."
-	}
-	if text != "" {
-		a.moveFailed = strings.TrimPrefix(a.moveFailed+" ", " ") + text
+		a.moveRows = append(a.moveRows, "These were in two places: "+strings.Join(both, "; ")+".",
+			"filu uses the ones in "+m.to+" and left the others in "+m.from+
+				": put what you need of them into those files, then take them out of "+m.from+".")
 	}
 }

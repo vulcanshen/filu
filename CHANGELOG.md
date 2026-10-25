@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-filu now follows tdp v0.9.14 and is built on terminu-go, the terminu
+filu now follows tdp v0.9.16 and is built on terminu-go, the terminu
 family's shared library: the screen, the `Space` menu, `?`, the popups and
 their animations, confirms, inputs, toasts, the finders, the viewer and the
 shell are the family's own, and look and work the same as in every terminu
@@ -99,6 +99,11 @@ them from it and shows both paths.
   watch that cannot start.
 - `[2]` says in red why it cannot read a file. The viewer shows a text file
   as it is — tabs, control characters, long lines — and copies it unchanged.
+- A message of several parts — a file found in two places, a move that
+  failed, several problems while starting — gives each part, and what to do
+  about it, a row of its own. When filu cannot read one of its files for an
+  error of several lines, the question shows the line saying why, and the App
+  Log has all of it.
 
 ### Removed
 

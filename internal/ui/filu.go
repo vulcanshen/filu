@@ -2,6 +2,7 @@ package ui
 
 import (
 	_ "embed"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,8 +66,8 @@ type App struct {
 	quitDir     string       // where the shell goes when filu ends (cd-on-quit)
 	startupErrs []string     // problems found while starting (no directory watch, a move that failed), shown once it runs
 	startupNews []string     // what filu did while starting (moved the settings), said once it runs
-	moveTitle   string       // the error popup's title for moveFailed
-	moveFailed  string       // moving the old settings failed, or some were in both places: why, with both paths
+	moveTitle   string       // the error popup's title for moveRows
+	moveRows    []string     // moving the old settings failed, or some were in both places: why, with both paths, a row each
 	unread      []unreadFile // filu's own files it could not read, asked about once it runs
 	keepState   bool         // state.yaml or data.yaml could not be read: leave them as they are rather than write over them
 }
@@ -103,18 +104,17 @@ func NewApp(startDir, focusName string) *App {
 	switch {
 	case mv.err != nil:
 		a.moveTitle = "Moving the settings failed"
-		// One paragraph: an error popup draws a \n by its name (components/README).
-		a.moveFailed = opFailedText("move filu's settings from "+mv.from+" to "+mv.to, mv.err) +
-			". filu goes on using " + mv.from + ". Move it to " + mv.to + " yourself to switch."
+		a.moveRows = append(a.moveRows, opFailedText("move filu's settings from "+mv.from+" to "+mv.to, mv.err)+".",
+			"filu goes on using "+mv.from+". Move it to "+mv.to+" yourself to switch.")
 	case len(mv.left) > 0:
 		a.moveTitle = "Found in two places"
 		var both []string
 		for _, name := range mv.left {
 			both = append(both, filepath.Join(mv.from, name)+" and "+filepath.Join(mv.to, name))
 		}
-		a.moveFailed = "These were in " + mv.from + " and in " + mv.to + " too: " + strings.Join(both, "; ") +
-			". filu uses the ones in " + mv.to + " and left the others where they were: put what you need of them into " +
-			mv.to + ", then delete " + mv.from + "."
+		a.moveRows = append(a.moveRows, "These were in "+mv.from+" and in "+mv.to+" too: "+strings.Join(both, "; ")+".",
+			"filu uses the ones in "+mv.to+" and left the others where they were: put what you need of them into "+
+				mv.to+", then delete "+mv.from+".")
 	}
 	if len(mv.moved) > 0 {
 		a.startupNews = append(a.startupNews, "Moved filu's settings from "+shortPath(mv.from)+" to "+shortPath(mv.to))
@@ -190,9 +190,9 @@ func (a *App) loadSession() (failed string, err error) {
 		if a.moveTitle == "" {
 			a.moveTitle = "Found in two places"
 		}
-		a.moveFailed = strings.TrimPrefix(a.moveFailed+" ", " ") + "Favorites or tasks were in " + sp + " and in " + dp +
-			" too. filu uses the ones in " + dp + " and left the others in " + sp +
-			": put what you need of them into " + dp + ", then take them out of " + sp + "."
+		a.moveRows = append(a.moveRows, "Favorites or tasks were in "+sp+" and in "+dp+" too.",
+			"filu uses the ones in "+dp+" and left the others in "+sp+
+				": put what you need of them into "+dp+", then take them out of "+sp+".")
 	}
 	if moved {
 		if err := saveState(a.snapshotState()); err != nil {
@@ -211,7 +211,7 @@ func (a *App) reopenSession() tea.Cmd {
 	a.keepState = false
 	if failed, err := a.loadSession(); err != nil {
 		a.keepState = true
-		return a.t.MoveAside(failed, err, a.reopenSession)
+		return a.t.MoveAside(failed, a.why(failed, err), a.reopenSession)
 	}
 	a.refreshAll()
 	a.syncWatches()
@@ -300,28 +300,53 @@ func (a *App) start() tea.Cmd {
 }
 
 // said says, once, what filu did and what went wrong while starting: a toast,
-// or an error popup for several, or for a move's two paths. Both go in the App
-// Log (tdp F5).
+// or an error popup for several, or for a move's two paths, a row each (tdp
+// components, control characters). Both go in the App Log (tdp F5).
 func (a *App) said() tea.Cmd {
 	var cmds []tea.Cmd
 	if len(a.startupNews) > 0 {
-		cmds = append(cmds, a.t.Toast(terminu.Info, strings.Join(a.startupNews, "; ")))
+		cmds = append(cmds, a.t.Toast(terminu.Info, a.startupNews...))
+	}
+	var errRows []string
+	for _, e := range a.startupErrs {
+		errRows = append(errRows, e+".")
 	}
 	switch {
-	case a.moveFailed != "":
+	case len(a.moveRows) > 0:
 		// Both paths, for the user to move it, or put the two together, by hand (tdp E3).
-		text := a.moveFailed
-		if len(a.startupErrs) > 0 {
-			text += " " + strings.Join(a.startupErrs, ". ") + "."
-		}
-		cmds = append(cmds, a.t.Error(a.moveTitle, text))
+		cmds = append(cmds, a.t.Error(a.moveTitle, append(a.moveRows, errRows...)...))
 	case len(a.startupErrs) == 1:
 		cmds = append(cmds, a.t.Toast(terminu.Error, a.startupErrs[0]))
 	case len(a.startupErrs) > 1:
-		cmds = append(cmds, a.t.Error("Starting filu", strings.Join(a.startupErrs, ". ")+"."))
+		cmds = append(cmds, a.t.Error("Starting filu", errRows...))
 	}
-	a.startupNews, a.startupErrs, a.moveTitle, a.moveFailed = nil, nil, "", ""
+	a.startupNews, a.startupErrs, a.moveTitle, a.moveRows = nil, nil, "", nil
 	return tea.Batch(cmds...)
+}
+
+// why is err as the confirm about path shows it: the line saying why when err
+// has several (a yaml type error under its header), the whole of it in the
+// App Log (tdp components, control characters).
+func (a *App) why(path string, err error) error {
+	var lines []string
+	reason := ""
+	for _, l := range strings.Split(err.Error(), "\n") {
+		if l = strings.TrimSpace(l); l == "" {
+			continue
+		}
+		lines = append(lines, l)
+		if reason == "" && !strings.HasSuffix(l, ":") {
+			reason = l
+		}
+	}
+	if len(lines) < 2 {
+		return err
+	}
+	if reason == "" {
+		reason = lines[0]
+	}
+	a.t.Log(terminu.Error, "Cannot read "+shortPath(path)+": "+strings.Join(lines, " "))
+	return errors.New(reason)
 }
 
 // askUnread asks about the first file of filu's own it could not read: moved
@@ -333,7 +358,7 @@ func (a *App) askUnread() tea.Cmd {
 	}
 	u := a.unread[0]
 	a.unread = a.unread[1:]
-	return a.t.MoveAside(u.path, u.err, func() tea.Cmd { return tea.Batch(u.fresh(), a.askUnread()) })
+	return a.t.MoveAside(u.path, a.why(u.path, u.err), func() tea.Cmd { return tea.Batch(u.fresh(), a.askUnread()) })
 }
 
 // shutdown saves the session, stops the watcher and the shell, and tells the

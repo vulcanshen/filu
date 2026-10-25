@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.14），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.17）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.16），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.21）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -74,8 +74,10 @@ code，開 shell 不會冒出 `command not found`。`init` 不寫進 usage：只
   `open_with` 空的、`ignore_dirs` 是預設的那一串）；`state.yaml`、`data.yaml` 第一次打開不寫，移開後也等第一次存檔才有：session
   重讀（`reopenSession`，`data.yaml` 也壞了就接著問），不馬上存；`Esc` 離開，`Run` 回傳路徑與原因，`main` 印到 stderr。問之前不寫回去
   （`keepState`）：寫回去就是把裡面的 tabs、marks、最愛、排序無聲丟掉。filu 沒有快取。
-- **錯誤** —— 目錄監看起不來、搬舊設定失敗，啟動後立刻說（一個用 toast、好幾個用 error popup）。error popup 是一段散文，裡面的
-  `\n` 會畫成名字（components/README「控制字元」），所以好幾件事、兩個路徑都接成一段。`[1]` 讀不到的目錄、`[2]` 讀不到的檔是 panel
+- **錯誤** —— 目錄監看起不來、搬舊設定失敗，啟動後立刻說（一個用 toast、好幾個用 error popup）。好幾件事一件一列給 lib
+  （`Error(title, rows...)`、`Toast(kind, rows...)`；`moveRows`、`startupErrs`），原因與該怎麼做也各一列：filu 自己的字不放 `\n`，畫面上
+  紅色的 `\n` 一定是外面來的（tdp v0.9.15，components「控制字元」）。外面來的錯誤有好幾行（yaml 的型別錯誤：一行標題、一行一個錯）時，
+  問移開的 confirm 只放說原因的那一行，整段接成一行記進 App Log（`App.why`）。`[1]` 讀不到的目錄、`[2]` 讀不到的檔是 panel
   的錯誤（Red 的事實加點名按鍵的提示），細節記進 App Log。Rename、Add、Zip 寫入時失敗用 input 的 `Commit`：input 留著、打的字還在，
   error popup 疊在上面；其他動作失敗開 error popup，標題寫「哪件事失敗」與對象（`App.ErrorAbout`：`DELETE FAILED: notes.md`）。
 - **App Log** —— lib 的（`!`，footer 的 `!:log`）：每個 toast 與 error popup 自己進去。filu 另外記（`App.Log`）：使用者做的事與結果

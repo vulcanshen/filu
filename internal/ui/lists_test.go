@@ -163,6 +163,7 @@ func TestE3ListInTwoPlaces(t *testing.T) {
 	listsSetUp(t, hs, oldConfig, map[string]string{"open_with.yaml": "- name: Vim\n  cmd: vim\n"})
 	hs.has("FOUND IN TWO PLACES", "open_with in", "/config/config.yaml and in", "/data/open_with.yaml")
 	hs.hasNot(`\n`)
+	hs.has("┃ filu uses the ones in") // what to do starts a row of its own (tdp components-31)
 	dir := filepath.Dir(dataPathOverride)
 	if b := readText(t, filepath.Join(dir, "open_with.yaml")); b != "- name: Vim\n  cmd: vim\n" {
 		t.Fatalf("open_with.yaml was written over:\n%s", b)

@@ -232,6 +232,24 @@ func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 	}
 }
 
+// A file it cannot read for an error of several lines (yaml's type error, a
+// header then a line each) is asked about with the line saying why, no line
+// break drawn by name; the whole of it goes into the App Log (tdp
+// components-30, components-32).
+func TestE3UnreadableFileErrorOfSeveralLines(t *testing.T) {
+	hs := newHarness(t, 120, 40, nil)
+	if err := os.WriteFile(configPathOverride, []byte("finder_cap: abc\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	hs.a = NewApp(hs.root, "")
+	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
+	hs.run(hs.a.start())
+	hs.has("MOVE ASIDE", "config.yaml can't be read:", "line 1: cannot unmarshal !!str `abc` into int")
+	hs.hasNot(`\n`, "unmarshal errors")
+	hs.keys("Enter", "!")
+	hs.has("ERR  Cannot read ~/config/config.yaml: yaml: unmarshal errors: line 1: cannot unmarshal")
+}
+
 // Esc on that question quits, leaving the file as it is (tdp E3-20; main
 // writes Run's error, the path and why, to stderr).
 func TestE3UnreadableFileQuits(t *testing.T) {

@@ -74,6 +74,7 @@ func TestTrickyNames(t *testing.T) {
 	tdptest.EachIconWidth(t, func(t *testing.T) {
 		hs := newHarness(t, 120, 40, trickyFiles())
 		d := tdptest.Start(t, hs.a.t, 120, 40)
+		d.AllowLineBreaks = true // the names hold line breaks on purpose, drawn by name in red
 		for range len(hs.a.cur().items) {
 			d.Press("j")
 			if it, _, ok := hs.a.item(); ok && !it.isDir {
