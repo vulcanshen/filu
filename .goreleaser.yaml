@@ -73,7 +73,6 @@ brews:
       A Nerd Font terminal profile and a truecolor (24-bit) terminal are
       required. macOS and Linux (WSL too).
     # app: dependencies, when the app calls other programs.
-    # Content search runs ripgrep; the finders list files with fd.
     dependencies:
       - name: ripgrep
       - name: fd

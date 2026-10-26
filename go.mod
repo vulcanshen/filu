@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
-	github.com/vulcanshen/terminu-go v0.5.2
+	github.com/vulcanshen/terminu-go v0.5.3
 	gopkg.in/yaml.v3 v3.0.1
 )
 
