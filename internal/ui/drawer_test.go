@@ -138,7 +138,7 @@ func TestRunningTaskSpins(t *testing.T) {
 
 // Tasks: Enter takes [1] to where it landed, and the focus with it; D takes
 // it out of the log. The toast says the row's words, its glyph left to the
-// row: the App Log entry starts with a capital (tdp note.7).
+// row: the App Log entry starts with a capital (tdp toast.2).
 func TestTasks(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "A", "dest/": ""})
 	hs.to("a.txt")
@@ -162,7 +162,7 @@ func TestTasks(t *testing.T) {
 }
 
 // A task that fails is one Error toast, with the row's words: in the App Log
-// once, a capital first (tdp note.7), and a popup after it still opens.
+// once, a capital first (tdp toast.2), and a popup after it still opens.
 func TestTaskFails(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("root writes everywhere")

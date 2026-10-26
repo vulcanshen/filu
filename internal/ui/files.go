@@ -235,7 +235,7 @@ func (a *App) drawTab(t *tab, w, h int, focused bool) []string {
 }
 
 // failRows are a panel's error, centred: the fact in Red, the hint in Overlay0
-// (tdp panel.5).
+// (tdp panel.15).
 func failRows(w, h int, fact, hint string) []string {
 	out := terminu.EmptyState(w, h, "", hint)
 	top := max((h-3)/2, 0)

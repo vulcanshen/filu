@@ -108,7 +108,7 @@ func taskText(t landTask) []terminu.Span {
 		return out
 	}
 	switch t.status {
-	case taskRunning: // a row that is still going, the app's to show (tdp F7, S67)
+	case taskRunning: // a row that is still going, the app's to show (tdp F7, screen.3)
 		return line(terminu.LoadingFrame(), terminu.Green, verbing, fmt.Sprintf("%d/%d", t.done, t.total), grey)
 	case taskDone:
 		return line(glyphDone, terminu.Green, verbed, "", grey)
@@ -384,7 +384,7 @@ func (a *App) handleLand(msg landMsg) tea.Cmd {
 		a.refreshPreview()
 		a.syncQuit()
 		// The row's words without its glyph: the toast's title says how it
-		// ended, and its words start with a capital (tdp toast, note.7).
+		// ended, and its words start with a capital (tdp toast.2).
 		// One toast: a second one would take the first one's place in the App
 		// Log too, and its animation, the first one's command dropped.
 		words := strings.TrimSpace(spansText(taskText(*t)[1:]))

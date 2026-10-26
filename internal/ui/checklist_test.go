@@ -43,7 +43,7 @@ func TestKeyReferenceListsShiftTab(t *testing.T) {
 }
 
 // A hotkey goes in place in its label, in either case: [go]to, Mo[v]e here
-// (tdp M5, S9).
+// (tdp M5).
 func TestHotkeysInTheirLabels(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
 	hs.to("a.txt")
@@ -226,7 +226,7 @@ func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 				t.Fatalf("%s: not there after the first save: %v", which, err)
 			}
 		}
-		// The move in the App Log, a capital first (tdp note.7; terminu-go v0.4.3).
+		// The move in the App Log, a capital first (tdp toast.2; terminu-go v0.4.3).
 		hs.keys("!")
 		hs.has("INFO Moved ~/" + rel + " to ~/" + rel + ".bak.1")
 	}
@@ -278,7 +278,7 @@ func TestNoBreadcrumbAtTheTop(t *testing.T) {
 }
 
 // A file [2] cannot read is the panel's error: the fact and a hint naming a
-// key (tdp panel.5).
+// key (tdp panel.15).
 func TestPreviewOfAnUnreadableFile(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("root reads everything")

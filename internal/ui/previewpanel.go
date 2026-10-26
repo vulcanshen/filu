@@ -47,7 +47,7 @@ func (b *previewBody) ensure() {
 
 // load makes the lines for an inside w cells wide. A file that cannot be read
 // is the panel's error: the fact in Red, a hint naming a key
-// (tdp panel.5).
+// (tdp panel.15).
 func (b *previewBody) load(w int) {
 	b.model = loadPreview(b.item, b.parent, w)
 	b.app.preview.Fail = nil
