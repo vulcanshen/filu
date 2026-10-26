@@ -13,7 +13,7 @@ import (
 )
 
 // Title glyphs of filu's own popups (an input's glyph is the app's choice,
-// components/layout/popup).
+// tdp popup.1).
 const (
 	glyphRename = "\U000F03EB" // nf-md-pencil
 	glyphAdd    = "\U000F0752" // nf-md-file_plus
@@ -92,7 +92,7 @@ func (a *App) filesActions() []terminu.Action {
 
 // zoomAction is z on any panel: it takes the whole screen, or gives it back
 // ([1] leaving [3] in sight, layout). Zoom is a change of layout, not a mode:
-// no key changes its meaning and Esc does not end it (the tdp term "mode").
+// no key changes its meaning and Esc does not end it (tdp terms.8).
 func (a *App) zoomAction() terminu.Action {
 	return terminu.Action{Key: "z", Label: "Zoom", Desc: "this panel to the whole screen, or back", Scope: terminu.PanelScope, Hint: "zoom",
 		Do: func() tea.Cmd {
@@ -116,8 +116,8 @@ func (a *App) info() tea.Cmd {
 		w = max(w, len(r.label))
 	}
 	// The labels in the layer colour, as a file-picker's facts are
-	// (components/input/file-picker); the viewer opens as the first layer. A
-	// table of facts has no line numbers (tdp S66).
+	// (tdp file-picker.4); the viewer opens as the first layer. A
+	// table of facts has no line numbers (tdp note.2).
 	label := terminu.Fg(terminu.LayerColor(1))
 	for _, r := range rows {
 		lines = append(lines, label.Render(fmt.Sprintf("%-*s", w, strings.ToUpper(r.label)))+"  "+r.value)
@@ -185,7 +185,7 @@ func (a *App) yankItem() tea.Cmd {
 }
 
 // rename renames the entry in place; the old name is offered in grey
-// (components/input/README).
+// (tdp input.5).
 func (a *App) rename() tea.Cmd {
 	it, p, ok := a.item()
 	if !ok {
@@ -491,7 +491,7 @@ func direction(asc bool) string {
 // shell opens the user's shell in the directory, once asked (shellAsk); when it
 // ends, the directory is read again. The user types commands of their own in
 // it: an interactive terminal, with History on PgUp and the selection on Alt-v
-// (components/dialog/terminal), copying as filu copies.
+// (tdp terminal), copying as filu copies.
 func (a *App) shell() tea.Cmd {
 	dir := a.cur().dir
 	a.t.Log(terminu.Info, "Opened your shell in "+shortPath(dir))

@@ -230,7 +230,7 @@ func (a *App) build() {
 	a.preview.Actions = a.previewActions()
 	a.files.Details = a.preview
 	// The names and the paths are long values, cut short as [3] narrows
-	// (components/layout/panel).
+	// (tdp panel.5).
 	a.marksL = &terminu.List{Columns: []terminu.Column{{Title: "Name", Shrink: true}, {Title: "In", Path: true, Shrink: true}}, Marks: true,
 		EmptyFact: "No marks yet", EmptyHint: "Press [m] on a file in [1] to mark it"}
 	// Narrow, a task's words are cut short first, then its time goes.
@@ -250,7 +250,7 @@ func (a *App) build() {
 }
 
 // layout is [1] | [2] at 2:1 over the top two thirds, [3] across the rest.
-// Zoomed, the focused panel takes the whole screen (tdp screen, zoom), but
+// Zoomed, the focused panel takes the whole screen (tdp screen.6), but
 // [1] takes the whole top and leaves [3] where it is (user 2026-10-24); a
 // panel not drawn gets no room.
 func (a *App) layout(w, h int) []terminu.Rect {
@@ -276,7 +276,7 @@ func (a *App) layout(w, h int) []terminu.Rect {
 	}
 }
 
-// splash is filu's easter egg, V on a panel (tdp S).
+// splash is filu's easter egg, V on a panel (tdp S1, S4).
 func splash() terminu.Splash {
 	s, err := terminu.NewSplash(icon, "filu", version.Display(), splashIntro)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 )
 
 // previewBody is [2]: the preview of the entry under [1]'s cursor, its details
-// (components/layout/panel). The lines depend on the width (an image's data URI
+// (tdp panel.13). The lines depend on the width (an image's data URI
 // folds to it), so they are made when it is drawn. It is filu's own rather than
 // terminu's FilePreview, which does not scroll: [2] scrolls, and copies what
 // it shows (dev-remarks).
@@ -47,7 +47,7 @@ func (b *previewBody) ensure() {
 
 // load makes the lines for an inside w cells wide. A file that cannot be read
 // is the panel's error: the fact in Red, a hint naming a key
-// (components/layout/panel, loading and errors).
+// (tdp panel.5).
 func (b *previewBody) load(w int) {
 	b.model = loadPreview(b.item, b.parent, w)
 	b.app.preview.Fail = nil
@@ -131,7 +131,7 @@ func (a *App) previewActions() []terminu.Action {
 // preview's, still bounded.
 const viewerCap = 4 << 20
 
-// viewPreview opens the preview in a viewer (components/dialog/note): it
+// viewPreview opens the preview in a viewer (tdp note): it
 // scrolls, and its selection mode copies a part of it. A text file goes in as
 // it is — tabs, control characters, line ends and long lines are the
 // viewer's to draw, and a copy gives them back unchanged.

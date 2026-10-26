@@ -384,7 +384,7 @@ func (a *App) handleLand(msg landMsg) tea.Cmd {
 		a.refreshPreview()
 		a.syncQuit()
 		// The row's words without its glyph: the toast's title says how it
-		// ended, and its words start with a capital (components/dialog/toast, note).
+		// ended, and its words start with a capital (tdp toast, note.7).
 		// One toast: a second one would take the first one's place in the App
 		// Log too, and its animation, the first one's command dropped.
 		words := strings.TrimSpace(spansText(taskText(*t)[1:]))
@@ -406,7 +406,7 @@ func (a *App) zip() tea.Cmd {
 	}
 	var dir string // the temporary directory the zip goes in
 	return a.t.Text(terminu.TextInput{
-		// The name filu would choose, in grey: Enter takes it (tdp S6).
+		// The name filu would choose, in grey: Enter takes it (tdp input.6).
 		Title: "Zip", Glyph: glyphZip, Name: "The name", Verb: "zip",
 		Prompt: zipPrompt(len(items)) + ": a name for the zip", Suggest: suggestZipName(items),
 		Check: func(v string) error {

@@ -155,7 +155,7 @@ func checkWidths(t *testing.T, hs *harness, w, h int) {
 		}
 	}
 	// No name in the fixture has an ESC: one drawn by its name is a colour of
-	// filu's own put in a text terminu draws as it is (components/README).
+	// filu's own put in a text terminu draws as it is (tdp components.5).
 	if s := hs.screen(); strings.Contains(s, `\x1b`) {
 		t.Fatalf("a colour code drawn by its name:\n%s", s)
 	}
@@ -163,7 +163,7 @@ func checkWidths(t *testing.T, hs *harness, w, h int) {
 
 // A file's name holding control characters shows them by their names — in
 // [1], the location row, [2]'s tree and the file's facts — never dropped or
-// sent to the terminal (tdp panel-136, components-27).
+// sent to the terminal (tdp panel.5, components.5).
 func TestControlCharactersInAName(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"line\nbreak.txt": "x", "esc\x1b[31m.txt": "x", "dir\tname/inside.txt": "x"})
 	hs.has(`line\nbreak.txt`, `esc\x1b[31m.txt`, `dir\tname`)

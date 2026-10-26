@@ -93,7 +93,7 @@ func TestConfirmNamesTheItemNow(t *testing.T) {
 
 // The App Log: ! opens it; what the user did and how it ended is in it, and a
 // directory that cannot be read is an error in it, counted in the footer until
-// it is seen (tdp K1-9, note-77, F5-3, screen-35).
+// it is seen (tdp K1, note.7, F5, screen.2).
 func TestAppLog(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root reads a directory without permissions too")
@@ -115,7 +115,7 @@ func TestAppLog(t *testing.T) {
 }
 
 // The shell is an interactive terminal: History on PgUp, the selection on
-// Alt-v, both shown with the exit key (tdp terminal-18, M1-2).
+// Alt-v, both shown with the exit key (tdp terminal.6, M1).
 func TestShellIsInteractive(t *testing.T) {
 	t.Setenv("SHELL", "/bin/sh")
 	hs := newHarness(t, 120, 40, nil)
@@ -159,7 +159,7 @@ func ownFiles(t *testing.T, home string) []string {
 // A file of filu's own it cannot read is asked about at the start, its path and
 // why; meanwhile nothing writes over it. Enter moves it to .bak (.bak.1 when
 // that is taken) and filu starts as on its first start: what that makes is made
-// again, the rest waits for the first save (tdp E3-17, E3-18, E3-19).
+// again, the rest waits for the first save (tdp E3).
 func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 	fs := newHarness(t, 120, 40, map[string]string{"a.txt": ""})
 	fs.run(fs.a.start())
@@ -226,7 +226,7 @@ func TestE3UnreadableFileIsMovedAside(t *testing.T) {
 				t.Fatalf("%s: not there after the first save: %v", which, err)
 			}
 		}
-		// The move in the App Log, a capital first (tdp note-78; terminu-go v0.4.3).
+		// The move in the App Log, a capital first (tdp note.7; terminu-go v0.4.3).
 		hs.keys("!")
 		hs.has("INFO Moved ~/" + rel + " to ~/" + rel + ".bak.1")
 	}
@@ -250,7 +250,7 @@ func TestE3UnreadableFileErrorOfSeveralLines(t *testing.T) {
 	hs.has("ERR  Cannot read ~/config/config.yaml: yaml: unmarshal errors: line 1: cannot unmarshal")
 }
 
-// Esc on that question quits, leaving the file as it is (tdp E3-20; main
+// Esc on that question quits, leaving the file as it is (tdp E3; main
 // writes Run's error, the path and why, to stderr).
 func TestE3UnreadableFileQuits(t *testing.T) {
 	hs := newHarness(t, 120, 40, nil)
@@ -278,7 +278,7 @@ func TestNoBreadcrumbAtTheTop(t *testing.T) {
 }
 
 // A file [2] cannot read is the panel's error: the fact and a hint naming a
-// key (components/layout/panel).
+// key (tdp panel.5).
 func TestPreviewOfAnUnreadableFile(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("root reads everything")
@@ -304,7 +304,7 @@ func TestEmptyStatesNameAKey(t *testing.T) {
 }
 
 // With hide_secrets_in_preview in config.yaml a finder's preview keeps a
-// private key out (components/input/file-picker).
+// private key out (tdp file-picker.5).
 func TestHideSecretsInPreview(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{
 		"id_ed25519": "-----BEGIN OPENSSH PRIVATE KEY-----\nsecretsecret\n-----END OPENSSH PRIVATE KEY-----\n",
@@ -325,7 +325,7 @@ func TestHideSecretsInPreview(t *testing.T) {
 }
 
 // The viewer gets the file as it is: a copy of all of it gives back the tabs
-// and the control characters (components/dialog/note).
+// and the control characters (tdp note).
 func TestViewerGetsTheFileAsItIs(t *testing.T) {
 	text := "a\tb\nding\x07dong"
 	hs := newHarness(t, 120, 40, map[string]string{"t.txt": text + "\n"})

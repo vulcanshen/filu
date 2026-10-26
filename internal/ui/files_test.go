@@ -34,12 +34,12 @@ func TestEnterOnAFileShowsItsFacts(t *testing.T) {
 	hs.to("notes.md")
 	hs.keys("Enter")
 	hs.has("INFO — notes.md", "PATH", "TYPE", "Text", "PERMISSIONS", "OWNER")
-	hs.hasNot("1 PATH") // a table of facts, without line numbers (tdp S66)
+	hs.hasNot("1 PATH") // a table of facts, without line numbers (tdp note.2)
 	hs.keys("Esc")
 	hs.hasNot("INFO — notes.md")
 }
 
-// The sort glyphs of components/layout/panel, as the list's header draws them.
+// The sort glyphs of tdp panel.6, as the list's header draws them.
 const (
 	glyphSortAsc  = "\U0000F160" // nf-fa-sort_amount_asc
 	glyphSortDesc = "\U0000F161" // nf-fa-sort_amount_desc
@@ -55,7 +55,7 @@ func tabLines(hs *harness, w int) []string {
 }
 
 // The list is directories first, then files; a sort keeps the directories
-// first, the header carrying the sort's glyph and place (components/layout/panel).
+// first, the header carrying the sort's glyph and place (tdp panel.6).
 // Choosing a direction goes back to the column menu, to sort by another column
 // too (tdp T1).
 func TestSortKeepsDirectoriesFirst(t *testing.T) {
@@ -126,7 +126,7 @@ func TestColumnsLeaveInOrder(t *testing.T) {
 }
 
 // One long name is cut short and the other columns stay whole: the name gives
-// way down to 12 cells before any column goes (components/layout/panel).
+// way down to 12 cells before any column goes (tdp panel.5).
 func TestALongNameIsCutShort(t *testing.T) {
 	long := "a-rather-long-file-name-that-will-not-fit-in-a-narrow-panel.go"
 	hs := newHarness(t, 120, 40, map[string]string{long: "", "b.txt": ""})
@@ -142,7 +142,7 @@ func TestALongNameIsCutShort(t *testing.T) {
 }
 
 // The list's first row is where the tab is, and only that, a favorite or not
-// (components/layout/panel, location row).
+// (tdp panel.10).
 func TestLocationRow(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"proj/": ""})
 	hs.keys("F")
@@ -152,7 +152,7 @@ func TestLocationRow(t *testing.T) {
 }
 
 // A favorite's star is in the list's last column, apart from its name: a long
-// name cut short keeps it (components/layout/panel, columns).
+// name cut short keeps it (tdp panel.5).
 func TestStarColumn(t *testing.T) {
 	long := "proj-" + strings.Repeat("x", 80)
 	hs := newHarness(t, 120, 40, map[string]string{"proj/": "", long + "/": "", "a.txt": ""})
@@ -235,7 +235,7 @@ func TestHiddenFiles(t *testing.T) {
 	hs.hasNot(".env")
 }
 
-// An empty directory says so and names the keys (components/layout/screen);
+// An empty directory says so and names the keys (tdp screen.8);
 // one with only dotfiles says how to show them.
 func TestEmptyDirectory(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"e/": "", "h/.x": ""})

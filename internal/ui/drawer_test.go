@@ -102,7 +102,7 @@ func TestZip(t *testing.T) {
 }
 
 // Zip offers the name filu would give the zip in grey; Enter with nothing
-// typed takes it (tdp S6).
+// typed takes it (tdp input.6).
 func TestZipSuggestsAName(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "A", "b.txt": "B"})
 	for _, n := range []string{"a.txt", "b.txt"} {
@@ -138,7 +138,7 @@ func TestRunningTaskSpins(t *testing.T) {
 
 // Tasks: Enter takes [1] to where it landed, and the focus with it; D takes
 // it out of the log. The toast says the row's words, its glyph left to the
-// row: the App Log entry starts with a capital (tdp note-78).
+// row: the App Log entry starts with a capital (tdp note.7).
 func TestTasks(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "A", "dest/": ""})
 	hs.to("a.txt")
@@ -162,7 +162,7 @@ func TestTasks(t *testing.T) {
 }
 
 // A task that fails is one Error toast, with the row's words: in the App Log
-// once, a capital first (tdp note-78), and a popup after it still opens.
+// once, a capital first (tdp note.7), and a popup after it still opens.
 func TestTaskFails(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("root writes everywhere")
@@ -337,7 +337,7 @@ func TestQuit(t *testing.T) {
 	}
 }
 
-// With a popup open the first q or Ctrl-C never quits (tdp K9-6). With one
+// With a popup open the first q or Ctrl-C never quits (tdp K9). With one
 // tab filu would leave at once, so the lib asks Quit filu?; with two filu's
 // flows ask anyway, the confirm or the menu, and ask only that. Esc goes back
 // to the popup.
@@ -518,7 +518,7 @@ func TestPreview(t *testing.T) {
 	hs.has("PREVIEW — notes.md", "v:visual")
 }
 
-// V opens the splash; any key closes it (tdp S).
+// V opens the splash; any key closes it (tdp S1, S3).
 func TestSplash(t *testing.T) {
 	hs := newHarness(t, 120, 40, nil)
 	hs.keys("V")

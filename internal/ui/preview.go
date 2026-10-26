@@ -91,7 +91,7 @@ func withLineNumbers(lines []string) []string {
 
 // textLines are a text's lines as it has them, a CRLF line's \r going with its
 // line break. Tabs, other control characters and colour codes are terminu's to
-// draw, as content for reading is (components/README, control characters).
+// draw, as content for reading is (tdp components.5).
 func textLines(text string) []string {
 	lines := strings.Split(text, "\n")
 	for i, l := range lines {

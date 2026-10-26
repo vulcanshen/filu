@@ -68,8 +68,8 @@ func trickyFiles() map[string]string {
 
 // Every tricky name in [1] under the cursor in turn, previewed in [2], its
 // facts opened, marked into [3], searched for: tdptest checks each frame for
-// tdp L4 and for a control character reaching the terminal (components/README,
-// control characters).
+// tdp L4 and for a control character reaching the terminal
+// (tdp components.5).
 func TestTrickyNames(t *testing.T) {
 	tdptest.EachIconWidth(t, func(t *testing.T) {
 		hs := newHarness(t, 120, 40, trickyFiles())

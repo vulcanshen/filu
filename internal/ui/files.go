@@ -101,8 +101,8 @@ var allFileCols = []fileCol{colModified, colOwner, colPerms, colSize, colName, c
 // fileColumns are the list's columns, as allFileCols draws them. The name takes
 // what the others leave, cut short down to 12 cells; past that the others go
 // whole — the owner, then the size, the modified time and the permissions —
-// and the name stays (components/layout/panel). So does the star: a favorite
-// directory's flag, content, the app's (components/layout/panel, marked rows),
+// and the name stays (tdp panel.5). So does the star: a favorite
+// directory's flag, content, the app's (tdp panel.7),
 // in a column of its own at the end, so that it is not lost after a long name
 // cut short.
 var fileColumns = []terminu.Column{
@@ -151,8 +151,7 @@ func fileRows(t *tab, favs map[string]bool) []terminu.Row {
 // fileCell is one entry's value in a column, in its colours: the type's for
 // the name (as eza and ls colour it), eza's for the owner, the permissions and
 // the size, Yellow for a favorite's star. The name is as it is: terminu draws
-// a control character in it by its name, in Red (components/README, control
-// characters).
+// a control character in it by its name, in Red (tdp components.5).
 func fileCell(it fileItem, c fileCol, fav bool) []terminu.Span {
 	switch c {
 	case colModified:
@@ -184,7 +183,7 @@ func (a *App) fillTab(t *tab) {
 		a.t.Log(terminu.Error, "Cannot read the directory "+why)
 	}
 	t.list.Columns = fileColumns
-	t.list.Location = shortPath(t.dir) // where you are, and only that (components/layout/panel, location row)
+	t.list.Location = shortPath(t.dir) // where you are, and only that (tdp panel.10)
 	t.list.OnMove = func(terminu.Row) tea.Cmd { a.refreshPreview(); return nil }
 	t.list.SetRows(fileRows(t, a.favs.pinnedSet()))
 	t.list.SortBy(sortKeys(sortRulesFor(t.dir))...)
@@ -192,7 +191,7 @@ func (a *App) fillTab(t *tab) {
 	t.list.SetMarked(a.marks.items)
 }
 
-// emptyDir is what an empty directory says (components/layout/screen).
+// emptyDir is what an empty directory says (tdp screen.8).
 func emptyDir(t *tab) (fact, hint string) {
 	if t.hidden > 0 && !t.showHidden {
 		n := strconv.Itoa(t.hidden) + " hidden"
@@ -236,7 +235,7 @@ func (a *App) drawTab(t *tab, w, h int, focused bool) []string {
 }
 
 // failRows are a panel's error, centred: the fact in Red, the hint in Overlay0
-// (components/layout/panel, loading and errors).
+// (tdp panel.5).
 func failRows(w, h int, fact, hint string) []string {
 	out := terminu.EmptyState(w, h, "", hint)
 	top := max((h-3)/2, 0)
@@ -292,7 +291,7 @@ func (a *App) switchTab(i int) tea.Cmd {
 }
 
 // syncTabs gives [1] its tabs: one mark each, the first one's being the
-// label (components/layout/panel, tabs).
+// label (tdp panel.4).
 func (a *App) syncTabs() {
 	a.active = min(a.active, len(a.tabs)-1)
 	a.files.Label = tabMark(0)
