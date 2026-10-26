@@ -5,10 +5,9 @@ globs: *
 
 # filu Project Rules
 
-filu 是 terminu family 的成員，遵循 [terminu design](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.9.16），畫面建在家族共用的
+filu 是 terminu family 的成員，遵循 [terminu design](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.10.1），畫面建在家族共用的
 [terminu-go](https://github.com/vulcanshen/terminu-go) 上（Bubble Tea v1）。現行的權威是 `docs/dev-remarks.md`（運作方式、設計決定、
-暫定）與 README；`.forge/meta/IDEA.md` 停在 v0.2.0 以前，只當演化史讀。還沒符合 tdp、在等 lib 或規範的地方寫在
-`docs/filu-terminu-fix.md`（tdp E7；有的時候才建，全部修完就刪掉）。
+暫定）與 README；`.forge/meta/IDEA.md` 停在 v0.2.0 以前，只當演化史讀。
 
 ## Code Quality
 - `make check` 通過才算完成：fmt-check、vet、`go test -race`，有 `go.work` 時加 `check-lib`（關掉 `go.work`、照 `go.mod` 的 terminu-go 版本編譯與測試）。
@@ -42,5 +41,5 @@ filu 是 terminu family 的成員，遵循 [terminu design](https://github.com/v
 - 一元素一語意（tdp P4）；亮的地方就是有 focus 的地方（tdp P6、F8）；每個 popup 只屬於一類（tdp F1）。
 - 設定、狀態、資料、快取照 tdp E3 放（用「刪掉會怎樣」分）；環境變數寫成 `FILU__<名字>`（tdp E2）。
 - splash 不揭露：不寫進 README、CHANGELOG、release notes、menu、key reference（tdp S2）。
-- 文件與程式註解引用 tdp 一律寫 `tdp X`（例：`tdp K3`），不寫 `Rules X`。
-- 有意不照 tdp 做的，寫進 `docs/dev-remarks.md`「偏離 tdp」並附理由；沒寫理由的列進 `docs/filu-terminu-fix.md`（tdp E7）。
+- 文件與程式註解引用 tdp 一律寫 `tdp` 加編號：rules 寫條目（`tdp K3`），元件與 project 寫節編號（`tdp panel.1`），整個元件都用到時寫檔名（`tdp confirm`）；不寫 `Rules X`、不寫路徑。
+- tdp 寫「app 可以自行決定」的地方，filu 怎麼定寫進 `docs/dev-remarks.md`；tdp 沒放行、filu 又照不了的，當成 tdp 的缺口回報 terminu（tdp P5），不自己另做一套。

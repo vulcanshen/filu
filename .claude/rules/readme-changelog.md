@@ -50,7 +50,7 @@ change is user-facing. Those are delivered off `main` directly, not through a
 tagged release, so they don't belong in a version's changelog. If a commit only
 touches such tooling/docs, skip the CHANGELOG step entirely.
 
-The format is tdp project's (the release notes are this file's section for the tag, cut out by `release.yml`):
+The format is the one in tdp project.6 (the release notes are this file's section for the tag, cut out by `release.yml`):
 
 ### For `git commit`:
 1. Run `git diff --staged` to see what changed
