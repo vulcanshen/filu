@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.11.1），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.6.1）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.11.2），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.6.2）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -84,7 +84,7 @@ code，開 shell 不會冒出 `command not found`。`init` 不寫進 usage：只
   與結果（tdp note.7：menu、熱鍵或 `Enter` 執行的，只看不改的也算 —— 進目錄與去到哪裡、Info 與預覽的 viewer、mark 與 pick、排序、
   隱藏檔、開關 tab、zoom、改名、新增、開檔、開始複製／搬移／打包、清掉 marks、刪掉 Tasks 的一列、開 shell 與 shell 結束；去某個目錄
   一律走 `goTo`）。會出 toast 的（Yank、Delete、Favorite）由 toast 記，不另外記；排序每選一步就是一次結果，每步記一筆。不記的：
-  `Esc` 回上一層（不是 menu 裡的動作，`up` 直接 `cd`）、`h|l` 換 tab（跟換 focus 一樣）、移 cursor、Space menu、`?`、`!`。背景做的事（搬舊設定的每一項、第一次寫的設定範本），
+  `Esc` 回上一層（不是 menu 裡的動作，`up` 直接 `cd`）、`h|l` 換 tab（跟換 focus 一樣）、移 cursor、Space menu、`?`、`!`，還有在 confirm 或 input 上按 `Esc` 取消的（動作沒做；filu 的紀錄都寫在 `Do`、`Done` 裡，取消時 lib 不跑）。背景做的事（搬舊設定的每一項、第一次寫的設定範本），
   讀不到外面的東西的細節（目錄、預覽，同一件事只記一次：`tab.logged`、`previewBody.logged`）。
 - **marks** —— 一個跨目錄、跨 tab 的 bucket（`marks.go` 的 `marksModel`），存在 `state.yaml`。清單上的勾是 lib 的標記欄，換目錄、
   bucket 變動時照 bucket 重勾（`List.SetMarked`）。`[3]` Marks 清單自己的標記就是 pick：有 pick 時只有 pick 的會落地（`landItems`）。
