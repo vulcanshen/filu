@@ -244,7 +244,7 @@ Not there, on purpose:
 
 ## terminu family
 
-filu follows the [terminu design](https://github.com/vulcanshen/terminu) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and popups as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [sshu](https://github.com/vulcanshen/sshu) (ssh), [webu](https://github.com/vulcanshen/webu) (the web), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks), [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code) and [hostu](https://github.com/vulcanshen/hostu) (switch the hosts file between profiles, in the terminal).
+filu follows the [terminu design](https://github.com/vulcanshen/terminu) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and popups as the rest of the family. [terminu-harness](https://github.com/vulcanshen/terminu-harness) is the Claude Code plugin that builds TUI apps with both.
 
 ## License
 

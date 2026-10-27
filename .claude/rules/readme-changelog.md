@@ -25,7 +25,7 @@ The 12 sections of tdp E7, all of them, in this order:
 8. Settings and where things are kept
 9. Limits, in the user's words
 10. Links: CHANGELOG, `docs/dev-remarks.md`
-11. terminu family: follows terminu design, lists the other members
+11. terminu family: follows terminu design, with links to tdp, terminu-go and terminu-harness; lists no other members (they are listed only in the tdp README)
 12. License
 
 - What belongs to a section goes in it as a subsection (updating next to uninstalling, in Install).
