@@ -304,7 +304,8 @@ func (a *App) syncTabs() {
 }
 
 // cd points the current tab at dir, the cursor on the entry at focus (a path)
-// or on the first one.
+// or on the top row as drawn: the lib puts the directories first, so the
+// first row filu hands it may be further down.
 func (a *App) cd(dir, focus string) tea.Cmd {
 	t := a.cur()
 	t.dir = dir
@@ -312,8 +313,8 @@ func (a *App) cd(dir, focus string) tea.Cmd {
 	a.fillTab(t)
 	if focus != "" {
 		t.list.Select(focus)
-	} else if rows := t.list.Rows(); len(rows) > 0 {
-		t.list.Select(rows[0].ID)
+	} else {
+		t.list.Key("gg", tea.KeyMsg{})
 	}
 	a.syncWatches()
 	a.refreshPreview()

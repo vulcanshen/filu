@@ -28,6 +28,18 @@ func TestEnterIntoAndEscUp(t *testing.T) {
 	}
 }
 
+// Going into a directory puts the cursor on its top row as drawn: the lib
+// draws the directories first, so a file whose name comes first by name is
+// not on top.
+func TestEnterStartsOnTheTopRow(t *testing.T) {
+	hs := newHarness(t, 120, 40, map[string]string{"w/a.txt": "", "w/src/x.go": ""})
+	hs.to("w")
+	hs.keys("Enter")
+	if hs.cursor() != "src" {
+		t.Fatalf("Enter on w: the cursor is on %q, not src, the top row", hs.cursor())
+	}
+}
+
 // Enter on a file shows its facts in a note; nothing is opened outside filu.
 func TestEnterOnAFileShowsItsFacts(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"notes.md": "hello"})
