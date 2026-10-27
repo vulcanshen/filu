@@ -2,13 +2,13 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.0.0 — tdp v1.0.0
 
-filu now follows tdp v0.11.5 and is built on terminu-go, the terminu
-family's shared library: the screen, the `Space` menu, `?`, the popups and
-their animations, confirms, inputs, toasts, the finders, the viewer and the
-shell are the family's own, and look and work the same as in every terminu
-app. What changes for you:
+filu now follows tdp v1.0.0, the stable terminu design, and is built on
+terminu-go, the terminu family's shared library: the screen, the `Space`
+menu, `?`, the popups and their animations, confirms, inputs, toasts, the
+finders, the viewer and the shell are the family's own, and look and work
+the same as in every terminu app. What changes for you:
 
 **On macOS the settings move to `~/.config/filu`** (or
 `$XDG_CONFIG_HOME/filu`), as on Linux and in every family app: the first time
@@ -63,7 +63,6 @@ them from it and shows both paths.
 - A file name holding control characters (a newline, a tab, an escape)
   shows them by their names in red instead of leaving them out. In a text
   file's preview, the file's own colour codes colour it.
-
 - With one tab, `q` leaves at once; after `filu shell install`, your shell
   goes where that tab is. With more tabs, `q` without it asks before quitting
   instead of listing directories that make no difference, and with it lists

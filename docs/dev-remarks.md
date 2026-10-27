@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.11.5），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.6.5）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v1.0.0），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v1.0.0）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -53,7 +53,7 @@ code，開 shell 不會冒出 `command not found`。`init` 不寫進 usage：只
 ### 各功能的實作備註
 
 - **檔案清單的欄位** —— `Modified`、`Owner`（user:group）、`Perms`（eza 配色：`r` 黃、`w` 紅、`x` 綠）、`Size`（eza 的
-  color-scale，越大越暖；目錄顯示 `-`，絕不遞迴加總）、icon + 檔名，前面是 lib 的標記欄。欄寬照 tdp S13（v0.8.2）：檔名是可以截短的欄
+  color-scale，越大越暖；目錄顯示 `-`，絕不遞迴加總）、icon + 檔名，前面是 lib 的標記欄。欄寬照 tdp panel.5：檔名是可以截短的欄
   （`Column.Shrink`），吃其他欄留下的寬度；其他欄照最寬的值、不縮。放不下時檔名先縮到 12 格（`MinWidth`），還放不下 lib 才依
   `Column.Drop` 整欄收掉：owner → size → modified → perms，檔名永遠留著（`files.go` 的 `fileColumns`）。一個很長的檔名只會被截短，
   不會把其他欄擠掉。最後一欄是最愛的星（Yellow，沒有表頭，也不收）：以前接在檔名後面，檔名一截短星就跟著不見。`[3]` 的名稱、路徑、
@@ -95,7 +95,7 @@ code，開 shell 不會冒出 `command not found`。`init` 不寫進 usage：只
 - **Tasks** —— 同磁碟搬移是瞬間 `rename`；跨磁碟、複製才逐項回報。log 是帶時間的白話（`taskText`）；中斷的任務存進 `data.yaml`、
   下次啟動標成 interrupted。執行中那一列是 lib 的 loading icon（`LoadingFrame`）加 `3/10`：`tasksBody` 畫的時候重做這幾列，
   `App.Spinning` 在 Tasks 開著、有工作在跑時讓 lib 繼續送畫面。做完是 Success toast，失敗是 Error toast：字是那一列的字、不帶那一列
-  的 glyph（toast 的標題已經說了結果；App Log 那一筆也才是大寫開頭，tdp v0.9.2 note-78）。只開一個 toast：每個 toast 都記進
+  的 glyph（toast 的標題已經說了結果；App Log 那一筆也才是大寫開頭，tdp toast.2）。只開一個 toast：每個 toast 都記進
   App Log，先 Success 再 Error 就會多一筆 OK。以前還會卡住：lib 的動畫只有一條 tick（`App.animate`），第二個 toast 拿不到 tick、第一個
   的 command 又被丟掉，之後的 popup 全部停在一條線、不收按鍵；terminu-go v0.4.4 起 lib 自己送 tick 與 toast 的計時，不會再卡。
 - **Finder** —— lib 的 `terminu.Finder`，三個都用 `Files: true`（lib 的檔案預覽與四列資訊）與 `Finder.Search`（filu 自己搜、自己篩）：
@@ -175,7 +175,7 @@ filu/
   （選 app）的事：「進入」與「交給外部程式」代價不同（tdp P4）。2026-09-28 user 裁定。
 - **其他 panel 的 `Enter`**：`[2]` 打開檢視；`[3]` Marks、Favorites 在 `[1]` 找已經開著那個目錄的 tab、沒有就開新的（Marks 的
   cursor 停在那個檔；tab 滿了跳 toast，不擠掉別的 tab）；Tasks 讓 `[1]` 到任務落地的地方。focus 跟著到 `[1]`（`App.Focus`），
-  Favorites 的 `o` 選了 tab 也是：使用者按它就是要去那裡，預期 focus 會換（tdp K3 v0.8.0：focus 只在使用者預期時換；S19）。
+  Favorites 的 `o` 選了 tab 也是：使用者按它就是要去那裡，預期 focus 會換（tdp K3：focus 只在使用者預期時換）。
 - **會改變磁碟、或把控制權交出去的動作先 confirm**：`D` Delete、`D` Unfavorite、`o` Open、`s` Shell、shell 裡的 `Alt-Esc`、`C` Clear。
   `m` mark、`p` pick、`f` favorite 是可逆的開關，不問。`O` 的選單裡挑一個 app 就算確認過（tdp F6 允許），連 `Default` 也不另外問。
 - **Zip 打到 temp，再走既有的落地路徑。** 使用情境是「打包完再搬去某個目錄」，輸出位置不等於目的地；打包範圍就是 `landItems()`。
@@ -204,7 +204,7 @@ filu/
   啟動的目錄、再來每個 tab 的（重複的只列一次），選了就離開；有工作在跑時選了先 confirm（`Esc` 回到 menu）。沒有這個變數時選了也
   沒有差別，所以只是一個 confirm（有工作在跑時多一句 Peach 的警告）。**只有一個 tab 時 `q` 不問、直接離開**（user 2026-10-24），
   shell 停在那個 tab 的目錄；有工作在跑時照樣先問（離開會中斷它，救不回來）。
-- **檔案資訊的 viewer 不畫行號**（user 2026-10-19 定案，tdp S66）：是一張事實的表，不是檔案的內容；照樣能選取複製。
+- **檔案資訊的 viewer 不畫行號**（user 2026-10-19 定案；畫不畫行號，tdp note.2 讓 app 自行決定）：是一張事實的表，不是檔案的內容；照樣能選取複製。
 - **排序選了方向只關方向那一步**（tdp T1：選一個值寫回 picker，保留 source）：欄位 menu 留著、寫出新的排序，可以接著疊下一欄；
   `Esc` 收起。
 - **最低尺寸 60×24**（tdp L1：app 可以調低）：80×24 是大多數終端機打開時的大小，在 filu 的版面裡每件事都做得完（上面兩個 panel
@@ -241,12 +241,6 @@ tab 用羅馬數字 `Ⅰ`–`Ⅲ` 標記（EA-ambiguous，CJK 字型畫 2 格）
   icon 佔一格，在 icon 畫成兩格的字型上那一列會歪。
 - **未做**：Mouse；每列的錯誤標示（broken symlink、沒有權限）；zoxide 式的目錄索引；chmod、解壓縮、真的圖（kitty / sixel）、續傳。
 - **拿掉的**：`FILU__REPAINT`（每次導覽整頁重畫，給把 glyph 畫得比游標前進更寬的終端機用）：畫到終端機是 lib 的事。
-
-## 偏離 tdp
-
-目前沒有；還沒符合 tdp 的地方也沒有（`docs/filu-terminu-fix.md` 已經刪掉，最後一件 FL27 —— hint 的 `h|l:tab`，user 2026-10-24
-要的，tdp v0.9.14 定成全家族由 lib 加 —— 在 terminu-go v0.4.17 做好）。
-zoom 時 tab 並排以前寫在這裡，tdp v0.8.0 讓 app 決定怎麼放大，移到「設計決定」。`[1]` 清單最後一欄的星、`[3]` 各清單的欄位是 panel 的內容。
 
 ## 設計文件導讀
 
