@@ -242,7 +242,7 @@ hide_secrets_in_preview: false
 
 ## terminu family
 
-filu 遵循 [terminu design](https://github.com/vulcanshen/terminu)，建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、選單與 popup —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）、[locku](https://github.com/vulcanshen/locku)（鎖定畫面）、[kamonu](https://github.com/vulcanshen/kamonu)（畫家族 mark 的編輯器）與 [ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側邊欄）。
+filu 遵循 [terminu design](https://github.com/vulcanshen/terminu)，建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、選單與 popup —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）、[locku](https://github.com/vulcanshen/locku)（鎖定畫面）、[kamonu](https://github.com/vulcanshen/kamonu)（畫家族 mark 的編輯器）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側邊欄）與 [hostu](https://github.com/vulcanshen/hostu)（在終端機裡用 profile 切換 hosts 檔）。
 
 ## License
 
