@@ -35,7 +35,7 @@ func (a *App) filesActions() []terminu.Action {
 			Hidden: func() bool { return !a.isDirItem() },
 			Do: func() tea.Cmd {
 				_, p, _ := a.item()
-				return a.cd(p, "")
+				return a.goTo(p, "")
 			}},
 		{Key: "Enter", Label: "Info", Desc: "the file's path, type, size, times, permissions and owner", Scope: item, Hint: "info",
 			Hidden: a.isDirItem, Do: a.info},
@@ -97,6 +97,12 @@ func (a *App) zoomAction() terminu.Action {
 	return terminu.Action{Key: "z", Label: "Zoom", Desc: "this panel to the whole screen, or back", Scope: terminu.PanelScope, Hint: "zoom",
 		Do: func() tea.Cmd {
 			a.zoomed = !a.zoomed
+			n := map[*terminu.Panel]string{a.files: "[1]", a.preview: "[2]", a.drawer: "[3]"}[a.screen.Focused()]
+			if a.zoomed {
+				a.t.Log(terminu.Info, "Zoomed in on "+n)
+			} else {
+				a.t.Log(terminu.Info, "Zoomed out of "+n)
+			}
 			return nil
 		}}
 }
@@ -122,6 +128,7 @@ func (a *App) info() tea.Cmd {
 	for _, r := range rows {
 		lines = append(lines, label.Render(fmt.Sprintf("%-*s", w, strings.ToUpper(r.label)))+"  "+r.value)
 	}
+	a.t.Log(terminu.Info, "Viewed the info of "+shortPath(p)) // only looking is an operation too (tdp note.7)
 	return a.t.Viewer(&terminu.Viewer{Title: "Info", Subject: it.name, Glyph: glyphInfo, Lines: lines, NoNumbers: true})
 }
 
@@ -164,6 +171,11 @@ func (a *App) toggleMark() tea.Cmd {
 		return nil
 	}
 	a.marks.toggle(p)
+	if indexOf(a.marks.items, p) >= 0 {
+		a.t.Log(terminu.Info, "Marked "+shortPath(p))
+	} else {
+		a.t.Log(terminu.Info, "Took the mark off "+shortPath(p))
+	}
 	a.marksChanged()
 	return a.persist()
 }
@@ -346,7 +358,7 @@ func (a *App) breadcrumb() tea.Cmd {
 		if n > 1 {
 			desc = itoa(n) + " levels up"
 		}
-		acts = append(acts, terminu.Action{Label: shortPath(d), Desc: desc, Do: func() tea.Cmd { return a.cd(d, "") }})
+		acts = append(acts, terminu.Action{Label: shortPath(d), Desc: desc, Do: func() tea.Cmd { return a.goTo(d, "") }})
 		if filepath.Dir(d) == d {
 			break
 		}
@@ -371,6 +383,7 @@ func (a *App) openTab(dir, focus string) tea.Cmd {
 	if len(a.tabs) >= maxTabs {
 		return a.t.Toast(terminu.Warning, fmt.Sprintf("All %d tabs are in use: close one with [w] first", maxTabs))
 	}
+	a.t.Log(terminu.Info, "Opened a tab on "+shortPath(dir))
 	t := newTab(dir)
 	a.fillTab(t)
 	a.tabs = append(a.tabs, t)
@@ -390,6 +403,7 @@ func (a *App) closeTab() tea.Cmd {
 	if len(a.tabs) <= 1 {
 		return nil
 	}
+	a.t.Log(terminu.Info, "Closed the tab on "+shortPath(a.cur().dir))
 	a.tabs = append(a.tabs[:a.active], a.tabs[a.active+1:]...)
 	a.active = max(a.active-1, 0)
 	a.syncTabs()
@@ -403,6 +417,11 @@ func (a *App) closeTab() tea.Cmd {
 func (a *App) toggleHidden() tea.Cmd {
 	t := a.cur()
 	t.showHidden = !t.showHidden
+	if t.showHidden {
+		a.t.Log(terminu.Info, "Showed the hidden files in "+shortPath(t.dir))
+	} else {
+		a.t.Log(terminu.Info, "Hid the hidden files in "+shortPath(t.dir))
+	}
 	t.reload()
 	a.fillTab(t)
 	a.refreshPreview()
@@ -425,6 +444,7 @@ func (a *App) sortMenu() tea.Cmd {
 	reset := terminu.Action{Key: "r", Label: "Reset", Desc: "back to names, A to Z", Disabled: func() bool { return len(sortRulesFor(dir)) == 0 },
 		Do: func() tea.Cmd {
 			resetSortFor(dir)
+			a.t.Log(terminu.Info, "Reset the sort of "+shortPath(dir))
 			return a.sorted(dir)
 		}}
 	return a.t.Menu("Sort", terminu.MenuSection{Title: "column", Actions: cols}, terminu.MenuSection{Title: "the whole sort", Actions: []terminu.Action{reset}})
@@ -443,17 +463,22 @@ func sortDesc(dir string, c sortCol) string {
 // which stays to sort by another column (tdp T1).
 func (a *App) sortDirMenu(dir string, d sortColDef) tea.Cmd {
 	in := sortRuleIndex(sortRulesFor(dir), d.col) >= 0
-	pick := func(set func()) func() tea.Cmd {
+	// Each pick is the sort's result, so it goes in the App Log (tdp note.7).
+	pick := func(done string, set func()) func() tea.Cmd {
 		return func() tea.Cmd {
 			set()
+			a.t.Log(terminu.Info, done)
 			return tea.Batch(a.t.CloseTop(1), a.sorted(dir))
 		}
 	}
+	by := "Sorted " + shortPath(dir) + " by " + d.title
 	acts := []terminu.Action{
-		{Key: "a", Label: "Ascending", Desc: "smallest, oldest or A first", Stay: true, Do: pick(func() { setSortFor(dir, d.col, true) })},
-		{Key: "D", Label: "Descending", Desc: "largest, newest or Z first", Stay: true, Do: pick(func() { setSortFor(dir, d.col, false) })},
+		{Key: "a", Label: "Ascending", Desc: "smallest, oldest or A first", Stay: true,
+			Do: pick(by+", ascending", func() { setSortFor(dir, d.col, true) })},
+		{Key: "D", Label: "Descending", Desc: "largest, newest or Z first", Stay: true,
+			Do: pick(by+", descending", func() { setSortFor(dir, d.col, false) })},
 		{Key: "x", Label: "Remove", Desc: "this column from the sort", Stay: true, Hidden: func() bool { return !in },
-			Do: pick(func() { unsetSortFor(dir, d.col) })},
+			Do: pick("Took "+d.title+" out of the sort of "+shortPath(dir), func() { unsetSortFor(dir, d.col) })},
 	}
 	return a.t.Menu("Sort by "+d.title, terminu.MenuSection{Actions: acts})
 }

@@ -332,6 +332,18 @@ func (a *App) up() tea.Cmd {
 	return a.cd(parent, t.dir)
 }
 
+// goTo is cd for an operation the user runs: it goes in the App Log, the
+// entry when there is one, else the directory (tdp note.7). Esc going up a
+// level is not an operation and goes unrecorded.
+func (a *App) goTo(dir, focus string) tea.Cmd {
+	to := dir
+	if focus != "" {
+		to = focus
+	}
+	a.t.Log(terminu.Info, "Went to "+shortPath(to))
+	return a.cd(dir, focus)
+}
+
 // reveal points the current tab at path: into it when it is a directory, else
 // into its parent with the cursor on it.
 func (a *App) reveal(path string) tea.Cmd {
@@ -340,9 +352,9 @@ func (a *App) reveal(path string) tea.Cmd {
 		return a.t.Toast(terminu.Error, opFailedText("open "+filepath.Base(path), err))
 	}
 	if info.IsDir() {
-		return a.cd(path, "")
+		return a.goTo(path, "")
 	}
-	return a.cd(filepath.Dir(path), path)
+	return a.goTo(filepath.Dir(path), path)
 }
 
 // reloadDir reads every tab on dir again.

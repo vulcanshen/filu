@@ -123,7 +123,7 @@ func (a *App) favoriteMenu(newTab bool) tea.Cmd {
 				if newTab {
 					return a.openTab(dir, "")
 				}
-				return a.cd(dir, "")
+				return a.goTo(dir, "")
 			}})
 	}
 	return a.t.Menu("Favorites", terminu.MenuSection{Actions: acts})
@@ -145,7 +145,7 @@ func (a *App) gotoFinder(newTab bool) tea.Cmd {
 			if newTab {
 				return tea.Batch(a.t.CloseAll(), a.openTab(it.ID, ""))
 			}
-			return tea.Batch(a.t.CloseAll(), a.cd(it.ID, ""))
+			return tea.Batch(a.t.CloseAll(), a.goTo(it.ID, ""))
 		}}
 	return a.pathFinder(f, home, true)
 }

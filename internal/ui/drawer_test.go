@@ -138,7 +138,8 @@ func TestRunningTaskSpins(t *testing.T) {
 
 // Tasks: Enter takes [1] to where it landed, and the focus with it; D takes
 // it out of the log. The toast says the row's words, its glyph left to the
-// row: the App Log entry starts with a capital (tdp toast.2).
+// row: the App Log entry starts with a capital (tdp toast.2). Going there
+// and taking it out are operations, in the App Log too (tdp note.7).
 func TestTasks(t *testing.T) {
 	hs := newHarness(t, 120, 40, map[string]string{"a.txt": "A", "dest/": ""})
 	hs.to("a.txt")
@@ -158,7 +159,8 @@ func TestTasks(t *testing.T) {
 		t.Fatal("D did not take the task out of the log")
 	}
 	hs.keys("!")
-	hs.has("OK   Copied a.txt → dest")
+	hs.has("OK   Copied a.txt → dest", "INFO Went to "+shortPath(hs.path("dest")),
+		"INFO Deleted from the task log: Copied a.txt → dest")
 }
 
 // A task that fails is one Error toast, with the row's words: in the App Log

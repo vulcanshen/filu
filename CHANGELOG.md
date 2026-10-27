@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-filu now follows tdp v0.10.3 and is built on terminu-go, the terminu
+filu now follows tdp v0.11.0 and is built on terminu-go, the terminu
 family's shared library: the screen, the `Space` menu, `?`, the popups and
 their animations, confirms, inputs, toasts, the finders, the viewer and the
 shell are the family's own, and look and work the same as in every terminu
@@ -45,8 +45,9 @@ them from it and shows both paths.
 - The finders preview a file with its type, size, modified time and mode
   under it; a content search's preview starts at the match.
 - `!` opens the App Log: what filu did and what went wrong, newest last —
-  every message, your renames and copies, what it could not read. The footer
-  counts the errors you have not seen.
+  every message, everything you run (going into a directory, viewing a file
+  or its info, marking, sorting, tabs, zoom, renames and copies), what it
+  could not read. The footer counts the errors you have not seen.
 - When filu cannot read its `config.yaml`, `state.yaml`, `data.yaml`,
   `open_with.yaml` or `ignore_dirs.yaml`, it asks when it starts: move the
   file aside to a `.bak` and start as the first time filu ran, or quit, the
@@ -57,6 +58,8 @@ them from it and shows both paths.
 
 ### Changed
 
+- Under 72 columns the three panels stay side by side, down to 60, instead
+  of filu showing the file list alone.
 - A file name holding control characters (a newline, a tab, an escape)
   shows them by their names in red instead of leaving them out. In a text
   file's preview, the file's own colour codes colour it.

@@ -143,6 +143,11 @@ func (a *App) drawerActions() []terminu.Action {
 				r, _ := a.marksL.Current()
 				a.marks.cursor = max(indexOf(a.marks.items, r.ID), 0)
 				a.marks.togglePick()
+				if a.marks.picked[r.ID] {
+					a.t.Log(terminu.Info, "Picked "+shortPath(r.ID))
+				} else {
+					a.t.Log(terminu.Info, "Took the pick off "+shortPath(r.ID))
+				}
 				a.marksChanged()
 				return a.persist()
 			}},
@@ -155,6 +160,7 @@ func (a *App) drawerActions() []terminu.Action {
 			Hidden: not(drawerMarks), Do: func() tea.Cmd {
 				r, _ := a.marksL.Current()
 				a.marks.removeItem(r.ID)
+				a.t.Log(terminu.Info, "Took the mark off "+shortPath(r.ID))
 				a.marksChanged()
 				return a.persist()
 			}},
@@ -175,7 +181,7 @@ func (a *App) drawerActions() []terminu.Action {
 		{Key: "Enter", Label: "Go to", Desc: "where it landed, in the tab [1] shows", Scope: item, Hint: "go",
 			Hidden: not(drawerTasks), Do: func() tea.Cmd {
 				if t := a.currentTask(); t != nil {
-					return tea.Batch(a.cd(t.destPath, ""), a.t.Focus(a.files))
+					return tea.Batch(a.goTo(t.destPath, ""), a.t.Focus(a.files))
 				}
 				return nil
 			}},
@@ -183,6 +189,7 @@ func (a *App) drawerActions() []terminu.Action {
 			Hidden: not(drawerTasks), Disabled: func() bool { t := a.currentTask(); return t != nil && t.status == taskRunning },
 			Do: func() tea.Cmd {
 				if t := a.currentTask(); t != nil {
+					a.t.Log(terminu.Info, "Deleted from the task log: "+strings.TrimSpace(spansText(taskText(*t)[1:])))
 					a.removeTask(t.id)
 					a.refreshDrawer()
 					return a.persist()
@@ -262,8 +269,12 @@ func (a *App) showInTabs(dir, focus string) tea.Cmd {
 		if len(a.tabs) >= maxTabs {
 			return a.t.Toast(terminu.Warning, fmt.Sprintf("All %d tabs are in use: close one with [w] to open %s", maxTabs, filepath.Base(dir)))
 		}
-		a.openTab(dir, "")
+		a.openTab(dir, "") // it says so in the App Log
 		at = len(a.tabs) - 1
+	} else if focus != "" {
+		a.t.Log(terminu.Info, "Went to "+shortPath(focus))
+	} else {
+		a.t.Log(terminu.Info, "Went to "+shortPath(dir))
 	}
 	a.switchTab(at)
 	a.syncTabs()
@@ -295,7 +306,7 @@ func (a *App) openInMenu(dir string) tea.Cmd {
 			Do: func() tea.Cmd {
 				a.switchTab(i)
 				a.syncTabs()
-				return tea.Batch(a.cd(dir, ""), a.t.Focus(a.files))
+				return tea.Batch(a.goTo(dir, ""), a.t.Focus(a.files))
 			}})
 	}
 	return a.t.MenuAbout("Open in", shortPath(dir), terminu.MenuSection{Actions: acts})

@@ -335,3 +335,62 @@ func TestViewerGetsTheFileAsItIs(t *testing.T) {
 		t.Fatalf("copied %q", got)
 	}
 }
+
+// Every operation the user runs goes in the App Log, one that only looks
+// too: what [1], [2] and [3] did, by its hotkey or Enter (tdp note.7). What
+// shows a toast is logged by the toast, the copy, move and zip by the task.
+func TestAppLogOperations(t *testing.T) {
+	type c = struct {
+		name string
+		run  func(hs *harness)
+		want func(hs *harness) []string
+	}
+	in := func(hs *harness, name string) string { return shortPath(hs.path(name)) }
+	for _, c := range []c{
+		{"into", func(hs *harness) { hs.to("sub"); hs.keys("Enter") },
+			func(hs *harness) []string { return []string{"Went to " + in(hs, "sub")} }},
+		{"info", func(hs *harness) { hs.to("a.txt"); hs.keys("Enter", "Esc") },
+			func(hs *harness) []string { return []string{"Viewed the info of " + in(hs, "a.txt")} }},
+		{"mark", func(hs *harness) { hs.to("a.txt"); hs.keys("m", "m") },
+			func(hs *harness) []string {
+				return []string{"Marked " + in(hs, "a.txt"), "Took the mark off " + in(hs, "a.txt")}
+			}},
+		{"zoom", func(hs *harness) { hs.keys("z", "z") },
+			func(hs *harness) []string { return []string{"Zoomed in on [1]", "Zoomed out of [1]"} }},
+		{"breadcrumb", func(hs *harness) { hs.a.cd(hs.path("sub"), ""); hs.keys("b", "Enter") },
+			func(hs *harness) []string { return []string{"Went to " + shortPath(hs.root)} }},
+		{"tabs", func(hs *harness) { hs.keys("t", "s", "w") },
+			func(hs *harness) []string {
+				return []string{"Opened a tab on " + shortPath(hs.root), "Closed the tab on " + shortPath(hs.root)}
+			}},
+		{"hidden files", func(hs *harness) { hs.keys(".", ".") },
+			func(hs *harness) []string {
+				return []string{"Showed the hidden files in " + shortPath(hs.root), "Hid the hidden files in " + shortPath(hs.root)}
+			}},
+		{"sort", func(hs *harness) { hs.keys("S", "s", "D", "s", "x", "s", "a", "r") },
+			func(hs *harness) []string {
+				root := shortPath(hs.root)
+				return []string{"Sorted " + root + " by Size, descending", "Took Size out of the sort of " + root,
+					"Sorted " + root + " by Size, ascending", "Reset the sort of " + root}
+			}},
+		{"view", func(hs *harness) { hs.to("a.txt"); hs.settle(); hs.keys("2", "Enter", "Esc") },
+			func(hs *harness) []string { return []string{"Viewed " + in(hs, "a.txt")} }},
+		{"marks", func(hs *harness) { hs.to("a.txt"); hs.keys("m", "3", "p", "m") },
+			func(hs *harness) []string {
+				return []string{"Picked " + in(hs, "a.txt"), "Took the mark off " + in(hs, "a.txt")}
+			}},
+		{"favorites", func(hs *harness) { hs.to("sub"); hs.keys("f", "3", "l", "l", "Enter", "3", "Enter") },
+			func(hs *harness) []string {
+				return []string{"Opened a tab on " + in(hs, "sub"), "Went to " + in(hs, "sub")}
+			}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			hs := newHarness(t, 200, 50, map[string]string{"a.txt": "A", "sub/": ""})
+			c.run(hs)
+			hs.keys("!")
+			for _, w := range c.want(hs) {
+				hs.has("INFO " + w)
+			}
+		})
+	}
+}

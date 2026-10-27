@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.10.3），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.5.3）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v0.11.0），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v0.6.0）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -14,7 +14,7 @@
 toast、finder、viewer、PTY、splash、icon 與 powerline 符號的寬度探測與量法）都是 terminu-go 的（tdp E8）。filu 只登記：
 
 - **一個畫面、三個 panel**（`filu.go` 的 `build`）：`[1]` 與 `[2]` 在上面 2:1 並排、佔三分之二高，`[3]` 橫跨下面（`layout`）；
-  寬度 `< 72` 時 lib 只畫 focus 的那一個（`Screen.NarrowBelow`）。
+  到最低寬度 60 欄也照樣並排（tdp L1、screen.5：`[1]` 40 欄、`[2]` 20 欄），所以不設 `Screen.NarrowBelow`。
 - **每個 panel 的動作**（`terminu.Action`：鍵、名稱、說明、範圍、hint、能不能按、做什麼）：`actions.go` 的 `filesActions`、
   `previewpanel.go` 的 `previewActions`、`drawer.go` 的 `drawerActions`。Space menu、key reference、熱鍵與下框 hint 都由這一份產生，
   不會對不上。global 的只有 lib 自己的離開那一列；離開流程是 `drawer.go` 的 `syncQuit`。
@@ -80,8 +80,11 @@ code，開 shell 不會冒出 `command not found`。`init` 不寫進 usage：只
   問移開的 confirm 只放說原因的那一行，整段接成一行記進 App Log（`App.why`）。`[1]` 讀不到的目錄、`[2]` 讀不到的檔是 panel
   的錯誤（Red 的事實加點名按鍵的提示），細節記進 App Log。Rename、Add、Zip 寫入時失敗用 input 的 `Commit`：input 留著、打的字還在，
   error popup 疊在上面；其他動作失敗開 error popup，標題寫「哪件事失敗」與對象（`App.ErrorAbout`：`DELETE FAILED: notes.md`）。
-- **App Log** —— lib 的（`!`，footer 的 `!:log`）：每個 toast 與 error popup 自己進去。filu 另外記（`App.Log`）：使用者做的事與結果
-  （改名、新增、開檔、開始複製／搬移／打包、清掉 marks、開 shell 與 shell 結束），背景做的事（搬舊設定的每一項、第一次寫的設定範本），
+- **App Log** —— lib 的（`!`，footer 的 `!:log`）：每個 toast 與 error popup 自己進去。filu 另外記（`App.Log`）：使用者執行的每個動作
+  與結果（tdp note.7：menu、熱鍵或 `Enter` 執行的，只看不改的也算 —— 進目錄與去到哪裡、Info 與預覽的 viewer、mark 與 pick、排序、
+  隱藏檔、開關 tab、zoom、改名、新增、開檔、開始複製／搬移／打包、清掉 marks、刪掉 Tasks 的一列、開 shell 與 shell 結束；去某個目錄
+  一律走 `goTo`）。會出 toast 的（Yank、Delete、Favorite）由 toast 記，不另外記；排序每選一步就是一次結果，每步記一筆。不記的：
+  `Esc` 回上一層（不是 menu 裡的動作，`up` 直接 `cd`）、`h|l` 換 tab（跟換 focus 一樣）、移 cursor、Space menu、`?`、`!`。背景做的事（搬舊設定的每一項、第一次寫的設定範本），
   讀不到外面的東西的細節（目錄、預覽，同一件事只記一次：`tab.logged`、`previewBody.logged`）。
 - **marks** —— 一個跨目錄、跨 tab 的 bucket（`marks.go` 的 `marksModel`），存在 `state.yaml`。清單上的勾是 lib 的標記欄，換目錄、
   bucket 變動時照 bucket 重勾（`List.SetMarked`）。`[3]` Marks 清單自己的標記就是 pick：有 pick 時只有 pick 的會落地（`landItems`）。
@@ -184,7 +187,7 @@ filu/
   cd-on-quit 的 POSIX shell function、`rwx` 權限都沒有 Windows 對應。Windows 使用者走 WSL（2026-07-27 拍板）。
 
 - **zoom 時換 panel 照樣放大**（user 2026-10-19 定案）：`Tab` 換到下一個 panel 時，下一個也是放大的，
-  `z` 才還原。放大是使用者要的版面，換 panel 不代表不要了；跟窄寬時一次只看一個 panel 的走法一樣。
+  `z` 才還原。放大是使用者要的版面，換 panel 不代表不要了。
 - **zoom `[1]` 時 `[3]` 留著**（user 2026-10-24 定：tdp screen「Zoom」讓 app 決定怎麼放大）：`[1]` 佔掉 `[2]` 的位置、`[3]` 照舊在下面，
   marks、tasks、最愛一直看得到；`[2]`、`[3]` 照 tdp 的預設佔滿畫面。
 - **zoom 時 `[1]` 的 tab 並排**（user 2026-10-19 定案：tdp 的 zoom 給預設，怎麼放大由 app 決定）：filu 在 zoom 時把每個 tab 畫成一欄
@@ -205,7 +208,7 @@ filu/
 - **排序選了方向只關方向那一步**（tdp T1：選一個值寫回 picker，保留 source）：欄位 menu 留著、寫出新的排序，可以接著疊下一欄；
   `Esc` 收起。
 - **最低尺寸 60×24**（tdp L1：app 可以調低）：80×24 是大多數終端機打開時的大小，在 filu 的版面裡每件事都做得完（上面兩個 panel
-  16 列、`[3]` 8 列）；寬度到 60 欄也一樣：`< 72` 時一次只畫一個 panel，finder、menu、confirm 的列都放得下。比它小就是 lib 的
+  16 列、`[3]` 8 列）；寬度到 60 欄也一樣：三個 panel 照樣並排，finder、menu、confirm 的列都放得下。比它小就是 lib 的
   「只畫名稱與要多大」，`screen_test.go` 量到 1×1。
 - **`[2]` 用 filu 自己的預覽、不用 lib 的 `FilePreview`**：`FilePreview` 不收鍵、不捲，`[2]` 要能捲、`Enter` 打開檢視、`y` 複製，
   圖片的 data URI 也要照寬度折，所以 `[2]` 是 `Pager` 加 filu 的預覽。

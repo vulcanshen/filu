@@ -151,6 +151,7 @@ func (a *App) viewPreview() tea.Cmd {
 	if lang != "" {
 		all = strings.Join(lines, "\n") // the file as it is
 	}
+	a.t.Log(terminu.Info, "Viewed "+shortPath(path)) // only looking is an operation too (tdp note.7)
 	return a.t.Viewer(&terminu.Viewer{
 		Title: "Preview", Subject: name, Glyph: glyphView, Lines: lines, Lang: lang,
 		Keys: []terminu.ViewerKey{{Key: "y", Desc: "copy all", Do: func() tea.Cmd {

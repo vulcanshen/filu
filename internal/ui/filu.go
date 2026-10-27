@@ -242,7 +242,7 @@ func (a *App) build() {
 	a.drawer = &terminu.Panel{Label: "Marks", Tabs: []string{"Tasks", "Favorites"}, Body: a.marksL, OnTab: a.drawerTab}
 	a.drawer.Actions = a.drawerActions()
 	a.screen = &terminu.Screen{Name: "Files", Panels: []*terminu.Panel{a.files, a.preview, a.drawer},
-		Layout: a.layout, NarrowBelow: 72}
+		Layout: a.layout}
 	t.AddScreen(a.screen)
 	t.OnMsg = a.onMsg
 	t.Start = a.start
