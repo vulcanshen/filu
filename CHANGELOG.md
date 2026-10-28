@@ -2,6 +2,11 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## v1.0.1 — tdp v1.1.0
+
+- Built on terminu-go v1.1.0, following tdp v1.1.0. Nothing changes in how
+  filu works since v1.0.0.
+
 ## v1.0.1-beta.2 — tdp v1.1.0-beta.3
 
 - Built on terminu-go v1.1.0-beta.3, following tdp v1.1.0-beta.3. Nothing
