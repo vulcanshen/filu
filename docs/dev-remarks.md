@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v1.1.0-beta.1），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.0-beta.1）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v1.1.0-beta.2），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.0-beta.2）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -317,6 +317,11 @@ target（linux / darwin × amd64 / arm64）與 checksums、更新 vulcanshen/hom
 
 - **CI 只在 tag 上跑**：打 tag 前先在乾淨的環境跑過測試 —— 只放 `go` 的 `PATH`（不要 `rg`、`fd`），以及 docker 的 `golang` 映像
   `go test -race ./...`。v0.4.0 第一次打 tag 時，一個測試因為 runner 沒有 `rg` 而失敗。
+- **beta**（tdp project.7）：tag `vX.Y.Z-beta.N`，步驟一樣；goreleaser 發成 GitHub 的 pre-release、不動 homebrew-tap，所以 brew 與
+  `install.sh`（抓 latest）拿到的仍是 stable。CHANGELOG 標題寫 tag 本身（`## v1.0.1-beta.1 — tdp v1.1.0-beta.2`），之後的 stable 那一節
+  寫上一個 stable 以來的全部改動。
+- **release notes 寫在 checkout 外**（`$RUNNER_TEMP`）：寫在 checkout 裡會讓工作樹變髒，binary 的 build info 就成了 `vX.Y.Z+dirty`
+  （`go version -m`），v1.0.0 就是這樣。
 - **goreleaser 的 `--release-notes` 不可靠**：workflow 最後一步用 `gh release edit` 把 body 換成 CHANGELOG 那一節。
 - **Homebrew 發 formula、不發 cask**：cask 的產物會被蓋上 `com.apple.quarantine`，未簽章的 binary 會被 Gatekeeper 擋；formula 不會。
   formula 宣告 `ripgrep` 與 `fd` 依賴。
