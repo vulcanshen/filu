@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v1.1.0-beta.2），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.0-beta.2）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v1.1.0-beta.3），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.0-beta.3）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -287,6 +287,9 @@ command（動畫、背景的 channel）、讀 `Frame()`。session、設定、垃
   是真的 32ms 一格，所以這組測試要幾十秒。
 - **背景的 channel**：harness 執行讀 channel 的 command（`waitFind` 之類）最多等 150ms；等不到時那個讀還在，之後讀到的訊息放進
   `harness.late` 再交給 filu，不會掉。搜尋是邊打邊找的，少了這一步，打字後的第一批結果會被上一次留下來的讀拿走。
+- **等 finder 搜完用 `found`，不用 `drain`**：`drain` 安靜 300ms 就停；finder 載入時讓 harness 一直等下去的是 spinner 的 90ms
+  timer，晚過 150ms 就被放掉。忙的 runner 上兩者都可能在搜尋結束前過去，接著按的 `Enter` 落在空的清單上（v1.0.1-beta.1 在 macOS 的
+  CI 就這樣失敗：`[1]` 留在原地）。`found` 等到 `Loading` 變成 false 為止。
 - **背景讀的預覽**：lib 的 finder 預覽在畫的時候記下要讀什麼、下一次 update 才開始讀（tdp file-picker 的「在背景讀」）。harness 的
   `has`、`hasNot` 先 `settle`（畫一次、送一次 update，三回），像終端機接下來的幾格畫面，讀完的預覽才會在畫面上。
 - **tdptest**（terminu-go 的）：`tdp_test.go` 的 `TestFirstLaunch` 用 `tdptest.Check` 在很多種尺寸與 icon 寬度下跑第一次啟動（每次一個新的
@@ -318,7 +321,7 @@ target（linux / darwin × amd64 / arm64）與 checksums、更新 vulcanshen/hom
 - **CI 只在 tag 上跑**：打 tag 前先在乾淨的環境跑過測試 —— 只放 `go` 的 `PATH`（不要 `rg`、`fd`），以及 docker 的 `golang` 映像
   `go test -race ./...`。v0.4.0 第一次打 tag 時，一個測試因為 runner 沒有 `rg` 而失敗。
 - **beta**（tdp project.7）：tag `vX.Y.Z-beta.N`，步驟一樣；goreleaser 發成 GitHub 的 pre-release、不動 homebrew-tap，所以 brew 與
-  `install.sh`（抓 latest）拿到的仍是 stable。CHANGELOG 標題寫 tag 本身（`## v1.0.1-beta.1 — tdp v1.1.0-beta.2`），之後的 stable 那一節
+  `install.sh`（抓 latest）拿到的仍是 stable。CHANGELOG 標題寫 tag 本身（`## v1.0.1-beta.2 — tdp v1.1.0-beta.3`），之後的 stable 那一節
   寫上一個 stable 以來的全部改動。
 - **release notes 寫在 checkout 外**（`$RUNNER_TEMP`）：寫在 checkout 裡會讓工作樹變髒，binary 的 build info 就成了 `vX.Y.Z+dirty`
   （`go version -m`），v1.0.0 就是這樣。

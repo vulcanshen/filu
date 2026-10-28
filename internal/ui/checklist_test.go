@@ -64,7 +64,7 @@ func TestWhatTheMenuIsLeftWith(t *testing.T) {
 	hs.keys("Esc")
 
 	hs.keys("Space", "g", "o", "/")
-	hs.drain()
+	hs.found()
 	hs.keys("sub", "Enter", "Enter")
 	if hs.a.cur().dir != hs.path("sub") {
 		t.Fatalf("[1] is on %s", hs.a.cur().dir)
@@ -318,7 +318,7 @@ func TestHideSecretsInPreview(t *testing.T) {
 	hs.a = NewApp(hs.root, "")
 	hs.send(tea.WindowSizeMsg{Width: 120, Height: 40})
 	hs.keys("/", "f")
-	hs.drain()
+	hs.found()
 	hs.keys("id_ed")
 	hs.has("(sensitive content not shown)")
 	hs.hasNot("secretsecret")

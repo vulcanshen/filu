@@ -191,6 +191,21 @@ func (hs *harness) drain() {
 	}
 }
 
+// found waits until the finder open now has all its search found. drain stops
+// at the first quiet 300ms, and the spinner that keeps send waiting is a timer
+// the harness lets go when it comes late: on a busy runner both can pass
+// before the search is over, and keys meant for the results find none.
+func (hs *harness) found() {
+	hs.t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for hs.a.finder != nil && hs.a.finder.Loading {
+		if time.Now().After(deadline) {
+			hs.t.Fatalf("the finder is still searching:\n%s", hs.screen())
+		}
+		hs.drain()
+	}
+}
+
 // frame is the screen as plain text.
 func (hs *harness) frame() []string {
 	var out []string
