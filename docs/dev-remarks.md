@@ -1,8 +1,8 @@
 # filu 開發者備忘
 
 開發 filu 時要提醒自己、以及與 AI 協作時記下的決策。filu 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v1.0.0），畫面建在家族共用的
-[terminu-go](https://github.com/vulcanshen/terminu-go)（v1.0.0）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
+[terminu design principle](https://github.com/vulcanshen/terminu)（tdp，目前跟到 v1.1.0-beta.1），畫面建在家族共用的
+[terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.0-beta.1）上；使用者要知道的在 README，這裡記的是「它為什麼長這樣、內部怎麼做」。
 
 ---
 
@@ -274,9 +274,9 @@ make build        # → ./filu（CGO_ENABLED=0 靜態；版本是 dev）
 - 本機 build 的版本號是 `dev`；release 版號由 goreleaser 以 `-X` 注入 `internal/version.Version`。
 - binary 的子指令：`filu version`（也收 `--version`、`-v`）、`filu help`（也收 `--help`、`-h`）、`filu shell install` / `uninstall`
   （cd-on-quit，見「運作方式」）、`filu iconwidth`（印出 lib 探測到的 icon 與 powerline 符號格數，以及從哪裡來的）。
-- 頂層另有（tdp project 的目錄圖上沒有的）：`CLAUDE.md`（gitignore，給 AI 協作的指引）、`.claude/`（進版控：專案的 Claude Code
-  規則、agent 與指令）、`.forge/`（gitignore：forge 的 GOAL.md、PROGRESS.md、IDEA.md、REDESIGN-LIST-AND-NAV.md，內容停在 v0.2.0
-  前後）、`.checkpoints/`（自帶 `.gitignore`：AI 協作的 session 紀錄）。
+- 頂層另有（tdp project 的目錄圖上沒有的）：`CLAUDE.md` 與 `.claude/`（Claude Code 的指引、規則與設定，tdp project.3：都不進版控）、
+  `.forge/`（gitignore：forge 的 GOAL.md、PROGRESS.md、IDEA.md、REDESIGN-LIST-AND-NAV.md，內容停在 v0.2.0 前後）、`.checkpoints/`
+  （自帶 `.gitignore`：AI 協作的 session 紀錄）。
 
 測試是 programmatic 的（不靠真終端）：`harness_test.go` 照 terminu-go 的 app 的做法，把按鍵送進 `App.Update`、跑完它發出的
 command（動畫、背景的 channel）、讀 `Frame()`。session、設定、垃圾桶、剪貼簿都指到測試自己的暫存目錄。

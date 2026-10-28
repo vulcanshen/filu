@@ -2,6 +2,11 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- Built on terminu-go v1.1.0-beta.1, following tdp v1.1.0-beta.1. Nothing
+  changes in how filu works.
+
 ## v1.0.0 — tdp v1.0.0
 
 filu now follows tdp v1.0.0, the stable terminu design, and is built on
